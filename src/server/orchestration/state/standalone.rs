@@ -18,18 +18,34 @@ impl StandaloneStateManager {
     pub fn new(db: Arc<DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         Self { db, mesh }
     }
+}
 
-    async fn transition_state_inner(
+
+
+#[async_trait]
+impl StateManager for StandaloneStateManager {
+    async fn transition_state(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
         reason: Option<&str>,
-        _lock_guard: &MeshLockGuard,
-        sqlite_pool: &sqlx::Pool<sqlx::Sqlite>,
     ) -> Result<(), String> {
+        let sqlite_pool = match &self.db.store {
+            DbStore::Sqlite(pool) => pool,
+            _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
+        };
+
+        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
+        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30);
+        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
+            Ok(Ok(guard)) => guard,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => return Err("Timeout acquiring lock".to_string()),
+        };
+
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state
@@ -121,37 +137,6 @@ impl StandaloneStateManager {
 
         Ok(())
     }
-}
-
-#[async_trait]
-impl StateManager for StandaloneStateManager {
-    async fn transition_state(
-        &self,
-        task_id: &str,
-        tenant_id: &str,
-        from_state: &str,
-        to_state: &str,
-        agent_id: Option<&str>,
-        reason: Option<&str>,
-    ) -> Result<(), String> {
-        let sqlite_pool = match &self.db.store {
-            DbStore::Sqlite(pool) => pool,
-            _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
-        };
-
-        let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
-
-        let transition_future = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
-            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
-        };
-
-        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => Err(e),
-            Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
-        }
-    }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let sqlite_pool = match &self.db.store {
@@ -165,27 +150,20 @@ impl StateManager for StandaloneStateManager {
 
             let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
-            let now_rfc = Utc::now().to_rfc3339();
             let rows = sqlx::query(
                 r#"
-                UPDATE swarm_tasks
-                SET status = 'IN_PROGRESS', updated_at = ?
-                WHERE id IN (
-                    SELECT t.id
-                    FROM swarm_tasks t
-                    WHERE t.status = 'PENDING'
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM json_each(t.dependencies) as dep_id
-                        JOIN swarm_tasks dep ON dep.id = dep_id.value
-                        WHERE dep.status != 'COMPLETED'
-                    )
-                    LIMIT ?
-                )
-                RETURNING *
+                SELECT t.*
+                FROM swarm_tasks t
+                WHERE t.status = 'PENDING'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM json_each(t.dependencies) as dep_id
+                      JOIN swarm_tasks dep ON dep.id = dep_id.value
+                      WHERE dep.status != 'COMPLETED'
+                  )
+                LIMIT ?
                 "#
             )
-            .bind(now_rfc)
             .bind(limit)
             .fetch_all(&mut *tx)
             .await
@@ -280,11 +258,20 @@ impl StateManager for StandaloneStateManager {
             }
         }
 
-        // Transitions are recorded after the UPDATE ... RETURNING
+        // Update status to IN_PROGRESS so it's not picked up by others
         if !task_ids.is_empty() {
             let now = Utc::now();
             let now_rfc = now.to_rfc3339();
             for (id_str, tenant_id) in task_ids {
+                sqlx::query(
+                    "UPDATE swarm_tasks SET status = 'IN_PROGRESS', updated_at = ? WHERE id = ?"
+                )
+                .bind(&now_rfc)
+                .bind(&id_str)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
@@ -304,7 +291,7 @@ impl StateManager for StandaloneStateManager {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        // Update the returned tasks statuses to match what we committed (IN_PROGRESS)
+        // Update the returned tasks statuses to match what we committed
         for t in &mut tasks {
             t.status = "IN_PROGRESS".to_string();
         }

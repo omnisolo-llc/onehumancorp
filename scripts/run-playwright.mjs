@@ -34,10 +34,10 @@ async function main() {
   // Build and start server
   console.log('[run-playwright] Server already built in outer execution');
 
-  const serverBin = path.join(ROOT, 'bazel-bin/src/server/server');
+  const serverBin = path.join('/app', 'bazel-bin/src/server/server');
   console.log('[run-playwright] Starting server...');
   const server = spawn(serverBin, [], {
-    cwd: ROOT,
+    cwd: '/app',
     stdio: 'inherit',
     env: { ...process.env, DATABASE_URL: 'postgres://ohc:ohc@localhost:5432/ohc' },
   });

@@ -21,7 +21,7 @@ These fields allow the daemon to track which tasks have been escalated, track er
 ## Go Interfaces
 
 ```go
-package cloudsync
+package sync
 
 import (
 	"context"

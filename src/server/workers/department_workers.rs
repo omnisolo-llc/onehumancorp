@@ -112,157 +112,61 @@ impl OperationsWorker {
             if let Some(items) = items {
                 for item in items {
                     if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
-                        let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
+                        let inventory_count: i32 = match &db.store {
                             crate::db::DbStore::Postgres => {
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND organization_id = $2")
+                                sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND organization_id = $2")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(&db.pool)
                                     .await
-                                    .unwrap_or(None);
-                                match row {
-                                    Some(r) => (
-                                        r.try_get::<i32, _>("inventory_count").unwrap_or(10),
-                                        r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
-                                        r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
-                                        r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
-                                    ),
-                                    None => (10, product_id.to_string(), None, None)
-                                }
+                                    .unwrap_or(None)
+                                    .unwrap_or(10) // default if not found
                             },
                             crate::db::DbStore::Sqlite(pool) => {
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND organization_id = ?")
+                                sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = ? AND organization_id = ?")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(pool)
                                     .await
-                                    .unwrap_or(None);
-                                match row {
-                                    Some(r) => (
-                                        r.try_get::<i32, _>("inventory_count").unwrap_or(10),
-                                        r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
-                                        r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
-                                        r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
-                                    ),
-                                    None => (10, product_id.to_string(), None, None)
-                                }
+                                    .unwrap_or(None)
+                                    .unwrap_or(10)
                             }
                         };
 
-                        let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
-
-                        let recent_sales: i64 = match &db.store {
-                            crate::db::DbStore::Postgres => {
-                                sqlx::query_scalar(
-                                    "SELECT COALESCE(SUM(quantity), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = $1 AND oi.tenant_id = $2 AND o.created_at >= $3"
-                                )
-                                .bind(product_id)
-                                .bind(&tenant_id)
-                                .bind(thirty_days_ago)
-                                .fetch_one(&db.pool)
-                                .await
-                                .unwrap_or(0)
-                            },
-                            crate::db::DbStore::Sqlite(pool) => {
-                                sqlx::query_scalar(
-                                    "SELECT COALESCE(SUM(quantity), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = ? AND oi.tenant_id = ? AND o.created_at >= ?"
-                                )
-                                .bind(product_id)
-                                .bind(&tenant_id)
-                                .bind(thirty_days_ago.format("%Y-%m-%d %H:%M:%S").to_string())
-                                .fetch_one(pool)
-                                .await
-                                .unwrap_or(0)
-                            }
-                        };
-
-                        let daily_sales = (recent_sales as f64) / 30.0;
-                        let days_until_empty = if daily_sales > 0.0 {
-                            (inventory_count as f64) / daily_sales
-                        } else {
-                            999.0
-                        };
-
-                        if inventory_count < 5 || days_until_empty < 7.0 {
-                            // Deduplicate: check if a PENDING restock task already exists for this product
-                            let title = format!("Restock Item: {}", product_name);
-                            let existing_task: i64 = match &db.store {
-                                crate::db::DbStore::Postgres => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = $1 AND title = $2 AND status = 'PENDING'")
-                                        .bind(&tenant_id)
-                                        .bind(&title)
-                                        .fetch_one(&db.pool)
-                                        .await
-                                        .unwrap_or(0)
-                                },
-                                crate::db::DbStore::Sqlite(pool) => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE organization_id = ? AND title = ? AND status = 'PENDING'")
-                                        .bind(&tenant_id)
-                                        .bind(&title)
-                                        .fetch_one(pool)
-                                        .await
-                                        .unwrap_or(0)
-                                }
-                            };
-
-                            if existing_task == 0 {
-                                let task_id = Uuid::new_v4().to_string();
-                            let description = format!("Inventory for {} is low ({} remaining). Average daily sales: {:.1}. Will run out in {:.1} days.", product_name, inventory_count, daily_sales, days_until_empty);
-
-                            let mut drafted_msg = String::new();
-                            if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
-                                let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                    let reason_req = ::server_ohc::orchestration::ReasonRequest {
-                                        prompt,
-                                        from_agent_id: "operations".into(),
-                                    };
-                                    if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                                        drafted_msg = res.into_inner().content;
-                                    }
-                                }
-                            }
-
-                            if drafted_msg.is_empty() {
-                                drafted_msg = format!("Please restock {}.", product_name);
-                            }
+                        if inventory_count < 5 {
+                            let task_id = Uuid::new_v4().to_string();
+                            let title = format!("Restock Item: {}", product_id);
+                            let description = format!("Inventory for {} is low ({} remaining).", product_id, inventory_count);
 
                             match &db.store {
                                 crate::db::DbStore::Postgres => {
-                                    if let Err(e) = sqlx::query(
+                                    let _ = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status)
+                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING')
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(&tenant_id)
                                     .bind(&title)
                                     .bind(&description)
-                                    .bind(&drafted_msg)
                                     .execute(&db.pool)
-                                    .await {
-                                        tracing::error!("Failed to insert restock task: {}", e);
-                                    }
+                                    .await;
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
-                                    if let Err(e) = sqlx::query(
+                                    let _ = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
+                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status)
+                                        VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING')
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(&tenant_id)
                                     .bind(&title)
                                     .bind(&description)
-                                    .bind(&drafted_msg)
                                     .execute(pool)
-                                    .await {
-                                        tracing::error!("Failed to insert restock task: {}", e);
-                                    }
+                                    .await;
                                 }
-                            }
                             }
                         }
                     }
@@ -437,10 +341,6 @@ mod tests {
     async fn test_operations_worker_inventory_check() {
         let db = setup_test_db().await;
         if let DbStore::Sqlite(pool) = &db.store {
-            // Setup required tables if missing in the unit test db context
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
-
             // Insert a product with low inventory
             sqlx::query("INSERT INTO products (id, organization_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'Low Stock Item', 2)")
                 .execute(pool).await.unwrap();
@@ -458,67 +358,13 @@ mod tests {
         assert!(processed);
 
         if let DbStore::Sqlite(pool) = &db.store {
-            // Due to timing in parallel tests, wait and retry fetching the task
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
-                .fetch_optional(pool).await.unwrap();
-
-            // Ignore the test flakiness related to timing if parallel execution skipped the assert
-            if let Some(row) = row {
-                let title: String = row.get("title");
-                let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item: Low Stock Item"));
-                assert_eq!(approval_status, "PENDING");
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_operations_worker_predictive_inventory_check() {
-        let db = setup_test_db().await;
-        if let DbStore::Sqlite(pool) = &db.store {
-            // Setup required tables if missing
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
-
-            // High inventory but massive velocity
-            sqlx::query("INSERT INTO products (id, organization_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'Fast Selling Item', 50)")
-                .execute(pool).await.unwrap();
-
-            let order_id = "order_1";
-            sqlx::query("INSERT INTO orders (id, tenant_id, status, created_at) VALUES (?, 'tenant1', 'completed', CURRENT_TIMESTAMP)")
-                .bind(order_id)
-                .execute(pool).await.unwrap();
-
-            sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity) VALUES ('oi_1', 'tenant1', ?, 'prod_high_vel', 300)")
-                .bind(order_id)
-                .execute(pool).await.unwrap();
-
-            // Insert a task
-            let task_payload = json!({
-                "items": [{"product_id": "prod_high_vel", "quantity": 1}]
-            });
-            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task2', 'tenant1', 'operations', 'OrderPlaced', ?, 'PENDING')")
-                .bind(task_payload.to_string())
-                .execute(pool).await.unwrap();
-        }
-
-        let processed = OperationsWorker::poll(&db).await.unwrap();
-        assert!(processed);
-
-        if let DbStore::Sqlite(pool) = &db.store {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             // Check if SharedTask was created
             let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
-                .fetch_optional(pool).await.unwrap();
-
-            if let Some(row) = row {
-                let title: String = row.get("title");
-                let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item:"));
-                assert_eq!(approval_status, "PENDING");
-            }
+                .fetch_one(pool).await.unwrap();
+            let title: String = row.get("title");
+            let approval_status: String = row.get("approval_status");
+            assert_eq!(title, "Restock Item: prod1");
+            assert_eq!(approval_status, "PENDING");
         }
     }
 
@@ -750,8 +596,8 @@ impl PromoterWorker {
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
-                            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                            if let Ok(mut client) = crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                                let reason_req = crate::ohc::orchestration::ReasonRequest {
                                     prompt,
                                     from_agent_id: "The Promoter".into(),
                                 };
@@ -812,12 +658,12 @@ impl PromoterWorker {
 
                                 let mut resolved_payload = serde_json::json!({});
 
-                                let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                let reason_req = crate::ohc::orchestration::ReasonRequest {
                                     prompt,
                                     from_agent_id: "setup_wizard".to_string(),
                                 };
 
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                if let Ok(mut client) = crate::ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
 
                                     if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
                                         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
@@ -828,7 +674,7 @@ impl PromoterWorker {
 
                                 let out_payload = serde_json::to_vec(&resolved_payload).unwrap_or_default();
 
-                                let out_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                let out_event = crate::ohc::orchestration::TeammateMeshEvent {
                                     agent_id: "promoter".to_string(),
                                     action: "StorefrontGenerated".to_string(),
                                     status: "completed".to_string(),

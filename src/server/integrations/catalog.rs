@@ -39,8 +39,6 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
         }
     };
     catalog.push(twilio_provider);
-    let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
-    catalog.push(chromadb_provider.to_integration_provider());
 
     catalog
 }

@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use ::server_ohc::organization::Organization;
-use ::server_ohc::organization::TeamMember;
-use ::server_ohc::organization::RoleProfile;
-use ::server_ohc::common::Role;
+use crate::ohc::organization::Organization;
+use crate::ohc::organization::TeamMember;
+use crate::ohc::organization::RoleProfile;
+use crate::ohc::common::Role;
 use chrono::{DateTime, Utc};
 
 pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {

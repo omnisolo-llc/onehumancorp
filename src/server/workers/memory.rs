@@ -131,6 +131,7 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
+        use sqlx::Row;
         // Verify the record was pruned
         let query = "SELECT count(*) FROM consolidated_memory";
         let row: (i64,) = sqlx::query_as(query)

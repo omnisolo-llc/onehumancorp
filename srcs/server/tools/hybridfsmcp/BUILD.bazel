@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybridfsmcp",
+    srcs = [
+        "cloud_provider.go",
+        "factory.go",
+        "local_provider.go",
+        "provider.go",
+        "server.go",
+    ],
+    importpath = "onehumancorp/srcs/server/tools/hybridfsmcp",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "hybridfsmcp_test",
+    srcs = ["server_test.go"],
+    embed = [":hybridfsmcp"],
+)

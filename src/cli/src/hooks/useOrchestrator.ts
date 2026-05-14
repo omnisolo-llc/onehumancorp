@@ -4,12 +4,10 @@ import { ToolItem } from '../components/ToolProgress';
 export interface OrchestratorState {
   status: string;
   tools: ToolItem[];
-  error: string | null;
 }
 
 export const useOrchestrator = (): OrchestratorState => {
   const [status, setStatus] = useState('Initializing Agent...');
-  const [error] = useState<string | null>(null);
   const [tools, setTools] = useState<ToolItem[]>([
     { name: 'ls -la', status: 'success' },
     { name: 'read_file', status: 'pending' }
@@ -28,5 +26,5 @@ export const useOrchestrator = (): OrchestratorState => {
     return () => clearTimeout(timer);
   }, []);
 
-  return { status, tools, error };
+  return { status, tools };
 };

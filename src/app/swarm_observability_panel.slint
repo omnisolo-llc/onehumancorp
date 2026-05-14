@@ -1,0 +1,151 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export struct SwarmActivity {
+    message: string,
+    time: string,
+}
+
+export struct SwarmAgentStatus {
+    name: string,
+    role: string,
+    status: string,
+    is_active: bool,
+}
+
+export component SwarmObservabilityPanel inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.85); // Dark semi-transparent backdrop
+    drop-shadow-blur: 20px;
+    drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+    in property <[SwarmActivity]> activities;
+    in property <[SwarmAgentStatus]> agent_statuses;
+
+    callback close();
+
+    TouchArea {
+        width: 100%;
+        height: 100%;
+        // Blocks touches from going through to underlying content
+    }
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 20px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text {
+                text: "AI Agent Activity";
+                font-family: "Outfit";
+                font-size: 24px;
+                font-weight: 700;
+                color: white;
+                vertical-alignment: center;
+            }
+            Button {
+                text: "Close";
+                width: 80px;
+                height: 44px;
+                clicked => { close(); }
+            }
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            Text {
+                text: "Active Agents";
+                font-family: "Inter";
+                font-size: 16px;
+                font-weight: 600;
+                color: #cbd5e1;
+            }
+
+            for status in agent_statuses : GlassCard {
+                border-color: status.is_active ? rgba(16, 185, 129, 0.5) : rgba(255, 255, 255, 0.1);
+                border-width: 1px;
+                border-radius: 12px;
+
+                HorizontalBox {
+                    padding: 16px;
+                    spacing: 12px;
+
+                    Rectangle {
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 22px;
+                        background: status.is_active ? rgba(16, 185, 129, 0.2) : rgba(148, 163, 184, 0.2);
+                        Text {
+                            text: "🤖";
+                            font-size: 20px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: status.name; font-family: "Inter"; font-weight: 700; color: white; font-size: 16px; }
+                        Text { text: status.role; font-family: "Inter"; color: #94a3b8; font-size: 14px; }
+                    }
+
+                    Rectangle {} // Spacer
+
+                    VerticalBox {
+                        alignment: center;
+                        Text {
+                            text: status.status;
+                            font-family: "Inter";
+                            color: status.is_active ? #10b981 : #94a3b8;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+                    }
+                }
+            }
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            Text {
+                text: "Activity Feed";
+                font-family: "Inter";
+                font-size: 16px;
+                font-weight: 600;
+                color: #cbd5e1;
+            }
+
+            for activity in activities : GlassCard {
+                border-color: rgba(255, 255, 255, 0.05);
+                border-width: 1px;
+                border-radius: 8px;
+
+                HorizontalBox {
+                    padding: 12px;
+                    spacing: 12px;
+
+                    Text {
+                        text: activity.message;
+                        font-family: "Inter";
+                        color: white;
+                        font-size: 14px;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                    }
+                    Rectangle {} // Spacer
+                    Text {
+                        text: activity.time;
+                        font-family: "Inter";
+                        color: #64748b;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        Rectangle {} // Bottom Spacer
+    }
+}

@@ -1,0 +1,102 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Walkthrough inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "App Data Sync Guide";
+
+    property <int> current_step: 0;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: center;
+
+        Text { text: "Interactive Guide: Setup Lifecycle"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 16px;
+            width: 500px;
+
+            VerticalBox {
+                padding: 32px;
+                spacing: 16px;
+
+                Text {
+                    text: current_step == 0 ? "1. Save your knowledge locally" :
+                          current_step == 1 ? "2. Check for new knowledge to share" :
+                          current_step == 2 ? "3. Prepare knowledge for sharing" :
+                          current_step == 3 ? "4. Send securely to the cloud" :
+                          current_step == 4 ? "5. Save to your cloud backup" :
+                          current_step == 5 ? "6. Confirm saving is complete" :
+                          "7. Mark as shared locally";
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #0284c7;
+                }
+
+                Text {
+                    text: current_step == 0 ? "Your agent writes down what it learned and saves it on your computer." :
+                          current_step == 1 ? "The system checks your computer for any new knowledge that hasn't been shared yet." :
+                          current_step == 2 ? "The system gathers all the new knowledge together to send it out." :
+                          current_step == 3 ? "The system safely sends your gathered knowledge over the internet to your cloud backup." :
+                          current_step == 4 ? "Your cloud backup receives the knowledge and saves it permanently." :
+                          current_step == 5 ? "The cloud backup sends a message back saying everything was saved successfully." :
+                          "Your computer marks the knowledge as 'shared' so it won't be sent again.";
+                    color: #1e293b;
+                    wrap: word-wrap;
+                }
+
+                Rectangle {
+                    background: #f1f5f9;
+                    border-radius: 8px;
+
+                    HorizontalBox {
+                        padding: 12px;
+                        spacing: 12px;
+                        Text { text: "🔄"; color: #0284c7; }
+                        Text {
+                            text: current_step == 0 ? "Computer -> Saved" :
+                                  current_step == 1 ? "System -> Checking" :
+                                  current_step == 2 ? "System -> Gathering" :
+                                  current_step == 3 ? "System -> Sending" :
+                                  current_step == 4 ? "Cloud Backup -> Saved" :
+                                  current_step == 5 ? "Cloud Backup -> Confirmed" :
+                                  "Computer -> Completed";
+                            color: #0284c7;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 20px;
+
+                    Button {
+                        text: "Previous Step";
+                        enabled: current_step > 0;
+                        clicked => { current_step = current_step - 1; }
+                    }
+
+                    Text {
+                        text: "Step " + (current_step + 1) + " of 7";
+                        color: #9ca3af;
+                        horizontal-alignment: center;
+                    }
+
+                    Button {
+                        text: "Next Step";
+                        enabled: current_step < 6;
+                        clicked => { current_step = current_step + 1; }
+                    }
+                }
+            }
+        }
+    }
+}

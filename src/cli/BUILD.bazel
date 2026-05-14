@@ -22,8 +22,4 @@ js_binary(
         "//:node_modules",
     ],
     entry_point = "src/index.tsx",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )

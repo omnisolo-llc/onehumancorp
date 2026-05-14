@@ -42,7 +42,7 @@ impl VectorRepository {
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
-        let emb_str = serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
+        let emb_str = serde_json::to_string(&record.embedding).map_err(|e| e.to_string())?;
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -329,14 +329,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -371,9 +371,6 @@ impl VectorRepository {
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count + 1;
         updated_winner.last_referenced_at = chrono::Utc::now();
-        if loser.owner_override && !updated_winner.owner_override {
-            updated_winner.owner_override = true;
-        }
         self.upsert(&updated_winner).await?;
         Ok(())
     }
@@ -452,8 +449,8 @@ impl VectorRepository {
                         content: row.get("a_content"),
                         embedding: a_embedding,
                         source_type: row.get("a_source_type"),
-                        created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+                        created_at: row.get("a_created_at"),
+                        last_referenced_at: row.get("a_last_referenced_at"),
                         reference_count: row.get("a_reference_count"),
                         reliability_score: row.get("a_reliability_score"),
                         owner_override: row.get("a_owner_override"),
@@ -467,8 +464,8 @@ impl VectorRepository {
                         content: row.get("b_content"),
                         embedding: b_embedding,
                         source_type: row.get("b_source_type"),
-                        created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+                        created_at: row.get("b_created_at"),
+                        last_referenced_at: row.get("b_last_referenced_at"),
                         reference_count: row.get("b_reference_count"),
                         reliability_score: row.get("b_reliability_score"),
                         owner_override: row.get("b_owner_override"),
@@ -1002,7 +999,6 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 pub struct RedisMemoryStore {
     client: redis::Client,
     namespace: String,
-    connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl std::fmt::Debug for RedisMemoryStore {
@@ -1019,22 +1015,14 @@ impl RedisMemoryStore {
         Ok(Self {
             client,
             namespace: namespace.to_string(),
-            connection: tokio::sync::OnceCell::new(),
         })
-    }
-
-    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        let conn = self.connection.get_or_try_init(|| async {
-            self.client.get_multiplexed_tokio_connection().await
-        }).await.map_err(|e| e.to_string())?;
-        Ok(conn.clone())
     }
 }
 
 #[async_trait]
 impl LongTermMemory for RedisMemoryStore {
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let key = format!("{}:memory", self.namespace);
         
         // Simple LRANGE to get recent memories. 
@@ -1051,7 +1039,7 @@ impl LongTermMemory for RedisMemoryStore {
     }
 
     async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
         let key = format!("{}:memory", self.namespace);
         
         let _: () = redis::cmd("LPUSH")
@@ -2431,60 +2419,6 @@ mod e2e_consolidation_tests {
     }
 
     #[tokio::test]
-    async fn test_e2e_tenant_isolation_comprehensive() {
-        let repo = setup_sqlite_repo().await;
-
-        let mut v1 = vec![0.0; 10];
-        v1[0] = 1.0;
-
-        let record_maya = EmbeddingRecord {
-            id: "maya_1".to_string(),
-            tenant_id: "org_maya".to_string(),
-            agent_id: "sales".to_string(),
-            content: "Maya's confidential sales data".to_string(),
-            embedding: v1.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: chrono::Utc::now(),
-            last_referenced_at: chrono::Utc::now(),
-            reference_count: 1,
-            reliability_score: 50,
-            owner_override: false,
-            metadata: None,
-        };
-
-        let record_bob = EmbeddingRecord {
-            id: "bob_1".to_string(),
-            tenant_id: "org_bob".to_string(),
-            agent_id: "sales".to_string(),
-            content: "Bob's confidential sales data".to_string(),
-            embedding: v1.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: chrono::Utc::now(),
-            last_referenced_at: chrono::Utc::now(),
-            reference_count: 1,
-            reliability_score: 50,
-            owner_override: false,
-            metadata: None,
-        };
-
-        repo.upsert(&record_maya).await.unwrap();
-        repo.upsert(&record_bob).await.unwrap();
-
-        let maya_results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
-        assert_eq!(maya_results.len(), 1);
-        assert_eq!(maya_results[0].tenant_id, "org_maya");
-        assert_eq!(maya_results[0].id, "maya_1");
-
-        let bob_results = repo.cross_department_search("org_bob", &v1, 10).await.unwrap();
-        assert_eq!(bob_results.len(), 1);
-        assert_eq!(bob_results[0].tenant_id, "org_bob");
-        assert_eq!(bob_results[0].id, "bob_1");
-
-        let unknown_results = repo.cross_department_search("org_unknown", &v1, 10).await.unwrap();
-        assert_eq!(unknown_results.len(), 0);
-    }
-
-    #[tokio::test]
     async fn test_e2e_stale_context_pruning() {
         let repo = setup_sqlite_repo().await;
 
@@ -2560,193 +2494,5 @@ mod e2e_consolidation_tests {
         assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
-    }
-
-    #[tokio::test]
-    async fn test_consolidation_edge_cases_and_overrides() {
-        let repo = setup_sqlite_repo().await;
-
-        let mut v1 = vec![0.0; 10];
-        v1[0] = 1.0;
-        let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99; // Trigger conflict
-
-        let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
-
-        let record_a = EmbeddingRecord {
-            id: "edge_a".to_string(),
-            tenant_id: "org_edge".to_string(),
-            agent_id: "test".to_string(),
-            content: "Same stats".to_string(),
-            embedding: v1.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: timestamp,
-            last_referenced_at: timestamp,
-            reference_count: 1,
-            reliability_score: 50,
-            owner_override: true, // both have override
-            metadata: None,
-        };
-
-        let record_b = EmbeddingRecord {
-            id: "edge_b".to_string(),
-            tenant_id: "org_edge".to_string(),
-            agent_id: "test".to_string(),
-            content: "Same stats too".to_string(),
-            embedding: v2.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: timestamp,
-            last_referenced_at: timestamp,
-            reference_count: 1,
-            reliability_score: 50,
-            owner_override: true, // both have override
-            metadata: None,
-        };
-
-        repo.upsert(&record_a).await.unwrap();
-        repo.upsert(&record_b).await.unwrap();
-
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert_eq!(resolved, 1, "Should resolve 1 conflict");
-
-        // The fallback logic selects the one with the smaller (or larger) ID depending on order,
-        // but it must be deterministic and result in 1 remaining record.
-        let results = repo.cross_department_search("org_edge", &v1, 10).await.unwrap();
-        assert_eq!(results.len(), 1, "Only one record should remain after resolving identical-stat conflict");
-    }
-}
-
-#[cfg(test)]
-mod additional_tests {
-    use super::*;
-    use std::str::FromStr;
-
-    #[tokio::test]
-    async fn test_cross_department_search_sqlite() {
-        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
-
-        let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                agent_id TEXT,
-                content TEXT NOT NULL,
-                embedding TEXT,
-                source_type TEXT NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                reference_count INTEGER DEFAULT 0,
-                reliability_score INTEGER DEFAULT 50,
-                owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
-
-        let repo = VectorRepository::new_sqlite(pool);
-
-        let v1 = vec![0.5; 1536];
-        let record = EmbeddingRecord {
-            id: "rec_cross_1".to_string(),
-            tenant_id: "org1".to_string(),
-            agent_id: "agent_sales".to_string(),
-            content: "Sales context".to_string(),
-            embedding: v1.clone(),
-            source_type: "NOTES".to_string(),
-            created_at: Utc::now(),
-            last_referenced_at: Utc::now(),
-            reference_count: 0,
-            reliability_score: 50,
-            owner_override: false,
-            metadata: None,
-        };
-        repo.upsert(&record).await.unwrap();
-
-        let results = repo.cross_department_search("org1", &v1, 10).await.unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].content, "Sales context");
-    }
-}
-
-#[cfg(test)]
-mod override_tests_resolve {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_resolve_conflict_propagates_override() {
-        // Setup SQLite repository
-        use std::str::FromStr;
-        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
-
-        let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                agent_id TEXT,
-                content TEXT NOT NULL,
-                embedding TEXT,
-                source_type TEXT NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                reference_count INTEGER DEFAULT 0,
-                reliability_score INTEGER DEFAULT 50,
-                owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
-
-        let repo = VectorRepository::new_sqlite(pool);
-
-        let mut v1 = vec![0.0; 10];
-        v1[0] = 1.0;
-        let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99;
-
-        let timestamp = chrono::Utc::now();
-
-        // record_a is winner, but has NO owner_override
-        let record_a = EmbeddingRecord {
-            id: "winner_a".to_string(),
-            tenant_id: "org_override".to_string(),
-            agent_id: "test".to_string(),
-            content: "Newer info".to_string(),
-            embedding: v1.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: timestamp + chrono::Duration::days(1),
-            last_referenced_at: timestamp + chrono::Duration::days(1),
-            reference_count: 1,
-            reliability_score: 90,
-            owner_override: false,
-            metadata: None,
-        };
-
-        // record_b is loser, but HAS owner_override
-        let record_b = EmbeddingRecord {
-            id: "loser_b".to_string(),
-            tenant_id: "org_override".to_string(),
-            agent_id: "test".to_string(),
-            content: "Older info".to_string(),
-            embedding: v2.clone(),
-            source_type: "NOTE".to_string(),
-            created_at: timestamp,
-            last_referenced_at: timestamp,
-            reference_count: 1,
-            reliability_score: 50,
-            owner_override: true,
-            metadata: None,
-        };
-
-        repo.upsert(&record_a).await.unwrap();
-        repo.upsert(&record_b).await.unwrap();
-
-        // Directly call resolve_conflict, bypassing determine_conflict_winner
-        // since determine_conflict_winner already naturally picks the one with owner_override as winner.
-        repo.resolve_conflict(&record_a, &record_b).await.unwrap();
-
-        let results = repo.cross_department_search("org_override", &v1, 10).await.unwrap();
-        assert_eq!(results.len(), 1, "Only winner_a should remain");
-        assert_eq!(results[0].id, "winner_a");
-        assert!(results[0].owner_override, "Winner should have inherited owner_override");
     }
 }

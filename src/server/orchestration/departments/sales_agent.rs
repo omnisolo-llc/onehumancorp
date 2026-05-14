@@ -45,7 +45,7 @@ impl Department for SalesAgent {
     fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
     }
 
-    async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
+    async fn query_memory(&self, query: &str) -> Result<Vec<String>, String> {
         let embedding = vec![0.5, 0.5, 0.5];
         // Note: We need a tenant_id here, but the trait signature doesn't provide one.
         // We'll pass a dummy one or extract it if available.

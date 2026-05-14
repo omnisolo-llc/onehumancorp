@@ -20,7 +20,6 @@ pub mod service;
 pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
-pub mod json_store;
 pub mod autogen;
 pub mod ralph_loop;
 
@@ -35,6 +34,7 @@ pub mod registry;
 pub mod plane;
 pub mod checkpointer;
 pub mod harness;
+pub mod legacy_mesh;
 pub mod langgraph;
 pub mod masking_tests;
 pub mod codex_runner;

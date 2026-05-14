@@ -31,7 +31,7 @@ impl CloudStateManager {
         _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state with FOR UPDATE
         let row = sqlx::query(
@@ -137,16 +137,15 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     ) -> Result<(), String> {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
-        let transition_future = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30).await?;
-            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
+        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
+        let lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
+            Ok(Ok(guard)) => guard,
+            Ok(Err(e)) => return Err(e),
+            Err(_) => return Err("Timeout acquiring lock".to_string()),
         };
 
-        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => Err(e),
-            Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
-        }
+        // Will drop automatically when block exits
+        self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
     }
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
@@ -162,7 +161,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         };
 
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
 
         let rows_future = sqlx::query(
             r#"

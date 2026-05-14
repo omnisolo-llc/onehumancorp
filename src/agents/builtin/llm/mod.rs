@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Role};
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse};
 
 #[async_trait]
 pub trait LlmClient: Send + Sync {
@@ -44,75 +44,12 @@ pub fn minify_chat_request(mut req: ChatRequest) -> ChatRequest {
         for tr in &mut m.tool_results {
             tr.content = minify_json_string(&tr.content);
         }
-    }
-    req
-}
-
-pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
-    if max_words == 0 {
-        return "".to_string();
-    }
-    let words: Vec<&str> = data.split_whitespace().collect();
-    if words.len() <= max_words {
-        return data.to_string();
-    }
-    words[..max_words].join(" ")
-}
-
-pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> ChatRequest {
-    if req.messages.len() <= 1 {
-        return req;
-    }
-
-    let mut current_words = 0;
-    let mut truncated_messages = Vec::new();
-    let mut system_messages = Vec::new();
-    let mut other_messages = req.messages;
-
-    // Separate system messages to ensure they are preserved
-    let mut i = 0;
-    while i < other_messages.len() {
-        if other_messages[i].role == Role::System {
-            system_messages.push(other_messages.remove(i));
-        } else {
-            i += 1;
+        for _tc in &mut m.tool_calls {
+            // Also minify tool_calls arguments if it's stored as string somehow.
+            // But here it is serde_json::Value. Wait, tool_calls arguments are usually Value.
+            // The JSON value itself gets minified when serialized.
         }
     }
-
-    // Always keep the last message
-    if let Some(last) = other_messages.pop() {
-        current_words += last.content.split_whitespace().count();
-        truncated_messages.push(last);
-    }
-
-    // Add previous messages until budget is reached
-    while let Some(msg) = other_messages.pop() {
-        let msg_words = msg.content.split_whitespace().count();
-        if current_words + msg_words > max_history_words && !truncated_messages.is_empty() {
-            // If this message would put us over budget, truncate it or stop
-            let remaining_budget = if max_history_words > current_words {
-                max_history_words - current_words
-            } else {
-                0
-            };
-            if remaining_budget > 20 {
-                let mut truncated_msg = msg;
-                truncated_msg.content = truncate_by_word_count(&truncated_msg.content, remaining_budget);
-                truncated_messages.push(truncated_msg);
-            }
-            break;
-        }
-        current_words += msg_words;
-        truncated_messages.push(msg);
-    }
-
-    truncated_messages.reverse();
-
-    // Prepend preserved system messages
-    let mut final_messages = system_messages;
-    final_messages.extend(truncated_messages);
-
-    req.messages = final_messages;
     req
 }
 
