@@ -27,6 +27,20 @@ validation:
         omitted_files: ignore
 nav:
   - Home: index.md
+  - Help Center:
+      - Help Center Home: help_center/index.md
+      - Getting Started: help_center/getting_started.md
+      - My Store: help_center/my_store.md
+      - Payments: help_center/payments.md
+      - AI Agents: help_center/ai_agents.md
+      - Marketing: help_center/marketing.md
+      - Account & Billing: help_center/account_billing.md
+      - Tooltip Registry: help_center/tooltip_registry.md
+      - Interactive Walkthroughs: help_center/walkthroughs.md
+      - AI-Powered Help Chat: help_center/help_chat.md
+      - Video Tutorials: help_center/video_tutorials.md
+      - What's New: help_center/whats_new.md
+      - API Reference: help_center/api_reference.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
       - Universal Transport Bridge: architecture/universal_transport_bridge.md
