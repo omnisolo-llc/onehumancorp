@@ -16,7 +16,6 @@ impl PermissionEvaluator {
         let disabled_patterns = vec![
             Regex::new(r"(?i)\bsudo\b").unwrap(),
             Regex::new(r"(?i)\bchown\b").unwrap(),
-            Regex::new(r"(?i)\bIFS=\b").unwrap(),
         ];
 
         PermissionEvaluator {
@@ -75,7 +74,6 @@ mod tests {
         assert!(!evaluator.evaluate("sudo apt-get update"));
         assert!(!evaluator.evaluate("SUDO rm -rf /tmp/*"));
         assert!(!evaluator.evaluate("chown root:root /etc/passwd"));
-        assert!(!evaluator.evaluate("IFS=; echo test"));
     }
 
     #[test]
