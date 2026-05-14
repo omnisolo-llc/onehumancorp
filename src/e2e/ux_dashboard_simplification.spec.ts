@@ -20,8 +20,10 @@ test.describe('Dashboard UX Simplification (Grandmother Test)', () => {
     const testOrder = page.locator('text="Test Order"');
     await expect(testOrder.first()).toBeVisible();
 
-    // 4. Check "Tasks for You to Approve" is visible instead of "Agent Activity Feed"
-    const oldFeedText = page.locator('text="Agent Activity Feed"');
+    // 4. Check "See what your AI is doing" is visible instead of "View AI Team Activity"
+    const seeAiActivity = page.locator('text="See what your AI is doing"');
+    await expect(seeAiActivity.first()).toBeVisible();
+    const oldFeedText = page.locator('text="View AI Team Activity"');
     await expect(oldFeedText).toHaveCount(0);
 
     // 5. Ensure "AutoDream Memory Pipeline" is not visible by default (hidden by is_advanced)
