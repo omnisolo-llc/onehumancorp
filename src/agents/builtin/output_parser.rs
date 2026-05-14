@@ -62,7 +62,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
                         Ok(parsed) => return Ok(parsed),
                         Err(e) => {
                             if attempt >= max_retries {
-                                return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
+                                return Err(ToolError::LlmRecoverable(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
                             }
 
                             // Let the LLM know the tool call arguments were invalid
@@ -89,7 +89,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
                     }
                 } else {
                     if attempt >= max_retries {
-                        return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: Missing 'data' parameter in structured_output tool.", max_retries)));
+                        return Err(ToolError::LlmRecoverable(format!("Output parsing failed after {} retries. Last error: Missing 'data' parameter in structured_output tool.", max_retries)));
                     }
 
                     let mut assistant_msg = msg.clone();
@@ -155,7 +155,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
             Ok(parsed) => return Ok(parsed),
             Err(e) => {
                 if attempt >= max_retries {
-                    return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
+                    return Err(ToolError::LlmRecoverable(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
                 }
 
                 current_req.messages.push(Message::assistant(completion));
@@ -289,10 +289,10 @@ mod tests {
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::Fatal(msg)) = result {
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Output parsing failed after 2 retries"));
         } else {
-            panic!("Expected Fatal error");
+            panic!("Expected LlmRecoverable error");
         }
     }
 
@@ -335,10 +335,10 @@ mod tests {
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::Fatal(msg)) = result {
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Output parsing failed after 2 retries"));
         } else {
-            panic!("Expected Fatal error");
+            panic!("Expected LlmRecoverable error");
         }
     }
 }
