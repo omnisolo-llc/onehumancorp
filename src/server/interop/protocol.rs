@@ -75,6 +75,7 @@ impl InteropProtocol {
         let msg = Message {
             topic: "system:state_handoff".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
 
         let mut retries = 0;
@@ -142,6 +143,7 @@ impl InteropProtocol {
                         let ack_msg = Message {
                             topic: format!("system:health_ack:{}", decoded.source_node_id),
                             payload: buf,
+            msg_id: "".to_string(),
                         };
                         let bus_clone = bus.clone();
                         tokio::spawn(async move {
@@ -193,6 +195,7 @@ impl InteropProtocol {
         let msg = Message {
             topic: "system:health_ping".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
         self.bus.publish(msg).await?;
 
@@ -241,6 +244,7 @@ impl InteropProtocol {
         let msg = Message {
             topic: format!("system:job_dispatch:{}", tenant_id),
             payload: buf,
+            msg_id: "".to_string(),
         };
 
         // Add internal retry for publishing to ensure dispatch survives partitions
@@ -296,6 +300,7 @@ impl InteropProtocol {
                         let ack_msg = Message {
                             topic: format!("system:job_ack:{}", decoded.job_id),
                             payload: buf,
+            msg_id: "".to_string(),
                         };
                         let bus_clone = bus.clone();
                         tokio::spawn(async move {
@@ -337,6 +342,7 @@ impl InteropProtocol {
         let msg = Message {
             topic: format!("system:job_status:{}", job_id),
             payload: buf,
+            msg_id: "".to_string(),
         };
 
         // Add internal retry for publishing to ensure reporting survives partitions
@@ -569,6 +575,7 @@ mod tests {
         let msg = Message {
             topic: "system:health_ping".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
         bus.publish(msg).await.unwrap();
 
@@ -615,6 +622,7 @@ mod tests {
         let msg = Message {
             topic: "system:job_dispatch:tenant_x".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
         bus.publish(msg).await.unwrap();
 
@@ -737,6 +745,9 @@ mod tests {
         async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
             Ok(Box::new(|| {}))
         }
+        async fn publish_with_ack(&self, _topic: String, _payload: Vec<u8>) -> Result<(), String> {
+            Ok(())
+        }
     }
 
     #[tokio::test]
@@ -795,6 +806,7 @@ mod tests {
         let msg = Message {
             topic: "system:state_handoff".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
+            msg_id: "".to_string(),
         };
         bus.publish(msg).await.unwrap();
 
@@ -825,6 +837,7 @@ mod tests {
         let msg = Message {
             topic: "system:health_ping".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
+            msg_id: "".to_string(),
         };
         bus.publish(msg).await.unwrap();
 
@@ -855,6 +868,7 @@ mod tests {
         let msg = Message {
             topic: "system:job_dispatch:tenant_x".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
+            msg_id: "".to_string(),
         };
         bus.publish(msg).await.unwrap();
 
@@ -884,6 +898,7 @@ mod tests {
         let msg = Message {
             topic: "system:job_status:job_status_123".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
+            msg_id: "".to_string(),
         };
         bus.publish(msg).await.unwrap();
 
@@ -927,6 +942,7 @@ mod tests {
         bus.publish(crate::msgbus::Message {
             topic: "system:state_handoff".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
@@ -965,6 +981,7 @@ mod tests {
         bus.publish(crate::msgbus::Message {
             topic: "system:health_ping".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
@@ -1005,6 +1022,7 @@ mod tests {
         bus.publish(crate::msgbus::Message {
             topic: "system:job_dispatch:t1".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         }).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
@@ -1033,6 +1051,7 @@ mod tests {
                     b.publish(crate::msgbus::Message {
                         topic: format!("system:health_ack:{}", ping.source_node_id),
                         payload: buf,
+            msg_id: "".to_string(),
                     }).await.unwrap();
                 });
             }
@@ -1064,6 +1083,7 @@ mod tests {
                     b.publish(crate::msgbus::Message {
                         topic: format!("system:job_ack:{}", dispatch.job_id),
                         payload: buf,
+            msg_id: "".to_string(),
                     }).await.unwrap();
                 });
             }

@@ -9,6 +9,8 @@ pub struct Message {
     pub topic: String,
     #[prost(bytes, tag = "2")]
     pub payload: Vec<u8>,
+    #[prost(string, tag = "3")]
+    pub msg_id: String,
 }
 
 #[async_trait]
@@ -22,6 +24,7 @@ pub trait DistributedLock: Send + Sync {
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn publish_with_ack(&self, topic: String, payload: Vec<u8>) -> Result<(), String>;
 }
 
 #[allow(dead_code)]
@@ -70,6 +73,46 @@ impl Bus for MemoryBus {
         });
         
         Ok(cancel)
+    }
+
+    async fn publish_with_ack(&self, topic: String, payload: Vec<u8>) -> Result<(), String> {
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("system:job_ack:{}", msg_id);
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let cancel = self.subscribe(ack_topic, Box::new(move |_msg| {
+            let _ = tx.send(());
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 200;
+
+        loop {
+            if retries > 10 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            let msg = Message {
+                topic: topic.clone(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            };
+
+            if let Err(e) = self.publish(msg).await {
+                cancel();
+                return Err(e);
+            }
+
+            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff = std::cmp::min(backoff * 2, 2000);
+        }
     }
 }
 
@@ -169,7 +212,7 @@ impl Bus for RedisBus {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
                     use prost::Message as ProstMessage;
-                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
+                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![], msg_id: "".to_string() });
                     handler(m);
                 }
             }
@@ -180,6 +223,46 @@ impl Bus for RedisBus {
         });
 
         Ok(cancel)
+    }
+
+    async fn publish_with_ack(&self, topic: String, payload: Vec<u8>) -> Result<(), String> {
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("system:job_ack:{}", msg_id);
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let cancel = self.subscribe(ack_topic, Box::new(move |_msg| {
+            let _ = tx.send(());
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 200;
+
+        loop {
+            if retries > 10 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            let msg = Message {
+                topic: topic.clone(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            };
+
+            if let Err(e) = self.publish(msg).await {
+                cancel();
+                return Err(e);
+            }
+
+            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff = std::cmp::min(backoff * 2, 2000);
+        }
     }
 }
 
@@ -278,7 +361,7 @@ impl IpcBus {
                         last_id = *id;
                         if let Some(tx) = s.get(topic) {
                             use prost::Message as ProstMessage;
-                            let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
+                            let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![], msg_id: "".to_string() });
                             let _ = tx.send(m);
                         }
                     }
@@ -344,6 +427,46 @@ impl Bus for IpcBus {
 
         Ok(cancel)
     }
+
+    async fn publish_with_ack(&self, topic: String, payload: Vec<u8>) -> Result<(), String> {
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("system:job_ack:{}", msg_id);
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let cancel = self.subscribe(ack_topic, Box::new(move |_msg| {
+            let _ = tx.send(());
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 200;
+
+        loop {
+            if retries > 10 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            let msg = Message {
+                topic: topic.clone(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            };
+
+            if let Err(e) = self.publish(msg).await {
+                cancel();
+                return Err(e);
+            }
+
+            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff = std::cmp::min(backoff * 2, 2000);
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -403,7 +526,7 @@ impl Bus for NatsBus {
         let worker = tokio::spawn(async move {
             while let Some(msg) = subscriber.next().await {
                 use prost::Message as ProstMessage;
-                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
+                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![], msg_id: "".to_string() });
                 handler(m);
             }
         });
@@ -413,6 +536,46 @@ impl Bus for NatsBus {
         });
 
         Ok(cancel)
+    }
+
+    async fn publish_with_ack(&self, topic: String, payload: Vec<u8>) -> Result<(), String> {
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("system:job_ack:{}", msg_id);
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let cancel = self.subscribe(ack_topic, Box::new(move |_msg| {
+            let _ = tx.send(());
+        })).await?;
+
+        let mut retries = 0;
+        let mut backoff = 200;
+
+        loop {
+            if retries > 10 {
+                cancel();
+                return Err("Failed to receive ack after retries".to_string());
+            }
+
+            let msg = Message {
+                topic: topic.clone(),
+                payload: payload.clone(),
+                msg_id: msg_id.clone(),
+            };
+
+            if let Err(e) = self.publish(msg).await {
+                cancel();
+                return Err(e);
+            }
+
+            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
+                cancel();
+                return Ok(());
+            }
+
+            retries += 1;
+            backoff = std::cmp::min(backoff * 2, 2000);
+        }
     }
 }
 
@@ -543,6 +706,7 @@ impl StateHandoffManager {
         let msg = Message {
             topic: "system:state_handoff".to_string(),
             payload,
+            msg_id: "".to_string(),
         };
         self.bus.publish(msg).await
     }
@@ -582,6 +746,7 @@ impl HealthMonitor {
         let msg = Message {
             topic: "system:health_ping".to_string(),
             payload: buf,
+            msg_id: "".to_string(),
         };
 
         if let Err(e) = self.bus.publish(msg).await {
@@ -625,6 +790,7 @@ mod tests {
         let msg = Message {
             topic: "test_topic".to_string(),
             payload: vec![],
+            msg_id: "".to_string(),
         };
         
         bus.publish(msg).await.unwrap();
@@ -660,6 +826,7 @@ mod tests {
         let msg = Message {
             topic: "test_ipc_topic".to_string(),
             payload: vec![],
+            msg_id: "".to_string(),
         };
 
         bus.publish(msg).await.unwrap();
@@ -694,6 +861,7 @@ mod tests {
         let msg = Message {
             topic: "test_redis_topic".to_string(),
             payload: vec![],
+            msg_id: "".to_string(),
         };
 
         bus.publish(msg).await.unwrap();
@@ -726,6 +894,7 @@ mod tests {
                         let _ = bus_inner.publish(Message {
                             topic: ack_topic,
                             payload: vec![],
+            msg_id: "".to_string(),
                         }).await;
                     });
                 }
@@ -783,7 +952,8 @@ mod tests {
                     let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
                     let ack_msg = Message {
                         topic: ack_topic,
-                        payload: vec![], // The content of the ack is currently ignored by ping()
+                        payload: vec![],
+            msg_id: "".to_string(), // The content of the ack is currently ignored by ping()
                     };
                     let bus_inner = bus_clone.clone();
                     tokio::spawn(async move {
@@ -870,6 +1040,19 @@ mod tests {
         bus.release_lock(resource, owner1).await.unwrap();
         assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
     }
+
+    #[tokio::test]
+    async fn test_redis_bus_publish_with_ack_timeout() {
+        let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_string());
+        let bus = match RedisBus::new(&url).await {
+            Ok(b) => b,
+            Err(_) => return,
+        };
+
+        let result = bus.publish_with_ack("test_redis_ack_topic".to_string(), b"hello".to_vec()).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Failed to receive ack after retries");
+    }
 }
 
 #[cfg(test)]
@@ -891,6 +1074,16 @@ mod tests_ipc {
 
         let acquired3 = bus.acquire_lock("test_res", "owner2", 10).await.unwrap();
         assert!(acquired3);
+    }
+
+    #[tokio::test]
+    async fn test_ipc_bus_publish_with_ack_timeout() {
+        let db_url = "sqlite::memory:";
+        let bus = IpcBus::new(db_url).await.unwrap();
+
+        let result = bus.publish_with_ack("test_ipc_ack_topic".to_string(), b"hello".to_vec()).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Failed to receive ack after retries");
     }
 }
 
@@ -917,6 +1110,7 @@ mod memory_bus_tests {
         let msg = Message {
             topic: "test_topic".to_string(),
             payload: b"hello".to_vec(),
+            msg_id: "".to_string(),
         };
 
         bus.publish(msg).await.unwrap();
@@ -939,5 +1133,18 @@ mod memory_bus_tests {
 
         let acquired_after_release = bus.acquire_lock("resource1", "owner2", 10).await.unwrap();
         assert!(acquired_after_release);
+    }
+
+    #[tokio::test]
+    async fn test_memory_bus_publish_with_ack_timeout() {
+        let bus = Arc::new(MemoryBus::new());
+
+        let handler = Box::new(move |_msg: Message| {});
+
+        let _cancel = bus.subscribe("test_ack_topic".to_string(), handler).await.unwrap();
+
+        let result = bus.publish_with_ack("test_ack_topic".to_string(), b"hello".to_vec()).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Failed to receive ack after retries");
     }
 }

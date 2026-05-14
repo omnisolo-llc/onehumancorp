@@ -25,14 +25,14 @@ impl DepartmentService {
                 tokio::spawn(async move {
                     let _ = bus.publish(Message {
                         topic: "system:activity".to_string(),
-                        payload: "Operations processed OrderReceived".as_bytes().to_vec(),
+                        payload: "Operations processed OrderReceived".as_bytes().to_vec(), msg_id: "".to_string(),
                     }).await;
 
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
                     let _ = bus.publish(Message {
                         topic: "system:activity".to_string(),
-                        payload: "Customer Success drafted confirmation".as_bytes().to_vec(),
+                        payload: "Customer Success drafted confirmation".as_bytes().to_vec(), msg_id: "".to_string(),
                     }).await;
                 });
             }
