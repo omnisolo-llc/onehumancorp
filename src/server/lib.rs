@@ -1607,6 +1607,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
+                        @media (max-width: 375px) { .screen { padding: 10px; margin: 10px auto; } h1 { font-size: 1.5rem; } }
                         body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
                         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
@@ -1900,8 +1901,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="nextStep('9_5')">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep('9_5')">🔗 Connect Custom Domain</button>
+                        </div>
+                        <div id="step-9_5" style="display: none;">
+                            <h1>Connect Payments</h1>
+                            <button onclick="nextStep(10)">Connect Stripe</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>

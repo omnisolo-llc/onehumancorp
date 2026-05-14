@@ -388,3 +388,73 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 });
 
+test.describe('End-to-End User Launch Business Flow', () => {
+  test('should complete the entire User Launch Business Flow including Stripe connection', async ({ page }) => {
+    // Navigate to dashboard/login
+    await page.goto('/login');
+    await page.click('button:has-text("Don\'t have an account? Sign Up")');
+    await page.fill('input[placeholder="Email or Username"]', 'newbizowner@example.com');
+    await page.fill('input[placeholder="Password"]', 'securepassword123');
+    await page.click('button:has-text("Sign Up")');
+
+    // Wait for the setup wizard modal/screen to open by checking for its contents
+    await expect(page.locator('text="Your business, live in minutes."').first()).toBeVisible({ timeout: 5000 });
+
+    // Step 1: Start
+    await page.click('text=🚀 Start My Business');
+
+    // Step 2: Business Type
+    await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
+    await page.click('text=🛒 Online Store');
+    await page.click('text=Next →');
+
+    // Step 3: Business Name
+    await expect(page.locator('text=Give your business a name')).toBeVisible();
+    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Maya\'s Amazing Cakes');
+    await page.click('text=Next →');
+
+    // Step 4: What do you sell?
+    await expect(page.locator('text=What do you sell?')).toBeVisible();
+    await page.click('text=📦 Physical products');
+    await page.click('text=Next →');
+
+    // Step 5: Payments
+    await expect(page.locator('text=How do you want to receive payments?')).toBeVisible();
+    await page.click('text=🌐 Online only');
+    await page.click('text=Next →');
+
+    // Step 6: Account creation (already filled in some flows, but doing it again per existing tests)
+    await expect(page.locator('text=Create your account')).toBeVisible();
+    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
+    await page.fill('input[placeholder="you@email.com"]', 'maya.owner@example.com');
+    await page.fill('input[placeholder="Password"]', 'securepassword123');
+    await page.click('text=Next →');
+
+    // Step 7: Template
+    await expect(page.locator('text=Choose a Template')).toBeVisible();
+    await page.click('text=✨ Modern');
+    await page.click('text=Next →');
+
+    // Step 8: First product
+    await expect(page.locator('text=Add your first product or service')).toBeVisible();
+    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Vegan Chocolate Cake');
+    await page.fill('input[placeholder="e.g. 50.00"]', '45.00');
+    await page.click('text=Next →');
+
+    // Step 9: Domain
+    await expect(page.locator('text=Choose a Domain')).toBeVisible();
+    await page.click('text=🌐 Free OHC Domain');
+    // We intentionally don't click "Next ->" for Domain step if it goes to 9_5 immediately
+
+    // Step 9_5: Connect Payments (Stripe)
+    await expect(page.locator('text=Connect Payments')).toBeVisible();
+    await page.click('text=Connect Stripe');
+
+    // Step 10: Launch
+    await expect(page.locator('text="Ready to launch!"')).toBeVisible();
+    await page.click('text="Publish my business →"');
+
+    // Wait for the success state/confetti
+    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+});
