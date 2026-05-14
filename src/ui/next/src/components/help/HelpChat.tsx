@@ -58,16 +58,7 @@ export default function HelpChat() {
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', marginTop: '10px' }}>
-                        {reply && (
-                            <div className="reply" style={{ lineHeight: "1.5" }}>
-                                {reply}
-                                {articleLink && (
-                                    <div style={{ marginTop: "8px" }}>
-                                        <a href={articleLink} style={{ color: "#0070f3", textDecoration: "none", fontWeight: "bold" }}>Read the full article →</a>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        {reply && <div className="reply" style={{lineHeight: "1.5"}}>{reply} {articleLink && <div style={{marginTop: "8px"}}><a href={articleLink} style={{color: "#0070f3", textDecoration: "none", fontWeight: "bold"}}>Read the full article →</a></div>}</div>}
                     </div>
 
                     <form onSubmit={sendChat} style={{ display: 'flex', marginTop: '10px' }}>

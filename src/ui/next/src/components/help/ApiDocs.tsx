@@ -23,7 +23,7 @@ export default function ApiDocs() {
             }}>
                 {specUrl && (
                     <iframe
-                        src={`https://petstore.swagger.io/?url=${encodeURIComponent(specUrl)}`}
+                        src={`https://editor.swagger.io/?url=https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml`}
                         width="100%"
                         height="100%"
                         frameBorder="0"
