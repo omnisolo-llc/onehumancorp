@@ -10,6 +10,7 @@ filegroup(
         "routing.rs",
         "auth.rs",
         "partition_healer.rs",
+        "diagnostics.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

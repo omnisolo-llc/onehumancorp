@@ -6,3 +6,4 @@ pub mod crdt;
 pub mod routing;
 pub mod auth;
 pub mod partition_healer;
+pub mod diagnostics;
