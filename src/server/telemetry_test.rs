@@ -324,7 +324,7 @@ mod tests {
                                lower_line.contains("error!") ||
                                lower_line.contains("warn!") ||
                                lower_line.contains("debug!") ||
-                               lower_line.contains("tracing::") ||
+                               lower_line.contains("tracing::") || lower_line.contains("println!(") || lower_line.contains("eprintln!(") || lower_line.contains("dbg!(") ||
                                lower_line.contains("println!") ||
                                lower_line.contains("log.print") ||
                                lower_line.contains("fmt.errorf") || lower_line.contains("fmt.error") || lower_line.contains("log.printf") || lower_line.contains("fmt.print") ||
@@ -560,4 +560,24 @@ fn test_redact_interface_pii_malicious_payloads() {
     assert_eq!(redacted["array_of_evil"][0]["email"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
+}
+
+#[test]
+fn test_standalone_telemetry_disabled_by_default() {
+    temp_env::with_vars(
+        [
+            ("OHC_STANDALONE", Some("true")),
+            ("STANDALONE_MODE", Some("true")),
+            ("OHC_TELEMETRY_ENABLED", None::<&str>),
+            ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+        ],
+        || {
+            let config = ::server_config::load().unwrap();
+
+            // If OHC_TELEMETRY_ENABLED is not set, it should default to false in standalone mode.
+            let should_start_telemetry = config.telemetry_enabled;
+
+            assert_eq!(should_start_telemetry, false);
+        },
+    );
 }
