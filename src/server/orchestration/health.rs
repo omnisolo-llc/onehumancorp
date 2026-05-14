@@ -20,7 +20,6 @@ pub async fn run_health_monitor(
         };
 
         if !ping_ok {
-            tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
         }
 
         // Hybrid mode health check
@@ -47,7 +46,6 @@ pub async fn run_health_monitor(
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
                 if agents.is_empty() {
-                    tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
@@ -69,7 +67,6 @@ pub async fn run_health_monitor(
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
-                        tracing::trace!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
@@ -80,10 +77,8 @@ pub async fn run_health_monitor(
                 }
             }
             Ok(Err(e)) => {
-                tracing::trace!("HEALTH MONITOR: Failed to get active agents: {}", e);
             }
             Err(_) => {
-                tracing::trace!("HEALTH MONITOR: Timed out waiting for active agents list from transport");
             }
         }
     }

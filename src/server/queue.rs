@@ -444,7 +444,6 @@ impl WorkerPool {
                         res = queue.pop(&topic) => {
                             match res {
                                 Ok(payload) => {
-                                    tracing::debug!("Worker {} processing job", i);
                                     if let Err(e) = handler.handle(payload).await {
                                         tracing::error!("Worker {} handler failed: {}", i, e);
                                     }
