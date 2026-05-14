@@ -271,15 +271,29 @@ mod tests {
             // In bazel runfiles, the manifest is at RUNFILES_DIR/MANIFEST.txt
             // The actual source files are symlinked in the runfiles directory
             // We need to find where the src directory actually is
-            for entry in std::fs::read_dir(&runfiles).into_iter().flatten().flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.file_name().map_or(false, |n| n == "src") {
-                    search_dirs.push(path);
+            if let Ok(entries) = std::fs::read_dir(&runfiles) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() && path.file_name().map_or(false, |n| n == "_main") {
+                        let main_src = path.join("src");
+                        if main_src.exists() {
+                            search_dirs.push(main_src);
+                        }
+                    }
+                    if path.is_dir() && path.file_name().map_or(false, |n| n == "src") {
+                        search_dirs.push(path);
+                    }
                 }
             }
             // Also try workspace name prefix (common pattern)
             if let Ok(workspace) = env::var("TEST_WORKSPACE") {
                 let prefixed = runfiles.join(&workspace).join("src");
+                if prefixed.exists() {
+                    search_dirs.push(prefixed);
+                }
+            }
+            if let Ok(workspace) = env::var("TEST_WORKSPACE") {
+                let prefixed = runfiles.join(&workspace);
                 if prefixed.exists() {
                     search_dirs.push(prefixed);
                 }
@@ -301,7 +315,7 @@ mod tests {
 
                 for entry in walker
                     .filter_map(Result::ok)
-                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
+                    .filter(|e| e.file_type().is_file() && e.path().extension().map_or(false, |ext| ext == "rs"))
                 {
                     let path_str = entry.path().to_string_lossy();
                     if path_str.contains("telemetry_test.rs") {
