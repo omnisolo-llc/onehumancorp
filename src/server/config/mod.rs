@@ -94,9 +94,10 @@ pub trait ModeEnforcer {
 
 pub struct StandaloneModeEnforcer;
 
-#[cfg(feature = "standalone")]
+
 impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
+    if !cfg.standalone { return cfg; }
     if let Some(db_url) = &cfg.database_url {
         if db_url != "sqlite://ohc-standalone.db" {
             tracing::info!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
@@ -170,12 +171,8 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 }
 
 
-#[cfg(not(feature = "standalone"))]
-impl ModeEnforcer for StandaloneModeEnforcer {
-    fn enforce(&self, cfg: AppConfig) -> AppConfig {
-        cfg
-    }
-}
+
+
 
 
 #[cfg(test)]

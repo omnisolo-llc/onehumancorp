@@ -234,8 +234,11 @@ impl SyncService for MySyncService {
         let deltas = req.deltas;
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-        let tenant_id = parsed.0;
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let mut tenant_id = parsed.0;
+        if tenant_id.is_empty() {
+             return Err(tonic::Status::unauthenticated("missing tenant identity in session"));
+        }
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
