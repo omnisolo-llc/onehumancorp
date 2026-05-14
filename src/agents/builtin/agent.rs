@@ -27,6 +27,7 @@ pub enum AgentEvent {
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
+    pub enable_anthropic_dumb_loop: bool,
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     pub max_retries: usize,
@@ -77,6 +78,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
 impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
+            enable_anthropic_dumb_loop: false,
             agent_id: "default-agent".to_string(),
             max_retries: 2,
             model: String::new(),
@@ -1061,7 +1063,14 @@ impl Agent {
                 let _ = tx.send(event);
             };
 
-            if let Err(e) = self.run(&cfg, &initial_message, &mut on_event).await {
+            // Anthropic Claude Agent SDK Archetype Integration
+            if cfg.enable_anthropic_dumb_loop {
+                let session_tools = self.tools.clone();
+                let orchestrator = crate::dumb_loop::DumbLoopOrchestrator::new(self.clone());
+                if let Err(e) = orchestrator.run_continuous(&cfg, &initial_message, &session_tools, &mut on_event).await {
+                    let _ = tx.send(AgentEvent::TaskError { error: format!("Dumb Loop run failed: {}", e) });
+                }
+            } else if let Err(e) = self.run(&cfg, &initial_message, &mut on_event).await {
                 // Propagate the error through the stream so it is not silently swallowed.
                 let _ = tx.send(AgentEvent::TaskError { error: format!("Agent run failed: {}", e) });
             }
@@ -2324,7 +2333,7 @@ impl Agent {
         Ok(())
     }
 
-    async fn execute_tool(
+    pub async fn execute_tool(
         &self,
         tc: &ToolCall,
         session_tools: &[Tool],
