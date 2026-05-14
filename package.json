@@ -12,6 +12,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@bazel/bazelisk": "^1.28.1",
     "@playwright/test": "^1.59.1",
     "@testing-library/react": "^16.3.2",
     "@types/ink": "^2.0.3",
@@ -30,5 +31,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": []
+  },
+  "scripts": {
+    "postinstall": "mkdir -p /usr/local/bin && cp node_modules/.bin/bazelisk /usr/local/bin/bazelisk || sudo cp node_modules/.bin/bazelisk /usr/local/bin/bazelisk"
   }
 }
