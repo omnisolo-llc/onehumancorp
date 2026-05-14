@@ -19,8 +19,8 @@ pub struct SharedTask {
     pub priority: String,
     pub payload: String,
     pub locked_until: Option<DateTime<Utc>>,
-    pub ultraplan_phase: Option<String>,
-    pub deliberation_log: Option<String>,
+    pub roadmap_step: Option<String>,
+    pub thinking_history: Option<String>,
     pub depth: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -142,8 +142,8 @@ impl TaskManager {
             priority,
             payload: String::new(),
             locked_until: None,
-            ultraplan_phase: Some("PROPOSE".to_string()),
-            deliberation_log: Some("[]".to_string()),
+            roadmap_step: Some("PROPOSE".to_string()),
+            thinking_history: Some("[]".to_string()),
             depth: None,
             created_at: now,
             updated_at: now,
@@ -513,7 +513,7 @@ mod tests {
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
 
         let _ = sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await;
 
         let db = std::sync::Arc::new(crate::db::DB {

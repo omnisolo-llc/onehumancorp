@@ -26,16 +26,16 @@ async fn test_task_decomposition_service() {
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
-                    dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    dependencies JSONB NOT NULL DEFAULT '[]',
                     title TEXT NOT NULL,
                     description TEXT,
                     assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
-                    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    payload JSONB NOT NULL DEFAULT '{}',
                     locked_until TIMESTAMPTZ,
-                    ultraplan_phase TEXT,
-                    deliberation_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    roadmap_step TEXT,
+                    thinking_history JSONB NOT NULL DEFAULT '[]',
                     depth INT,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -44,6 +44,7 @@ async fn test_task_decomposition_service() {
                     proposed_content TEXT
                 );
 
+                CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT); CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT);
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
                     task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
@@ -74,8 +75,8 @@ async fn test_task_decomposition_service() {
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
                     locked_until TIMESTAMP,
-                    ultraplan_phase TEXT,
-                    deliberation_log TEXT NOT NULL DEFAULT '[]',
+                    roadmap_step TEXT,
+                    thinking_history TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -84,6 +85,7 @@ async fn test_task_decomposition_service() {
                     proposed_content TEXT
                 );
 
+                CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT); CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT);
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
                     task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
@@ -130,8 +132,8 @@ async fn test_task_decomposition_service() {
         priority: "P1".to_string(),
         payload: "{}".to_string(),
         locked_until: None,
-        ultraplan_phase: None,
-        deliberation_log: None,
+        roadmap_step: None,
+        thinking_history: None,
         depth: Some(1),
         created_at: now,
         updated_at: now,
@@ -153,8 +155,8 @@ async fn test_task_decomposition_service() {
         priority: "P1".to_string(),
         payload: "{}".to_string(),
         locked_until: None,
-        ultraplan_phase: None,
-        deliberation_log: None,
+        roadmap_step: None,
+        thinking_history: None,
         depth: Some(1),
         created_at: now,
         updated_at: now,
@@ -191,16 +193,16 @@ async fn test_task_decomposition_dag_blocked() {
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
-                    dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    dependencies JSONB NOT NULL DEFAULT '[]',
                     title TEXT NOT NULL,
                     description TEXT,
                     assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
-                    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    payload JSONB NOT NULL DEFAULT '{}',
                     locked_until TIMESTAMPTZ,
-                    ultraplan_phase TEXT,
-                    deliberation_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    roadmap_step TEXT,
+                    thinking_history JSONB NOT NULL DEFAULT '[]',
                     depth INT,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -227,8 +229,8 @@ async fn test_task_decomposition_dag_blocked() {
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
                     locked_until TIMESTAMP,
-                    ultraplan_phase TEXT,
-                    deliberation_log TEXT NOT NULL DEFAULT '[]',
+                    roadmap_step TEXT,
+                    thinking_history TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -240,6 +242,7 @@ async fn test_task_decomposition_dag_blocked() {
             ).execute(sqlite_pool).await.unwrap();
             sqlx::query(
                 r#"
+                CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT); CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT);
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
                     task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
@@ -283,8 +286,8 @@ async fn test_task_decomposition_dag_blocked() {
         priority: "P1".to_string(),
         payload: "{}".to_string(),
         locked_until: None,
-        ultraplan_phase: None,
-        deliberation_log: None,
+        roadmap_step: None,
+        thinking_history: None,
         depth: Some(1),
         created_at: now,
         updated_at: now,
@@ -306,8 +309,8 @@ async fn test_task_decomposition_dag_blocked() {
         priority: "P1".to_string(),
         payload: "{}".to_string(),
         locked_until: None,
-        ultraplan_phase: None,
-        deliberation_log: None,
+        roadmap_step: None,
+        thinking_history: None,
         depth: Some(1),
         created_at: now,
         updated_at: now,
@@ -346,16 +349,16 @@ async fn test_task_decomposition_service_fail_task() {
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
                     parent_plan_id TEXT NOT NULL,
-                    dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    dependencies JSONB NOT NULL DEFAULT '[]',
                     title TEXT NOT NULL,
                     description TEXT,
                     assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
                     priority TEXT NOT NULL,
-                    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    payload JSONB NOT NULL DEFAULT '{}',
                     locked_until TIMESTAMPTZ,
-                    ultraplan_phase TEXT,
-                    deliberation_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    roadmap_step TEXT,
+                    thinking_history JSONB NOT NULL DEFAULT '[]',
                     depth INT,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -364,6 +367,7 @@ async fn test_task_decomposition_service_fail_task() {
                     proposed_content TEXT
                 );
 
+                CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT); CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT);
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
                     task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
@@ -391,8 +395,8 @@ async fn test_task_decomposition_service_fail_task() {
                     priority TEXT NOT NULL,
                     payload TEXT NOT NULL DEFAULT '{}',
                     locked_until TIMESTAMP,
-                    ultraplan_phase TEXT,
-                    deliberation_log TEXT NOT NULL DEFAULT '[]',
+                    roadmap_step TEXT,
+                    thinking_history TEXT NOT NULL DEFAULT '[]',
                     depth INTEGER,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -401,6 +405,7 @@ async fn test_task_decomposition_service_fail_task() {
                     proposed_content TEXT
                 );
 
+                CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT); CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT);
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
                     task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
@@ -444,8 +449,8 @@ async fn test_task_decomposition_service_fail_task() {
         priority: "P1".to_string(),
         payload: "{}".to_string(),
         locked_until: None,
-        ultraplan_phase: None,
-        deliberation_log: None,
+        roadmap_step: None,
+        thinking_history: None,
         depth: Some(1),
         created_at: now,
         updated_at: now,

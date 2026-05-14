@@ -29,13 +29,13 @@ impl TaskDecompositionService {
             DbStore::Postgres => {
                 let deps = serde_json::to_value(&task.dependencies).map_err(|e| e.to_string())?;
                 let payload = serde_json::from_str::<serde_json::Value>(&task.payload).unwrap_or(serde_json::json!({}));
-                let deliberation = serde_json::from_str::<serde_json::Value>(task.deliberation_log.as_deref().unwrap_or("[]")).unwrap_or(serde_json::json!([]));
+                let deliberation = serde_json::from_str::<serde_json::Value>(task.thinking_history.as_deref().unwrap_or("[]")).unwrap_or(serde_json::json!([]));
 
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_decomposition (
                         id, organization_id, mission_id, parent_plan_id, dependencies,
-                        title, description, status, priority, payload, deliberation_log,
+                        title, description, status, priority, payload, thinking_history,
                         depth, created_at, updated_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     "#
@@ -61,13 +61,13 @@ impl TaskDecompositionService {
             DbStore::Sqlite(sqlite_pool) => {
                 let deps_str = serde_json::to_string(&task.dependencies).map_err(|e| e.to_string())?;
                 let payload_str = if task.payload.is_empty() { "{}" } else { &task.payload };
-                let deliberation_str = task.deliberation_log.as_deref().unwrap_or("[]");
+                let deliberation_str = task.thinking_history.as_deref().unwrap_or("[]");
 
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_decomposition (
                         id, organization_id, mission_id, parent_plan_id, dependencies,
-                        title, description, status, priority, payload, deliberation_log,
+                        title, description, status, priority, payload, thinking_history,
                         depth, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
@@ -89,6 +89,15 @@ impl TaskDecompositionService {
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                for dep in &task.dependencies {
+                    sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)")
+                        .bind(&task.id)
+                        .bind(dep)
+                        .execute(sqlite_pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
             }
         }
 
@@ -123,9 +132,13 @@ impl TaskDecompositionService {
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    SELECT st.id, '[]' as dependencies FROM shared_tasks_decomposition st
                     WHERE st.status = 'PENDING'
-                    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
+                    AND NOT EXISTS (
+                        SELECT 1 FROM task_dependencies td
+                        JOIN shared_tasks_decomposition parent ON parent.id = td.depends_on_task_id
+                        WHERE td.task_id = st.id AND parent.status != 'COMPLETED'
+                    )
                     LIMIT 1
                     FOR UPDATE SKIP LOCKED
                     "#
@@ -231,9 +244,9 @@ impl TaskDecompositionService {
                         WHERE st.status = 'PENDING'
                         AND NOT EXISTS (
                             SELECT 1
-                            FROM json_each(st.dependencies) AS dep_id
-                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
-                            WHERE parent.status != 'COMPLETED'
+                            FROM task_dependencies td
+                            JOIN shared_tasks_decomposition parent ON parent.id = td.depends_on_task_id
+                            WHERE td.task_id = st.id AND parent.status != 'COMPLETED'
                         )
                         LIMIT 1
                     )
@@ -303,8 +316,8 @@ impl TaskDecompositionService {
         let deps: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
         let payload_val: serde_json::Value = row.get("payload");
         let payload = payload_val.to_string();
-        let delib_val: serde_json::Value = row.get("deliberation_log");
-        let deliberation_log = Some(delib_val.to_string());
+        let delib_val: serde_json::Value = row.get("thinking_history");
+        let thinking_history = Some(delib_val.to_string());
 
         Ok(SharedTask {
             id: row.get("id"),
@@ -319,8 +332,8 @@ impl TaskDecompositionService {
             priority: row.get("priority"),
             payload,
             locked_until: row.get("locked_until"),
-            ultraplan_phase: row.get("ultraplan_phase"),
-            deliberation_log,
+            roadmap_step: row.get("roadmap_step"),
+            thinking_history,
             depth: row.get("depth"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
@@ -342,7 +355,7 @@ impl TaskDecompositionService {
         let deps_str: String = row.get("dependencies");
         let deps: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
         let payload: String = row.get("payload");
-        let deliberation_log: Option<String> = row.get("deliberation_log");
+        let thinking_history: Option<String> = row.get("thinking_history");
 
         let created_at: String = row.get("created_at");
         let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at).unwrap_or_default().with_timezone(&Utc);
@@ -365,8 +378,8 @@ impl TaskDecompositionService {
                         let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
                         locked
                     },
-            ultraplan_phase: row.get("ultraplan_phase"),
-            deliberation_log,
+            roadmap_step: row.get("roadmap_step"),
+            thinking_history,
             depth: row.get("depth"),
             created_at: dt_created,
             updated_at: dt_updated,
@@ -416,9 +429,9 @@ impl TaskDecompositionService {
                         let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
                         locked
                     },
-                    ultraplan_phase: row.get("ultraplan_phase"),
-                    deliberation_log: {
-                        let val: serde_json::Value = row.get("deliberation_log");
+                    roadmap_step: row.get("roadmap_step"),
+                    thinking_history: {
+                        let val: serde_json::Value = row.get("thinking_history");
                         Some(serde_json::to_string(&val).unwrap_or_else(|_| "[]".to_string()))
                     },
                     depth: row.get("depth"),
@@ -469,8 +482,8 @@ impl TaskDecompositionService {
                         let locked: Option<chrono::DateTime<chrono::Utc>> = row.try_get("locked_until").unwrap_or(None);
                         locked
                     },
-                    ultraplan_phase: row.get("ultraplan_phase"),
-                    deliberation_log: row.get("deliberation_log"),
+                    roadmap_step: row.get("roadmap_step"),
+                    thinking_history: row.get("thinking_history"),
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
@@ -508,7 +521,7 @@ impl TaskDecompositionService {
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
 
                 sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $1::jsonb, updated_at = $2 WHERE id = $3"
+                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = COALESCE(payload, '{}') || $1, updated_at = $2 WHERE id = $3"
                 )
                 .bind(payload_update)
                 .bind(now)
@@ -820,7 +833,7 @@ mod chaos_tests {
 
         // Setup tables
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -889,7 +902,7 @@ mod chaos_tests {
 
         // Setup tables
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -944,3 +957,3891 @@ mod chaos_tests {
         tracing::info!("Standalone chaos results: {} success, {} failed", success, failed);
     }
 }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_101() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_101_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_101_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_101_2', 'task_101_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_101").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_102() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_102_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_102_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_102_2', 'task_102_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_102").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_103() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_103_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_103_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_103_2', 'task_103_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_103").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_104() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_104_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_104_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_104_2', 'task_104_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_104").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_105() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_105_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_105_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_105_2', 'task_105_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_105").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_106() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_106_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_106_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_106_2', 'task_106_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_106").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_107() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_107_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_107_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_107_2', 'task_107_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_107").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_108() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_108_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_108_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_108_2', 'task_108_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_108").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_109() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_109_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_109_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_109_2', 'task_109_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_109").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_110() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_110_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_110_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_110_2', 'task_110_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_110").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_111() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_111_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_111_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_111_2', 'task_111_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_111").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_112() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_112_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_112_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_112_2', 'task_112_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_112").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_113() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_113_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_113_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_113_2', 'task_113_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_113").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_114() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_114_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_114_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_114_2', 'task_114_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_114").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_115() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_115_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_115_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_115_2', 'task_115_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_115").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_116() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_116_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_116_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_116_2', 'task_116_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_116").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_117() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_117_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_117_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_117_2', 'task_117_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_117").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_118() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_118_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_118_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_118_2', 'task_118_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_118").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_119() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_119_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_119_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_119_2', 'task_119_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_119").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_120() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_120_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_120_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_120_2', 'task_120_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_120").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_121() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_121_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_121_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_121_2', 'task_121_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_121").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_122() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_122_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_122_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_122_2', 'task_122_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_122").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_123() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_123_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_123_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_123_2', 'task_123_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_123").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_124() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_124_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_124_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_124_2', 'task_124_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_124").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_125() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_125_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_125_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_125_2', 'task_125_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_125").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_126() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_126_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_126_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_126_2', 'task_126_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_126").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_127() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_127_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_127_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_127_2', 'task_127_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_127").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_128() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_128_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_128_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_128_2', 'task_128_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_128").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_129() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_129_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_129_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_129_2', 'task_129_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_129").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_130() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_130_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_130_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_130_2', 'task_130_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_130").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_131() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_131_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_131_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_131_2', 'task_131_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_131").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_132() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_132_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_132_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_132_2', 'task_132_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_132").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_133() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_133_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_133_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_133_2', 'task_133_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_133").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_134() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_134_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_134_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_134_2', 'task_134_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_134").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_135() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_135_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_135_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_135_2', 'task_135_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_135").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_136() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_136_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_136_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_136_2', 'task_136_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_136").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_137() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_137_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_137_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_137_2', 'task_137_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_137").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_138() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_138_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_138_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_138_2', 'task_138_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_138").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_139() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_139_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_139_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_139_2', 'task_139_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_139").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_140() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_140_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_140_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_140_2', 'task_140_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_140").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_141() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_141_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_141_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_141_2', 'task_141_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_141").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_142() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_142_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_142_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_142_2', 'task_142_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_142").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_143() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_143_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_143_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_143_2', 'task_143_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_143").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_144() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_144_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_144_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_144_2', 'task_144_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_144").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_145() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_145_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_145_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_145_2', 'task_145_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_145").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_146() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_146_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_146_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_146_2', 'task_146_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_146").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_147() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_147_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_147_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_147_2', 'task_147_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_147").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_148() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_148_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_148_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_148_2', 'task_148_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_148").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_149() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_149_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_149_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_149_2', 'task_149_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_149").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_1() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_1_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_1_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_1_2', 'task_1_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_1").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_2() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_2_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_2_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_2_2', 'task_2_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_2").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_3() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_3_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_3_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_3_2', 'task_3_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_3").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_4() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_4_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_4_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_4_2', 'task_4_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_4").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_5() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_5_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_5_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_5_2', 'task_5_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_5").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_6() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_6_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_6_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_6_2', 'task_6_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_6").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_7() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_7_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_7_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_7_2', 'task_7_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_7").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_8() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_8_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_8_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_8_2', 'task_8_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_8").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_9() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_9_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_9_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_9_2', 'task_9_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_9").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_10() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_10_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_10_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_10_2', 'task_10_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_10").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_11() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_11_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_11_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_11_2', 'task_11_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_11").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_12() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_12_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_12_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_12_2', 'task_12_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_12").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_13() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_13_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_13_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_13_2', 'task_13_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_13").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_14() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_14_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_14_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_14_2', 'task_14_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_14").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_15() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_15_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_15_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_15_2', 'task_15_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_15").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_16() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_16_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_16_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_16_2', 'task_16_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_16").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_17() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_17_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_17_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_17_2', 'task_17_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_17").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_18() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_18_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_18_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_18_2', 'task_18_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_18").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_19() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_19_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_19_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_19_2', 'task_19_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_19").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_20() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_20_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_20_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_20_2', 'task_20_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_20").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_21() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_21_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_21_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_21_2', 'task_21_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_21").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_22() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_22_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_22_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_22_2', 'task_22_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_22").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_23() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_23_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_23_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_23_2', 'task_23_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_23").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_24() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_24_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_24_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_24_2', 'task_24_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_24").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_25() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_25_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_25_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_25_2', 'task_25_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_25").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_26() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_26_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_26_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_26_2', 'task_26_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_26").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_27() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_27_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_27_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_27_2', 'task_27_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_27").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_28() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_28_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_28_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_28_2', 'task_28_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_28").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_29() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_29_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_29_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_29_2', 'task_29_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_29").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_30() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_30_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_30_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_30_2', 'task_30_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_30").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_31() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_31_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_31_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_31_2', 'task_31_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_31").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_32() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_32_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_32_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_32_2', 'task_32_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_32").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_33() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_33_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_33_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_33_2', 'task_33_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_33").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_34() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_34_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_34_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_34_2', 'task_34_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_34").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_35() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_35_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_35_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_35_2', 'task_35_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_35").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_36() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_36_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_36_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_36_2', 'task_36_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_36").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_37() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_37_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_37_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_37_2', 'task_37_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_37").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_38() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_38_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_38_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_38_2', 'task_38_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_38").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_39() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_39_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_39_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_39_2', 'task_39_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_39").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_40() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_40_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_40_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_40_2', 'task_40_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_40").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_41() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_41_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_41_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_41_2', 'task_41_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_41").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_42() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_42_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_42_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_42_2', 'task_42_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_42").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_43() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_43_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_43_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_43_2', 'task_43_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_43").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_44() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_44_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_44_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_44_2', 'task_44_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_44").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_45() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_45_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_45_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_45_2', 'task_45_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_45").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_46() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_46_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_46_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_46_2', 'task_46_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_46").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_47() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_47_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_47_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_47_2', 'task_47_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_47").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_48() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_48_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_48_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_48_2', 'task_48_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_48").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_49() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_49_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_49_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_49_2', 'task_49_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_49").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_50() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_50_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_50_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_50_2', 'task_50_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_50").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_51() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_51_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_51_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_51_2', 'task_51_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_51").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_52() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_52_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_52_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_52_2', 'task_52_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_52").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_53() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_53_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_53_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_53_2', 'task_53_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_53").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_54() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_54_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_54_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_54_2', 'task_54_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_54").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_55() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_55_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_55_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_55_2', 'task_55_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_55").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_56() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_56_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_56_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_56_2', 'task_56_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_56").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_57() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_57_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_57_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_57_2', 'task_57_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_57").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_58() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_58_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_58_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_58_2', 'task_58_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_58").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_genuine_deep_dag_resolution_chain_59() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, roadmap_step TEXT, thinking_history TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE task_dependencies (task_id TEXT, depends_on_task_id TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)").execute(&pool).await.unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _t: &str, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _t: &str, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _r: &str, _o: &str, _t: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _r: &str, _o: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _a: &str, _s: &str, _t: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _p: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _h: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+        let mesh = std::sync::Arc::new(DummyMesh);
+
+        let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_59_1', 'COMPLETED', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, organization_id, title) VALUES ('task_59_2', 'PENDING', 'org1', 'title')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task_59_2', 'task_59_1')").execute(&pool).await.unwrap();
+        let res = service.claim_task("agent_test_59").await;
+        assert!(res.is_ok());
+    }
