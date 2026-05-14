@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use ::server_pricing::prompt_caching::PromptCache;
-use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+use ::server_pricing::compression::{minify_json_prompt, minify_system_prompt, truncate_by_word_count};
 use tokio_stream::Stream;
 use std::pin::Pin;
 
@@ -117,7 +117,8 @@ impl MinimaxClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            truncate_by_word_count(prompt, 2000) // Safety truncation
+            let minified = minify_system_prompt(prompt);
+            truncate_by_word_count(&minified, 2000) // Safety truncation
         };
 
         let client = reqwest::Client::new();

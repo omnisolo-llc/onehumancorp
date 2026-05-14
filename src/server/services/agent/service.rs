@@ -23,10 +23,17 @@ impl MyAgentManagerService {
         }
     }
 
-    async fn get_snapshot(&self, org_id: &str) -> Result<DashboardSnapshot, Status> {
+    async fn get_snapshot(&self, org_id: &str, mobile_optimized: bool) -> Result<DashboardSnapshot, Status> {
         let cache_key = format!("agent_dashboard_snapshot_{}", org_id);
         if let Some(snapshot) = self.snapshot_cache.get(&cache_key).await {
-            return Ok(snapshot);
+            let mut res = snapshot;
+            if mobile_optimized {
+                for agent in res.agents.iter_mut() {
+                    agent.name = String::new();
+                }
+                res.meetings = vec![];
+            }
+            return Ok(res);
         }
 
         let hub_cost = self.hub.clone();
@@ -76,7 +83,16 @@ impl MyAgentManagerService {
             updated_at_unix: Utc::now().timestamp(),
         };
         self.snapshot_cache.set(&cache_key, snapshot.clone(), std::time::Duration::from_secs(5)).await;
-        Ok(snapshot)
+
+        let mut res = snapshot;
+        if mobile_optimized {
+            for agent in res.agents.iter_mut() {
+                agent.name = String::new();
+            }
+            res.meetings = vec![];
+        }
+
+        Ok(res)
     }
 }
 
@@ -106,7 +122,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.register_agent(agent);
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
     async fn fire_agent(
@@ -123,7 +139,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.fire_agent(&req.agent_id);
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
     async fn delegate_task(
@@ -143,7 +159,7 @@ impl AgentManagerService for MyAgentManagerService {
         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
     async fn get_agent_providers(
@@ -280,10 +296,11 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
+        let mobile_optimized = request.get_ref().mobile_optimized;
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id_req = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-        Ok(Response::new(self.get_snapshot(&org_id_req).await?))
+        Ok(Response::new(self.get_snapshot(&org_id_req, mobile_optimized).await?))
     }
 
     async fn restore_snapshot(
@@ -298,6 +315,6 @@ impl AgentManagerService for MyAgentManagerService {
             return Err(Status::invalid_argument("snapshotId is required"));
         }
 
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 }

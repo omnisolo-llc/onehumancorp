@@ -48,40 +48,28 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
-        let hub1 = self.hub.clone();
-        let hub2 = self.hub.clone();
-        let hub3 = self.hub.clone();
-        let db1 = self.db.clone();
-        let db2 = self.db.clone();
-        let db3 = self.db.clone();
-
-        let org_id1 = req.organization_id.clone();
-        let org_id2 = req.organization_id.clone();
-        let org_id3 = req.organization_id.clone();
-
-        let hub_prod = self.hub.clone();
-        let hub_orders = self.hub.clone();
-        let hub_org = self.hub.clone();
+        let hub_clone = self.hub.clone();
+        let db_clone = self.db.clone();
+        let org_id = req.organization_id.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub1.get_agents())
-            }),
-            tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub2.get_meetings())
-            }),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub3.get_cost_auditor();
+            async {
+                Ok::<_, String>(hub_clone.get_agents())
+            },
+            async {
+                Ok::<_, String>(hub_clone.get_meetings())
+            },
+            async {
+                let cost_auditor = hub_clone.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
                 ))
-            }),
+            },
             async {
-                let org_id = org_id1;
                 let cache_key = format!("hub:products:{}", org_id);
-                let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
+                let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_clone.redis_client.clone()));
 
                 if let Some(products) = cache.get(&cache_key).await {
                     return Ok::<_, String>(products);
@@ -90,9 +78,9 @@ impl DashboardService for MyDashboardService {
                 let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
-                match &db1.store {
+                match &db_clone.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db_clone.pool).await {
                             for r in rows {
                                 let p = ::server_ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -135,9 +123,8 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(results)
             },
             async {
-                let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}", org_id);
-                let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
+                let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_clone.redis_client.clone()));
 
                 if let Some(orders) = cache.get(&cache_key).await {
                     return Ok::<_, String>(orders);
@@ -146,9 +133,9 @@ impl DashboardService for MyDashboardService {
                 let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
-                match &db2.store {
+                match &db_clone.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db_clone.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
@@ -185,9 +172,8 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(results)
             },
             async {
-                let org_id = org_id3;
                 let cache_key = format!("hub:org:{}", org_id);
-                let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
+                let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_clone.redis_client.clone()));
 
                 if let Some(org) = cache.get(&cache_key).await {
                     return Ok::<_, String>(org);
@@ -196,10 +182,10 @@ impl DashboardService for MyDashboardService {
                 let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
-                match &db3.store {
+                match &db_clone.store {
                     crate::db::DbStore::Postgres => {
                         if let Ok(Some(row)) =
-                            sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await
+                            sqlx::query(q).bind(&org_id).fetch_optional(&db_clone.pool).await
                         {
                             org = Some(::server_ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
@@ -237,14 +223,11 @@ impl DashboardService for MyDashboardService {
         );
 
         let agents = agents_res
-            .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res
-            .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) =
             cost_res
-                .map_err(|e| Status::internal(e.to_string()))?
                 .map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;

@@ -5,6 +5,8 @@ use chrono::Utc;
 use uuid::Uuid;
 use sqlx::Row;
 use serde_json::json;
+use futures::stream::{StreamExt, TryStreamExt};
+use futures::future::join_all;
 
 pub struct OperationsWorker {
     pub db: Arc<DB>,
@@ -41,49 +43,50 @@ impl OperationsWorker {
     }
 
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
-        let task = match &db.store {
+        let tasks = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
-                let row = sqlx::query(
+                let rows = sqlx::query(
                     r#"
                     UPDATE department_tasks
                     SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = (
+                    WHERE id IN (
                         SELECT id FROM department_tasks
                         WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
-                        LIMIT 1
+                        LIMIT 10
                         FOR UPDATE SKIP LOCKED
                     )
                     RETURNING id, tenant_id, payload
                     "#
                 )
                 .bind(Utc::now() + chrono::Duration::minutes(5))
-                .fetch_optional(&mut *tx)
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                let res = rows.into_iter().map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"))).collect::<Vec<_>>();
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
-                let row = sqlx::query(
+                let rows = sqlx::query(
                     r#"
                     SELECT id, tenant_id, payload FROM department_tasks
                     WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                     ORDER BY created_at ASC
-                    LIMIT 1
+                    LIMIT 10
                     "#
                 )
-                .fetch_optional(&mut *tx)
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = if let Some(r) = row {
+                let mut res = Vec::new();
+                for r in rows {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
@@ -96,17 +99,33 @@ impl OperationsWorker {
                     .bind(&id)
                     .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload))
-                } else {
-                    None
-                };
+                    res.push((id, tenant_id, payload));
+                }
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
             }
         };
 
-        let processed = task.is_some();
-        if let Some((id, tenant_id, payload)) = task {
+        if tasks.is_empty() {
+            return Ok(false);
+        }
+
+        let processed = !tasks.is_empty();
+        futures::stream::iter(tasks)
+            .map(|(id, tenant_id, payload)| {
+                let db = db.clone();
+                async move {
+                    Self::process_task(&db, id, tenant_id, payload).await
+                }
+            })
+            .buffer_unordered(5)
+            .try_collect::<Vec<()>>()
+            .await?;
+
+        Ok(processed)
+    }
+
+    async fn process_task(db: &Arc<DB>, id: String, tenant_id: String, payload: serde_json::Value) -> Result<(), String> {
             // Check inventory levels
             let items = payload.get("items").and_then(|v| v.as_array());
             if let Some(items) = items {
@@ -376,8 +395,7 @@ impl OperationsWorker {
                     }
                 }
             }
-        }
-        Ok(processed)
+        Ok(())
     }
 }
 
@@ -588,51 +606,52 @@ impl CustomerSuccessWorker {
     }
 
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
-        let task = match &db.store {
+        let tasks = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
-                let row = sqlx::query(
+                let rows = sqlx::query(
                     r#"
                     UPDATE department_tasks
                     SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = (
+                    WHERE id IN (
                         SELECT id FROM department_tasks
                         WHERE status = 'PENDING' AND department = 'customer_success'
                         AND (event_type = 'OrderProcessed' OR event_type = 'CustomerMessageReceived')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
-                        LIMIT 1
+                        LIMIT 10
                         FOR UPDATE SKIP LOCKED
                     )
                     RETURNING id, tenant_id, payload, event_type
                     "#
                 )
                 .bind(Utc::now() + chrono::Duration::minutes(5))
-                .fetch_optional(&mut *tx)
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
+                let res = rows.into_iter().map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type"))).collect::<Vec<_>>();
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
-                let row = sqlx::query(
+                let rows = sqlx::query(
                     r#"
                     SELECT id, tenant_id, payload, event_type FROM department_tasks
                     WHERE status = 'PENDING' AND department = 'customer_success'
                     AND (event_type = 'OrderProcessed' OR event_type = 'CustomerMessageReceived')
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                     ORDER BY created_at ASC
-                    LIMIT 1
+                    LIMIT 10
                     "#
                 )
-                .fetch_optional(&mut *tx)
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = if let Some(r) = row {
+                let mut res = Vec::new();
+                for r in rows {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
@@ -646,17 +665,33 @@ impl CustomerSuccessWorker {
                     .bind(&id)
                     .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload, event_type))
-                } else {
-                    None
-                };
+                    res.push((id, tenant_id, payload, event_type));
+                }
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
             }
         };
 
-        let processed = task.is_some();
-        if let Some((id, tenant_id, payload, event_type)) = task {
+        if tasks.is_empty() {
+            return Ok(false);
+        }
+
+        let processed = !tasks.is_empty();
+        futures::stream::iter(tasks)
+            .map(|(id, tenant_id, payload, event_type)| {
+                let db = db.clone();
+                async move {
+                    Self::process_task(&db, id, tenant_id, payload, event_type).await
+                }
+            })
+            .buffer_unordered(5)
+            .try_collect::<Vec<()>>()
+            .await?;
+
+        Ok(processed)
+    }
+
+    async fn process_task(db: &Arc<DB>, id: String, tenant_id: String, payload: serde_json::Value, event_type: String) -> Result<(), String> {
             // Draft confirmation message
             let (title, drafted_msg) = if event_type == "OrderProcessed" {
                 ("Draft Confirmation".to_string(), format!("Hi! Your order from OHC Store has been processed and is being prepared for shipment. Thank you!"))
@@ -710,8 +745,7 @@ impl CustomerSuccessWorker {
                         .map_err(|e| e.to_string())?;
                 }
             }
-        }
-        Ok(processed)
+        Ok(())
     }
 }
 

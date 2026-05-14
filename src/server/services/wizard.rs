@@ -218,7 +218,7 @@ mod tests {
         temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
+                let request = Request::new(EmptyRequest { mobile_optimized: false });
                 let response = service.verify_onboarding(request).await.unwrap().into_inner();
                 assert_eq!(response.status, "healthy");
                 assert_eq!(response.mode, "standalone");
@@ -240,7 +240,7 @@ mod tests {
         temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", None::<&str>)], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
+                let request = Request::new(EmptyRequest { mobile_optimized: false });
                 let response = service.verify_onboarding(request).await.unwrap().into_inner();
                 assert_eq!(response.status, "degraded");
                 assert_eq!(response.mode, "standalone");
@@ -258,7 +258,7 @@ mod tests {
         temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("postgres://localhost/db"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
+                let request = Request::new(EmptyRequest { mobile_optimized: false });
                 let response = service.verify_onboarding(request).await.unwrap().into_inner();
                 assert_eq!(response.status, "degraded");
                 assert_eq!(response.mode, "standalone");
@@ -274,7 +274,7 @@ mod tests {
         temp_env::with_vars(vec![("STANDALONE_MODE", Some("false")), ("DATABASE_URL", Some("postgres://db")), ("REDIS_URL", Some("redis://cache"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
                 let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
+                let request = Request::new(EmptyRequest { mobile_optimized: false });
                 let response = service.verify_onboarding(request).await.unwrap().into_inner();
                 assert_eq!(response.status, "healthy");
                 assert_eq!(response.mode, "cloud");

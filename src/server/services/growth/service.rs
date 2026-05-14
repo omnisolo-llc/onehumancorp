@@ -599,7 +599,7 @@ mod tests {
             .fetch_one(&service.pool).await.unwrap_or_else(|_| "Free".to_string());
         assert_eq!(upgraded_tier, "Pro", "Plan should upgrade on conversion");
 
-        let mut list_req = Request::new(EmptyRequest {});
+        let mut list_req = Request::new(EmptyRequest { mobile_optimized: false });
         list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));

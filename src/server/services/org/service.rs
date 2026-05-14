@@ -8,6 +8,8 @@ pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
     settings: RwLock<SettingsResponse>,
     analytics_cache: ::server_utils::cache::HybridCache<AnalyticsSummaryResponse>,
+    domains_cache: ::server_utils::cache::HybridCache<DomainsResponse>,
+    marketplace_cache: ::server_utils::cache::HybridCache<MarketplaceItemsResponse>,
 }
 
 impl MyOrgService {
@@ -19,7 +21,9 @@ impl MyOrgService {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
-            analytics_cache: ::server_utils::cache::HybridCache::new(redis_client),
+            analytics_cache: ::server_utils::cache::HybridCache::new(redis_client.clone()),
+            domains_cache: ::server_utils::cache::HybridCache::new(redis_client.clone()),
+            marketplace_cache: ::server_utils::cache::HybridCache::new(redis_client),
         }
     }
 }
@@ -30,12 +34,19 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<DomainsResponse>, Status> {
+        let cache_key = "org_domains_global";
+        if let Some(cached) = self.domains_cache.get(cache_key).await {
+            return Ok(Response::new(cached));
+        }
+
         let domains = vec![
             DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
             DomainInfoProto { id: "digital_marketing_agency".to_string(), name: "Digital Marketing Agency".to_string(), description: "Full-service agency...".to_string() },
             DomainInfoProto { id: "accounting_firm".to_string(), name: "Accounting Firm".to_string(), description: "Financial services firm...".to_string() },
         ];
-        Ok(Response::new(DomainsResponse { domains }))
+        let response = DomainsResponse { domains };
+        self.domains_cache.set(cache_key, response.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(Response::new(response))
     }
 
     async fn get_settings(
@@ -61,30 +72,41 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
+        let cache_key = "org_marketplace_global";
+        if let Some(cached) = self.marketplace_cache.get(cache_key).await {
+            return Ok(Response::new(cached));
+        }
+
         let items = vec![
             MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
         ];
-        Ok(Response::new(MarketplaceItemsResponse { items }))
+        let response = MarketplaceItemsResponse { items };
+        self.marketplace_cache.set(cache_key, response.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(Response::new(response))
     }
 
     async fn get_analytics(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
+        let mobile_optimized = request.get_ref().mobile_optimized;
+        let org_id = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
         if let Some(cached) = self.analytics_cache.get(&cache_key).await {
-            return Ok(Response::new(cached));
+            let mut res = cached;
+            if mobile_optimized {
+                res.upgrade_message = String::new();
+                res.resumption_latency_ms = 0;
+            }
+            return Ok(Response::new(res));
         }
 
-        let hub1 = self.hub.clone();
-        let hub2 = self.hub.clone();
-        let hub3 = self.hub.clone();
+        let hub_clone = self.hub.clone();
         let (agents_res, meetings_res, summary_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || hub3.tracker().summary("system"))
+            async { Ok::<_, String>(hub_clone.get_agents()) },
+            async { Ok::<_, String>(hub_clone.get_meetings()) },
+            async { Ok::<_, String>(hub_clone.tracker().summary("system")) }
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -127,7 +149,7 @@ impl OrgService for MyOrgService {
             user_message: None,
         });
 
-        let response = AnalyticsSummaryResponse {
+        let mut response = AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
             total_humans,
@@ -142,6 +164,11 @@ impl OrgService for MyOrgService {
         };
 
         self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        if mobile_optimized {
+            response.upgrade_message = String::new();
+            response.resumption_latency_ms = 0;
+        }
 
         Ok(Response::new(response))
     }
@@ -161,14 +188,14 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let mut request1 = Request::new(EmptyRequest {});
+        let mut request1 = Request::new(EmptyRequest { mobile_optimized: false });
         request1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start = std::time::Instant::now();
         let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
         let elapsed1 = start.elapsed();
 
-        let mut request2 = Request::new(EmptyRequest {});
+        let mut request2 = Request::new(EmptyRequest { mobile_optimized: false });
         request2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start2 = std::time::Instant::now();

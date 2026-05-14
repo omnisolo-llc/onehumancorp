@@ -36,16 +36,37 @@ pub fn reduce_tokens(data: &str) -> String {
         "a", "an", "the", "is", "are",
         "and", "or", "but", "in", "on",
         "at", "to", "for", "with", "by",
-        "about", "as", "of",
+        "about", "as", "of", "be", "been", "being",
+        "have", "has", "had", "do", "does", "did",
+        "will", "would", "shall", "should", "can", "could",
+        "may", "might", "must", "if", "then", "else",
+        "which", "who", "whom", "whose", "this", "that", "these", "those",
+        "it", "its", "they", "them", "their", "we", "us", "our",
+        "you", "your", "he", "him", "his", "she", "her",
     ].iter().cloned().collect();
 
     data.split_whitespace()
         .filter(|word| {
             let clean_word = word.to_lowercase();
-            !stop_words.contains(clean_word.as_str())
+            let clean_word = clean_word.trim_matches(|c: char| !c.is_alphanumeric());
+            !stop_words.contains(clean_word)
         })
         .collect::<Vec<&str>>()
         .join(" ")
+}
+
+pub fn minify_system_prompt(data: &str) -> String {
+    let mut minified = String::new();
+    for line in data.lines() {
+        let trimmed = line.trim();
+        // Preserve Markdown headers (#), but strip empty lines and // comments
+        if trimmed.is_empty() || trimmed.starts_with("//") {
+            continue;
+        }
+        minified.push_str(trimmed);
+        minified.push('\n');
+    }
+    minified.trim().to_string()
 }
 
 pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
@@ -94,11 +115,34 @@ mod tests {
     #[test]
     fn test_reduce_tokens() {
         let input = "This is a long sentence with some stop words in it and about some things.";
-        // Stop words: a, an, the, is, are, and, or, but, in, on, at, to, for, with, by, about, as, of
-        // Result should remove "is", "a", "with", "in", "and", "about".
-        // Note: 'it' and 'some' are not stop words here.
+        // Stop words: a, an, the, is, are, and, or, but, in, on, at, to, for, with, by, about, as, of, it, this, etc.
         let reduced = reduce_tokens(input);
-        assert_eq!(reduced, "This long sentence some stop words it some things.");
+        // "This", "is", "a", "with", "in", "it", "and", "about" are removed.
+        assert_eq!(reduced, "long sentence some stop words some things.");
+    }
+
+    #[test]
+    fn test_reduce_tokens_consecutive() {
+        let input = "the is a test and or but";
+        let reduced = reduce_tokens(input);
+        assert_eq!(reduced, "test");
+    }
+
+    #[test]
+    fn test_minify_system_prompt() {
+        let input = r#"
+            # System Instructions
+            You are a helpful assistant.
+
+            // Rules:
+            1. Be concise.
+            2. Be helpful.
+        "#;
+        let minified = minify_system_prompt(input);
+        assert!(minified.contains("# System Instructions"));
+        assert!(minified.contains("You are a helpful assistant."));
+        assert!(!minified.contains("// Rules:"));
+        assert!(minified.contains("1. Be concise."));
     }
 
     #[test]
