@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 
-	"onehumancorp/srcs/server/agents/local"
+
 	dbWrapper "onehumancorp/srcs/server/db"
 	"onehumancorp/srcs/server/orchestration/autodream"
 )
@@ -36,7 +36,7 @@ type AutoDreamWorker struct {
 
 func NewAutoDreamWorker(db *sql.DB, llmClient LLMClient) *AutoDreamWorker {
 	if llmClient == nil {
-		llmClient = local.NewLocalLLMClient()
+		// Do not fallback to a concrete LLMClient. Tests pass mock. Production MUST provide it.
 	}
 	return &AutoDreamWorker{
 		db:        db,

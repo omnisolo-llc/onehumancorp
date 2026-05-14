@@ -264,7 +264,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 	defer localDB.Unlock()
 
 	query := `
-		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies
+		SELECT id, organization_id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies
 		FROM shared_tasks
 		WHERE status = 'CLOUD_ESCALATION'
 		LIMIT 100
@@ -354,7 +354,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	defer localDB.Unlock()
 
 	query := `
-		SELECT id
+		SELECT id, organization_id
 		FROM shared_tasks
 		WHERE status = 'CLOUD_PROCESSING'
 	`
@@ -364,22 +364,23 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	}
 	defer rows.Close()
 
-	var taskIDs []string
+	type TaskLoc struct { ID string; Org string }
+	var tasks []TaskLoc
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var id, org string
+		if err := rows.Scan(&id, &org); err != nil {
 			log.Printf("Error scanning local task ID: %v", err)
 			continue
 		}
-		taskIDs = append(taskIDs, id)
+		tasks = append(tasks, TaskLoc{ID: id, Org: org})
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
 
-	for _, id := range taskIDs {
+	for _, task := range tasks {
 		// Check cloud DB
-		cloudTask, err := cloudDB.GetTask(ctx, id, localTask.OrganizationID)
+		cloudTask, err := cloudDB.GetTask(ctx, task.ID, task.Org)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				log.Printf("Error getting task from cloud DB: %v", err)
@@ -390,6 +391,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 		if cloudTask.Status == "DONE" {
 			// Pull results back and update local DB
 			updateQuery := `UPDATE shared_tasks SET status = 'DONE', payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+			id := task.ID
 			var payloadBytes []byte
 			if cloudTask.Payload != nil {
 				payloadBytes = []byte(*cloudTask.Payload)
