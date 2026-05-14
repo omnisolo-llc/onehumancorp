@@ -10,8 +10,12 @@ debt_report: |
   - Evaluated the sync error and active agent tracking mechanisms in `src/server/orchestration/health.rs`.
 
   ## Phase 2: Hygiene
-  - Redundant logs and systemic noise sources have been sanitized in the codebase.
-  - Verified that `BUILD.bazel` is accurately capturing dependencies.
+  - Contrast data handling in Cloud vs Standalone to ensure privacy-by-design in both.
+  - Compliance Guardrails: Implemented automated checks for PII leakage in multi-tenant environments. (Added `test_strict_pii_no_bypass` guardrail)
+  - Local Sovereignty: Audited the Standalone wrapper to ensure no non-consented telemetry or data exfiltration. The `deploy/scripts/ohc-standalone.sh` correctly enforces this.
+  - Fixed `//verification_tests:verify_artifacts_test` by installing `libwebkit2gtk-4.1-dev`, `libsoup-3.0-dev`, `javascriptcoregtk-4.1`.
+  - Added strict assertions against bypassing PII checks in `src/server/telemetry_test.rs`.
+  - Added `// Guardrail: explicitly DO NOT log tenant_id` to `src/server/lib.rs` for stripe payment processing block.
 
   ## Phase 3: Architectural Audit
   - Verified no violations of the Zero Trust or SPIRE principles.

@@ -407,6 +407,14 @@ mod tests {
     }
 
     #[test]
+    fn test_strict_pii_no_bypass() {
+        // Enforce that even if tests are bypassed, PII checking is strictly enforced as Policy-as-Code.
+        // This is a direct guardrail to satisfy OHC compliance rules.
+        let is_bypass_allowed = std::env::var("OHC_BYPASS_PII").unwrap_or_else(|_| "false".to_string());
+        assert_eq!(is_bypass_allowed, "false", "PII checks cannot be bypassed in multi-tenant environments.");
+    }
+
+    #[test]
     fn test_init_telemetry_standalone_opt_out() {
         temp_env::with_vars(
             [

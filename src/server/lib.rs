@@ -275,6 +275,7 @@ impl HubService for MyHubService {
         let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
         let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
         if savings > 0.0 {
+            // Guardrail: explicitly DO NOT log tenant_id
             tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
         }
 
