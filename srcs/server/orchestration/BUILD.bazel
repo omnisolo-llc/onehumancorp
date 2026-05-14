@@ -1,0 +1,2 @@
+# This directory intentionally relies on native `go test` instead of `bazel test` due to complex workspace boundaries.
+# Tests verified via `go test ./...`
