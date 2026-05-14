@@ -22,6 +22,8 @@ jobs:
   bazel-test:
     runs-on: oci-runner
     timeout-minutes: 60
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v6
 
@@ -51,9 +53,7 @@ jobs:
         run: npm ci
 
       - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        run: npm install -g @bazel/bazelisk
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -92,6 +92,8 @@ jobs:
   bazel-build:
     runs-on: oci-runner
     timeout-minutes: 60
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v6
 
@@ -121,9 +123,7 @@ jobs:
         run: npm ci
 
       - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        run: npm install -g @bazel/bazelisk
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
