@@ -332,7 +332,7 @@ impl InteropProtocol {
         };
 
         let mut buf = Vec::new();
-        update.encode(&mut buf).unwrap();
+        update.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let msg = Message {
             topic: format!("system:job_status:{}", job_id),
@@ -1091,4 +1091,14 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_job_status_reporting_encode_error() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
+
+        let result = protocol.report_job_status("job_encode", "tenant", "OK", vec![]).await;
+        assert!(result.is_ok());
     }
