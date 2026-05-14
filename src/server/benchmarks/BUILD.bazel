@@ -5,6 +5,7 @@ filegroup(
         "latency_bench.rs",
         "mod.rs",
 
+        "bolt_padding.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
