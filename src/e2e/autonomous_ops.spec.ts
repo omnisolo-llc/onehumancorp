@@ -25,7 +25,7 @@ test.describe('Autonomous Operations CUJ', () => {
         try {
             execSync(`psql -U ohc -d ohc -c "${sql}"`);
         } catch (e2) {
-             console.error("Could not insert test task into DB");
+             console.debug("Could not insert test task into DB");
         }
     }
 
