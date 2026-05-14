@@ -773,6 +773,13 @@ message WaitlistResponse {
 }
 
 service GrowthService {
+  rpc CreateEmailCampaign(CreateEmailCampaignRequest) returns (EmailCampaign);
+  rpc GetEmailCampaigns(EmptyRequest) returns (EmailCampaignsResponse);
+  rpc CreateSocialPost(CreateSocialPostRequest) returns (SocialPost);
+  rpc GetSocialPosts(EmptyRequest) returns (SocialPostsResponse);
+  rpc GetStorefrontLink(EmptyRequest) returns (StorefrontLinkResponse);
+  rpc GetMilestoneNotifications(EmptyRequest) returns (MilestoneNotificationsResponse);
+  rpc MarkMilestoneRead(GrowthIdRequest) returns (MilestoneNotification);
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   
@@ -1641,4 +1648,63 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
+}
+
+message CreateEmailCampaignRequest {
+  string template_name = 1;
+  string subject = 2;
+  string body = 3;
+  string audience_type = 4;
+}
+
+message EmailCampaign {
+  string id = 1;
+  string template_name = 2;
+  string subject = 3;
+  string body = 4;
+  string audience_type = 5;
+  int32 emails_sent = 6;
+  float open_rate = 7;
+  int64 created_at_unix = 8;
+}
+
+message EmailCampaignsResponse {
+  repeated EmailCampaign campaigns = 1;
+}
+
+message CreateSocialPostRequest {
+  string platform = 1;
+  string content = 2;
+  int64 scheduled_for_unix = 3;
+}
+
+message SocialPost {
+  string id = 1;
+  string platform = 2;
+  string content = 3;
+  string status = 4;
+  int64 scheduled_for_unix = 5;
+  int64 created_at_unix = 6;
+}
+
+message SocialPostsResponse {
+  repeated SocialPost posts = 1;
+}
+
+message StorefrontLinkResponse {
+  string url = 1;
+  string embed_code = 2;
+  string og_image_url = 3;
+}
+
+message MilestoneNotification {
+  string id = 1;
+  string milestone_type = 2;
+  string message = 3;
+  bool is_read = 4;
+  int64 created_at_unix = 5;
+}
+
+message MilestoneNotificationsResponse {
+  repeated MilestoneNotification notifications = 1;
 }

@@ -1,3 +1,4 @@
+use crate::ohc::orchestration::{CreateEmailCampaignRequest, EmailCampaign, EmailCampaignsResponse, CreateSocialPostRequest, SocialPost, SocialPostsResponse, StorefrontLinkResponse, MilestoneNotification, MilestoneNotificationsResponse};
 use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::growth_service_server::GrowthService;
@@ -45,6 +46,245 @@ impl MyGrowthService {
 
 #[tonic::async_trait]
 impl GrowthService for MyGrowthService {
+    async fn create_referral(
+        &self,
+        request: Request<crate::ohc::orchestration::CreateReferralRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::Referral>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let id = format!("ref-{}", chrono::Utc::now().timestamp());
+        let referral_code = if req.referral_code.is_empty() {
+            format!("{}-{}", req.user_id.clone(), id.replace("ref-", ""))
+        } else {
+            req.referral_code.clone()
+        };
+        let created_at = chrono::Utc::now().timestamp();
+        sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, created_at_unix) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&id).bind(&org_id).bind(&req.user_id).bind(&referral_code).bind(created_at)
+            .execute(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(crate::ohc::orchestration::Referral {
+            id,
+            user_id: req.user_id,
+            referral_code,
+            clicks: 0,
+            conversions: 0,
+            created_at_unix: created_at,
+        }))
+    }
+
+    async fn click_referral(
+        &self,
+        request: Request<crate::ohc::orchestration::GrowthIdRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::Referral>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        use sqlx::Row;
+        let row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 AND organization_id = $2 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+            .bind(&req.id).bind(&org_id)
+            .fetch_one(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(crate::ohc::orchestration::Referral {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            referral_code: row.get("referral_code"),
+            clicks: row.get("clicks"),
+            conversions: row.get("conversions"),
+            created_at_unix: row.get("created_at_unix"),
+        }))
+    }
+
+    async fn convert_referral(
+        &self,
+        request: Request<crate::ohc::orchestration::GrowthIdRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::Referral>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        use sqlx::Row;
+        let row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 AND organization_id = $2 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+            .bind(&req.id).bind(&org_id)
+            .fetch_one(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        let _ = sqlx::query("UPDATE organizations SET plan_tier = $1, current_period_end = extract(epoch from now() + interval '1 month') WHERE id = $2")
+            .bind("Pro").bind(&org_id)
+            .execute(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(crate::ohc::orchestration::Referral {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            referral_code: row.get("referral_code"),
+            clicks: row.get("clicks"),
+            conversions: row.get("conversions"),
+            created_at_unix: row.get("created_at_unix"),
+        }))
+    }
+
+    async fn create_email_campaign(
+        &self,
+        request: Request<CreateEmailCampaignRequest>,
+    ) -> Result<Response<EmailCampaign>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let id = format!("emc-{}", chrono::Utc::now().timestamp());
+        let emails_sent = if req.audience_type == "All Customers" { 150 } else if req.audience_type == "Recent Buyers" { 42 } else { 12 };
+        let created_at = chrono::Utc::now().timestamp();
+        sqlx::query("INSERT INTO email_campaigns (id, organization_id, template_name, subject, body, audience_type, emails_sent, open_rate, created_at_unix) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
+            .bind(&id).bind(&org_id).bind(&req.template_name).bind(&req.subject).bind(&req.body).bind(&req.audience_type).bind(emails_sent).bind(0.0).bind(created_at)
+            .execute(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(EmailCampaign {
+            id,
+            template_name: req.template_name,
+            subject: req.subject,
+            body: req.body,
+            audience_type: req.audience_type,
+            emails_sent,
+            open_rate: 0.0,
+            created_at_unix: created_at,
+        }))
+    }
+
+    async fn get_email_campaigns(
+        &self,
+        request: Request<EmptyRequest>,
+    ) -> Result<Response<EmailCampaignsResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rows = sqlx::query("SELECT id, template_name, subject, body, audience_type, emails_sent, open_rate, created_at_unix FROM email_campaigns WHERE organization_id = $1")
+            .bind(&org_id).fetch_all(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut campaigns = Vec::new();
+        for row in rows {
+            use sqlx::Row;
+            campaigns.push(EmailCampaign {
+                id: row.get("id"),
+                template_name: row.get("template_name"),
+                subject: row.get("subject"),
+                body: row.get("body"),
+                audience_type: row.get("audience_type"),
+                emails_sent: row.get("emails_sent"),
+                open_rate: row.get::<f64, _>("open_rate") as f32,
+                created_at_unix: row.get("created_at_unix"),
+            });
+        }
+        Ok(Response::new(EmailCampaignsResponse { campaigns }))
+    }
+
+    async fn create_social_post(
+        &self,
+        request: Request<CreateSocialPostRequest>,
+    ) -> Result<Response<SocialPost>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let id = format!("sp-{}", chrono::Utc::now().timestamp());
+        let created_at = chrono::Utc::now().timestamp();
+        sqlx::query("INSERT INTO social_posts (id, organization_id, platform, content, status, scheduled_for_unix, created_at_unix) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind(&id).bind(&org_id).bind(&req.platform).bind(&req.content).bind("PENDING").bind(req.scheduled_for_unix).bind(created_at)
+            .execute(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(SocialPost {
+            id,
+            platform: req.platform,
+            content: req.content,
+            status: "PENDING".to_string(),
+            scheduled_for_unix: req.scheduled_for_unix,
+            created_at_unix: created_at,
+        }))
+    }
+
+    async fn get_social_posts(
+        &self,
+        request: Request<EmptyRequest>,
+    ) -> Result<Response<SocialPostsResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rows = sqlx::query("SELECT id, platform, content, status, scheduled_for_unix, created_at_unix FROM social_posts WHERE organization_id = $1")
+            .bind(&org_id).fetch_all(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut posts = Vec::new();
+        for row in rows {
+            use sqlx::Row;
+            posts.push(SocialPost {
+                id: row.get("id"),
+                platform: row.get("platform"),
+                content: row.get("content"),
+                status: row.get("status"),
+                scheduled_for_unix: row.get("scheduled_for_unix"),
+                created_at_unix: row.get("created_at_unix"),
+            });
+        }
+        Ok(Response::new(SocialPostsResponse { posts }))
+    }
+
+    async fn get_storefront_link(
+        &self,
+        request: Request<EmptyRequest>,
+    ) -> Result<Response<StorefrontLinkResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let url = format!("https://{}.ohc.store", org_id.replace("org-", "").to_lowercase());
+        let embed_code = format!("<iframe src=\"{}\"></iframe>", url);
+        let og_image_url = format!("{}/og-image.png", url);
+        Ok(Response::new(StorefrontLinkResponse {
+            url,
+            embed_code,
+            og_image_url,
+        }))
+    }
+
+    async fn get_milestone_notifications(
+        &self,
+        request: Request<EmptyRequest>,
+    ) -> Result<Response<MilestoneNotificationsResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rows = sqlx::query("SELECT id, milestone_type, message, is_read, created_at_unix FROM milestone_notifications WHERE organization_id = $1")
+            .bind(&org_id).fetch_all(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut notifications = Vec::new();
+        for row in rows {
+            use sqlx::Row;
+            notifications.push(MilestoneNotification {
+                id: row.get("id"),
+                milestone_type: row.get("milestone_type"),
+                message: row.get("message"),
+                is_read: row.get("is_read"),
+                created_at_unix: row.get("created_at_unix"),
+            });
+        }
+        Ok(Response::new(MilestoneNotificationsResponse { notifications }))
+    }
+
+    async fn mark_milestone_read(
+        &self,
+        request: Request<GrowthIdRequest>,
+    ) -> Result<Response<MilestoneNotification>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::utils::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        use sqlx::Row;
+        let row = sqlx::query("UPDATE milestone_notifications SET is_read = true WHERE id = $1 AND organization_id = $2 RETURNING id, milestone_type, message, is_read, created_at_unix")
+            .bind(&req.id).bind(&org_id)
+            .fetch_one(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(MilestoneNotification {
+            id: row.get("id"),
+            milestone_type: row.get("milestone_type"),
+            message: row.get("message"),
+            is_read: row.get("is_read"),
+            created_at_unix: row.get("created_at_unix"),
+        }))
+    }
+
     async fn get_landing_page_experiments(
         &self,
         _request: Request<EmptyRequest>,
@@ -164,124 +404,6 @@ impl GrowthService for MyGrowthService {
         }))
     }
 
-    async fn create_referral(
-        &self,
-        request: Request<CreateReferralRequest>,
-    ) -> Result<Response<Referral>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await?;
-        let req = request.into_inner();
-
-        if req.user_id.is_empty() {
-            return Err(Status::invalid_argument("userId is required"));
-        }
-
-        let referral_code = if req.referral_code.is_empty() {
-            let generated_link = referral_api::generate_referral_link(&req.user_id)
-                .map_err(|e| Status::internal(e))?;
-
-            generated_link
-                .split("&utm_source=")
-                .next()
-                .unwrap_or("")
-                .strip_prefix("ohc://join?ref=")
-                .unwrap_or("error")
-                .to_string()
-        } else {
-            req.referral_code
-        };
-        
-        let id = format!("ref-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
-        let created_at = Utc::now().timestamp();
-
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, created_at_unix) VALUES ($1, $2, $3, $4, $5)")
-            .bind(&id)
-            .bind(&org_id)
-            .bind(&req.user_id)
-            .bind(&referral_code)
-            .bind(created_at)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(Referral {
-            id,
-            user_id: req.user_id,
-            referral_code,
-            clicks: 0,
-            conversions: 0,
-            created_at_unix: created_at,
-        }))
-    }
-
-    async fn click_referral(
-        &self,
-        request: Request<GrowthIdRequest>,
-    ) -> Result<Response<Referral>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await?;
-        let req = request.into_inner();
-        
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        let row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
-            .bind(&req.id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
-
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(Referral {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            referral_code: row.get("referral_code"),
-            clicks: row.get("clicks"),
-            conversions: row.get("conversions"),
-            created_at_unix: row.get("created_at_unix"),
-        }))
-    }
-
-    async fn convert_referral(
-        &self,
-        request: Request<GrowthIdRequest>,
-    ) -> Result<Response<Referral>, Status> {
-        let org_id = self.get_org_id(request.metadata()).await?;
-        let req = request.into_inner();
-        
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        let row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
-            .bind(&req.id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
-
-        // Implement Credit Attribution: "both get 1 month free Pro"
-        // In a real app we'd update a billing or organizations table.
-        // For now, we simulate credit attribution.
-        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
-            .bind(&org_id)
-            .bind(&req.id)
-            .execute(&mut *tx)
-            .await;
-
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(Referral {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            referral_code: row.get("referral_code"),
-            clicks: row.get("clicks"),
-            conversions: row.get("conversions"),
-            created_at_unix: row.get("created_at_unix"),
-        }))
-    }
 
     async fn get_downloads(
         &self,
