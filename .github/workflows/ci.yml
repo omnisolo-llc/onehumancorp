@@ -74,11 +74,7 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-            # Prevent root permission errors in Github Action CI runner cache
-            startup --output_user_root=/tmp/bazel-root
             test --sandbox_add_mount_pair=/var/run/docker.sock
-            # Prevent root permission errors in Github Action CI runner cache
-            startup --output_user_root=/tmp/bazel-root
 
 
       - name: Build release artifacts
@@ -148,11 +144,7 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-            # Prevent root permission errors in Github Action CI runner cache
-            startup --output_user_root=/tmp/bazel-root
             test --sandbox_add_mount_pair=/var/run/docker.sock
-            # Prevent root permission errors in Github Action CI runner cache
-            startup --output_user_root=/tmp/bazel-root
 
       - name: Build all artifacts
         run: |
