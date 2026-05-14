@@ -388,23 +388,39 @@ impl Store {
         Ok(())
     }
 
-    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
-        let mut revoked = self.revoked.write().unwrap();
-        revoked.insert(jti, exp);
-        
-        let now = Utc::now();
-        revoked.retain(|_, v| *v > now);
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
+        {
+            let mut revoked = self.revoked.write().unwrap();
+            revoked.insert(jti.clone(), exp);
+            let now = Utc::now();
+            revoked.retain(|_, v| *v > now);
+        }
+        let pool = crate::db::get_pool();
+        let _ = sqlx::query("INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3) ON CONFLICT (jti) DO NOTHING")
+            .bind(&jti).bind(exp).bind(org_id).execute(&pool).await;
+        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP").execute(&pool).await;
     }
 
-    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
-        let revoked = self.revoked.read().unwrap();
-        if let Some(exp) = revoked.get(jti) {
-             if exp > &Utc::now() {
-                 return true;
-             }
+
+    pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
+        {
+            let revoked = self.revoked.read().unwrap();
+            if let Some(exp) = revoked.get(jti) {
+                if exp > &Utc::now() {
+                    return true;
+                }
+            }
+        }
+        let pool = crate::db::get_pool();
+        if let Ok(row) = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
+            .bind(jti).fetch_one(&pool).await
+        {
+            let count: i64 = sqlx::Row::get(&row, 0);
+            if count > 0 { return true; }
         }
         false
     }
+
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
             let now = chrono::Utc::now();
@@ -443,7 +459,7 @@ impl Store {
                     if crate::config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -551,7 +567,7 @@ impl AuthService for AuthServiceServerImpl {
                     if let Ok(claims) = self.store.validate_token(token).await {
                         let exp = chrono::DateTime::from_timestamp(claims.exp as i64, 0)
                             .unwrap_or_else(|| chrono::Utc::now());
-                        let _ = self.store.revoke_token(claims.jti, exp, &claims.organization_id.unwrap_or_default());
+                        let _ = self.store.revoke_token(claims.jti, exp, &claims.organization_id.unwrap_or_default()).await;
                     }
                 }
             }
@@ -844,7 +860,7 @@ mod tests {
         let token = s.issue_token(&u).unwrap();
         
         let claims = s.validate_token(&token).await.unwrap();
-        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24), "");
+        s.revoke_token(claims.jti.clone(), Utc::now() + chrono::Duration::hours(24), "").await;
         
         assert!(s.validate_token(&token).await.is_err());
     }
