@@ -10,7 +10,7 @@ use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum AgentEvent {
     RunStarted { iteration: i32 },
     TextChunk { content: String },
@@ -25,7 +25,7 @@ pub enum AgentEvent {
 }
 
 /// Configuration for a single agent run.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AgentRunConfig {
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
@@ -53,6 +53,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
     pub visual_verification_command: String,
+    #[serde(skip)]
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub enable_git_checkpointing: bool,
@@ -71,6 +72,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
+    #[serde(skip)]
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
 
