@@ -11,6 +11,7 @@ filegroup(
         "telemetry.rs",
         "//src/server/api/agents:srcs",
         "//src/server/api/onboarding:srcs",
+        "//src/server/api/scribe:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

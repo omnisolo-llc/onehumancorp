@@ -17,6 +17,7 @@ filegroup(
         "//src/server/services/ops:srcs",
         "//src/server/services/org:srcs",
         "//src/server/services/scheduler:srcs",
+        "//src/server/services/scribe:srcs",
         "//src/server/services/sync:srcs",
     ],
     visibility = ["//src/server:__pkg__"],

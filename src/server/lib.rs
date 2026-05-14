@@ -55,6 +55,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod scribe;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -153,6 +154,7 @@ pub mod proto {
 use ::server_ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ::server_ohc::billing::billing_service_server::BillingServiceServer;
+use ::server_ohc::orchestration::scribe_service_server::ScribeServiceServer;
 use ::server_ohc::orchestration::*;
 
 pub struct MyHubService {
@@ -1466,6 +1468,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
+        .nest("/api/scribe", api::scribe::router(std::sync::Arc::new(crate::services::scribe::service::MyScribeService::new(hub.clone()))))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -1583,6 +1586,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
+    let scribe_service = crate::services::scribe::service::MyScribeService::new(hub.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
@@ -1591,6 +1595,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(ScribeServiceServer::with_interceptor(scribe_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
@@ -1600,7 +1605,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     let path = req.uri().path();
     let content = match path {
         "/api/v1/health" => "{\"status\":\"ok\"}",
-        _ => r#"
+        _ => r##"
             <!DOCTYPE html>
             <html>
                 <head>
@@ -1619,15 +1624,67 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
                         .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+
+                        /* Scribe UI Enhancements */
+                        .tooltip-trigger { cursor: help; text-decoration: underline dotted; }
+                        .tooltip-box { position: absolute; background: #1e293b; border: 1px solid #4ecca3; padding: 10px; border-radius: 8px; font-size: 14px; max-width: 200px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+                        .help-fab { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: #4ecca3; color: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; }
+                        .help-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; height: 80%; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; z-index: 1001; padding: 20px; overflow-y: auto; }
+                        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; }
+                        .search-bar { width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; margin-bottom: 20px; }
+                        .help-article { margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+                        .help-article h3 { color: #4ecca3; margin-top: 0; }
+                        .chat-widget { position: fixed; bottom: 90px; right: 20px; width: 300px; height: 400px; background: #1e293b; border: 1px solid #4ecca3; border-radius: 12px; z-index: 999; display: none; flex-direction: column; overflow: hidden; }
+                        .chat-header { background: #4ecca3; color: #0f172a; padding: 10px; font-weight: bold; }
+                        .chat-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 14px; }
+                        .chat-input-area { padding: 10px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; }
+                        .chat-input { flex: 1; background: rgba(255,255,255,0.1); border: none; padding: 8px; border-radius: 4px; color: white; margin-right: 5px; }
+                        .walkthrough-highlight { position: absolute; border: 2px solid #4ecca3; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); z-index: 9998; pointer-events: none; transition: all 0.3s ease; }
+                        .walkthrough-bubble { position: absolute; background: #4ecca3; color: #0f172a; padding: 15px; border-radius: 8px; z-index: 9999; width: 250px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+                        .advanced-only { display: none; }
+                        body.advanced-mode .advanced-only { display: block; }
+                        .portrait-video-player { width: 100%; aspect-ratio: 9/16; background: black; border-radius: 12px; overflow: hidden; }
                     </style>
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
-                        <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a id="dashboard-nav" onclick="showScreen('dashboard-screen')" onmouseenter="showTooltip(this)" onmouseleave="hideTooltip()">Dashboard</a>
+                        <a id="agents-nav" onclick="showScreen('agents-screen')" onmouseenter="showTooltip(this)" onmouseleave="hideTooltip()">Agents</a>
+                        <a id="setup-nav" onclick="showScreen('setup-screen')" onmouseenter="showTooltip(this)" onmouseleave="hideTooltip()">Setup Wizard</a>
+                        <a id="api-nav" onclick="showScreen('api-screen')" onmouseenter="showTooltip(this)" onmouseleave="hideTooltip()">Software</a>
                     </nav>
+
+                    <!-- Scribe Overlays -->
+                    <div id="modal-overlay" class="modal-overlay" onclick="closeHelp()"></div>
+                    <div id="help-modal" class="help-modal glass">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2>Help Center</h2>
+                            <button class="secondary" onclick="closeHelp()">Close</button>
+                        </div>
+                        <input type="text" class="search-bar" id="help-search" placeholder="Search for help (e.g. 'payments', 'agents')..." onkeyup="searchHelp(this.value)" />
+                        <div id="help-content">
+                            <!-- Articles will be injected here -->
+                            <div class="help-article">
+                                <h3>Getting Started</h3>
+                                <p>Welcome to OHC! To begin, follow the Setup Wizard to launch your business.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="chat-widget" class="chat-widget">
+                        <div class="chat-header">OHC Help Assistant</div>
+                        <div id="chat-messages" class="chat-messages">
+                            <div style="margin-bottom: 10px;"><b>Assistant:</b> Hi! I'm here to help. Ask me anything about OHC.</div>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendHelpMessage()" />
+                            <button onclick="sendHelpMessage()">Send</button>
+                        </div>
+                    </div>
+
+                    <div id="help-fab" class="help-fab" onclick="toggleHelp()">?</div>
+
+                    <div id="walkthrough-container"></div>
 
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
@@ -1657,7 +1714,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h1>Dashboard</h1>
+                            <button class="secondary" onclick="showScreen('whats-new-screen')">What's New</button>
+                        </div>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
@@ -1674,7 +1734,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <button>Video Tutorials</button>
+                            <button onclick="showScreen('tutorials-screen')">Video Tutorials</button>
+                            <button onclick="startWalkthrough('first-payment')">Start Walkthrough</button>
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
@@ -1709,11 +1770,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
                         <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
+                         <div style="margin-bottom: 20px;">
+                            <button onclick="toggleAdvancedMode()">Toggle Advanced Mode</button>
+                         </div>
+                         <div class="card glass">
+                            <h3>Quick Start</h3>
+                            <p>Connect your favorite tools to OHC using our pre-built integrations.</p>
+                            <button class="secondary">View Integrations</button>
+                         </div>
+
+                         <div class="advanced-only">
+                             <div class="card glass">
+                                <h3>API Reference (Advanced)</h3>
+                                <p>Use our gRPC and REST APIs to build custom integrations.</p>
+                                <button class="secondary" style="margin-top: 10px;">Download OpenAPI Spec</button>
+                             </div>
+                         </div>
+
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
@@ -1799,6 +1872,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                              <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
+                     </div>
+
+                     <!-- Tutorials Page -->
+                     <div id="tutorials-screen" class="screen glass">
+                        <h1>Video Tutorials</h1>
+                        <p>Learn how to use OHC with these short videos.</p>
+                        <div class="card glass">
+                            <h3>Setting up your store</h3>
+                            <div class="portrait-video-player">
+                                [ Video Player ]
+                            </div>
+                            <p>Learn how to launch your business in under 60 seconds.</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                     </div>
+
+                     <!-- What's New Page -->
+                     <div id="whats-new-screen" class="screen glass">
+                        <h1>What's New in OHC</h1>
+                        <div class="card glass">
+                            <h3>Better AI Support</h3>
+                            <p>We've improved our AI agents to be even more helpful.</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                      </div>
 
                      <!-- Diagnostics Page -->
@@ -1946,7 +2043,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'tutorials-screen' || id === 'whats-new-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -1985,6 +2082,174 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function toggleMenu() {
                             const menu = document.getElementById('extra-menu');
                             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                        }
+
+                        var helpArticles = [];
+                        function fetchArticles() {
+                            fetch('/api/scribe/articles')
+                                .then(function(r) { return r.json(); })
+                                .then(function(data) {
+                                    helpArticles = data.articles;
+                                    renderArticles(helpArticles);
+                                });
+                        }
+
+                        function toggleHelp() {
+                            const modal = document.getElementById('help-modal');
+                            const overlay = document.getElementById('modal-overlay');
+                            const isVisible = modal.style.display === 'block';
+                            modal.style.display = isVisible ? 'none' : 'block';
+                            overlay.style.display = isVisible ? 'none' : 'block';
+                            if (!isVisible) fetchArticles();
+                        }
+
+                        function closeHelp() {
+                            document.getElementById('help-modal').style.display = 'none';
+                            document.getElementById('modal-overlay').style.display = 'none';
+                            document.getElementById('chat-widget').style.display = 'none';
+                        }
+
+                        function renderArticles(articles) {
+                            const container = document.getElementById('help-content');
+                            var html = "";
+                            for (var i = 0; i < articles.length; i++) {
+                                var a = articles[i];
+                                html += '<div class="help-article"><h3>' + (a.title || "") + '</h3><p>' + (a.content || "") + '</p><small style="color: #4ecca3; opacity: 0.7;">Category: ' + (a.category || "") + '</small></div>';
+                            }
+                            container.innerHTML = html;
+                        }
+
+                        function searchHelp(query) {
+                            if (!query) {
+                                renderArticles(helpArticles);
+                                return;
+                            }
+                            fetch('/api/scribe/search?q=' + encodeURIComponent(query))
+                                .then(function(r) { return r.json(); })
+                                .then(function(data) {
+                                    renderArticles(data.articles);
+                                });
+                        }
+
+                        function toggleChat() {
+                            const chat = document.getElementById('chat-widget');
+                            chat.style.display = chat.style.display === 'flex' ? 'none' : 'flex';
+                        }
+
+                        function sendHelpMessage() {
+                            const input = document.getElementById('chat-input');
+                            const msg = input.value;
+                            if (!msg) return;
+
+                            const chatMessages = document.getElementById('chat-messages');
+                            var userDiv = document.createElement('div');
+                            userDiv.style.marginBottom = '10px';
+                            userDiv.style.textAlign = 'right';
+                            userDiv.innerHTML = '<b>You:</b> ' + msg;
+                            chatMessages.appendChild(userDiv);
+                            input.value = '';
+
+                            fetch('/api/scribe/chat', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ message: msg, context_url: window.location.pathname })
+                            })
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                var aiDiv = document.createElement('div');
+                                aiDiv.style.marginBottom = '10px';
+                                aiDiv.innerHTML = '<b>Assistant:</b> ' + (data.response || "");
+                                if (data.relatedArticles && data.relatedArticles.length > 0) {
+                                    aiDiv.innerHTML += ' <a href="#" onclick="toggleHelp(); return false;" style="color: #4ecca3">Read more</a>';
+                                }
+                                chatMessages.appendChild(aiDiv);
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            });
+                        }
+
+                        var tooltipRegistry = {};
+                        function fetchTooltips() {
+                            fetch('/api/scribe/tooltips')
+                                .then(function(r) { return r.json(); })
+                                .then(function(data) {
+                                    (data.tooltips || []).forEach(function(t) {
+                                        tooltipRegistry[t.elementId] = t.text;
+                                    });
+                                });
+                        }
+                        fetchTooltips();
+
+                        function showTooltip(target, text) {
+                            if (!text && tooltipRegistry[target.id]) text = tooltipRegistry[target.id];
+                            if (!text) return;
+                            const rect = target.getBoundingClientRect();
+                            const box = document.createElement('div');
+                            box.id = 'active-tooltip';
+                            box.className = 'tooltip-box';
+                            box.innerText = text;
+                            box.style.left = rect.left + 'px';
+                            box.style.top = (rect.bottom + 10) + 'px';
+                            document.body.appendChild(box);
+                        }
+
+                        function hideTooltip() {
+                            const box = document.getElementById('active-tooltip');
+                            if (box) box.remove();
+                        }
+
+                        let currentWalkthrough = null;
+                        let currentStepIdx = 0;
+
+                        function startWalkthrough(id) {
+                            fetch('/api/scribe/walkthrough/' + id)
+                                .then(function(r) { return r.json(); })
+                                .then(function(data) {
+                                    currentWalkthrough = data.steps;
+                                    currentStepIdx = 0;
+                                    showWalkthroughStep();
+                                });
+                        }
+
+                        function showWalkthroughStep() {
+                            const step = currentWalkthrough[currentStepIdx];
+                            const target = document.querySelector('a[id="' + step.elementId + '"], button[id="' + step.elementId + '"], div[id="' + step.elementId + '"], strong[id="' + step.elementId + '"]');
+                            if (!target) return;
+
+                            const rect = target.getBoundingClientRect();
+                            const container = document.getElementById('walkthrough-container');
+                            container.innerHTML = '<div class="walkthrough-highlight" style="left: ' + (rect.left-5) + 'px; top: ' + (rect.top-5) + 'px; width: ' + (rect.width+10) + 'px; height: ' + (rect.height+10) + 'px;"></div>' +
+                                '<div class="walkthrough-bubble" style="left: ' + rect.left + 'px; top: ' + (rect.bottom+20) + 'px;">' +
+                                    '<h3>' + step.title + '</h3>' +
+                                    '<p>' + step.content + '</p>' +
+                                    '<div style="display: flex; justify-content: space-between; margin-top: 10px;">' +
+                                        '<button class="secondary" onclick="stopWalkthrough()">Stop</button>' +
+                                        '<button onclick="nextWalkthroughStep()">Next</button>' +
+                                    '</div>' +
+                                '</div>';
+                        }
+
+                        function nextWalkthroughStep() {
+                            currentStepIdx++;
+                            if (currentStepIdx < currentWalkthrough.length) {
+                                showWalkthroughStep();
+                            } else {
+                                stopWalkthrough();
+                            }
+                        }
+
+                        function stopWalkthrough() {
+                            document.getElementById('walkthrough-container').innerHTML = '';
+                            currentWalkthrough = null;
+                        }
+
+                        function toggleAdvancedMode() {
+                            document.body.classList.toggle('advanced-mode');
+                            const isAdvanced = document.body.classList.contains('advanced-mode');
+                            localStorage.setItem('advancedMode', isAdvanced);
+                        }
+
+                        if (localStorage.getItem('advancedMode') === 'true') {
+                            document.body.classList.add('advanced-mode');
                         }
 
                         // Attach event listener for the grandma hint
@@ -2033,7 +2298,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </script>
                 </body>
             </html>
-        "#,
+        "##,
     };
     axum::response::Html(content)
 }

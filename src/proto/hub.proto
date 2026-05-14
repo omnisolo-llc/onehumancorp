@@ -1566,6 +1566,94 @@ service IntegrationService {
   rpc AssignIssue(IssueAssignRequest) returns (Issue);
 }
 
+message HelpArticle {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string category = 4;
+  repeated string tags = 5;
+}
+
+message SearchHelpRequest {
+  string query = 1;
+}
+
+message HelpArticlesResponse {
+  repeated HelpArticle articles = 1;
+}
+
+message Tooltip {
+  string element_id = 1;
+  string text = 2;
+  string page_route = 3;
+}
+
+message TooltipsResponse {
+  repeated Tooltip tooltips = 1;
+}
+
+message WalkthroughStep {
+  string element_id = 1;
+  string title = 2;
+  string content = 3;
+  int32 order = 4;
+}
+
+message WalkthroughRequest {
+  string walkthrough_id = 1;
+}
+
+message WalkthroughResponse {
+  string id = 1;
+  string name = 2;
+  repeated WalkthroughStep steps = 3;
+}
+
+message VideoTutorial {
+  string id = 1;
+  string title = 2;
+  string url = 3;
+  int32 duration_seconds = 4;
+  string thumbnail_url = 5;
+}
+
+message VideoTutorialsResponse {
+  repeated VideoTutorial tutorials = 1;
+}
+
+message ReleaseNote {
+  string id = 1;
+  string version = 2;
+  string date = 3;
+  string title = 4;
+  string content = 5;
+  string screenshot_url = 6;
+}
+
+message ReleaseNotesResponse {
+  repeated ReleaseNote notes = 1;
+}
+
+message HelpChatRequest {
+  string message = 1;
+  string context_url = 2;
+}
+
+message HelpChatResponse {
+  string response = 1;
+  repeated HelpArticle related_articles = 2;
+}
+
+service ScribeService {
+  rpc GetHelpArticles(EmptyRequest) returns (HelpArticlesResponse);
+  rpc SearchHelp(SearchHelpRequest) returns (HelpArticlesResponse);
+  rpc GetTooltips(EmptyRequest) returns (TooltipsResponse);
+  rpc GetWalkthrough(WalkthroughRequest) returns (WalkthroughResponse);
+  rpc GetVideoTutorials(EmptyRequest) returns (VideoTutorialsResponse);
+  rpc GetReleaseNotes(EmptyRequest) returns (ReleaseNotesResponse);
+  rpc AskHelpAI(HelpChatRequest) returns (HelpChatResponse);
+}
+
 message McpToolProto {
   string id = 1;
   string name = 2;
