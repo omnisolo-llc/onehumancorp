@@ -262,40 +262,19 @@ mod tests {
 
         let mut search_dirs = vec![PathBuf::from(".")];
         // Try multiple possible source locations
-        let possible_src_roots = vec![
-            PathBuf::from("src"),
-            PathBuf::from("src/server"),
-        ];
-        if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
+        if let Ok(workspace_dir) = env::var("BUILD_WORKSPACE_DIRECTORY") {
+            let ws = PathBuf::from(workspace_dir);
+            search_dirs = vec![ws.join("src"), ws.join("src/server")];
+        } else if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
             let runfiles = PathBuf::from(&runfiles_dir);
-            // In bazel runfiles, the manifest is at RUNFILES_DIR/MANIFEST.txt
-            // The actual source files are symlinked in the runfiles directory
-            // We need to find where the src directory actually is
-            for entry in std::fs::read_dir(&runfiles).into_iter().flatten().flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.file_name().map_or(false, |n| n == "src") {
-                    search_dirs.push(path);
-                }
-            }
-            // Also try workspace name prefix (common pattern)
-            if let Ok(workspace) = env::var("TEST_WORKSPACE") {
-                let prefixed = runfiles.join(&workspace).join("src");
-                if prefixed.exists() {
-                    search_dirs.push(prefixed);
-                }
-            }
-        }
-        for src_root in possible_src_roots {
-            if src_root.exists() {
-                search_dirs.push(src_root);
-            }
+            search_dirs = vec![runfiles.join("ohc/src"), runfiles.join("ohc/src/server"), runfiles.join("_main/src"), runfiles.join("_main/src/server")];
         }
 
         let mut checked_files = 0;
 
         for dir in &search_dirs {
             if dir.exists() {
-                let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
+                let walker = WalkDir::new(&dir).follow_links(true).into_iter().filter_entry(|e| {
                     e.path().components().all(|c| c.as_os_str() != "external")
                 });
 
