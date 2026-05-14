@@ -32,8 +32,14 @@ pub async fn run_health_monitor(
             }
         }
 
-        // New Health-check probe for local-to-cloud mission sync
+
+        // Advanced hybrid-mode switching probe and local-to-cloud mission sync probe combined
         if let Ok(Ok(health)) = tokio::time::timeout(std::time::Duration::from_millis(50), monitor_hub.check_health()).await {
+            if let Some(sync_latency) = health.get("sync_latency_ms").and_then(|v| v.as_i64()) {
+                if sync_latency > 5000 {
+                    tracing::warn!("HEALTH MONITOR: Sync latency is too high: {} ms", sync_latency);
+                }
+            }
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
                     tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
@@ -196,6 +202,38 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
+        handle.abort();
+    }
+
+
+    #[tokio::test]
+    async fn test_health_monitor_sync_latency_probe() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pg_pool));
+
+        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let centrifuge_node = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let monitor_mesh: std::sync::Arc<dyn TeammateMesh> = centrifuge_node.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         handle.abort();
     }
 

@@ -71,6 +71,13 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
+
+                // Signal Hygiene: Prune redundant missions that are completely orphaned
+                sqlx::query("DELETE FROM agent_missions WHERE status = 'ORPHANED' AND tenant_id = $1")
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND tenant_id = $1")
                     .bind(&self.org_id)
@@ -495,6 +502,20 @@ mod tests {
             // Clean up
             sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_id'").execute(&pool).await.unwrap();
         }
+    }
+
+
+    #[tokio::test]
+    async fn test_prune_redundant_orphaned_missions() {
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(10))
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string());
+        let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+        assert!(res.is_err());
     }
 
     #[tokio::test]
