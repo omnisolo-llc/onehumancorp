@@ -2008,21 +2008,90 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+
+                    <!-- Pricing Page -->
+                    <div id="pricing-screen" class="screen">
+                        <h1>Pricing Plans</h1>
+                        <h2>Plan Comparison</h2>
+                        <div>
+                            <button>Monthly</button>
+                            <button>Annual (Save 20% off)</button>
+                        </div>
+                        <div class="pricing-grid" style="display: flex; gap: 20px;">
+                            <div class="card glass">
+                                <h3>Free</h3>
+                                <p class="price">$0 / month</p>
+                                <ul>
+                                    <li class="feature">1 AI Agent Limit</li>
+                                    <li class="feature">500MB Storage limit</li>
+                                    <li class="feature">Community Support</li>
+                                </ul>
+                                <button onclick="showScreen('dashboard-screen')">Start for Free</button>
+                            </div>
+                            <div class="card glass recommended" style="border: 2px solid var(--accent);">
+                                <h3>Starter</h3>
+                                <p class="best-badge">Recommended</p>
+                                <p class="price">$29 / month</p>
+                                <ul>
+                                    <li class="feature">3 AI Agents Limit</li>
+                                    <li class="feature">5GB Storage limit</li>
+                                    <li class="feature">Email Support</li>
+                                </ul>
+                                <button onclick="showScreen('checkout-screen')">Choose Starter</button>
+                            </div>
+                            <div class="card glass">
+                                <h3>Pro (Professional)</h3>
+                                <p class="price">$99 / month</p>
+                                <ul>
+                                    <li class="feature">10 AI Agents Limit</li>
+                                    <li class="feature">50GB Storage limit</li>
+                                    <li class="feature">Priority Support</li>
+                                </ul>
+                                <button onclick="showScreen('checkout-screen')">Choose Pro</button>
+                            </div>
+                            <div class="card glass">
+                                <h3>Business (Enterprise)</h3>
+                                <p class="price">Custom</p>
+                                <ul>
+                                    <li class="feature">Unlimited Agents Limit</li>
+                                    <li class="feature">500GB+ Storage limit</li>
+                                    <li class="feature">24/7 Dedicated Help Support</li>
+                                </ul>
+                                <button onclick="alert('Contact Sales Email')">Contact Sales</button>
+                            </div>
+                        </div>
+
+                        <div class="faq-section">
+                            <h2>FAQ (Frequently Asked Questions)</h2>
+                            <div class="faq-item question" onclick="this.querySelector('.answer').style.display = 'block'">
+                                <h3>Is there a money back guarantee?</h3>
+                                <p class="answer description" style="display:none;">Yes, we offer a 30-day refund guarantee.</p>
+                            </div>
+                        </div>
+                        <div class="badges">
+                            <span class="badge">Money Back Guarantee</span>
+                            <span class="badge">100% Secure Checkout SSL</span>
+                        </div>
+                    </div>
+
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
                         <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
+                        <p>Next billing / Renewal: 2024-06-01</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
+                            <p>Storage Used: 1MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
+                            <p>AI Actions Used: 15 / 100</p>
                             <p>Projected Cost this cycle: $1.23</p>
                             <button onclick="showScreen('pricing-screen')">Add Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
+                        <button onclick="showScreen('pricing-screen')">Upgrade Plan / Change Plan</button>
+                        <button class="secondary" onclick="alert('Confirm Cancel Subscription')">Cancel Subscription / Unsubscribe</button>
+                        <button class="secondary" onclick="alert('PDF Invoice')">Download Invoice</button>
+                        <button class="secondary" onclick="alert('Billing History')">Billing History / Invoices</button>
+                        <button class="secondary" onclick="alert('Update Payment Method')">Update Payment Method / Card</button>
                         <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>

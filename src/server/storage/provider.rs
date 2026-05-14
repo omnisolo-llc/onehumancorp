@@ -30,3 +30,10 @@ pub trait Provider: Send + Sync {
     /// WriteBlob writes the content of a blob.
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()>;
 }
+
+
+#[async_trait]
+pub trait CDNProvider: Send + Sync {
+    async fn invalidate_cache(&self, keys: &[String]) -> io::Result<()>;
+    async fn get_cdn_url(&self, key: &str) -> io::Result<String>;
+}
