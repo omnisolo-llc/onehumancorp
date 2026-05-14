@@ -250,7 +250,6 @@ pub fn is_email(s: &str) -> bool {
     s.contains('@') && s.contains('.')
 }
 
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -321,5 +320,4 @@ pub async fn record_email_send_cost(pool: &PgPool, organization_id: &str, count:
     )
     .await
 }
-#[cfg(test)]
 pub mod compliance_test;
