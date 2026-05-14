@@ -4,12 +4,7 @@ test.describe('Lens Audit E2E Flow', () => {
   // Wait for the UI components to load since this hits the Slint app (or placeholder API)
   test.beforeEach(async ({ page }) => {
     // Attempt to navigate to the app UI
-    try {
-      await page.goto('/');
-    } catch (e) {
-      console.log('App server is not available for pure E2E. Skipping visual E2E since we tested using Rust Slint UI tests.');
-      test.skip();
-    }
+    await page.goto('/');
   });
 
   test('verify Dashboard visual state and full UI lifecycle', async ({ page }) => {
