@@ -1,5 +1,13 @@
-issue_category: cleanup
+triage_report:
+  issue_category: "cleanup"
+  severity: "low"
+  summary: "Fixed duplicate networkPolicy definition and added missing OHC Premium CSS tokens to Grafana dashboards."
+  details: |
+    - Removed duplicate `networkPolicy` block in `deploy/helm/ohc/values.yaml`.
+    - Injected missing OHC Premium CSS tokens (`backdrop-filter: blur(20px) saturate(200%);`) into `monitoring/dashboards/tenant_costs.json`, `monitoring/grafana/dashboards/chaos_resilience.json`, and `monitoring/grafana/dashboards/cost_dashboard.json`.
+    - Optimized Standalone Wrapper resource limits for Prometheus
 debt_report:
-  description: "Bump version to v0.4.41"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+  technical_debt:
+    - "Some older Python test utilities in `src/tests/` might need porting to Rust or modern integration frameworks."
+  refactoring_opportunities:
+    - "Unify dashboard configurations so that OHC Premium CSS is applied systematically rather than duplicated across JSON files."

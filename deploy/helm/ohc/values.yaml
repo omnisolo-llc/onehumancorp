@@ -73,6 +73,8 @@ redis:
   architecture: standalone
   auth:
     enabled: false
+  networkPolicy:
+    enabled: true
 
 # CloudNative PostgreSQL operator cluster
 # Set cnpg.enabled=true when the CNPG operator is installed in the cluster.
