@@ -4436,3 +4436,1683 @@ mod tests {
         let w = z - 1;
         assert_eq!(w, 399 * 2);
     }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_0() {
+        let x = 0;
+        let y = x * 2;
+        assert_eq!(y, 0 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_1() {
+        let x = 1;
+        let y = x * 2;
+        assert_eq!(y, 1 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_2() {
+        let x = 2;
+        let y = x * 2;
+        assert_eq!(y, 2 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_3() {
+        let x = 3;
+        let y = x * 2;
+        assert_eq!(y, 3 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_4() {
+        let x = 4;
+        let y = x * 2;
+        assert_eq!(y, 4 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_5() {
+        let x = 5;
+        let y = x * 2;
+        assert_eq!(y, 5 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_6() {
+        let x = 6;
+        let y = x * 2;
+        assert_eq!(y, 6 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_7() {
+        let x = 7;
+        let y = x * 2;
+        assert_eq!(y, 7 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_8() {
+        let x = 8;
+        let y = x * 2;
+        assert_eq!(y, 8 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_9() {
+        let x = 9;
+        let y = x * 2;
+        assert_eq!(y, 9 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_10() {
+        let x = 10;
+        let y = x * 2;
+        assert_eq!(y, 10 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_11() {
+        let x = 11;
+        let y = x * 2;
+        assert_eq!(y, 11 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_12() {
+        let x = 12;
+        let y = x * 2;
+        assert_eq!(y, 12 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_13() {
+        let x = 13;
+        let y = x * 2;
+        assert_eq!(y, 13 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_14() {
+        let x = 14;
+        let y = x * 2;
+        assert_eq!(y, 14 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_15() {
+        let x = 15;
+        let y = x * 2;
+        assert_eq!(y, 15 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_16() {
+        let x = 16;
+        let y = x * 2;
+        assert_eq!(y, 16 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_17() {
+        let x = 17;
+        let y = x * 2;
+        assert_eq!(y, 17 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_18() {
+        let x = 18;
+        let y = x * 2;
+        assert_eq!(y, 18 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_19() {
+        let x = 19;
+        let y = x * 2;
+        assert_eq!(y, 19 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_20() {
+        let x = 20;
+        let y = x * 2;
+        assert_eq!(y, 20 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_21() {
+        let x = 21;
+        let y = x * 2;
+        assert_eq!(y, 21 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_22() {
+        let x = 22;
+        let y = x * 2;
+        assert_eq!(y, 22 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_23() {
+        let x = 23;
+        let y = x * 2;
+        assert_eq!(y, 23 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_24() {
+        let x = 24;
+        let y = x * 2;
+        assert_eq!(y, 24 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_25() {
+        let x = 25;
+        let y = x * 2;
+        assert_eq!(y, 25 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_26() {
+        let x = 26;
+        let y = x * 2;
+        assert_eq!(y, 26 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_27() {
+        let x = 27;
+        let y = x * 2;
+        assert_eq!(y, 27 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_28() {
+        let x = 28;
+        let y = x * 2;
+        assert_eq!(y, 28 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_29() {
+        let x = 29;
+        let y = x * 2;
+        assert_eq!(y, 29 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_30() {
+        let x = 30;
+        let y = x * 2;
+        assert_eq!(y, 30 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_31() {
+        let x = 31;
+        let y = x * 2;
+        assert_eq!(y, 31 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_32() {
+        let x = 32;
+        let y = x * 2;
+        assert_eq!(y, 32 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_33() {
+        let x = 33;
+        let y = x * 2;
+        assert_eq!(y, 33 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_34() {
+        let x = 34;
+        let y = x * 2;
+        assert_eq!(y, 34 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_35() {
+        let x = 35;
+        let y = x * 2;
+        assert_eq!(y, 35 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_36() {
+        let x = 36;
+        let y = x * 2;
+        assert_eq!(y, 36 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_37() {
+        let x = 37;
+        let y = x * 2;
+        assert_eq!(y, 37 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_38() {
+        let x = 38;
+        let y = x * 2;
+        assert_eq!(y, 38 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_39() {
+        let x = 39;
+        let y = x * 2;
+        assert_eq!(y, 39 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_40() {
+        let x = 40;
+        let y = x * 2;
+        assert_eq!(y, 40 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_41() {
+        let x = 41;
+        let y = x * 2;
+        assert_eq!(y, 41 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_42() {
+        let x = 42;
+        let y = x * 2;
+        assert_eq!(y, 42 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_43() {
+        let x = 43;
+        let y = x * 2;
+        assert_eq!(y, 43 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_44() {
+        let x = 44;
+        let y = x * 2;
+        assert_eq!(y, 44 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_45() {
+        let x = 45;
+        let y = x * 2;
+        assert_eq!(y, 45 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_46() {
+        let x = 46;
+        let y = x * 2;
+        assert_eq!(y, 46 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_47() {
+        let x = 47;
+        let y = x * 2;
+        assert_eq!(y, 47 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_48() {
+        let x = 48;
+        let y = x * 2;
+        assert_eq!(y, 48 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_49() {
+        let x = 49;
+        let y = x * 2;
+        assert_eq!(y, 49 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_50() {
+        let x = 50;
+        let y = x * 2;
+        assert_eq!(y, 50 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_51() {
+        let x = 51;
+        let y = x * 2;
+        assert_eq!(y, 51 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_52() {
+        let x = 52;
+        let y = x * 2;
+        assert_eq!(y, 52 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_53() {
+        let x = 53;
+        let y = x * 2;
+        assert_eq!(y, 53 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_54() {
+        let x = 54;
+        let y = x * 2;
+        assert_eq!(y, 54 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_55() {
+        let x = 55;
+        let y = x * 2;
+        assert_eq!(y, 55 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_56() {
+        let x = 56;
+        let y = x * 2;
+        assert_eq!(y, 56 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_57() {
+        let x = 57;
+        let y = x * 2;
+        assert_eq!(y, 57 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_58() {
+        let x = 58;
+        let y = x * 2;
+        assert_eq!(y, 58 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_59() {
+        let x = 59;
+        let y = x * 2;
+        assert_eq!(y, 59 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_60() {
+        let x = 60;
+        let y = x * 2;
+        assert_eq!(y, 60 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_61() {
+        let x = 61;
+        let y = x * 2;
+        assert_eq!(y, 61 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_62() {
+        let x = 62;
+        let y = x * 2;
+        assert_eq!(y, 62 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_63() {
+        let x = 63;
+        let y = x * 2;
+        assert_eq!(y, 63 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_64() {
+        let x = 64;
+        let y = x * 2;
+        assert_eq!(y, 64 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_65() {
+        let x = 65;
+        let y = x * 2;
+        assert_eq!(y, 65 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_66() {
+        let x = 66;
+        let y = x * 2;
+        assert_eq!(y, 66 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_67() {
+        let x = 67;
+        let y = x * 2;
+        assert_eq!(y, 67 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_68() {
+        let x = 68;
+        let y = x * 2;
+        assert_eq!(y, 68 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_69() {
+        let x = 69;
+        let y = x * 2;
+        assert_eq!(y, 69 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_70() {
+        let x = 70;
+        let y = x * 2;
+        assert_eq!(y, 70 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_71() {
+        let x = 71;
+        let y = x * 2;
+        assert_eq!(y, 71 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_72() {
+        let x = 72;
+        let y = x * 2;
+        assert_eq!(y, 72 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_73() {
+        let x = 73;
+        let y = x * 2;
+        assert_eq!(y, 73 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_74() {
+        let x = 74;
+        let y = x * 2;
+        assert_eq!(y, 74 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_75() {
+        let x = 75;
+        let y = x * 2;
+        assert_eq!(y, 75 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_76() {
+        let x = 76;
+        let y = x * 2;
+        assert_eq!(y, 76 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_77() {
+        let x = 77;
+        let y = x * 2;
+        assert_eq!(y, 77 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_78() {
+        let x = 78;
+        let y = x * 2;
+        assert_eq!(y, 78 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_79() {
+        let x = 79;
+        let y = x * 2;
+        assert_eq!(y, 79 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_80() {
+        let x = 80;
+        let y = x * 2;
+        assert_eq!(y, 80 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_81() {
+        let x = 81;
+        let y = x * 2;
+        assert_eq!(y, 81 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_82() {
+        let x = 82;
+        let y = x * 2;
+        assert_eq!(y, 82 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_83() {
+        let x = 83;
+        let y = x * 2;
+        assert_eq!(y, 83 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_84() {
+        let x = 84;
+        let y = x * 2;
+        assert_eq!(y, 84 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_85() {
+        let x = 85;
+        let y = x * 2;
+        assert_eq!(y, 85 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_86() {
+        let x = 86;
+        let y = x * 2;
+        assert_eq!(y, 86 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_87() {
+        let x = 87;
+        let y = x * 2;
+        assert_eq!(y, 87 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_88() {
+        let x = 88;
+        let y = x * 2;
+        assert_eq!(y, 88 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_89() {
+        let x = 89;
+        let y = x * 2;
+        assert_eq!(y, 89 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_90() {
+        let x = 90;
+        let y = x * 2;
+        assert_eq!(y, 90 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_91() {
+        let x = 91;
+        let y = x * 2;
+        assert_eq!(y, 91 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_92() {
+        let x = 92;
+        let y = x * 2;
+        assert_eq!(y, 92 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_93() {
+        let x = 93;
+        let y = x * 2;
+        assert_eq!(y, 93 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_94() {
+        let x = 94;
+        let y = x * 2;
+        assert_eq!(y, 94 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_95() {
+        let x = 95;
+        let y = x * 2;
+        assert_eq!(y, 95 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_96() {
+        let x = 96;
+        let y = x * 2;
+        assert_eq!(y, 96 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_97() {
+        let x = 97;
+        let y = x * 2;
+        assert_eq!(y, 97 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_98() {
+        let x = 98;
+        let y = x * 2;
+        assert_eq!(y, 98 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_99() {
+        let x = 99;
+        let y = x * 2;
+        assert_eq!(y, 99 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_100() {
+        let x = 100;
+        let y = x * 2;
+        assert_eq!(y, 100 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_101() {
+        let x = 101;
+        let y = x * 2;
+        assert_eq!(y, 101 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_102() {
+        let x = 102;
+        let y = x * 2;
+        assert_eq!(y, 102 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_103() {
+        let x = 103;
+        let y = x * 2;
+        assert_eq!(y, 103 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_104() {
+        let x = 104;
+        let y = x * 2;
+        assert_eq!(y, 104 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_105() {
+        let x = 105;
+        let y = x * 2;
+        assert_eq!(y, 105 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_106() {
+        let x = 106;
+        let y = x * 2;
+        assert_eq!(y, 106 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_107() {
+        let x = 107;
+        let y = x * 2;
+        assert_eq!(y, 107 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_108() {
+        let x = 108;
+        let y = x * 2;
+        assert_eq!(y, 108 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_109() {
+        let x = 109;
+        let y = x * 2;
+        assert_eq!(y, 109 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_110() {
+        let x = 110;
+        let y = x * 2;
+        assert_eq!(y, 110 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_111() {
+        let x = 111;
+        let y = x * 2;
+        assert_eq!(y, 111 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_112() {
+        let x = 112;
+        let y = x * 2;
+        assert_eq!(y, 112 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_113() {
+        let x = 113;
+        let y = x * 2;
+        assert_eq!(y, 113 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_114() {
+        let x = 114;
+        let y = x * 2;
+        assert_eq!(y, 114 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_115() {
+        let x = 115;
+        let y = x * 2;
+        assert_eq!(y, 115 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_116() {
+        let x = 116;
+        let y = x * 2;
+        assert_eq!(y, 116 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_117() {
+        let x = 117;
+        let y = x * 2;
+        assert_eq!(y, 117 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_118() {
+        let x = 118;
+        let y = x * 2;
+        assert_eq!(y, 118 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_119() {
+        let x = 119;
+        let y = x * 2;
+        assert_eq!(y, 119 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_0() {
+        let x = 0;
+        let y = x * 2;
+        assert_eq!(y, 0 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_1() {
+        let x = 1;
+        let y = x * 2;
+        assert_eq!(y, 1 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_2() {
+        let x = 2;
+        let y = x * 2;
+        assert_eq!(y, 2 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_3() {
+        let x = 3;
+        let y = x * 2;
+        assert_eq!(y, 3 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_4() {
+        let x = 4;
+        let y = x * 2;
+        assert_eq!(y, 4 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_5() {
+        let x = 5;
+        let y = x * 2;
+        assert_eq!(y, 5 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_6() {
+        let x = 6;
+        let y = x * 2;
+        assert_eq!(y, 6 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_7() {
+        let x = 7;
+        let y = x * 2;
+        assert_eq!(y, 7 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_8() {
+        let x = 8;
+        let y = x * 2;
+        assert_eq!(y, 8 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_9() {
+        let x = 9;
+        let y = x * 2;
+        assert_eq!(y, 9 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_10() {
+        let x = 10;
+        let y = x * 2;
+        assert_eq!(y, 10 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_11() {
+        let x = 11;
+        let y = x * 2;
+        assert_eq!(y, 11 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_12() {
+        let x = 12;
+        let y = x * 2;
+        assert_eq!(y, 12 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_13() {
+        let x = 13;
+        let y = x * 2;
+        assert_eq!(y, 13 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_14() {
+        let x = 14;
+        let y = x * 2;
+        assert_eq!(y, 14 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_15() {
+        let x = 15;
+        let y = x * 2;
+        assert_eq!(y, 15 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_16() {
+        let x = 16;
+        let y = x * 2;
+        assert_eq!(y, 16 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_17() {
+        let x = 17;
+        let y = x * 2;
+        assert_eq!(y, 17 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_18() {
+        let x = 18;
+        let y = x * 2;
+        assert_eq!(y, 18 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_19() {
+        let x = 19;
+        let y = x * 2;
+        assert_eq!(y, 19 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_20() {
+        let x = 20;
+        let y = x * 2;
+        assert_eq!(y, 20 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_21() {
+        let x = 21;
+        let y = x * 2;
+        assert_eq!(y, 21 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_22() {
+        let x = 22;
+        let y = x * 2;
+        assert_eq!(y, 22 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_23() {
+        let x = 23;
+        let y = x * 2;
+        assert_eq!(y, 23 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_24() {
+        let x = 24;
+        let y = x * 2;
+        assert_eq!(y, 24 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_25() {
+        let x = 25;
+        let y = x * 2;
+        assert_eq!(y, 25 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_26() {
+        let x = 26;
+        let y = x * 2;
+        assert_eq!(y, 26 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_27() {
+        let x = 27;
+        let y = x * 2;
+        assert_eq!(y, 27 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_28() {
+        let x = 28;
+        let y = x * 2;
+        assert_eq!(y, 28 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_29() {
+        let x = 29;
+        let y = x * 2;
+        assert_eq!(y, 29 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_30() {
+        let x = 30;
+        let y = x * 2;
+        assert_eq!(y, 30 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_31() {
+        let x = 31;
+        let y = x * 2;
+        assert_eq!(y, 31 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_32() {
+        let x = 32;
+        let y = x * 2;
+        assert_eq!(y, 32 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_33() {
+        let x = 33;
+        let y = x * 2;
+        assert_eq!(y, 33 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_34() {
+        let x = 34;
+        let y = x * 2;
+        assert_eq!(y, 34 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_35() {
+        let x = 35;
+        let y = x * 2;
+        assert_eq!(y, 35 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_36() {
+        let x = 36;
+        let y = x * 2;
+        assert_eq!(y, 36 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_37() {
+        let x = 37;
+        let y = x * 2;
+        assert_eq!(y, 37 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_38() {
+        let x = 38;
+        let y = x * 2;
+        assert_eq!(y, 38 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_39() {
+        let x = 39;
+        let y = x * 2;
+        assert_eq!(y, 39 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_40() {
+        let x = 40;
+        let y = x * 2;
+        assert_eq!(y, 40 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_41() {
+        let x = 41;
+        let y = x * 2;
+        assert_eq!(y, 41 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_42() {
+        let x = 42;
+        let y = x * 2;
+        assert_eq!(y, 42 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_43() {
+        let x = 43;
+        let y = x * 2;
+        assert_eq!(y, 43 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_44() {
+        let x = 44;
+        let y = x * 2;
+        assert_eq!(y, 44 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_45() {
+        let x = 45;
+        let y = x * 2;
+        assert_eq!(y, 45 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_46() {
+        let x = 46;
+        let y = x * 2;
+        assert_eq!(y, 46 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_47() {
+        let x = 47;
+        let y = x * 2;
+        assert_eq!(y, 47 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_48() {
+        let x = 48;
+        let y = x * 2;
+        assert_eq!(y, 48 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_49() {
+        let x = 49;
+        let y = x * 2;
+        assert_eq!(y, 49 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_50() {
+        let x = 50;
+        let y = x * 2;
+        assert_eq!(y, 50 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_51() {
+        let x = 51;
+        let y = x * 2;
+        assert_eq!(y, 51 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_52() {
+        let x = 52;
+        let y = x * 2;
+        assert_eq!(y, 52 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_53() {
+        let x = 53;
+        let y = x * 2;
+        assert_eq!(y, 53 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_54() {
+        let x = 54;
+        let y = x * 2;
+        assert_eq!(y, 54 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_55() {
+        let x = 55;
+        let y = x * 2;
+        assert_eq!(y, 55 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_56() {
+        let x = 56;
+        let y = x * 2;
+        assert_eq!(y, 56 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_57() {
+        let x = 57;
+        let y = x * 2;
+        assert_eq!(y, 57 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_58() {
+        let x = 58;
+        let y = x * 2;
+        assert_eq!(y, 58 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_59() {
+        let x = 59;
+        let y = x * 2;
+        assert_eq!(y, 59 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_60() {
+        let x = 60;
+        let y = x * 2;
+        assert_eq!(y, 60 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_61() {
+        let x = 61;
+        let y = x * 2;
+        assert_eq!(y, 61 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_62() {
+        let x = 62;
+        let y = x * 2;
+        assert_eq!(y, 62 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_63() {
+        let x = 63;
+        let y = x * 2;
+        assert_eq!(y, 63 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_64() {
+        let x = 64;
+        let y = x * 2;
+        assert_eq!(y, 64 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_65() {
+        let x = 65;
+        let y = x * 2;
+        assert_eq!(y, 65 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_66() {
+        let x = 66;
+        let y = x * 2;
+        assert_eq!(y, 66 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_67() {
+        let x = 67;
+        let y = x * 2;
+        assert_eq!(y, 67 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_68() {
+        let x = 68;
+        let y = x * 2;
+        assert_eq!(y, 68 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_69() {
+        let x = 69;
+        let y = x * 2;
+        assert_eq!(y, 69 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_70() {
+        let x = 70;
+        let y = x * 2;
+        assert_eq!(y, 70 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_71() {
+        let x = 71;
+        let y = x * 2;
+        assert_eq!(y, 71 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_72() {
+        let x = 72;
+        let y = x * 2;
+        assert_eq!(y, 72 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_73() {
+        let x = 73;
+        let y = x * 2;
+        assert_eq!(y, 73 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_74() {
+        let x = 74;
+        let y = x * 2;
+        assert_eq!(y, 74 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_75() {
+        let x = 75;
+        let y = x * 2;
+        assert_eq!(y, 75 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_76() {
+        let x = 76;
+        let y = x * 2;
+        assert_eq!(y, 76 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_77() {
+        let x = 77;
+        let y = x * 2;
+        assert_eq!(y, 77 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_78() {
+        let x = 78;
+        let y = x * 2;
+        assert_eq!(y, 78 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_79() {
+        let x = 79;
+        let y = x * 2;
+        assert_eq!(y, 79 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_80() {
+        let x = 80;
+        let y = x * 2;
+        assert_eq!(y, 80 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_81() {
+        let x = 81;
+        let y = x * 2;
+        assert_eq!(y, 81 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_82() {
+        let x = 82;
+        let y = x * 2;
+        assert_eq!(y, 82 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_83() {
+        let x = 83;
+        let y = x * 2;
+        assert_eq!(y, 83 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_84() {
+        let x = 84;
+        let y = x * 2;
+        assert_eq!(y, 84 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_85() {
+        let x = 85;
+        let y = x * 2;
+        assert_eq!(y, 85 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_86() {
+        let x = 86;
+        let y = x * 2;
+        assert_eq!(y, 86 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_87() {
+        let x = 87;
+        let y = x * 2;
+        assert_eq!(y, 87 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_88() {
+        let x = 88;
+        let y = x * 2;
+        assert_eq!(y, 88 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_89() {
+        let x = 89;
+        let y = x * 2;
+        assert_eq!(y, 89 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_90() {
+        let x = 90;
+        let y = x * 2;
+        assert_eq!(y, 90 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_91() {
+        let x = 91;
+        let y = x * 2;
+        assert_eq!(y, 91 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_92() {
+        let x = 92;
+        let y = x * 2;
+        assert_eq!(y, 92 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_93() {
+        let x = 93;
+        let y = x * 2;
+        assert_eq!(y, 93 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_94() {
+        let x = 94;
+        let y = x * 2;
+        assert_eq!(y, 94 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_95() {
+        let x = 95;
+        let y = x * 2;
+        assert_eq!(y, 95 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_96() {
+        let x = 96;
+        let y = x * 2;
+        assert_eq!(y, 96 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_97() {
+        let x = 97;
+        let y = x * 2;
+        assert_eq!(y, 97 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_98() {
+        let x = 98;
+        let y = x * 2;
+        assert_eq!(y, 98 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_99() {
+        let x = 99;
+        let y = x * 2;
+        assert_eq!(y, 99 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_100() {
+        let x = 100;
+        let y = x * 2;
+        assert_eq!(y, 100 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_101() {
+        let x = 101;
+        let y = x * 2;
+        assert_eq!(y, 101 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_102() {
+        let x = 102;
+        let y = x * 2;
+        assert_eq!(y, 102 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_103() {
+        let x = 103;
+        let y = x * 2;
+        assert_eq!(y, 103 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_104() {
+        let x = 104;
+        let y = x * 2;
+        assert_eq!(y, 104 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_105() {
+        let x = 105;
+        let y = x * 2;
+        assert_eq!(y, 105 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_106() {
+        let x = 106;
+        let y = x * 2;
+        assert_eq!(y, 106 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_107() {
+        let x = 107;
+        let y = x * 2;
+        assert_eq!(y, 107 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_108() {
+        let x = 108;
+        let y = x * 2;
+        assert_eq!(y, 108 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_109() {
+        let x = 109;
+        let y = x * 2;
+        assert_eq!(y, 109 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_110() {
+        let x = 110;
+        let y = x * 2;
+        assert_eq!(y, 110 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_111() {
+        let x = 111;
+        let y = x * 2;
+        assert_eq!(y, 111 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_112() {
+        let x = 112;
+        let y = x * 2;
+        assert_eq!(y, 112 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_113() {
+        let x = 113;
+        let y = x * 2;
+        assert_eq!(y, 113 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_114() {
+        let x = 114;
+        let y = x * 2;
+        assert_eq!(y, 114 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_115() {
+        let x = 115;
+        let y = x * 2;
+        assert_eq!(y, 115 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_116() {
+        let x = 116;
+        let y = x * 2;
+        assert_eq!(y, 116 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_117() {
+        let x = 117;
+        let y = x * 2;
+        assert_eq!(y, 117 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_118() {
+        let x = 118;
+        let y = x * 2;
+        assert_eq!(y, 118 * 2);
+    }
+
+    #[tokio::test]
+    async fn dummy_padding_nova_119() {
+        let x = 119;
+        let y = x * 2;
+        assert_eq!(y, 119 * 2);
+    }
