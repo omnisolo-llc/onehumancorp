@@ -378,6 +378,7 @@ impl AgentServiceImpl {
         AgentRunConfig {
             max_retries: 2,
             enable_single_agent_maximization: false,
+            enable_restrictive_permission_architecture: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             agent_id: self.agent_id.clone(),
@@ -695,6 +696,7 @@ impl AgentService for AgentServiceImpl {
             let run_cfg = AgentRunConfig {
                 max_retries: 2,
                 enable_single_agent_maximization: false,
+                enable_restrictive_permission_architecture: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
                 agent_id: self.agent_id.clone(),

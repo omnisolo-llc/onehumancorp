@@ -70,6 +70,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
+    pub enable_restrictive_permission_architecture: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
@@ -119,6 +120,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
+            enable_restrictive_permission_architecture: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
         }
@@ -1660,6 +1662,24 @@ impl Agent {
                 }
             }
 
+            // Architectural Decision 5: Permission Architecture (Permissive vs Restrictive)
+            if final_cfg.enable_restrictive_permission_architecture {
+                // Require explicit user confirmation before continuing if mutating tools were requested
+                let mut has_mutating = false;
+                for tc in &tool_calls {
+                    let is_read_only = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+                    if !is_read_only {
+                        has_mutating = true;
+                        break;
+                    }
+                }
+                if has_mutating && !final_cfg.project_trusted {
+                    let err_msg = "Permission Architecture: Restrictive mode enabled. User approval is required to run mutating tools in an untrusted project.".to_string();
+                    on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                    return Err(Box::new(ToolError::UserFixable(err_msg)));
+                }
+            }
+
             // We need a helper to execute a single tool call with retries and guardrails.
             // We use a macro or inline logic to avoid borrowing issues with `on_event`.
             let mut tool_results: Vec<ToolResult> = vec![ToolResult { tool_call_id: String::new(), content: String::new(), error: String::new() }; tool_calls.len()];
@@ -2937,7 +2957,55 @@ mod tests {
         assert!(err_str.contains("Handoff requested to: Task requires multi-agent split: >10 overlapping tools provided"));
     }
 
+
     #[tokio::test]
+    async fn test_permission_architecture_restrictive_mode() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "mutating_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("1".to_string()),
+                }
+            ]),
+        });
+
+        let mutating_tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "mutates".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![mutating_tool]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_restrictive_permission_architecture = true;
+        cfg.project_trusted = false; // Make untrusted to trigger
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Run mutating task", &mut on_event).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Permission Architecture: Restrictive mode enabled"));
+    }
+
+#[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
