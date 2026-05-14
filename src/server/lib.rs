@@ -1607,16 +1607,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
                         nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
+                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); }
                         .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-                        h1, h2 { color: #4ecca3; }
+                        h1, h2 { font-family: 'Outfit', sans-serif; color: #4ecca3; }
                         input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
-                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+                        button { padding: 12px 24px; transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
                         .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
                     </style>
