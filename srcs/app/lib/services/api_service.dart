@@ -1,63 +1,38 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
+  static final Map<String, String> _mockMemory = {};
+
   Future<void> submitBusinessData(Map<String, dynamic> data) async {
-    final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/start');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': data['companyName'] ?? '',
-          'category': data['industry'] ?? '',
-          'description': data['productDescription'] ?? '',
-        }),
-      );
-      if (response.statusCode == 202) {
-        print('Business data submitted successfully: ${response.body}');
-      } else {
-        print('Failed to submit business data: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error submitting business data: $e');
-    }
+    // Mock network delay
+    await Future.delayed(const Duration(milliseconds: 500));
+    print('Business data submitted successfully (Mock)');
   }
 
   Future<void> saveState(Map<String, dynamic> state, String tenantId) async {
-    final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/state');
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant-Id': tenantId,
-        },
-        body: json.encode({'state': json.encode(state)}),
-      );
-      if (response.statusCode != 204) {
-        print('Failed to save state: ${response.statusCode}');
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('wizard_state_$tenantId', json.encode(state));
     } catch (e) {
-      print('Error saving state: $e');
+      print('Error saving state to shared_prefs, falling back to memory: $e');
+      _mockMemory[tenantId] = json.encode(state);
     }
   }
 
   Future<Map<String, dynamic>?> getState(String tenantId) async {
-    final url = Uri.parse('https://api.onehumancorp.com/api/onboarding/state');
     try {
-      final response = await http.get(
-        url,
-        headers: {'X-Tenant-Id': tenantId},
-      );
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body);
-        if (body['state'] != null && body['state'].isNotEmpty) {
-           return json.decode(body['state']);
-        }
+      final prefs = await SharedPreferences.getInstance();
+      final savedState = prefs.getString('wizard_state_$tenantId');
+      if (savedState != null && savedState.isNotEmpty) {
+        return json.decode(savedState);
       }
     } catch (e) {
-      print('Error getting state: $e');
+      print('Error getting state from shared_prefs, falling back to memory: $e');
+      final memState = _mockMemory[tenantId];
+      if (memState != null && memState.isNotEmpty) {
+        return json.decode(memState);
+      }
     }
     return null;
   }

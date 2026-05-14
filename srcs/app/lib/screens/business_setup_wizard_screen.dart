@@ -84,7 +84,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 11) {
+    if (state.currentStep == 12) {
       return const DashboardScreen();
     }
 
@@ -97,7 +97,19 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               constraints: const BoxConstraints(maxWidth: 400),
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: _buildCurrentStep(state.currentStep, state),
+                child: Column(
+                  children: [
+                    if (state.currentStep < 10)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 20, bottom: 20),
+                        child: Text(
+                          "Setup Wizard",
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                    Expanded(child: _buildCurrentStep(state.currentStep, state)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -118,31 +130,71 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   Widget _buildCurrentStep(int step, WizardState state) {
     switch (step) {
-      case 0:
-        return _buildWelcomeScreen();
-      case 1:
-        return _buildBusinessProfileScreen(state);
-      case 2:
-        return _buildGoalSelectionScreen(state);
-      case 3:
-        return _buildExternalIntegrationsScreen();
-      case 4:
-        return _buildDeploymentPreferenceScreen(state);
-      case 5:
-        return _buildAdministratorAccountScreen();
-      case 6:
-        return _buildTemplateSelectionScreen(state);
-      case 7:
-        return _buildProductScreen(state);
-      case 8:
-        return _buildDomainScreen(state);
-      case 9:
-        return _buildReviewAndLaunchScreen(state);
-      case 10:
-        return _buildWelcomeChecklistScreen(state);
-      default:
-        return const SizedBox.shrink();
+      case 0: return _buildWelcomeScreen();
+      case 1: return _buildBusinessTypeScreen(state);
+      case 2: return _buildBusinessProfileScreen(state);
+      case 3: return _buildGoalSelectionScreen(state);
+      case 4: return _buildProductScreen(state);
+      case 5: return _buildExternalIntegrationsScreen();
+      case 6: return _buildTemplateSelectionScreen(state);
+      case 7: return _buildDomainScreen(state);
+      case 8: return _buildReviewAndLaunchScreen(state);
+      case 9: return _buildSuccessScreen(state);
+      case 10: return _buildWelcomeChecklistScreen(state);
+      default: return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildBusinessTypeScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'What kind of business are you building?',
+          style: TextStyle(fontFamily: 'Outfit', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: Column(
+            children: [
+              _buildSelectionButton('Online Store', state.industry == 'Online Store', () {
+                ref.read(wizardProvider.notifier).updateBusinessProfile(industry: 'Online Store');
+              }),
+              _buildSelectionButton('Service Business', state.industry == 'Service Business', () {
+                ref.read(wizardProvider.notifier).updateBusinessProfile(industry: 'Service Business');
+              }),
+              _buildSelectionButton('Restaurant / Food', state.industry == 'Restaurant / Food', () {
+                ref.read(wizardProvider.notifier).updateBusinessProfile(industry: 'Restaurant / Food');
+              }),
+            ],
+          ),
+        ),
+        _buildNavigationButtons(),
+      ],
+    );
+  }
+
+  Widget _buildSelectionButton(String text, bool isSelected, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF6B4EFF).withOpacity(0.3) : Colors.white.withOpacity(0.05),
+            border: Border.all(color: isSelected ? const Color(0xFF6B4EFF) : Colors.white24),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Row(
+            children: [
+              Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 18))),
+              if (isSelected) const Icon(Icons.check_circle, color: Color(0xFF22C55E)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildWelcomeScreen() {
@@ -163,7 +215,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           ),
           const SizedBox(height: 30),
           const Text(
-            'Welcome to One Human Corp',
+            'Your business, live in minutes.',
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 32,
@@ -174,7 +226,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           ),
           const SizedBox(height: 20),
           const Text(
-            'Create your account to start your business.',
+            'Zero tech skills needed. We do the heavy lifting.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 16,
@@ -183,37 +235,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          GlassContainer(
-            child: TextField(
-              key: const Key('signupEmailField'),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                labelStyle: TextStyle(color: Colors.white70),
-                border: InputBorder.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          GlassContainer(
-            child: TextField(
-              key: const Key('signupPasswordField'),
-              obscureText: true,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                labelStyle: TextStyle(color: Colors.white70),
-                border: InputBorder.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
           WalkthroughHighlight(
             showHighlight: _showWalkthrough,
             speechBubbleText: "Start setting up your store here!",
             onDismiss: () => setState(() => _showWalkthrough = false),
             child: ElevatedButton(
-              key: const Key('signupBtn'),
+              key: const Key('startBtn'),
               onPressed: () {
                 setState(() => _showWalkthrough = false);
                 _nextStep();
@@ -225,8 +252,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              child: const Text('Sign Up & Continue', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('🚀 Start My Business', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: () {},
+            child: const Text('⚡ Instant Build (AI) →', style: TextStyle(fontSize: 16, color: Colors.white70)),
           ),
           const SizedBox(height: 15),
           ElevatedButton.icon(
@@ -297,6 +329,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
               labelText: 'Company Name',
+              hintText: 'What is your business called?',
               labelStyle: TextStyle(color: Colors.white70),
               border: InputBorder.none,
             ),
@@ -304,6 +337,16 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               ref.read(wizardProvider.notifier).updateBusinessProfile(companyName: value);
             },
           ),
+        ),
+        const SizedBox(height: 15),
+        ElevatedButton(
+          onPressed: () {},
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.1),
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Center(child: Text('Generate Description', style: TextStyle(color: Colors.white))),
         ),
         const SizedBox(height: 15),
         GlassContainer(
@@ -364,7 +407,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   }
 
   Widget _buildGoalSelectionScreen(WizardState state) {
-    final goals = ['Support', 'Build software', 'Marketing', 'Data', 'Custom'];
+    final goals = ['Support', 'Build software', 'Marketing', 'Data', 'Physical Products'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -398,9 +441,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                           goal,
                           style: const TextStyle(color: Colors.white, fontSize: 16),
                         ),
-                        Icon(
-                          isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                          color: isSelected ? const Color(0xFF22C55E) : Colors.white54,
+                        Checkbox(
+                          value: isSelected,
+                          onChanged: (_) {
+                            ref.read(wizardProvider.notifier).toggleGoal(goal);
+                          },
                         ),
                       ],
                     ),
@@ -415,96 +460,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildExternalIntegrationsScreen() {
-    if (widget.environmentMode == EnvironmentMode.standaloneDesktop) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Local Environment Optimization',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: SingleChildScrollView(
-              child: GlassContainer(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.speed, size: 60, color: Color(0xFF22C55E)),
-                    SizedBox(height: 20),
-                    Text(
-                      'Bypassing Cloud Dependencies',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Running in Standalone Desktop mode. Heavy cloud-specific dependencies like Redis and multi-tenant external databases are safely bypassed for local host-machine efficiency.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildNavigationButtons(),
-        ],
-      );
-    }
+    Widget _buildExternalIntegrationsScreen() {
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'External Integrations',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 20),
-        GlassContainer(
-          child: const TextField(
-            key: Key('redisUrlField'),
-            style: TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Redis URL',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 15),
-        GlassContainer(
-          child: const TextField(
-            key: Key('dbUrlField'),
-            style: TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Multi-tenant DB URL',
-              labelStyle: TextStyle(color: Colors.white70),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-        const Spacer(),
-        _buildNavigationButtons(),
-      ],
-    );
-  }
+
+
 
   Widget _buildDeploymentPreferenceScreen(WizardState state) {
     final options = ['Cloud', 'Desktop', 'Mobile-only'];
@@ -761,7 +720,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     initialValue: state.productName,
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                      hintText: 'e.g. Custom Birthday Cake',
+                      hintText: 'What is the name of this product?',
                       hintStyle: TextStyle(color: Colors.white24),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.all(15),
@@ -799,7 +758,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Center(child: Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))),
+                  child: const Center(child: Text('Generate AI Description', style: TextStyle(color: Colors.white))),
                 ),
                 const SizedBox(height: 15),
                 const Text('Price', style: TextStyle(color: Colors.white70, fontSize: 14)),
@@ -982,11 +941,45 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  key: const Key('launchAIBtn'), child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  key: const Key('launchAIBtn'), child: const Text('Publish my business', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildSuccessScreen(WizardState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          'CONFETTI Success',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            ref.read(wizardProvider.notifier).nextStep(); // Goes to 11
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6B4EFF),
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+          child: const Text('View Welcome Checklist →', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
     );
@@ -1011,6 +1004,16 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
         const SizedBox(height: 20),
+        const Text(
+          'Welcome Checklist',
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 10),
         Expanded(
           child: SingleChildScrollView(
             child: Column(

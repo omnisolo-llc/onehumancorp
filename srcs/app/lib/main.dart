@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/login_screen.dart';
 import 'screens/unified_inbox_screen.dart';
 import 'screens/business_setup_wizard_screen.dart';
 import 'screens/help/help_center_screen.dart';
@@ -30,7 +31,7 @@ class OHCApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const BusinessSetupWizardScreen(),
+      home: const LoginScreen(),
     );
   }
 }
@@ -122,6 +123,30 @@ IconButton(
             child: ListView(
 
               children: [
+                const SizedBox(height: 20),
+                const Text(
+                  "Your business, live in minutes.",
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const BusinessSetupWizardScreen()));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6B4EFF),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  child: const Text('Start Setup', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
                 const SizedBox(height: 20),
                 const Text(
                   "Dashboard",
