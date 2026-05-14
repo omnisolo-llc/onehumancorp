@@ -284,34 +284,34 @@ impl InteropProtocol {
             if msg.topic.starts_with("system:job_dispatch:") {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
-                    // In a real implementation, we would process the job here or send it to a worker pool
-                    // Here, we just acknowledge receipt
-                    let ack = proto::JobAck {
-                        job_id: decoded.job_id.clone(),
-                        node_id: node_id.clone(),
-                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
-                    };
-                    let mut buf = Vec::new();
-                    if ack.encode(&mut buf).is_ok() {
-                        let ack_msg = Message {
-                            topic: format!("system:job_ack:{}", decoded.job_id),
-                            payload: buf,
-                        };
-                        let bus_clone = bus.clone();
-                        tokio::spawn(async move {
-                            // Retry mechanism to ensure ACK reaches the dispatcher
-                            let mut retries = 0;
-                            let mut delay_ms = 50;
-                            while retries < 5 {
-                                if bus_clone.publish(ack_msg.clone()).await.is_ok() {
-                                    break;
-                                }
-                                retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                delay_ms *= 2; // Exponential backoff
+                    // Spawn a task to enqueue the job and then send the ACK
+                    let bus_clone = bus.clone();
+                    let node_id_clone = node_id.clone();
+                    tokio::spawn(async move {
+                        // In a real implementation, we would process the job here or send it to a worker pool
+                        // E.g., QueueManager::enqueue(job).await
+
+                        // We simulate the enqueue operation succeeding
+                        let enqueue_success = true;
+
+                        if enqueue_success {
+                            let ack = proto::JobAck {
+                                job_id: decoded.job_id.clone(),
+                                node_id: node_id_clone.clone(),
+                                timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                            };
+                            let mut buf = Vec::new();
+                            if ack.encode(&mut buf).is_ok() {
+                                let ack_msg = Message {
+                                    topic: format!("system:job_ack:{}", decoded.job_id),
+                                    payload: buf,
+                                };
+                                // Retry mechanism to ensure ACK reaches the dispatcher
+                                let protocol_clone = InteropProtocol::new(bus_clone.clone(), std::sync::Arc::new(crate::msgbus::MemoryBus::new()), node_id_clone.clone());
+                                let _ = protocol_clone.publish_with_retry_and_dlq(ack_msg, 5, 50, "system:job_ack_dlq").await;
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             }
         });
@@ -358,6 +358,35 @@ impl InteropProtocol {
     }
 
     /// Listens for job status updates for a specific job
+
+    /// Publishes a message with exponential backoff and routes to a Dead Letter Queue on failure.
+    pub async fn publish_with_retry_and_dlq(&self, msg: Message, max_retries: u32, base_delay_ms: u64, dlq_topic: &str) -> Result<(), String> {
+        let mut retries = 0;
+        let mut delay_ms = base_delay_ms;
+
+        loop {
+            match self.bus.publish(msg.clone()).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if retries >= max_retries {
+                        // Routing to DLQ
+                        let dlq_msg = Message {
+                            topic: dlq_topic.to_string(),
+                            payload: msg.payload.clone(),
+                        };
+                        return match self.bus.publish(dlq_msg).await {
+                            Ok(_) => Ok(()),
+                            Err(dlq_err) => Err(format!("Failed to publish to main topic: {}, and failed to publish to DLQ: {}", e, dlq_err)),
+                        };
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        }
+    }
+
     pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
@@ -378,6 +407,93 @@ mod tests {
     use super::*;
     use crate::msgbus::MemoryBus;
     use std::sync::atomic::{AtomicBool, Ordering};
+
+
+    struct FailingBus;
+
+    #[async_trait::async_trait]
+    impl Bus for FailingBus {
+        async fn publish(&self, msg: Message) -> Result<(), String> {
+            if msg.topic == "system:dlq" {
+                Ok(())
+            } else {
+                Err("Simulated failure".to_string())
+            }
+        }
+
+        async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+    }
+
+    struct DoubleFailingBus;
+    #[async_trait::async_trait]
+    impl Bus for DoubleFailingBus {
+        async fn publish(&self, _msg: Message) -> Result<(), String> {
+            Err("Simulated failure".to_string())
+        }
+        async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_interop_publish_with_retry_and_dlq_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:test_reliable_publish" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let _cancel = bus.subscribe("system:test_reliable_publish".to_string(), handler).await.unwrap();
+
+        let msg = Message {
+            topic: "system:test_reliable_publish".to_string(),
+            payload: vec![1, 2, 3],
+        };
+
+        protocol.publish_with_retry_and_dlq(msg, 3, 10, "system:dlq").await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_publish_with_retry_and_dlq_fallback_to_dlq() {
+        let bus = Arc::new(FailingBus);
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
+
+        let msg = Message {
+            topic: "system:test_reliable_publish".to_string(),
+            payload: vec![1, 2, 3],
+        };
+
+        let res = protocol.publish_with_retry_and_dlq(msg, 2, 10, "system:dlq").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_interop_publish_with_retry_and_dlq_double_failure() {
+        let bus = Arc::new(DoubleFailingBus);
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
+
+        let msg = Message {
+            topic: "system:test_reliable_publish".to_string(),
+            payload: vec![1, 2, 3],
+        };
+
+        let res = protocol.publish_with_retry_and_dlq(msg, 2, 10, "system:dlq").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("failed to publish to DLQ"));
+    }
 
     #[tokio::test]
     async fn test_interop_handoff_memory() {
