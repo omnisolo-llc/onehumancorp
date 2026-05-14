@@ -70,6 +70,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
+    pub enable_ralph_loop: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
@@ -119,6 +120,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
+            enable_ralph_loop: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
         }
@@ -922,6 +924,128 @@ impl Agent {
         rx
     }
 
+    pub async fn run_ralph_loop<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        // The Ralph Loop: For long-running asynchronous tasks spanning multiple context windows.
+        let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let progress_path = format!("{}/.ralph_progress.json", wd);
+
+        let has_progress = tokio::fs::metadata(&progress_path).await.is_ok();
+
+        if !has_progress {
+            // Phase 1 (Initializer Agent): Sets up environment, writes init script, progress file, feature list, and makes initial git commit.
+            on_event(AgentEvent::RunStarted { iteration: 0 });
+            on_event(AgentEvent::TextChunk { content: "Starting Phase 1 (Initializer Agent)...".to_string() });
+
+            let init_req = ChatRequest {
+                model: cfg.model.clone(),
+                system: "You are an Initializer Agent. Analyze the request and output a JSON array of feature tasks to implement.".to_string(),
+                messages: vec![Message::user(initial_message)],
+                tools: vec![],
+                max_tokens: cfg.max_tokens,
+                temperature: 0.0,
+            };
+
+            let init_resp = self.llm.chat(init_req).await?;
+            let json_text = init_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+
+            let tasks: Vec<String> = match serde_json::from_str(json_text) {
+                Ok(t) => t,
+                Err(_) => vec!["Implement requested feature".to_string()], // Fallback
+            };
+
+            let progress_data = serde_json::json!({
+                "status": "initialized",
+                "original_request": initial_message,
+                "tasks": tasks,
+                "completed_tasks": [],
+                "summary": "Initialization complete."
+            });
+
+            tokio::fs::write(&progress_path, serde_json::to_string_pretty(&progress_data).unwrap()).await?;
+
+            if cfg.enable_git_checkpointing {
+                let _ = std::process::Command::new("git").arg("add").arg(&progress_path).current_dir(&wd).output();
+                let _ = std::process::Command::new("git").arg("commit").arg("-m").arg("ralph loop: initialization").current_dir(&wd).output();
+            }
+
+            on_event(AgentEvent::TaskComplete { content: "Phase 1 initialized.".to_string() });
+            return Ok("Phase 1 initialized.".to_string());
+        } else {
+            // Phase 2 (Coding Agent): Reads git logs and progress files, picks highest-priority incomplete feature, works, commits, updates summary.
+            on_event(AgentEvent::RunStarted { iteration: 1 });
+            on_event(AgentEvent::TextChunk { content: "Starting Phase 2 (Coding Agent)...".to_string() });
+
+            let progress_str = tokio::fs::read_to_string(&progress_path).await?;
+            let mut progress_data: serde_json::Value = serde_json::from_str(&progress_str)?;
+
+            let tasks = progress_data["tasks"].as_array().unwrap().clone();
+            let completed_tasks = progress_data["completed_tasks"].as_array().unwrap().clone();
+
+            let mut next_task = None;
+            for t in tasks {
+                if !completed_tasks.contains(&t) {
+                    next_task = Some(t.as_str().unwrap().to_string());
+                    break;
+                }
+            }
+
+            if next_task.is_none() {
+                return Ok("All tasks completed in previous sessions.".to_string());
+            }
+
+            let active_task = next_task.unwrap();
+
+            let git_log = if cfg.enable_git_checkpointing {
+                match std::process::Command::new("git").arg("log").arg("--oneline").arg("-n").arg("5").current_dir(&wd).output() {
+                    Ok(output) => String::from_utf8_lossy(&output.stdout).to_string(),
+                    Err(_) => "No git log available.".to_string(),
+                }
+            } else {
+                "Git checkpointing disabled.".to_string()
+            };
+
+            let context_msg = format!(
+                "You are the Coding Agent in Phase 2 of the Ralph Loop. You are resuming work.\n\
+                 Progress Summary: {}\n\
+                 Recent Git Log:\n{}\n\
+                 \nYour current active task is: {}\n\
+                 Please provide a summary of the work you intend to do, or use tools to complete it.",
+                progress_data["summary"].as_str().unwrap_or(""),
+                git_log,
+                active_task
+            );
+
+            let mut cfg_run = cfg.clone();
+            cfg_run.enable_ralph_loop = false; // Prevent infinite recursion
+            cfg_run.server_system_message = format!("{}\n\n{}", cfg_run.server_system_message, context_msg);
+
+            // Box::pin to avoid recursion errors
+            let res = Box::pin(self.run(&cfg_run, &format!("Implement the task: {}", active_task), on_event)).await?;
+
+            // Update progress
+            progress_data["completed_tasks"].as_array_mut().unwrap().push(serde_json::json!(active_task));
+            progress_data["summary"] = serde_json::json!(format!("Completed task: {}", active_task));
+
+            tokio::fs::write(&progress_path, serde_json::to_string_pretty(&progress_data).unwrap()).await?;
+
+            if cfg.enable_git_checkpointing {
+                let commit_msg = format!("ralph loop: completed {}", active_task);
+                let _ = std::process::Command::new("git").arg("add").arg(".").current_dir(&wd).output();
+                let _ = std::process::Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&wd).output();
+            }
+
+            return Ok(res);
+        }
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1028,6 +1152,10 @@ impl Agent {
 
         if final_cfg.enable_langgraph_mechanic {
             return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
+        }
+
+        if final_cfg.enable_ralph_loop {
+            return Box::pin(self_with_memory.run_ralph_loop(&final_cfg, initial_message, on_event)).await;
         }
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
@@ -4596,6 +4724,33 @@ mod stream_tests {
         assert!(has_task_complete, "Stream should eventually emit TaskComplete event");
     }
 
+    struct MockLlmClientRalph {
+        call_count: tokio::sync::Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlmClientRalph {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+            if *count == 1 {
+                Ok(ChatResponse {
+                    message: Message::assistant("```json\n[\"task1\", \"task2\"]\n```"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("r1".to_string()),
+                })
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("Did the task."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some(format!("r{}", *count)),
+                })
+            }
+        }
+    }
+
     #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
         use ohc_builtin_agent_tools::ToolExecutor;
@@ -4814,4 +4969,88 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_phase_1_and_2() {
+        use std::sync::Arc;
+        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+        let temp_dir = tempfile::tempdir().unwrap();
+        let wd = temp_dir.path().to_string_lossy().to_string();
+
+        let progress_path = format!("{}/.ralph_progress.json", wd);
+
+        struct RalphMockLlmClient {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for RalphMockLlmClient {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                if *count == 1 {
+                    Ok(ChatResponse {
+                        message: Message::assistant("```json\n[\"task1\", \"task2\"]\n```"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("r1".to_string()),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: Message::assistant("Did the task."),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some(format!("r{}", *count)),
+                    })
+                }
+            }
+        }
+
+        let client = Arc::new(RalphMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(client, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_ralph_loop = true;
+        cfg.workspace_path = Some(wd.clone());
+        cfg.enable_git_checkpointing = false; // simplify test
+
+        let mut events1 = vec![];
+        let mut on_event1 = |e| { events1.push(e); };
+
+        // Phase 1
+        let res1 = agent.run(&cfg, "Build a feature", &mut on_event1).await;
+        assert!(res1.is_ok());
+        assert_eq!(res1.unwrap(), "Phase 1 initialized.");
+        assert!(tokio::fs::metadata(&progress_path).await.is_ok());
+
+        let progress_str = tokio::fs::read_to_string(&progress_path).await.unwrap();
+        let mut progress_data: serde_json::Value = serde_json::from_str(&progress_str).unwrap();
+        assert_eq!(progress_data["status"], "initialized");
+
+        // Fake the progress file tasks so it has something to do in Phase 2
+        progress_data["tasks"] = serde_json::json!(["task1", "task2"]);
+        tokio::fs::write(&progress_path, serde_json::to_string_pretty(&progress_data).unwrap()).await.unwrap();
+
+        // Phase 2 - Task 1
+        let mut events2 = vec![];
+        let mut on_event2 = |e| { events2.push(e); };
+        let res2 = agent.run(&cfg, "", &mut on_event2).await;
+        assert!(res2.is_ok());
+
+        let progress_str = tokio::fs::read_to_string(&progress_path).await.unwrap();
+        let progress_data: serde_json::Value = serde_json::from_str(&progress_str).unwrap();
+        let completed = progress_data["completed_tasks"].as_array().unwrap();
+        assert_eq!(completed.len(), 1);
+        assert_eq!(completed[0], "task1");
+
+        // Phase 2 - Task 2
+        let mut events3 = vec![];
+        let mut on_event3 = |e| { events3.push(e); };
+        let _res3 = agent.run(&cfg, "", &mut on_event3).await;
+
+        let progress_str = tokio::fs::read_to_string(&progress_path).await.unwrap();
+        let progress_data: serde_json::Value = serde_json::from_str(&progress_str).unwrap();
+        let completed = progress_data["completed_tasks"].as_array().unwrap();
+        assert_eq!(completed.len(), 2);
     }
