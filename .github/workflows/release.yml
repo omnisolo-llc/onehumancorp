@@ -11,18 +11,28 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+
   contents: write
   packages: write
+
+
+
+
+
+
 
 defaults:
   run:
     shell: bash
+
 
 jobs:
   # ── Build cross-platform ironclaw archives ──────────────────────────────────
   build-archives:
     name: Build release archives
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -86,6 +96,8 @@ jobs:
   build-flutter-android:
     name: Build Flutter Android
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -138,6 +150,8 @@ jobs:
   build-flutter-ios:
     name: Build Flutter iOS
     runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
@@ -176,6 +190,8 @@ jobs:
   build-flutter-macos:
     name: Build Flutter macOS
     runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -222,7 +238,11 @@ jobs:
   build-flutter-windows:
     name: Build Flutter Windows
     runs-on: windows-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
+
+
     defaults:
       run:
         shell: bash
@@ -270,6 +290,8 @@ jobs:
   build-flutter-linux:
     name: Build Flutter Linux
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -322,6 +344,8 @@ jobs:
   build-flutter-web:
     name: Build Flutter Web
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -365,6 +389,8 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     needs:
       - build-archives
       - build-flutter-android
@@ -439,13 +465,14 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
-        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ── Push Docker images to GHCR ─────────────────────────────────────────────
   push-docker:
     name: Push Docker images
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6

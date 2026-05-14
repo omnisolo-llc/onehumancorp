@@ -14,13 +14,17 @@ concurrency:
 permissions:
   contents: read
 
+
 defaults:
   run:
     shell: bash
 
+
 jobs:
   bazel-test:
     runs-on: oci-runner
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -50,10 +54,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -91,6 +96,8 @@ jobs:
 
   bazel-build:
     runs-on: oci-runner
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -120,10 +127,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -154,6 +161,8 @@ jobs:
 
 #   playwright-e2e:
 #     runs-on: oci-runner
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 #     timeout-minutes: 60
 #     steps:
 #       - uses: actions/checkout@v6
