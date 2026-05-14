@@ -179,7 +179,7 @@ impl InteropProtocol {
             }
         });
 
-        let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
+        let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await.map_err(|e| e.to_string())?;
 
         let ping = proto::HealthPing {
             current_mode: 0,
@@ -194,7 +194,7 @@ impl InteropProtocol {
             topic: "system:health_ping".to_string(),
             payload: buf,
         };
-        self.bus.publish(msg).await?;
+        self.bus.publish(msg).await.map_err(|e| e.to_string())?;
 
         // Wait for up to timeout_ms
         let start = std::time::Instant::now();
@@ -211,6 +211,91 @@ impl InteropProtocol {
     }
 
     /// Dispatches a background job and waits for acknowledgment
+
+    pub async fn dispatch_job_robust(
+        &self,
+        job_id: &str,
+        tenant_id: &str,
+        action_name: &str,
+        payload: Vec<u8>,
+        timeout_ms: u64,
+        retries: u32,
+    ) -> Result<bool, String> {
+        let dispatch = proto::JobDispatch {
+            job_id: job_id.to_string(),
+            tenant_id: tenant_id.to_string(),
+            action_name: action_name.to_string(),
+            payload: payload.clone(),
+            timestamp_ms: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as i64,
+        };
+
+        let mut buf = Vec::new();
+        prost::Message::encode(&dispatch, &mut buf).map_err(|e| e.to_string())?;
+
+        let ack_topic = format!("system:job_ack:{}", job_id);
+        let rx = std::sync::Arc::new(std::sync::Mutex::new(false));
+        let rx_clone = rx.clone();
+
+        let _cancel = self.bus.subscribe(ack_topic.clone(), Box::new(move |_msg: crate::msgbus::Message| {
+            let mut guard = rx_clone.lock().unwrap();
+            *guard = true;
+        })).await.map_err(|e| e.to_string())?;
+
+        for attempt in 0..=retries {
+            self.bus.publish(crate::msgbus::Message {
+                topic: format!("system:job_dispatch:{}", tenant_id),
+                payload: buf.clone(),
+            }).await.map_err(|e| e.to_string())?;
+
+            let start = tokio::time::Instant::now();
+            let mut acked = false;
+            while start.elapsed().as_millis() < timeout_ms as u128 {
+                let guard = rx.lock().unwrap();
+                if *guard {
+                    acked = true;
+                    break;
+                }
+                drop(guard);
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+
+            if acked {
+                return Ok(true);
+            }
+            if attempt < retries {
+                tokio::time::sleep(std::time::Duration::from_millis(50 * (attempt + 1) as u64)).await;
+            }
+        }
+
+        Ok(false)
+    }
+
+    pub async fn handoff_resilient(
+        &self,
+        mission_id: &str,
+        tenant_id: &str,
+        state_snapshot: Vec<u8>,
+        retries: u32,
+    ) -> Result<(), String> {
+        let lock_key = format!("lock:handoff:{}:{}", tenant_id, mission_id);
+        let _guard = self.lock.acquire_lock(&lock_key, "node", 5).await.map_err(|e| e.to_string())?;
+
+        for attempt in 0..=retries {
+            let result = self.handoff(mission_id, tenant_id, state_snapshot.clone()).await;
+            if result.is_ok() {
+                return Ok(());
+            }
+            if attempt < retries {
+                tokio::time::sleep(std::time::Duration::from_millis(100 * (attempt + 1) as u64)).await;
+            }
+        }
+
+        Err("Handoff failed after retries".to_string())
+    }
+
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
         use std::sync::atomic::{AtomicBool, Ordering};
@@ -225,7 +310,7 @@ impl InteropProtocol {
             }
         });
 
-        let cancel = self.bus.subscribe(format!("system:job_ack:{}", job_id), handler).await?;
+        let cancel = self.bus.subscribe(format!("system:job_ack:{}", job_id), handler).await.map_err(|e| e.to_string())?;
 
         let dispatch = proto::JobDispatch {
             job_id: job_id.to_string(),
@@ -1040,6 +1125,96 @@ mod tests {
 
         let is_healthy = protocol.check_health(500).await.unwrap();
         assert!(is_healthy);
+    }
+
+
+    #[tokio::test]
+    async fn test_interop_dispatch_job_robust_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let bus_clone = bus.clone();
+        let _cancel = bus.subscribe("system:job_dispatch:t1".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(dispatch) = proto::JobDispatch::decode(&msg.payload[..]) {
+                let ack = proto::JobAck {
+                    job_id: dispatch.job_id.clone(),
+                    node_id: "responder".to_string(),
+                    timestamp_ms: 1000,
+                };
+                let mut buf = Vec::new();
+                ack.encode(&mut buf).unwrap();
+                let b = bus_clone.clone();
+                tokio::spawn(async move {
+                    b.publish(crate::msgbus::Message {
+                        topic: format!("system:job_ack:{}", dispatch.job_id),
+                        payload: buf,
+                    }).await.unwrap();
+                });
+            }
+        })).await.unwrap();
+
+        let success = protocol.dispatch_job_robust("job1", "t1", "action", vec![], 500, 3).await.unwrap();
+        assert!(success);
+    }
+
+    #[tokio::test]
+    async fn test_interop_dispatch_job_robust_retry() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let attempt_counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter_clone = attempt_counter.clone();
+
+        let bus_clone = bus.clone();
+        let _cancel = bus.subscribe("system:job_dispatch:t1".to_string(), Box::new(move |msg| {
+            let attempt = counter_clone.fetch_add(1, Ordering::SeqCst);
+            if attempt == 1 { // Only ack on the second attempt
+                use prost::Message as ProstMessage;
+                if let Ok(dispatch) = proto::JobDispatch::decode(&msg.payload[..]) {
+                    let ack = proto::JobAck {
+                        job_id: dispatch.job_id.clone(),
+                        node_id: "responder".to_string(),
+                        timestamp_ms: 1000,
+                    };
+                    let mut buf = Vec::new();
+                    ack.encode(&mut buf).unwrap();
+                    let b = bus_clone.clone();
+                    tokio::spawn(async move {
+                        b.publish(crate::msgbus::Message {
+                            topic: format!("system:job_ack:{}", dispatch.job_id),
+                            payload: buf,
+                        }).await.unwrap();
+                    });
+                }
+            }
+        })).await.unwrap();
+
+        let success = protocol.dispatch_job_robust("job2", "t1", "action", vec![], 200, 3).await.unwrap();
+        assert!(success);
+        assert!(attempt_counter.load(Ordering::SeqCst) >= 2);
+    }
+
+    #[tokio::test]
+    async fn test_interop_handoff_resilient_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel = bus.subscribe("system:state_handoff".to_string(), Box::new(move |_| {
+            rx.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        let result = protocol.handoff_resilient("m1", "t1", vec![], 3).await;
+        assert!(result.is_ok());
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
     }
 
     #[tokio::test]
