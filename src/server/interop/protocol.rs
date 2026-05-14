@@ -292,7 +292,7 @@ impl InteropProtocol {
                         // E.g., QueueManager::enqueue(job).await
 
                         // We simulate the enqueue operation succeeding
-                        let enqueue_success = true;
+                        let mut enqueue_success = true;
 
                         if enqueue_success {
                             let ack = proto::JobAck {
