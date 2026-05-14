@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"database/sql"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 	"fmt"
 )
 
@@ -92,4 +93,10 @@ func (d *HybridMCPRAGDaemon) syncToCloud(ctx context.Context, id string, payload
 	// In a real implementation, this would use d.remoteURL and make an HTTP/gRPC request.
 	// For this test daemon, we just return nil assuming success.
 	return nil
+}
+
+// InitStandaloneDB initializes the encrypted SQLite database for the daemon
+func InitStandaloneDB(dbPath, key string) (*sql.DB, error) {
+	connStr := fmt.Sprintf("file:%s?_pragma_key=%s", dbPath, key)
+	return sql.Open("sqlite3", connStr)
 }

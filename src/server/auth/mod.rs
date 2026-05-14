@@ -441,7 +441,7 @@ impl Store {
                 organization_id: _user.organization_id.clone(),
                 session_id: None,
                 iat: now.timestamp(),
-                exp: (now + chrono::Duration::hours(24)).timestamp(),
+                exp: (now + chrono::Duration::hours(1)).timestamp(),
                 jti: hex::encode(random_bytes(8)),
             };
 
@@ -566,7 +566,7 @@ impl AuthService for AuthServiceServerImpl {
             Ok(user) => {
                 match self.store.issue_token(&user) {
                     Ok(token) => {
-                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                         let expires_at = (Utc::now() + chrono::Duration::hours(1)).timestamp();
                          Ok(Response::new(LoginResponse {
                              token,
                              expires_at,
@@ -597,7 +597,7 @@ impl AuthService for AuthServiceServerImpl {
 
         Ok(Response::new(LoginResponse {
              token,
-             expires_at: (Utc::now() + chrono::Duration::hours(24)).timestamp(),
+             expires_at: (Utc::now() + chrono::Duration::hours(1)).timestamp(),
         }))
     }
 

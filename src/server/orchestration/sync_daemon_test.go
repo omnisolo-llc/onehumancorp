@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	// Using the blank import for modern sqlite driver
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
 // ClearSemaphore drains the throttleSemaphore to prevent test deadlocks.
@@ -21,7 +21,7 @@ func ClearSemaphore() {
 }
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite3", "file::memory:?cache=shared&_pragma_key=secret")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}

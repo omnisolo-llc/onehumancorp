@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS task_dependencies (
     task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
     depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+    tenant_id TEXT DEFAULT 'system',
     PRIMARY KEY (task_id, depends_on_task_id)
 );
 
@@ -204,3 +205,21 @@ CREATE POLICY tenant_isolation_knowledge_embeddings ON knowledge_embeddings USIN
 
 -- Add other tables as needed...
 -- For brevity and correctness, I will use the previous content but cleaned up.
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_roles ON roles USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE revoked_tokens ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_revoked_tokens ON revoked_tokens USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE agent_missions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_agent_missions ON agent_missions USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE agent_status ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_agent_status ON agent_status USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_order_items ON order_items USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_task_dependencies ON task_dependencies USING (tenant_id::text = current_setting('app.current_tenant', true));
