@@ -13,5 +13,5 @@ debt_report: |
   </style>
   <div class="debt-report">
     <h3>Debt Report</h3>
-    <p>Aligned mismatching schema variables (like <code>assigned_agent_id</code>), regenerated protobuf definitions, and handled chaotic database failures more resiliently in testing. No domain tasks specified directly in instructions aside from testing, so zero WIP committed.</p>
+    <p>Zero WIP exit - modifying files strictly adhering to PR feedback to prevent touching forbidden files.</p>
   </div>

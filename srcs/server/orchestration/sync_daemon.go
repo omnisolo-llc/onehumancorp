@@ -264,7 +264,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 	defer localDB.Unlock()
 
 	query := `
-		SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies
+		SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies
 		FROM shared_tasks
 		WHERE status = 'CLOUD_ESCALATION'
 		LIMIT 100
@@ -285,7 +285,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		var payloadBytes, depsBytes []byte
 		if err := rows.Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
-			&task.AssignedAgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
+			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
 		); err != nil {
 			if syncDaemonErrorTotal != nil {
 				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ITERATION_ERROR")))
@@ -354,7 +354,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	defer localDB.Unlock()
 
 	query := `
-		SELECT id, organization_id
+		SELECT id
 		FROM shared_tasks
 		WHERE status = 'CLOUD_PROCESSING'
 	`
@@ -364,23 +364,22 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 	}
 	defer rows.Close()
 
-	type TaskID struct { ID string; OrgID string }
-	var taskIDs []TaskID
+	var taskIDs []string
 	for rows.Next() {
-		var id, orgID string
-		if err := rows.Scan(&id, &orgID); err != nil {
+		var id string
+		if err := rows.Scan(&id); err != nil {
 			log.Printf("Error scanning local task ID: %v", err)
 			continue
 		}
-		taskIDs = append(taskIDs, TaskID{ID: id, OrgID: orgID})
+		taskIDs = append(taskIDs, id)
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
 
-	for _, taskID := range taskIDs {
+	for _, id := range taskIDs {
 		// Check cloud DB
-		cloudTask, err := cloudDB.GetTask(ctx, taskID.ID, taskID.OrgID)
+		cloudTask, err := cloudDB.GetTask(ctx, id, localTask.OrganizationID)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				log.Printf("Error getting task from cloud DB: %v", err)
@@ -395,7 +394,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 			if cloudTask.Payload != nil {
 				payloadBytes = []byte(*cloudTask.Payload)
 			}
-			localDB.GetDB().ExecContext(ctx, updateQuery, payloadBytes, taskID.ID)
+			localDB.GetDB().ExecContext(ctx, updateQuery, payloadBytes, id)
 		}
 	}
 	return nil

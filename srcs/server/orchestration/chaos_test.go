@@ -22,7 +22,7 @@ func (f *faultInjectingCloudDB) CreateTask(ctx context.Context, task *SharedTask
 	return nil
 }
 
-func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string, orgID string) (*SharedTask, error) {
+func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string) (*SharedTask, error) {
 	if f.fails {
 		return nil, errors.New("simulated network failure")
 	}
@@ -51,29 +51,19 @@ func TestChaosSyncDaemonNetworkFailure(t *testing.T) {
 	}
 
 	err := localStore.CreateTask(context.Background(), task)
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+	assert.NoError(t, err)
 
 	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+	assert.NoError(t, err)
 
 	// Attempt sync with failing cloud DB
 	err = syncPendingEscalations(context.Background(), localStore, cloudStore)
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	} // Should not cascade failure, just log and continue
+	assert.NoError(t, err) // Should not cascade failure, just log and continue
 
 	// Verify local task status hasn't changed to CLOUD_PROCESSING because the cloud push failed
 	localTask, err := localStore.GetTask(context.Background(), "task-chaos-1", "org-1")
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
-	if localTask != nil {
-		assert.Equal(t, "CLOUD_ESCALATION", localTask.Status)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "CLOUD_ESCALATION", localTask.Status)
 }
 
 func TestChaosSyncDaemonDegradation(t *testing.T) {
@@ -91,29 +81,19 @@ func TestChaosSyncDaemonDegradation(t *testing.T) {
 	}
 
 	err := localStore.CreateTask(context.Background(), task)
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+	assert.NoError(t, err)
 
 	err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_PROCESSING")
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+	assert.NoError(t, err)
 
 	// Attempt to pull completed escalations with failing cloud DB
 	err = syncCompletedEscalations(context.Background(), localStore, cloudStore)
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	} // circuit breaking prevents error bubble up
+	assert.NoError(t, err) // circuit breaking prevents error bubble up
 
 	// Verify local task status hasn't changed
 	localTask, err := localStore.GetTask(context.Background(), "task-chaos-2", "org-1")
-	if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
-	if localTask != nil {
-		assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
 }
 
 func TestChaosStressVerification(t *testing.T) {
@@ -139,13 +119,9 @@ func TestChaosStressVerification(t *testing.T) {
             Status:         "CLOUD_ESCALATION",
         }
         err := localStore.CreateTask(context.Background(), task)
-        if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+        assert.NoError(t, err)
         err = localStore.UpdateTaskStatus(context.Background(), task.ID, "CLOUD_ESCALATION")
-        if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+        assert.NoError(t, err)
     }
 
     go StartSyncDaemon(ctx, localStore, cloudStore)
@@ -159,18 +135,14 @@ func TestChaosStressVerification(t *testing.T) {
     // Assert tasks successfully synced
     for i := 0; i < 100; i++ {
         task, err := localStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i), "org-1")
-        if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+        assert.NoError(t, err)
         if task != nil {
              assert.Equal(t, "CLOUD_PROCESSING", task.Status) // Assuming sync daemon successfully processed and marked them
         }
 
         // Ensure Cloud Store also received them
         cloudTask, err := cloudStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i), "org-1")
-        if err != nil {
-		// task not found expected due to rollback/abort on chaos test
-	}
+        assert.NoError(t, err)
         if cloudTask != nil {
             assert.Equal(t, "PENDING", cloudTask.Status)
         }

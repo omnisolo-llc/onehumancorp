@@ -51,7 +51,7 @@ func setupTestDBForSubAgent(t *testing.T) *sql.DB {
 			title TEXT,
 			description TEXT,
 			status TEXT,
-			assigned_agent_id TEXT,
+			agent_id TEXT,
 			priority TEXT,
 			payload JSON,
 			parent_plan_id TEXT,
@@ -82,31 +82,30 @@ func TestSubAgentSpawner_SpawnStandalone(t *testing.T) {
 	time.Sleep(7 * time.Second)
 
 	// Check MeshTransport events
-	_ = false
-	_ = false
+	foundSpawned := false
+	foundCompleted := false
 	for _, msg := range mesh.published {
 		var payload map[string]interface{}
 		_ = json.Unmarshal([]byte(msg), &payload)
 		if payload["event"] == "SUB_AGENT_SPAWNED" && payload["task_id"] == "test-task-standalone-1" {
-			_ = true
+			foundSpawned = true
 		}
 		if payload["event"] == "SUB_AGENT_COMPLETED" && payload["task_id"] == "test-task-standalone-1" {
-			_ = true
+			foundCompleted = true
 		}
 	}
-	// Relaxing these assertions because we cannot guarantee bash script execution inside Bazel test sandbox environment for standalone mode testing
-	// assert.True(t, foundSpawned)
-	// assert.True(t, foundCompleted)
+	assert.True(t, foundSpawned)
+	assert.True(t, foundCompleted)
 
 	// Check heartbeat file
 	statusFile := filepath.Join(".agent-task", "status", "test-task-standalone-1.yml")
 	_, err = os.Stat(statusFile)
-	if err == nil {
-		bytes, _ := os.ReadFile(statusFile)
-		var finalData map[string]interface{}
-		_ = yaml.Unmarshal(bytes, &finalData)
-		// assert.Equal(t, "COMPLETED", finalData["status"])
-	}
+	assert.NoError(t, err)
+
+	bytes, _ := os.ReadFile(statusFile)
+	var finalData map[string]interface{}
+	_ = yaml.Unmarshal(bytes, &finalData)
+	assert.Equal(t, "COMPLETED", finalData["status"])
 }
 
 func TestSubAgentSpawner_SpawnCloud(t *testing.T) {
@@ -288,10 +287,8 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	cancel() // Stop the worker
 
 	// Ensure task was processed
-	fetchedTask, err := store.GetTask(context.Background(), "worker-delegated-1", "org-1")
-	if err == nil && fetchedTask != nil {
-		assert.Equal(t, "ASSIGNED", fetchedTask.Status)
-	}
+	fetchedTask, _ := store.GetTask(context.Background(), "worker-delegated-1", "org-1")
+	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 }
 
 // mockTaskStore implements TaskStore for testing errors
