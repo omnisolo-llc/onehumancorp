@@ -321,3 +321,5 @@ pub async fn record_email_send_cost(pool: &PgPool, organization_id: &str, count:
     )
     .await
 }
+#[cfg(test)]
+pub mod compliance_test;

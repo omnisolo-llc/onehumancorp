@@ -367,7 +367,7 @@ mod tests {
                                current_log_block.contains("payload") ||
                                current_log_block.contains("email") ||
                                current_log_block.contains("password") ||
-                               current_log_block.contains("pii") ||
+                               current_log_block.contains("pii") || current_log_block.contains("tenant_id") || current_log_block.contains("organization_id") || current_log_block.contains("org_id") || current_log_block.contains("session_data") ||
                                current_log_block.contains("api_key") ||
                                current_log_block.contains("secret_key") ||
                                current_log_block.contains("credit") ||
