@@ -51,6 +51,13 @@ pub fn get() -> &'static AppConfig {
     })
 }
 
+
+// For testing
+#[cfg(test)]
+pub fn init_for_test(cfg: AppConfig) {
+    let _ = INSTANCE.set(cfg);
+}
+
 pub fn load() -> Result<AppConfig, ::config::ConfigError> {
     let s = ::config::Config::builder()
         // Defaults

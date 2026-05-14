@@ -34,3 +34,10 @@ rust_library(
         "@crates//:async-trait",
     ],
 )
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_auth_test",
+    crate = ":server_auth",
+)

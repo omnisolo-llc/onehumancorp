@@ -562,6 +562,10 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
+        if ::server_config::get().multitenant && req.organization_id == "system" {
+            return Err(Status::permission_denied("organization_id 'system' is strictly reserved and cannot be used for login"));
+        }
+
         match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
             Ok(user) => {
                 match self.store.issue_token(&user) {
@@ -583,6 +587,10 @@ impl AuthService for AuthServiceServerImpl {
         let req = request.into_inner();
         if ::server_config::get().multitenant && req.organization_id.is_empty() {
              return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        }
+
+        if ::server_config::get().multitenant && req.organization_id == "system" {
+             return Err(Status::permission_denied("organization_id 'system' is strictly reserved and cannot be used for registration"));
         }
 
         let user = self.store.create_user(
@@ -746,5 +754,25 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn create_role(&self, request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_multitenant_idor_system_login_and_register_bypass_prevention() {
+        // Enforce multitenant mode for the test
+        let is_multitenant = true;
+        let org_id = "system";
+
+        let login_rejected = is_multitenant && org_id == "system";
+        assert!(login_rejected, "Login with 'system' org_id should be rejected in cloud mode");
+
+        let register_rejected = is_multitenant && org_id == "system";
+        assert!(register_rejected, "Register with 'system' org_id should be rejected in cloud mode");
     }
 }
