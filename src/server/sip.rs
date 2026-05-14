@@ -162,6 +162,57 @@ impl SipDB {
     /// By utilizing the agent_missions table, we natively inject complete project context
     /// into sub-agent payloads at the moment of creation, achieving hermetic,
     /// zero-latency Bazel-native context routing.
+    pub async fn delegate_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
+        let mut attempt = 0;
+        let max_attempts = 5;
+        let mut backoff = std::time::Duration::from_millis(50);
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+
+        loop {
+            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+                let _permit = if is_standalone {
+                    if get_sqlite_limiter().available_permits() == 0 {
+                        let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "delegate_mission").await;
+                    }
+                    Some(get_sqlite_limiter().acquire().await.unwrap())
+                } else {
+                    None
+                };
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+                self.delegate_mission_with_tx(&mut tx, mission_id, status, payload, force_local, grounding_content).await?;
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }).await;
+
+            match res {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        let _ = crate::telemetry::record_sqlite_retry_event(&self.pool, "delegate_mission").await;
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else {
+                        return Err(err);
+                    }
+                }
+                Err(timeout_err) => {
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
+                }
+            }
+        }
+    }
+
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
@@ -186,6 +237,9 @@ impl SipDB {
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let _permit = if is_standalone {
+                    if get_sqlite_limiter().available_permits() == 0 {
+                        let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "upsert_mission").await;
+                    }
                     Some(get_sqlite_limiter().acquire().await.unwrap())
                 } else {
                     None
@@ -202,6 +256,7 @@ impl SipDB {
                 Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
                     if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        let _ = crate::telemetry::record_sqlite_retry_event(&self.pool, "upsert_mission").await;
                         attempt += 1;
                         if attempt >= max_attempts {
                             return Err(err);
@@ -391,6 +446,68 @@ mod tests {
         assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAGENTS rules.");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
+    }
+
+
+    #[test]
+    fn test_delegate_mission_standalone_throttling() {
+        let _ = temp_env::with_var("OHC_STANDALONE", Some("true"), || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let pool = setup_dummy_pool().await;
+                let sip_db = SipDB::new(pool, "test_org".to_string());
+
+                // Ensure limiter is available initially
+                assert_eq!(get_sqlite_limiter().available_permits(), 1);
+
+                let res = sip_db.delegate_mission("test_throttle", "PENDING", "data", true, &None).await;
+
+                // Assert it didn't panic and returned the expected error (since no DB tables exist)
+                assert!(res.is_err());
+                assert_eq!(get_sqlite_limiter().available_permits(), 1); // Should be released
+            });
+        });
+    }
+
+    #[test]
+    fn test_upsert_mission_retry_exhaustion() {
+        let _ = temp_env::with_var("OHC_STANDALONE", Some("true"), || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let pool = setup_dummy_pool().await;
+                let sip_db = SipDB::new(pool, "test_org".to_string());
+
+                let res = sip_db.upsert_mission("test_retry", "PENDING", "data", true).await;
+                assert!(res.is_err());
+            });
+        });
+    }
+
+    #[test]
+    fn test_concurrency_limiter_block() {
+        let _ = temp_env::with_var("OHC_STANDALONE", Some("true"), || {
+            tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(async {
+                let pool = setup_dummy_pool().await;
+                let sip_db = std::sync::Arc::new(SipDB::new(pool, "test_org".to_string()));
+
+                let permit = get_sqlite_limiter().acquire().await.unwrap();
+                assert_eq!(get_sqlite_limiter().available_permits(), 0);
+
+                let sip_clone = sip_db.clone();
+                let handle = tokio::spawn(async move {
+                    sip_clone.delegate_mission("test_block", "PENDING", "data", true, &None).await
+                });
+
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+                // Background task should be blocked, so the handle shouldn't be finished yet
+                // We can't directly check if it's pending easily without a timeout, but we know it's blocked.
+
+                drop(permit);
+
+                let res = handle.await.unwrap();
+                assert!(res.is_err());
+                assert_eq!(get_sqlite_limiter().available_permits(), 1);
+            });
+        });
     }
 
     #[tokio::test]

@@ -72,6 +72,15 @@ pub async fn record_sqlite_lock_contention(pool: &PgPool, operation: &str) -> Re
     buffer_metric(pool, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
 }
 
+
+pub async fn record_sqlite_throttled_request(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_sqlite_throttled_request_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
+}
+
+pub async fn record_sqlite_retry_event(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_sqlite_retry_event_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
+}
+
 pub async fn record_sqlite_retry_exhausted(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "ohc_sqlite_retry_exhausted_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
 }

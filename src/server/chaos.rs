@@ -31,11 +31,8 @@ mod tests {
         let upsert_res = sip_db.upsert_mission("test_mission", "PENDING", "data", true).await;
         assert!(upsert_res.is_err(), "upsert_mission should fail gracefully without panic");
 
-        let delegate_res = async {
-            let mut tx = pool.begin().await?;
-            sip_db.delegate_mission_with_tx(&mut tx, "test_mission", "PENDING", "data", true, &None).await
-        }.await;
-        assert!(delegate_res.is_err(), "delegate_mission_with_tx should fail gracefully without panic");
+        let delegate_res = sip_db.delegate_mission("test_mission", "PENDING", "data", true, &None).await;
+        assert!(delegate_res.is_err(), "delegate_mission should fail gracefully without panic");
     }
 
 
