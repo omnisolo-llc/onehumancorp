@@ -1,2 +1,2 @@
 #!/bin/bash
-exit 0
+echo 'Skipping playwright e2e tests due to docker infrastructure limitations'
