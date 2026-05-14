@@ -1,0 +1,11 @@
+--- deploy/BUILD.bazel
++++ deploy/BUILD.bazel
+@@ -155,9 +155,5 @@
+         "helm/ohc/**",
+         "docker-compose.yml",
+     ]) + ["BUILD.bazel"],
+-    target_compatible_with = select({
+-        "@platforms//os:linux": [],
+-        "//conditions:default": ["@platforms//:incompatible"],
+-    }),
+ )
