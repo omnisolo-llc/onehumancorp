@@ -1,7 +1,7 @@
-use super::{TaskQueue, Job, SQLiteTaskQueue};
-use std::sync::Arc;
-use sqlx::SqlitePool;
+use super::{Job, SQLiteTaskQueue, TaskQueue};
 use chrono::Utc;
+use sqlx::SqlitePool;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_sqlite_task_queue() {
@@ -21,8 +21,11 @@ async fn test_sqlite_task_queue() {
             locked_until TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-        )"
-    ).execute(&pool).await.unwrap();
+        )",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
 
     let queue = SQLiteTaskQueue::new(Arc::new(pool));
 
@@ -69,8 +72,11 @@ async fn test_sqlite_task_queue_empty_dequeue() {
             locked_until TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-        )"
-    ).execute(&pool).await.unwrap();
+        )",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
 
     let queue = SQLiteTaskQueue::new(Arc::new(pool));
 

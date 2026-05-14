@@ -1,8 +1,8 @@
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use std::process::Command;
 use std::path::PathBuf;
+use std::process::Command;
+use std::sync::Arc;
 use tokio::fs;
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -32,7 +32,9 @@ pub struct RalphLoop {
 
 impl RalphLoop {
     pub fn new(agent: Arc<Agent>, config: AgentRunConfig, progress_file_path: &str) -> Self {
-        let mut p = std::path::Path::new(progress_file_path).parent().unwrap_or(std::path::Path::new("."));
+        let mut p = std::path::Path::new(progress_file_path)
+            .parent()
+            .unwrap_or(std::path::Path::new("."));
         if p.as_os_str().is_empty() {
             p = std::path::Path::new(".");
         }
@@ -46,10 +48,13 @@ impl RalphLoop {
     }
 
     /// Run the full Ralph Loop
-    pub async fn run(&self, initial_task: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run(
+        &self,
+        initial_task: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Phase 1: Initializer
         let mut progress = self.initialize(initial_task).await?;
-        
+
         // Phase 2: Coding Agent Loop
         while !progress.is_complete {
             if progress.current_feature_index >= progress.features.len() {
@@ -58,14 +63,16 @@ impl RalphLoop {
                 break;
             }
 
-            let feature_name = progress.features[progress.current_feature_index].name.clone();
+            let feature_name = progress.features[progress.current_feature_index]
+                .name
+                .clone();
             if progress.features[progress.current_feature_index].status == "completed" {
                 progress.current_feature_index += 1;
                 continue;
             }
 
             tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
-            
+
             // Phase 2 (Coding Agent): Read git logs to orient itself
             let git_log_output = Command::new("git")
                 .arg("log")
@@ -87,30 +94,60 @@ impl RalphLoop {
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
             feature_config.user_instructions = feature_prompt.clone();
-            
+
             let mut on_event = |event: AgentEvent| {
                 if let AgentEvent::TaskError { error } = event {
                     tracing::error!("Ralph Loop Feature Error: {}", error);
                 }
             };
 
-            match self.agent.run(&feature_config, &feature_prompt, &mut on_event).await {
+            match self
+                .agent
+                .run(&feature_config, &feature_prompt, &mut on_event)
+                .await
+            {
                 Ok(result) => {
-                    tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
-                    progress.features[progress.current_feature_index].status = "completed".to_string();
+                    tracing::info!(
+                        "Ralph Loop: Feature {} completed. Result: {}",
+                        feature_name,
+                        result
+                    );
+                    progress.features[progress.current_feature_index].status =
+                        "completed".to_string();
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
 
                     // Phase 2: Commit after completion
-                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
+                    if let Err(e) = Command::new("git")
+                        .arg("add")
+                        .arg(".")
+                        .current_dir(&self.repo_path)
+                        .output()
+                    {
                         tracing::error!("Phase 2 failed to git add: {}", e);
                     }
                     let commit_msg = format!("Completed feature: {}", feature_name);
 
-                    let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
-                    let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
+                    let _ = Command::new("git")
+                        .arg("config")
+                        .arg("user.name")
+                        .arg("Ralph Agent")
+                        .current_dir(&self.repo_path)
+                        .output();
+                    let _ = Command::new("git")
+                        .arg("config")
+                        .arg("user.email")
+                        .arg("ralph@example.com")
+                        .current_dir(&self.repo_path)
+                        .output();
 
-                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                    if let Err(e) = Command::new("git")
+                        .arg("commit")
+                        .arg("-m")
+                        .arg(&commit_msg)
+                        .current_dir(&self.repo_path)
+                        .output()
+                    {
                         tracing::error!("Phase 2 failed to git commit: {}", e);
                     }
                 }
@@ -125,7 +162,10 @@ impl RalphLoop {
         Ok(())
     }
 
-    async fn initialize(&self, task: &str) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
+    async fn initialize(
+        &self,
+        task: &str,
+    ) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
         if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
             if let Ok(progress) = serde_json::from_str::<RalphProgress>(&data) {
                 tracing::info!("Ralph Loop: Resuming from existing progress file.");
@@ -134,20 +174,32 @@ impl RalphLoop {
         }
 
         tracing::info!("Ralph Loop: Initializing new progress file.");
-        
+
         let breakdown_prompt = format!("Break down the following task into 3 distinct, manageable features to implement sequentially. Respond strictly with a JSON array of strings representing the feature names. Task: {}", task);
-        
+
         let mut on_event = |_| {};
-        let result = self.agent.run(&self.config, &breakdown_prompt, &mut on_event).await?;
-        
+        let result = self
+            .agent
+            .run(&self.config, &breakdown_prompt, &mut on_event)
+            .await?;
+
         let mut features = vec![];
         if let Ok(parsed) = serde_json::from_str::<Vec<String>>(&result) {
             for name in parsed {
-                features.push(Feature { name, status: "pending".to_string() });
+                features.push(Feature {
+                    name,
+                    status: "pending".to_string(),
+                });
             }
         } else {
-            features.push(Feature { name: "Step 1".to_string(), status: "pending".to_string() });
-            features.push(Feature { name: "Step 2".to_string(), status: "pending".to_string() });
+            features.push(Feature {
+                name: "Step 1".to_string(),
+                status: "pending".to_string(),
+            });
+            features.push(Feature {
+                name: "Step 2".to_string(),
+                status: "pending".to_string(),
+            });
         }
 
         let progress = RalphProgress {
@@ -166,7 +218,10 @@ impl RalphLoop {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                if let Ok(mut perms) = fs::metadata(&init_script_path).await.map(|m| m.permissions()) {
+                if let Ok(mut perms) = fs::metadata(&init_script_path)
+                    .await
+                    .map(|m| m.permissions())
+                {
                     perms.set_mode(0o755);
                     let _ = fs::set_permissions(&init_script_path, perms).await;
                 }
@@ -174,27 +229,58 @@ impl RalphLoop {
         }
 
         // Run git init if not inside a repo
-        let git_status = Command::new("git").arg("status").current_dir(&self.repo_path).output();
+        let git_status = Command::new("git")
+            .arg("status")
+            .current_dir(&self.repo_path)
+            .output();
         if git_status.is_err() || !git_status.unwrap().status.success() {
-            if let Err(e) = Command::new("git").arg("init").current_dir(&self.repo_path).output() {
+            if let Err(e) = Command::new("git")
+                .arg("init")
+                .current_dir(&self.repo_path)
+                .output()
+            {
                 tracing::error!("Failed to git init: {}", e);
             }
         }
 
-        let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
-        let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
+        let _ = Command::new("git")
+            .arg("config")
+            .arg("user.name")
+            .arg("Ralph Agent")
+            .current_dir(&self.repo_path)
+            .output();
+        let _ = Command::new("git")
+            .arg("config")
+            .arg("user.email")
+            .arg("ralph@example.com")
+            .current_dir(&self.repo_path)
+            .output();
 
-        if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
+        if let Err(e) = Command::new("git")
+            .arg("add")
+            .arg(".")
+            .current_dir(&self.repo_path)
+            .output()
+        {
             tracing::error!("Failed to git add: {}", e);
         }
-        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg("Ralph Loop Initial Commit").current_dir(&self.repo_path).output() {
+        if let Err(e) = Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("Ralph Loop Initial Commit")
+            .current_dir(&self.repo_path)
+            .output()
+        {
             tracing::error!("Failed to git commit: {}", e);
         }
 
         Ok(progress)
     }
 
-    async fn save_progress(&self, progress: &RalphProgress) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn save_progress(
+        &self,
+        progress: &RalphProgress,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string_pretty(progress)?;
         fs::write(&self.progress_file_path, json).await?;
         Ok(())
@@ -216,7 +302,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for TestLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut count = self.call_count.lock().await;
             *count += 1;
 
@@ -244,7 +333,9 @@ mod tests {
         let progress_file = dir.path().join("progress.json");
         let progress_file_str = progress_file.to_str().unwrap();
 
-        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let llm = Arc::new(TestLlmClient {
+            call_count: tokio::sync::Mutex::new(0),
+        });
         let agent = Arc::new(Agent::new(llm, vec![]));
         let config = AgentRunConfig::default();
 
@@ -273,15 +364,27 @@ mod tests {
         let initial_progress = RalphProgress {
             task_description: "Build a web server".to_string(),
             features: vec![
-                Feature { name: "Step 1".to_string(), status: "completed".to_string() },
-                Feature { name: "Step 2".to_string(), status: "pending".to_string() },
+                Feature {
+                    name: "Step 1".to_string(),
+                    status: "completed".to_string(),
+                },
+                Feature {
+                    name: "Step 2".to_string(),
+                    status: "pending".to_string(),
+                },
             ],
             current_feature_index: 0,
             is_complete: false,
         };
-        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
+        std::fs::write(
+            &progress_file,
+            serde_json::to_string(&initial_progress).unwrap(),
+        )
+        .unwrap();
 
-        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let llm = Arc::new(TestLlmClient {
+            call_count: tokio::sync::Mutex::new(0),
+        });
         let agent = Arc::new(Agent::new(llm, vec![]));
         let config = AgentRunConfig::default();
 

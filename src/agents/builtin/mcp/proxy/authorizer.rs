@@ -1,7 +1,7 @@
-use serde::{Serialize, Deserialize};
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
-use chrono::Utc;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CapabilityProfile {
@@ -10,7 +10,12 @@ pub struct CapabilityProfile {
 }
 
 pub trait SandboxViolationStore: Send + Sync {
-    fn log_violation(&self, session_id: &str, capability: &str, tool_name: &str) -> Result<(), String>;
+    fn log_violation(
+        &self,
+        session_id: &str,
+        capability: &str,
+        tool_name: &str,
+    ) -> Result<(), String>;
     #[allow(dead_code)]
     fn get_violations(&self, session_id: &str) -> Result<Vec<String>, String>;
 }
@@ -28,7 +33,12 @@ impl InMemoryViolationStore {
 }
 
 impl SandboxViolationStore for InMemoryViolationStore {
-    fn log_violation(&self, session_id: &str, capability: &str, tool_name: &str) -> Result<(), String> {
+    fn log_violation(
+        &self,
+        session_id: &str,
+        capability: &str,
+        tool_name: &str,
+    ) -> Result<(), String> {
         let mut violations = self.violations.write().unwrap();
         let entry = format!(
             "[{}] Denied capability '{}' for tool '{}'",
@@ -36,13 +46,19 @@ impl SandboxViolationStore for InMemoryViolationStore {
             capability,
             tool_name
         );
-        violations.entry(session_id.to_string()).or_default().push(entry);
-        
+        violations
+            .entry(session_id.to_string())
+            .or_default()
+            .push(entry);
+
         let capability = capability.to_string();
         crate::record_telemetry(move || {
-             tracing::warn!("Telemetry: Sandbox violation - capability_denied, capability={}", capability);
+            tracing::warn!(
+                "Telemetry: Sandbox violation - capability_denied, capability={}",
+                capability
+            );
         });
-        
+
         Ok(())
     }
 
@@ -71,21 +87,34 @@ impl CapabilityAuthorizer {
         profiles.insert(session_id, profile);
     }
 
-    pub fn authorize(&self, session_id: &str, capability: &str, tool_name: &str) -> Result<(), String> {
+    pub fn authorize(
+        &self,
+        session_id: &str,
+        capability: &str,
+        tool_name: &str,
+    ) -> Result<(), String> {
         let profiles = self.profiles.read().unwrap();
         let profile = profiles.get(session_id);
 
         if profile.is_none() {
-            self.violation_store.log_violation(session_id, capability, tool_name)?;
-            return Err(format!("capability {} denied: no profile for session {}", capability, session_id));
+            self.violation_store
+                .log_violation(session_id, capability, tool_name)?;
+            return Err(format!(
+                "capability {} denied: no profile for session {}",
+                capability, session_id
+            ));
         }
         let profile = profile.unwrap();
 
         // Check explicit denies first
         for denied in &profile.denied_capabilities {
             if denied == capability || denied == "*" {
-                self.violation_store.log_violation(session_id, capability, tool_name)?;
-                return Err(format!("capability {} denied explicitly for session {}", capability, session_id));
+                self.violation_store
+                    .log_violation(session_id, capability, tool_name)?;
+                return Err(format!(
+                    "capability {} denied explicitly for session {}",
+                    capability, session_id
+                ));
             }
         }
 
@@ -97,8 +126,12 @@ impl CapabilityAuthorizer {
         }
 
         // Implicit deny
-        self.violation_store.log_violation(session_id, capability, tool_name)?;
-        Err(format!("capability {} denied implicitly for session {}", capability, session_id))
+        self.violation_store
+            .log_violation(session_id, capability, tool_name)?;
+        Err(format!(
+            "capability {} denied implicitly for session {}",
+            capability, session_id
+        ))
     }
 }
 
@@ -119,16 +152,26 @@ mod tests {
 
         authorizer.set_profile(session_id.to_string(), profile);
 
-        assert!(authorizer.authorize(session_id, "read", "test_tool").is_ok());
-        assert!(authorizer.authorize(session_id, "write", "test_tool").is_ok());
-        
-        let err = authorizer.authorize(session_id, "delete", "test_tool").unwrap_err();
+        assert!(authorizer
+            .authorize(session_id, "read", "test_tool")
+            .is_ok());
+        assert!(authorizer
+            .authorize(session_id, "write", "test_tool")
+            .is_ok());
+
+        let err = authorizer
+            .authorize(session_id, "delete", "test_tool")
+            .unwrap_err();
         assert!(err.contains("denied explicitly"));
 
-        let err = authorizer.authorize(session_id, "execute", "test_tool").unwrap_err();
+        let err = authorizer
+            .authorize(session_id, "execute", "test_tool")
+            .unwrap_err();
         assert!(err.contains("denied implicitly"));
 
-        let err = authorizer.authorize("non-existent", "read", "test_tool").unwrap_err();
+        let err = authorizer
+            .authorize("non-existent", "read", "test_tool")
+            .unwrap_err();
         assert!(err.contains("no profile for session"));
     }
 }

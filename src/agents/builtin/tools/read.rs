@@ -11,16 +11,22 @@ struct ReadExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for ReadExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let path = args["path"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
+        let safe_path = std::path::Path::new(path)
+            .strip_prefix("/")
+            .unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir {
+            wd.join(safe_path)
+        } else {
+            std::path::PathBuf::from(path)
+        };
         let content = fs::read_to_string(&actual_path)
             .await
-            .map_err(|e| format!("read: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("read: {}: {}", path, e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Just-in-Time (JIT) Retrieval Mechanic:
         // "Never load full files." We enforce a strict token/line limit.
@@ -28,19 +34,20 @@ impl ToolExecutor for ReadExecutor {
         let lines: Vec<&str> = content.lines().collect();
 
         // Optional line range
-        if let (Some(start), Some(end)) = (
-            args["start_line"].as_u64(),
-            args["end_line"].as_u64(),
-        ) {
+        if let (Some(start), Some(end)) = (args["start_line"].as_u64(), args["end_line"].as_u64()) {
             let start = (start as usize).saturating_sub(1);
             let end = (end as usize).min(lines.len());
             if start >= end {
-                return Err(ToolError::LlmRecoverable(format!("read: invalid line range {}-{}", start + 1, end)));
+                return Err(ToolError::LlmRecoverable(format!(
+                    "read: invalid line range {}-{}",
+                    start + 1,
+                    end
+                )));
             }
 
             // Enforce maximum window size
             if end - start > 1000 {
-                 return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Please use start_line and end_line to paginate.".to_string()));
+                return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Please use start_line and end_line to paginate.".to_string()));
             }
 
             return Ok(lines[start..end].join("\n"));
@@ -48,7 +55,7 @@ impl ToolExecutor for ReadExecutor {
 
         // If no range specified and file is large, reject it.
         if lines.len() > 1000 {
-             return Err(ToolError::LlmRecoverable(format!(
+            return Err(ToolError::LlmRecoverable(format!(
                  "JIT Retrieval Error: File is too large ({} lines). Never load full files. Please use start_line and end_line to paginate (max 1000 lines per request).",
                  lines.len()
              )));

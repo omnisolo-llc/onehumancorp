@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::db::ScoutDb;
     use crate::agent::ScoutAgent;
+    use crate::db::ScoutDb;
     use ohc_builtin_agent_core::pubsub::SubagentBus;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::sync::Arc;
@@ -15,7 +15,8 @@ mod tests {
             .expect("Failed to create pool");
 
         // Setup schema
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             CREATE TABLE tool_integrations (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
@@ -26,7 +27,8 @@ mod tests {
                 status TEXT NOT NULL,
                 created_at DATETIME NOT NULL
             );
-        "#)
+        "#,
+        )
         .execute(&pool)
         .await
         .expect("Failed to create table");
@@ -37,20 +39,29 @@ mod tests {
 
         let agent = ScoutAgent::new(db.clone(), bus.clone());
 
-        let id = agent.process_tool_request(
-            "tenant-123",
-            "TestTool",
-            Some("A test tool"),
-            Some("https://api.testtool.com")
-        ).await.expect("Failed to process tool request");
+        let id = agent
+            .process_tool_request(
+                "tenant-123",
+                "TestTool",
+                Some("A test tool"),
+                Some("https://api.testtool.com"),
+            )
+            .await
+            .expect("Failed to process tool request");
 
         // Verify database
-        let integration = db.get_integration(&id.to_string(), Some("tenant-123")).await.expect("Failed to get integration")
+        let integration = db
+            .get_integration(&id.to_string(), Some("tenant-123"))
+            .await
+            .expect("Failed to get integration")
             .expect("Integration not found");
 
         assert_eq!(integration.name, "TestTool");
         assert_eq!(integration.tenant_id, "tenant-123");
-        assert!(integration.integration_code.unwrap().contains("TestToolClient"));
+        assert!(integration
+            .integration_code
+            .unwrap()
+            .contains("TestToolClient"));
 
         // Verify pubsub event
         let evt = rx.recv().await.expect("Failed to receive event");
@@ -64,7 +75,8 @@ mod tests {
             .await
             .expect("Failed to create pool");
 
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             CREATE TABLE tool_integrations (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
@@ -75,7 +87,8 @@ mod tests {
                 status TEXT NOT NULL,
                 created_at DATETIME NOT NULL
             );
-        "#)
+        "#,
+        )
         .execute(&pool)
         .await
         .expect("Failed to create table");
@@ -85,18 +98,27 @@ mod tests {
 
         let agent = ScoutAgent::new(db.clone(), bus.clone());
 
-        let id = agent.process_tool_request(
-            "tenant-456",
-            "DummyAPI",
-            Some("Dummy API for testing"),
-            Some("https://api.dummy.com/openapi.json")
-        ).await.expect("Failed to process tool request");
+        let id = agent
+            .process_tool_request(
+                "tenant-456",
+                "DummyAPI",
+                Some("Dummy API for testing"),
+                Some("https://api.dummy.com/openapi.json"),
+            )
+            .await
+            .expect("Failed to process tool request");
 
-        let integration = db.get_integration(&id.to_string(), Some("tenant-456")).await.expect("Failed to get integration")
+        let integration = db
+            .get_integration(&id.to_string(), Some("tenant-456"))
+            .await
+            .expect("Failed to get integration")
             .expect("Integration not found");
 
         assert_eq!(integration.name, "DummyAPI");
         assert_eq!(integration.tenant_id, "tenant-456");
-        assert!(integration.integration_code.unwrap().contains("DummyAPIClient"));
+        assert!(integration
+            .integration_code
+            .unwrap()
+            .contains("DummyAPIClient"));
     }
 }

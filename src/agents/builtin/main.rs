@@ -1,19 +1,15 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
     proto::agent_service_server::AgentServiceServer,
-    service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
+    service::{AgentConfig, AgentServiceImpl, SharedAgentService, DEFAULT_ADDRESS},
 };
+use opentelemetry::{global, KeyValue};
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::{propagation::TraceContextPropagator, runtime, Resource};
 use std::{env, net::SocketAddr};
 use tonic::transport::Server;
 use tracing::{info, Level};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-use opentelemetry::{global, KeyValue};
-use opentelemetry_sdk::{
-    propagation::TraceContextPropagator,
-    runtime,
-    Resource,
-};
-use opentelemetry_otlp::WithExportConfig;
 
 fn get_env(key: &str, default: &str) -> String {
     env::var(key).unwrap_or_else(|_| default.to_string())
@@ -40,7 +36,10 @@ fn init_otel() {
 
     let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
         .with_batch_exporter(tracer, runtime::Tokio)
-        .with_resource(Resource::new(vec![KeyValue::new("service.name", "ohc-agent")]))
+        .with_resource(Resource::new(vec![KeyValue::new(
+            "service.name",
+            "ohc-agent",
+        )]))
         .build();
 
     global::set_tracer_provider(tracer_provider.clone());
@@ -89,7 +88,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let auth = auth_mode_from_env();
-    info!("Starting OHC builtin agent (Rust) at {} (id: {})", address, agent_id);
+    info!(
+        "Starting OHC builtin agent (Rust) at {} (id: {})",
+        address, agent_id
+    );
 
     let addr: SocketAddr = address.parse()?;
     let mut svc_impl = AgentServiceImpl::new(agent_id.clone(), cfg, auth);
@@ -99,14 +101,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let is_cloud = get_env("STANDALONE_MODE", "true") != "true";
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
-    
+
     match ohc_builtin_agent::mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {
             let heartbeat_transport = transport.clone();
             let heartbeat_agent_id = agent_id.clone();
             tokio::spawn(async move {
                 loop {
-                    if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "active", 30).await {
+                    if let Err(e) = heartbeat_transport
+                        .register_presence(&heartbeat_agent_id, "active", 30)
+                        .await
+                    {
                         tracing::error!("Failed to register presence: {}", e);
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(15)).await;

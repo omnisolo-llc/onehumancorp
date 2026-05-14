@@ -1,6 +1,6 @@
-use tonic::{Request, Status};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use tonic::{Request, Status};
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -21,7 +21,9 @@ impl AuthConfig {
     pub fn from_env() -> Self {
         if let Ok(tok) = std::env::var("OHC_AGENT_TOKEN") {
             let h = hmac_token(&tok);
-            return AuthConfig { mode: AuthMode::Token(h) };
+            return AuthConfig {
+                mode: AuthMode::Token(h),
+            };
         }
         // Default: SPIFFE mode
         AuthConfig {
@@ -41,33 +43,42 @@ impl AuthConfig {
 
     fn check_token(&self, req: &Request<()>, expected_hash: &[u8]) -> Result<(), Status> {
         let md = req.metadata();
-        let auth_header = md.get("authorization")
+        let auth_header = md
+            .get("authorization")
             .ok_or_else(|| Status::unauthenticated("missing authorization header"))?;
-        
-        let auth_str = auth_header.to_str()
+
+        let auth_str = auth_header
+            .to_str()
             .map_err(|_| Status::unauthenticated("invalid authorization header"))?;
 
         if !auth_str.starts_with("Bearer ") {
-            return Err(Status::unauthenticated("authorization must be Bearer token"));
+            return Err(Status::unauthenticated(
+                "authorization must be Bearer token",
+            ));
         }
 
         let token = &auth_str["Bearer ".len()..];
-        if token.is_empty() { return Err(Status::unauthenticated("empty token")); }
-        
-        let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
-        let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
+        if token.is_empty() {
+            return Err(Status::unauthenticated("empty token"));
+        }
+
+        let app_key =
+            std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+        let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes())
+            .expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
-        
+
         if mac.verify(expected_hash.into()).is_ok() {
-             Ok(())
+            Ok(())
         } else {
-             Err(Status::unauthenticated("invalid token"))
+            Err(Status::unauthenticated("invalid token"))
         }
     }
 
     fn check_spiffe(&self, req: &Request<()>, allowed_id: Option<&str>) -> Result<(), Status> {
         let md = req.metadata();
-        let spiffe_id = md.get("x-spiffe-id")
+        let spiffe_id = md
+            .get("x-spiffe-id")
             .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
             .to_str()
             .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?;
@@ -89,8 +100,10 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
-    let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
+    let app_key =
+        std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+    let mut mac =
+        Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
 }
@@ -99,27 +112,43 @@ fn hmac_token(tok: &str) -> Vec<u8> {
 fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let lower = id.to_lowercase();
     if lower.contains("%2f") || lower.contains("%25") {
-        return Err(Status::permission_denied(format!("invalid SPIFFE ID: encoded slashes: {}", id)));
+        return Err(Status::permission_denied(format!(
+            "invalid SPIFFE ID: encoded slashes: {}",
+            id
+        )));
     }
     if !id.starts_with("spiffe://") {
-        return Err(Status::permission_denied("invalid SPIFFE ID: missing spiffe:// prefix"));
+        return Err(Status::permission_denied(
+            "invalid SPIFFE ID: missing spiffe:// prefix",
+        ));
     }
     let trimmed = &id["spiffe://".len()..];
     if trimmed.contains("..") || trimmed.contains("//") {
-        return Err(Status::permission_denied(format!("invalid SPIFFE ID path: {}", id)));
+        return Err(Status::permission_denied(format!(
+            "invalid SPIFFE ID path: {}",
+            id
+        )));
     }
     let parts: Vec<&str> = trimmed.splitn(6, '/').collect();
     if parts.len() < 2 {
-        return Err(Status::permission_denied(format!("SPIFFE ID too short: {}", id)));
+        return Err(Status::permission_denied(format!(
+            "SPIFFE ID too short: {}",
+            id
+        )));
     }
     let domain = parts[0];
-    
+
     match domain {
         "onehumancorp.io" | "ohc.local" | "ohc.os" => {}
         _ if domain == "ohc.global" || domain.ends_with(".ohc.global") => {}
-        _ => return Err(Status::permission_denied(format!("untrusted SPIFFE domain {:?} in {}", domain, id))),
+        _ => {
+            return Err(Status::permission_denied(format!(
+                "untrusted SPIFFE domain {:?} in {}",
+                domain, id
+            )))
+        }
     }
-    
+
     Ok(())
 }
 
@@ -134,8 +163,8 @@ pub fn interceptor(cfg: AuthConfig) -> impl Fn(Request<()>) -> Result<Request<()
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tonic::metadata::MetadataValue;
     use std::str::FromStr;
+    use tonic::metadata::MetadataValue;
 
     #[test]
     fn test_validate_spiffe_id() {
@@ -153,15 +182,23 @@ mod tests {
     fn test_check_token() {
         let token = "secret_token";
         let hash = hmac_token(token);
-        let cfg = AuthConfig { mode: AuthMode::Token(hash) };
+        let cfg = AuthConfig {
+            mode: AuthMode::Token(hash),
+        };
 
         let mut req = Request::new(());
-        req.metadata_mut().insert("authorization", MetadataValue::from_str(&format!("Bearer {}", token)).unwrap());
+        req.metadata_mut().insert(
+            "authorization",
+            MetadataValue::from_str(&format!("Bearer {}", token)).unwrap(),
+        );
 
         assert!(cfg.authenticate(&req).is_ok());
 
         let mut req2 = Request::new(());
-        req2.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer wrong_token").unwrap());
+        req2.metadata_mut().insert(
+            "authorization",
+            MetadataValue::from_str("Bearer wrong_token").unwrap(),
+        );
         assert!(cfg.authenticate(&req2).is_err());
     }
 }

@@ -10,10 +10,7 @@ struct SleepExecutor;
 
 #[async_trait::async_trait]
 impl ToolExecutor for SleepExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let secs = args["seconds"]
             .as_f64()
             .ok_or_else(|| ToolError::LlmRecoverable("sleep: seconds is required".to_string()))?;

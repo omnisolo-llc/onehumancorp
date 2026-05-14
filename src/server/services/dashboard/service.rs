@@ -1,13 +1,15 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 use ::server_ohc::app::*;
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
+use std::sync::Arc;
 use std::sync::OnceLock;
+use tonic::{Request, Response, Status};
 
-static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> =
+    OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
-static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
+static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> =
+    OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -64,12 +66,8 @@ impl DashboardService for MyDashboardService {
         let hub_org = self.hub.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub1.get_agents())
-            }),
-            tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub2.get_meetings())
-            }),
+            tokio::task::spawn_blocking(move || { Ok::<_, String>(hub1.get_agents()) }),
+            tokio::task::spawn_blocking(move || { Ok::<_, String>(hub2.get_meetings()) }),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
@@ -81,7 +79,8 @@ impl DashboardService for MyDashboardService {
             async {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}", org_id);
-                let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
+                let cache =
+                    PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
 
                 if let Some(products) = cache.get(&cache_key).await {
                     return Ok::<_, String>(products);
@@ -102,9 +101,16 @@ impl DashboardService for MyDashboardService {
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    currency: r
+                                        .try_get("currency")
+                                        .unwrap_or_else(|_| "USD".to_string()),
+                                    fulfillment_strategy: r
+                                        .try_get("fulfillment_strategy")
+                                        .unwrap_or_default(),
+                                    metadata_json: r
+                                        .try_get::<serde_json::Value, _>("metadata")
+                                        .unwrap_or_else(|_| serde_json::json!({}))
+                                        .to_string(),
                                 };
                                 results.push(p);
                             }
@@ -121,9 +127,16 @@ impl DashboardService for MyDashboardService {
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    currency: r
+                                        .try_get("currency")
+                                        .unwrap_or_else(|_| "USD".to_string()),
+                                    fulfillment_strategy: r
+                                        .try_get("fulfillment_strategy")
+                                        .unwrap_or_default(),
+                                    metadata_json: r
+                                        .try_get::<serde_json::Value, _>("metadata")
+                                        .unwrap_or_else(|_| serde_json::json!({}))
+                                        .to_string(),
                                 };
                                 results.push(p);
                             }
@@ -131,13 +144,20 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
+                cache
+                    .set(
+                        &cache_key,
+                        results.clone(),
+                        std::time::Duration::from_secs(3600),
+                    )
+                    .await;
                 Ok::<_, String>(results)
             },
             async {
                 let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}", org_id);
-                let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
+                let cache =
+                    ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
 
                 if let Some(orders) = cache.get(&cache_key).await {
                     return Ok::<_, String>(orders);
@@ -181,13 +201,20 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
+                cache
+                    .set(
+                        &cache_key,
+                        results.clone(),
+                        std::time::Duration::from_secs(5),
+                    )
+                    .await;
                 Ok::<_, String>(results)
             },
             async {
                 let org_id = org_id3;
                 let cache_key = format!("hub:org:{}", org_id);
-                let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
+                let cache =
+                    ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
 
                 if let Some(org) = cache.get(&cache_key).await {
                     return Ok::<_, String>(org);
@@ -231,7 +258,13 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+                cache
+                    .set(
+                        &cache_key,
+                        org.clone(),
+                        std::time::Duration::from_secs(3600),
+                    )
+                    .await;
                 Ok::<_, String>(org)
             }
         );
@@ -242,10 +275,9 @@ impl DashboardService for MyDashboardService {
         let _meetings = meetings_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) =
-            cost_res
-                .map_err(|e| Status::internal(e.to_string()))?
-                .map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -325,8 +357,8 @@ impl DashboardService for MyDashboardService {
         let mut compressed_prompts_len = 0;
 
         let stop_words: std::collections::HashSet<&str> = [
-            "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
-            "for", "with", "by", "about", "as", "of",
+            "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to", "for",
+            "with", "by", "about", "as", "of",
         ]
         .iter()
         .cloned()
@@ -390,7 +422,11 @@ impl DashboardService for MyDashboardService {
                 token_used: tokens_used,
                 roi,
                 efficiency,
-                pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+                pct: if total_cost > 0.0 {
+                    (cost_usd / total_cost) as f32
+                } else {
+                    0.0
+                },
                 storage_usage_bytes: _storage,
             });
         }
@@ -406,7 +442,8 @@ impl DashboardService for MyDashboardService {
         let mut final_agents = _filtered_agents
             .into_iter()
             .map(|a| {
-                let compressed_name = a.name
+                let compressed_name = a
+                    .name
                     .split_whitespace()
                     .filter(|word| {
                         let clean_word = word.to_lowercase();
@@ -581,16 +618,24 @@ impl DashboardService for MyDashboardService {
         }).await;
 
         match update_res {
-            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse { success: true })),
+            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse {
+                success: true,
+            })),
             Ok(Err(e)) => {
                 tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+                Ok(Response::new(UpdateOnboardingStateResponse {
+                    success: true,
+                }))
             }
             Err(_) => {
-                tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+                tracing::warn!(
+                    "Timeout updating onboarding state. Write operation queued locally for retry."
+                );
+                Ok(Response::new(UpdateOnboardingStateResponse {
+                    success: true,
+                }))
             }
         }
     }
@@ -599,22 +644,29 @@ impl DashboardService for MyDashboardService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_ohc::app::GetDashboardRequest;
-    use ::server_ohc::app::dashboard_service_server::DashboardService;
     use ::server_auth::orchestration::AuthInfo;
-    use tonic::Request;
+    use ::server_ohc::app::dashboard_service_server::DashboardService;
+    use ::server_ohc::app::GetDashboardRequest;
     use std::sync::Arc;
+    use tonic::Request;
     use uuid::Uuid;
 
     async fn setup_test_dashboard_service() -> MyDashboardService {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(database_url).await.unwrap();
+            .connect(database_url)
+            .await
+            .unwrap();
 
         sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         // Add dummy data for tests
         sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'system', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
@@ -622,7 +674,10 @@ mod tests {
         sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('system', 'System Org', 'free')").execute(&pool).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let db = Arc::new(crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
@@ -639,7 +694,11 @@ mod tests {
 
         // Add meetings
         let meeting_id = format!("meeting-{}", Uuid::new_v4());
-        hub.open_meeting(meeting_id.clone(), vec!["agent_1".to_string()], "Test Agenda".to_string());
+        hub.open_meeting(
+            meeting_id.clone(),
+            vec!["agent_1".to_string()],
+            "Test Agenda".to_string(),
+        );
         let _ = hub.clone().publish(::server_ohc::orchestration::Message {
             id: "msg_1".to_string(),
             from_agent: "agent_1".to_string(),
@@ -657,7 +716,10 @@ mod tests {
     async fn test_dashboard_mobile_payload_optimization() {
         let service = setup_test_dashboard_service().await;
 
-        let req_mobile = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+        let req_mobile = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: true,
+        };
         let mut request_mobile = Request::new(req_mobile);
         request_mobile.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -665,23 +727,52 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
-        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
+        let res_mobile = service
+            .get_dashboard(request_mobile)
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(
+            res_mobile.agents[0].name, "",
+            "Mobile optimization should clear agent names"
+        );
         if let Some(org) = res_mobile.organization {
-            assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
-            assert!(org.members.is_empty(), "Mobile optimization should clear org members");
+            assert_eq!(
+                org.domain, "",
+                "Mobile optimization should clear org domain"
+            );
+            assert!(
+                org.members.is_empty(),
+                "Mobile optimization should clear org members"
+            );
             assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
-            assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
+            assert_eq!(
+                org.created_at_unix, 0,
+                "Mobile optimization should clear created_at_unix"
+            );
         }
         if !res_mobile.meetings.is_empty() {
-            assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
+            assert_eq!(
+                res_mobile.meetings[0].transcript.len(),
+                0,
+                "Mobile optimization should clear meeting transcripts"
+            );
         }
         if !res_mobile.products.is_empty() {
-            assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
-            assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
+            assert_eq!(
+                res_mobile.products[0].currency, "",
+                "Mobile optimization should clear product currency"
+            );
+            assert_eq!(
+                res_mobile.products[0].fulfillment_strategy, "",
+                "Mobile optimization should clear fulfillment_strategy"
+            );
         }
         if !res_mobile.orders.is_empty() {
-            assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
+            assert_eq!(
+                res_mobile.orders[0].organization_id, "",
+                "Mobile optimization should clear order organization_id"
+            );
         }
     }
 
@@ -689,7 +780,10 @@ mod tests {
     async fn test_dashboard_desktop_payload() {
         let service = setup_test_dashboard_service().await;
 
-        let req_desktop = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req_desktop = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request_desktop = Request::new(req_desktop);
         request_desktop.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -697,17 +791,30 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_desktop = service.get_dashboard(request_desktop).await.unwrap().into_inner();
-        assert_ne!(res_desktop.agents[0].name, "", "Desktop should preserve agent names");
+        let res_desktop = service
+            .get_dashboard(request_desktop)
+            .await
+            .unwrap()
+            .into_inner();
+        assert_ne!(
+            res_desktop.agents[0].name, "",
+            "Desktop should preserve agent names"
+        );
         if !res_desktop.meetings.is_empty() {
-            assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop should preserve meeting transcripts");
+            assert!(
+                res_desktop.meetings[0].transcript.len() > 0,
+                "Desktop should preserve meeting transcripts"
+            );
         }
     }
 
     #[tokio::test]
     async fn test_dashboard_ai_token_efficiency() {
         let service = setup_test_dashboard_service().await;
-        let req = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -728,7 +835,10 @@ mod tests {
     async fn test_dashboard_caching() {
         let service = setup_test_dashboard_service().await;
 
-        let req1 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req1 = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request1 = Request::new(req1);
         request1.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -739,7 +849,10 @@ mod tests {
         let _res1 = service.get_dashboard(request1).await.unwrap().into_inner();
         let elapsed1 = start1.elapsed();
 
-        let req2 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req2 = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request2 = Request::new(req2);
         request2.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),

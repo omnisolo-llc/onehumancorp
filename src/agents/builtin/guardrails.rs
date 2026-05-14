@@ -8,7 +8,10 @@ pub struct GuardrailConfig {
 pub fn check_input(input: &str, cfg: &GuardrailConfig) -> Result<(), String> {
     for kw in &cfg.blocked_keywords {
         if input.contains(kw) {
-            return Err(format!("Input guardrail tripped: contains blocked keyword: {}", kw));
+            return Err(format!(
+                "Input guardrail tripped: contains blocked keyword: {}",
+                kw
+            ));
         }
     }
     Ok(())
@@ -60,7 +63,10 @@ mod tests {
 pub fn check_output(output: &str, cfg: &GuardrailConfig) -> Result<(), String> {
     for kw in &cfg.blocked_keywords {
         if output.contains(kw) {
-            return Err(format!("Output guardrail tripped: contains blocked keyword: {}", kw));
+            return Err(format!(
+                "Output guardrail tripped: contains blocked keyword: {}",
+                kw
+            ));
         }
     }
     Ok(())
@@ -69,11 +75,17 @@ pub fn check_output(output: &str, cfg: &GuardrailConfig) -> Result<(), String> {
 pub fn check_tool(tc: &ToolCall, cfg: &GuardrailConfig) -> Result<(), String> {
     for kw in &cfg.blocked_keywords {
         if tc.name.contains(kw) {
-            return Err(format!("Tool guardrail tripped: name contains blocked keyword: {}", kw));
+            return Err(format!(
+                "Tool guardrail tripped: name contains blocked keyword: {}",
+                kw
+            ));
         }
         let args_str = tc.arguments.to_string();
         if args_str.contains(kw) {
-            return Err(format!("Tool guardrail tripped: arguments contain blocked keyword: {}", kw));
+            return Err(format!(
+                "Tool guardrail tripped: arguments contain blocked keyword: {}",
+                kw
+            ));
         }
     }
     Ok(())

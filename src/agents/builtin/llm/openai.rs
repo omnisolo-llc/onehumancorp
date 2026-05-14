@@ -1,10 +1,10 @@
 use async_trait::async_trait;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use reqwest::Client;
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use super::LlmClient;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -63,7 +63,6 @@ static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
-
 
 pub struct OpenAIClient {
     api_key: String,
@@ -250,7 +249,11 @@ impl LlmClient for OpenAIClient {
                     .collect();
                 messages.push(OpenAIMessage {
                     role: "assistant".to_string(),
-                    content: if m.content.is_empty() { None } else { Some(m.content.clone()) },
+                    content: if m.content.is_empty() {
+                        None
+                    } else {
+                        Some(m.content.clone())
+                    },
                     tool_calls: Some(calls),
                     tool_call_id: None,
                 });
@@ -299,9 +302,9 @@ impl LlmClient for OpenAIClient {
         // We also check for OHC_OPENAI_CACHE_BYPASS env var.
         let cache_bypass = std::env::var("OHC_OPENAI_CACHE_BYPASS").unwrap_or_default() == "true";
         if !cache_bypass && (req.model.contains("gpt-4o") || req.model.contains("gpt-4.1")) {
-             // In some scenarios we might want to specifically structure the prompt
-             // to maximize cache hits (e.g. putting static system instructions first).
-             // Our build_hierarchical_system_prompt already does this.
+            // In some scenarios we might want to specifically structure the prompt
+            // to maximize cache hits (e.g. putting static system instructions first).
+            // Our build_hierarchical_system_prompt already does this.
         }
 
         let url = format!("{}/chat/completions", self.base_url);
@@ -324,11 +327,14 @@ impl LlmClient for OpenAIClient {
         let result = resp.json::<OpenAIResponse>().await;
         if result.is_err() {
             cb.record_failure();
-            return Err(format!("openai api error: failed to parse response: {:?}", result.unwrap_err()).into());
+            return Err(format!(
+                "openai api error: failed to parse response: {:?}",
+                result.unwrap_err()
+            )
+            .into());
         }
         let result = result.unwrap();
         cb.record_success();
-
 
         let choice = result.choices.into_iter().next().ok_or("no choices")?;
         let finish_reason = choice.finish_reason.unwrap_or_default();
@@ -340,8 +346,8 @@ impl LlmClient for OpenAIClient {
             .unwrap_or_default()
             .into_iter()
             .map(|tc| {
-                let arguments: Value =
-                    serde_json::from_str(&tc.function.arguments).unwrap_or(Value::Object(Default::default()));
+                let arguments: Value = serde_json::from_str(&tc.function.arguments)
+                    .unwrap_or(Value::Object(Default::default()));
                 ToolCall {
                     id: tc.id,
                     name: tc.function.name,
@@ -352,10 +358,14 @@ impl LlmClient for OpenAIClient {
 
         let usage = result
             .usage
-                        .map(|u| Usage {
+            .map(|u| Usage {
                 input_tokens: u.prompt_tokens,
                 output_tokens: u.completion_tokens,
-                cache_read_input_tokens: u.prompt_tokens_details.as_ref().map(|d| d.cached_tokens).unwrap_or(0),
+                cache_read_input_tokens: u
+                    .prompt_tokens_details
+                    .as_ref()
+                    .map(|d| d.cached_tokens)
+                    .unwrap_or(0),
                 cache_creation_input_tokens: 0,
             })
             .unwrap_or_default();

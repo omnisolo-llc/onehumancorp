@@ -1,7 +1,7 @@
+use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tokio::sync::broadcast;
-use chrono::Utc;
 
 /// Subagent event types — mirrors Go SubagentEventType.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

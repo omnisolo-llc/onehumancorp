@@ -1,4 +1,4 @@
-use super::sandbox::{SandboxManager, SandboxAdapter};
+use super::sandbox::{SandboxAdapter, SandboxManager};
 use sqlx::PgPool;
 
 pub struct LocalShellTask {

@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use sqlx::PgPool;
 use super::{User, UserRepository};
 use ::server_common::auth_utils::set_org_context;
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use sqlx::PgPool;
 use sqlx::Row;
 
 #[allow(dead_code)]
@@ -23,7 +23,9 @@ impl UserRepository for PgUserRepository {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"
@@ -55,9 +57,15 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query)
+            .bind(id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         // Parse roles from JSON string
         let roles_json: String = row.get("roles");
@@ -83,9 +91,15 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(username).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query)
+            .bind(username)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -110,9 +124,15 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query)
+            .bind(email)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -137,9 +157,15 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query)
+            .bind(sub)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -163,9 +189,14 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
+        let rows = sqlx::query(query)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
         for row in rows {
@@ -199,7 +230,9 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let res = sqlx::query(query)
             .bind(&user.id)
@@ -229,9 +262,15 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let res = sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let res = sqlx::query(query)
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -242,9 +281,16 @@ impl UserRepository for PgUserRepository {
         Ok(())
     }
 
-    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
+    async fn revoke_token(
+        &self,
+        jti: String,
+        exp: DateTime<Utc>,
+        org_id: &str,
+    ) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"
@@ -270,7 +316,9 @@ impl UserRepository for PgUserRepository {
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
             .bind(jti)
@@ -288,8 +336,8 @@ impl UserRepository for PgUserRepository {
 #[cfg(test)]
 mod security_tests {
     use super::*;
-    use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
+    use std::time::Duration;
 
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
@@ -302,7 +350,21 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();
@@ -318,10 +380,16 @@ mod security_tests {
         let should_bypass = !is_multitenant && org_id == "system";
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
-        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
+        assert!(
+            !should_bypass,
+            "Cloud mode should NEVER bypass tenant filters when org_id is 'system'"
+        );
 
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        assert!(
+            res.is_err() || res.is_ok(),
+            "Codebase query executed correctly"
+        );
     }
 
     #[tokio::test]
@@ -335,7 +403,21 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();
@@ -344,7 +426,9 @@ mod security_tests {
         let exp = Utc::now() + chrono::Duration::hours(1);
 
         // This validates the context threading through the trait boundaries
-        let res = repo.revoke_token("test-token-jti".to_string(), exp, "test-tenant").await;
+        let res = repo
+            .revoke_token("test-token-jti".to_string(), exp, "test-tenant")
+            .await;
 
         // Depending on test db state, it might be an error (missing migrations), but we just ensure it executes cleanly.
         assert!(res.is_ok() || res.is_err());

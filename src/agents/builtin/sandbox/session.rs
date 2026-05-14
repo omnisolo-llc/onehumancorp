@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
+use crate::harness::ASTValidator;
+use regex::Regex;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::process::Command;
 use tokio::sync::RwLock;
-use regex::Regex;
-use crate::harness::ASTValidator;
 
 pub struct ShellSession {
     pub session_id: String,
@@ -19,14 +19,20 @@ pub struct ShellSession {
 impl ShellSession {
     pub async fn new(session_id: &str, sandbox_dir: &str) -> Result<Self, String> {
         let sandbox_path = Path::new(sandbox_dir);
-        fs::create_dir_all(sandbox_path).await.map_err(|e| e.to_string())?;
+        fs::create_dir_all(sandbox_path)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let memory_dir = sandbox_path.join("memory");
-        fs::create_dir_all(&memory_dir).await.map_err(|e| e.to_string())?;
+        fs::create_dir_all(&memory_dir)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let env_snapshot_path = sandbox_path.join("env_snapshot.sh");
         if !env_snapshot_path.exists() {
-            fs::write(&env_snapshot_path, b"").await.map_err(|e| e.to_string())?;
+            fs::write(&env_snapshot_path, b"")
+                .await
+                .map_err(|e| e.to_string())?;
         }
 
         let blocked_patterns = vec![
@@ -52,7 +58,10 @@ impl ShellSession {
     pub fn validate(&self, command: &str) -> Result<(), String> {
         for pattern in &self.blocked_patterns {
             if pattern.is_match(command) {
-                return Err(format!("command violates security policy: matched {}", pattern));
+                return Err(format!(
+                    "command violates security policy: matched {}",
+                    pattern
+                ));
             }
         }
         self.ast_validator.validate(command)?;
@@ -74,29 +83,35 @@ impl ShellSession {
 
         let mut cmd = Command::new("bash");
         cmd.arg("-c").arg(wrapper_cmd);
-        
+
         let cwd = self.current_cwd.read().await.clone();
         cmd.current_dir(cwd);
-        
+
         cmd.env_clear();
-        cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+        cmd.env(
+            "PATH",
+            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        );
 
         // Check if bwrap is available (cached)
-        static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-        static BWRAP_CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
+        static BWRAP_CHECKED: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
 
         if !BWRAP_CHECKED.load(std::sync::atomic::Ordering::Relaxed) {
-            let is_available = if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
-                false
-            } else {
-                std::process::Command::new("bwrap")
-                    .arg("--version")
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null())
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false)
-            };
+            let is_available =
+                if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+                    false
+                } else {
+                    std::process::Command::new("bwrap")
+                        .arg("--version")
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status()
+                        .map(|s| s.success())
+                        .unwrap_or(false)
+                };
             BWRAP_AVAILABLE.store(is_available, std::sync::atomic::Ordering::Relaxed);
             BWRAP_CHECKED.store(true, std::sync::atomic::Ordering::Relaxed);
         }
@@ -109,11 +124,18 @@ impl ShellSession {
                 "--unshare-uts".to_string(),
                 "--unshare-ipc".to_string(),
                 "--unshare-cgroup".to_string(),
-                "--proc".to_string(), "/proc".to_string(),
-                "--dev".to_string(), "/dev".to_string(),
-                "--tmpfs".to_string(), "/tmp".to_string(),
-                "--ro-bind".to_string(), "/".to_string(), "/".to_string(),
-                "--bind".to_string(), self.sandbox_dir.to_string_lossy().to_string(), self.sandbox_dir.to_string_lossy().to_string(),
+                "--proc".to_string(),
+                "/proc".to_string(),
+                "--dev".to_string(),
+                "/dev".to_string(),
+                "--tmpfs".to_string(),
+                "/tmp".to_string(),
+                "--ro-bind".to_string(),
+                "/".to_string(),
+                "/".to_string(),
+                "--bind".to_string(),
+                self.sandbox_dir.to_string_lossy().to_string(),
+                self.sandbox_dir.to_string_lossy().to_string(),
                 "--".to_string(),
                 "bash".to_string(),
                 "-c".to_string(),
@@ -126,7 +148,10 @@ impl ShellSession {
             let cwd = self.current_cwd.read().await.clone();
             bwrap_cmd.current_dir(cwd);
             bwrap_cmd.env_clear();
-            bwrap_cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+            bwrap_cmd.env(
+                "PATH",
+                "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            );
 
             // We do not override cmd entirely, instead we simply use bwrap_cmd to execute
             let output = bwrap_cmd.output().await.map_err(|e| e.to_string())?;
@@ -145,8 +170,11 @@ impl ShellSession {
             if output.status.success() {
                 return Ok(stdout);
             } else {
-                return Err(format!("command failed: {}
-stderr: {}", stdout, stderr));
+                return Err(format!(
+                    "command failed: {}
+stderr: {}",
+                    stdout, stderr
+                ));
             }
         }
 
@@ -162,7 +190,7 @@ stderr: {}", stdout, stderr));
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        
+
         if output.status.success() {
             Ok(stdout)
         } else {
@@ -184,12 +212,18 @@ mod tests {
         let out = session.run_stateful_command("echo hello").await.unwrap();
         assert!(out.contains("hello"));
 
-        let out = session.run_stateful_command("export FOO=bar").await.unwrap();
+        let out = session
+            .run_stateful_command("export FOO=bar")
+            .await
+            .unwrap();
         let out = session.run_stateful_command("echo $FOO").await.unwrap();
         assert!(out.contains("bar"));
 
         // Test memory directory export
-        let out = session.run_stateful_command("echo $OHC_MEMORY_DIR").await.unwrap();
+        let out = session
+            .run_stateful_command("echo $OHC_MEMORY_DIR")
+            .await
+            .unwrap();
         assert!(out.contains("memory"));
 
         let _ = tokio::fs::remove_dir_all(dir).await;

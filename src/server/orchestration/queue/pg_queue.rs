@@ -16,7 +16,9 @@ impl PgTaskQueue {
 #[async_trait]
 impl TaskQueue for PgTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
-        if jobs.is_empty() { return Ok(()); }
+        if jobs.is_empty() {
+            return Ok(());
+        }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
@@ -24,14 +26,23 @@ impl TaskQueue for PgTaskQueue {
 
         for i in 0..jobs.len() {
             let base = i * 6;
-            values.push(format!("(${}, ${}, ${}, ${}, 'QUEUED', ${}, ${})", base + 1, base + 2, base + 3, base + 4, base + 5, base + 6));
+            values.push(format!(
+                "(${}, ${}, ${}, ${}, 'QUEUED', ${}, ${})",
+                base + 1,
+                base + 2,
+                base + 3,
+                base + 4,
+                base + 5,
+                base + 6
+            ));
         }
         query_str.push_str(&values.join(", "));
 
         let mut query = sqlx::query(&query_str);
 
         for job in jobs {
-            let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
+            let payload_json: serde_json::Value =
+                serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
             query = query
                 .bind(job.id)
                 .bind(job.parent_task_id)
@@ -47,7 +58,8 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
+        let payload_json: serde_json::Value =
+            serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
         sqlx::query(
             "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
              VALUES ($1, $2, $3, $4, 'QUEUED', $5, $6)"
@@ -72,7 +84,12 @@ impl TaskQueue for PgTaskQueue {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
+        let role_placeholders = roles
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("${}", i + 1))
+            .collect::<Vec<_>>()
+            .join(",");
         let query_str = format!(
             "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
              FROM sub_agent_jobs
@@ -87,10 +104,14 @@ impl TaskQueue for PgTaskQueue {
             query = query.bind(role);
         }
 
-        let job_opt = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let job_opt = query
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if let Some(row) = job_opt {
-            let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
+            let payload_val: serde_json::Value =
+                row.try_get("payload").unwrap_or(serde_json::Value::Null);
             let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
             let job = Job {
                 id: row.get("id"),
@@ -100,10 +121,16 @@ impl TaskQueue for PgTaskQueue {
                 status: row.try_get("status").unwrap_or_default(),
                 attempts: row.try_get("attempts").unwrap_or(0),
                 max_attempts: row.try_get("max_attempts").unwrap_or(3),
-                run_after: row.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now()),
+                run_after: row
+                    .try_get("run_after")
+                    .unwrap_or_else(|_| chrono::Utc::now()),
                 locked_until: row.try_get("locked_until").unwrap_or(None),
-                created_at: row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
-                updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                created_at: row
+                    .try_get("created_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()),
+                updated_at: row
+                    .try_get("updated_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()),
                 tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };
 

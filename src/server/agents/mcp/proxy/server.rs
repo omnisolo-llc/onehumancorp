@@ -1,11 +1,11 @@
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelService;
-use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer};
-use tonic::{Request, Response, Status, Streaming};
+use ::server_ohc::mcp_proxy::{ProxyToServer, ServerToProxy};
+use sqlx::PgPool;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing::{info, warn, error};
-use std::sync::Arc;
-use sqlx::PgPool;
+use tonic::{Request, Response, Status, Streaming};
+use tracing::{error, info, warn};
 
 pub struct ReverseTunnelServer {
     pub pool: Arc<PgPool>,
@@ -18,7 +18,10 @@ impl McpReverseTunnelService for ReverseTunnelServer {
     async fn establish_tunnel(
         &self,
         request: Request<Streaming<ProxyToServer>>,
-    ) -> Result<Response<<ReverseTunnelServer as McpReverseTunnelService>::EstablishTunnelStream>, Status> {
+    ) -> Result<
+        Response<<ReverseTunnelServer as McpReverseTunnelService>::EstablishTunnelStream>,
+        Status,
+    > {
         let mut in_stream = request.into_inner();
 
         let (tx, rx) = mpsc::channel(128);
@@ -33,17 +36,28 @@ impl McpReverseTunnelService for ReverseTunnelServer {
                         ::server_ohc::mcp_proxy::proxy_to_server::Payload::Register(reg) => {
                             info!("Registered local proxy with SPIFFE ID: {}", reg.spiffe_id);
                             active_spiffe_id = Some(reg.spiffe_id.clone());
-                            let _ = ::server_telemetry::record_mcp_proxy_connections_active(&pool, &reg.spiffe_id, 1.0).await;
+                            let _ = ::server_telemetry::record_mcp_proxy_connections_active(
+                                &pool,
+                                &reg.spiffe_id,
+                                1.0,
+                            )
+                            .await;
                         }
                         ::server_ohc::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
-                            info!("Received response for {}: success={}", msg.request_id, res.success);
+                            info!(
+                                "Received response for {}: success={}",
+                                msg.request_id, res.success
+                            );
                         }
                     }
                 }
             }
 
             if let Some(spiffe_id) = active_spiffe_id {
-                let _ = ::server_telemetry::record_mcp_proxy_connections_active(&pool, &spiffe_id, -1.0).await;
+                let _ = ::server_telemetry::record_mcp_proxy_connections_active(
+                    &pool, &spiffe_id, -1.0,
+                )
+                .await;
             }
 
             info!("Tunnel connection closed.");

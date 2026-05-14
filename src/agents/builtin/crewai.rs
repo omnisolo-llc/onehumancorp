@@ -1,7 +1,7 @@
 use crate::agent::{Agent, AgentRunConfig};
 use ohc_builtin_agent_core::types::Message;
-use std::sync::Arc;
 use serde_json::Value;
+use std::sync::Arc;
 
 /// Defines a specific role an agent can take in the CrewAI architecture.
 #[derive(Debug, Clone)]
@@ -12,7 +12,11 @@ pub struct Role {
 }
 
 impl Role {
-    pub fn new(name: impl Into<String>, goal: impl Into<String>, backstory: impl Into<String>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        goal: impl Into<String>,
+        backstory: impl Into<String>,
+    ) -> Self {
         Self {
             name: name.into(),
             goal: goal.into(),
@@ -30,7 +34,11 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(description: impl Into<String>, expected_output: impl Into<String>, role: Role) -> Self {
+    pub fn new(
+        description: impl Into<String>,
+        expected_output: impl Into<String>,
+        role: Role,
+    ) -> Self {
         Self {
             description: description.into(),
             expected_output: expected_output.into(),
@@ -48,7 +56,11 @@ pub struct Crew {
 
 impl Crew {
     pub fn new(tasks: Vec<Task>, agent: Arc<Agent>, config: AgentRunConfig) -> Self {
-        Self { tasks, agent, config }
+        Self {
+            tasks,
+            agent,
+            config,
+        }
     }
 }
 
@@ -86,13 +98,20 @@ impl Flow {
 
             let mut on_event = |_| {};
 
-            let result = self.crew.agent.run(&run_cfg, &user_prompt, &mut on_event).await
+            let result = self
+                .crew
+                .agent
+                .run(&run_cfg, &user_prompt, &mut on_event)
+                .await
                 .map_err(|e| format!("Task {} failed: {}", i, e))?;
 
             // Simple deterministic validation: ensure it's not empty, and if expected_output hints at JSON, check JSON parseability.
             if task.expected_output.to_lowercase().contains("json") {
                 if let Err(_) = serde_json::from_str::<Value>(&result) {
-                    return Err(format!("Task {} failed validation: expected JSON output", i));
+                    return Err(format!(
+                        "Task {} failed validation: expected JSON output",
+                        i
+                    ));
                 }
             }
 
@@ -111,8 +130,8 @@ impl Flow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, ToolCall};
     use crate::llm::client::LlmClient;
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall, Usage};
     use tokio::sync::Mutex;
 
     struct MockLlmClientCrew {
@@ -121,7 +140,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClientCrew {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             let content = if !resps.is_empty() {
                 resps.remove(0)
@@ -170,9 +192,7 @@ mod tests {
     #[tokio::test]
     async fn test_crewai_flow_json_validation_failure() {
         let client = Arc::new(MockLlmClientCrew {
-            responses: Mutex::new(vec![
-                "This is not JSON text".to_string(),
-            ]),
+            responses: Mutex::new(vec!["This is not JSON text".to_string()]),
         });
 
         let agent = Arc::new(Agent::new(client, vec![]));
@@ -186,15 +206,16 @@ mod tests {
 
         let result = flow.execute().await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Task 0 failed validation: expected JSON output");
+        assert_eq!(
+            result.unwrap_err(),
+            "Task 0 failed validation: expected JSON output"
+        );
     }
 
     #[tokio::test]
     async fn test_crewai_flow_empty_output_failure() {
         let client = Arc::new(MockLlmClientCrew {
-            responses: Mutex::new(vec![
-                "   ".to_string(),
-            ]),
+            responses: Mutex::new(vec!["   ".to_string()]),
         });
 
         let agent = Arc::new(Agent::new(client, vec![]));
@@ -208,7 +229,10 @@ mod tests {
 
         let result = flow.execute().await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Task 0 failed validation: output is empty");
+        assert_eq!(
+            result.unwrap_err(),
+            "Task 0 failed validation: output is empty"
+        );
     }
 
     #[tokio::test]
@@ -216,7 +240,10 @@ mod tests {
         struct FailingLlmClient;
         #[async_trait::async_trait]
         impl LlmClient for FailingLlmClient {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Err("LLM completely failed".into())
             }
         }

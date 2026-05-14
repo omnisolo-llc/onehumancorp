@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 use super::LlmClient;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 
 pub struct OllamaClient {
     endpoint: String,
@@ -114,7 +114,7 @@ impl LlmClient for OllamaClient {
                 response_id: None,
                 previous_response_id: None,
             },
-                        usage: Usage {
+            usage: Usage {
                 input_tokens: result.prompt_eval_count,
                 output_tokens: result.eval_count,
                 cache_creation_input_tokens: 0,

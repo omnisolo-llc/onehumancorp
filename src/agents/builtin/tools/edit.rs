@@ -12,11 +12,10 @@ struct EditExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for EditExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("edit: path is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let path = args["path"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("edit: path is required".to_string()))?;
         let old_str = args["old_str"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("edit: old_str is required".to_string()))?;
@@ -24,11 +23,18 @@ impl ToolExecutor for EditExecutor {
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("edit: new_str is required".to_string()))?;
 
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let safe_path = std::path::Path::new(path)
+            .strip_prefix("/")
+            .unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir {
+            wd.join(safe_path)
+        } else {
+            std::path::PathBuf::from(path)
+        };
         let content = fs::read_to_string(&actual_path)
             .await
-            .map_err(|e| format!("edit: read {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("edit: read {}: {}", actual_path.display(), e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Ensure exactly one occurrence.
         let count = content.matches(old_str).count();
@@ -48,16 +54,29 @@ impl ToolExecutor for EditExecutor {
         let new_content = content.replacen(old_str, new_str, 1);
         fs::write(&actual_path, &new_content)
             .await
-            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
             let actual_path_str = actual_path.to_string_lossy();
-            match self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &actual_path_str], None, vec![]).await {
+            match self
+                .runner
+                .run(
+                    "rustc",
+                    &["--emit=metadata", "--edition=2021", &actual_path_str],
+                    None,
+                    vec![],
+                )
+                .await
+            {
                 Ok(output) => {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
-                        if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                        if !stderr.contains("E0432")
+                            && !stderr.contains("E0463")
+                            && !stderr.contains("E0433")
+                        {
                             return Err(ToolError::LlmRecoverable(format!(
                                 "Verification Loop Failed: `rustc` reported syntax errors after editing {}.
 
@@ -76,13 +95,14 @@ Please fix the errors and try again.",
             }
         }
 
-
-
         Ok(format!("File edited: {}", path))
     }
 }
 
-pub fn edit_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
+pub fn edit_tool(
+    working_dir: Option<std::path::PathBuf>,
+    runner: Arc<dyn crate::runner::CommandRunner>,
+) -> Tool {
     Tool {
         name: "Edit".to_string(),
         description: "Replace exactly one occurrence of old_str with new_str in a file. \
@@ -107,7 +127,10 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["path", "old_str", "new_str"]
         }),
-        execute: Arc::new(EditExecutor { working_dir, runner }),
+        execute: Arc::new(EditExecutor {
+            working_dir,
+            runner,
+        }),
     }
 }
 
@@ -123,7 +146,10 @@ mod tests {
         fs::write(&file_path, "hello old world").await.unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = EditExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+            runner,
+        };
 
         let args = json!({
             "path": "test.txt",
@@ -141,7 +167,10 @@ mod tests {
     #[tokio::test]
     async fn test_edit_tool_missing_args() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: None, runner };
+        let executor = EditExecutor {
+            working_dir: None,
+            runner,
+        };
 
         let args = json!({ "path": "test.txt", "old_str": "old" });
         let result = executor.execute(args).await;
@@ -155,7 +184,10 @@ mod tests {
         fs::write(&file_path, "hello old old world").await.unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = EditExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+            runner,
+        };
 
         let args = json!({
             "path": "test.txt",
@@ -176,10 +208,15 @@ mod tests {
     async fn test_edit_tool_rust_verification_success() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.rs");
-        fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
+        fs::write(&file_path, "fn main() { println!(\"old\"); }")
+            .await
+            .unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = EditExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+            runner,
+        };
 
         let args = json!({
             "path": "test.rs",
@@ -196,13 +233,22 @@ mod tests {
     async fn test_edit_tool_rust_verification_failure() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.rs");
-        fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
+        fs::write(&file_path, "fn main() { println!(\"old\"); }")
+            .await
+            .unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         // Simulate rustc failure
-        runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(
+            1,
+            "",
+            "error: expected expression, found `;`",
+        )));
 
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = EditExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+            runner,
+        };
 
         let args = json!({
             "path": "test.rs",
@@ -212,7 +258,10 @@ mod tests {
 
         // Should fail verification due to syntax error
         let result = executor.execute(args).await;
-        assert!(result.is_err(), "Expected error from mock rustc verification");
+        assert!(
+            result.is_err(),
+            "Expected error from mock rustc verification"
+        );
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
         } else {

@@ -1,6 +1,6 @@
 use super::queue::{Job, TaskQueue};
 use async_trait::async_trait;
-use sqlx::{SqlitePool, Row};
+use sqlx::{Row, SqlitePool};
 use std::sync::Arc;
 
 pub struct SQLiteTaskQueue {
@@ -16,7 +16,9 @@ impl SQLiteTaskQueue {
 #[async_trait]
 impl TaskQueue for SQLiteTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
-        if jobs.is_empty() { return Ok(()); }
+        if jobs.is_empty() {
+            return Ok(());
+        }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
@@ -83,7 +85,10 @@ impl TaskQueue for SQLiteTaskQueue {
             query = query.bind(role);
         }
 
-        let job_opt: Option<sqlx::sqlite::SqliteRow> = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let job_opt: Option<sqlx::sqlite::SqliteRow> = query
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if let Some(row) = job_opt {
             let job = Job {
@@ -94,10 +99,16 @@ impl TaskQueue for SQLiteTaskQueue {
                 status: row.get("status"),
                 attempts: row.get("attempts"),
                 max_attempts: row.get("max_attempts"),
-                run_after: row.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now()),
+                run_after: row
+                    .try_get("run_after")
+                    .unwrap_or_else(|_| chrono::Utc::now()),
                 locked_until: row.try_get("locked_until").unwrap_or(None),
-                created_at: row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
-                updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                created_at: row
+                    .try_get("created_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()),
+                updated_at: row
+                    .try_get("updated_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()),
                 tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };
 

@@ -1,10 +1,10 @@
-pub mod validation;
-pub mod preflight;
-pub mod provisioner;
 pub mod audit;
-pub mod wizard;
-pub mod onboarding_agent;
-pub mod dayone;
 pub mod cli;
+pub mod dayone;
 pub mod diagnostics;
 pub mod env_verifier;
+pub mod onboarding_agent;
+pub mod preflight;
+pub mod provisioner;
+pub mod validation;
+pub mod wizard;

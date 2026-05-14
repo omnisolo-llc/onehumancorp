@@ -1,7 +1,7 @@
+use chrono::Utc;
+use ohc_builtin_agent_core::pubsub::{SubagentBus, SubagentEventType, SubagentLifecycleEvent};
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Utc;
-use ohc_builtin_agent_core::pubsub::{SubagentBus, SubagentLifecycleEvent, SubagentEventType};
 
 use crate::db::{ScoutDb, ToolIntegration};
 
