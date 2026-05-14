@@ -25,7 +25,6 @@ def define_playwright_tests():
                 "//deploy:docker-compose.e2e.yml",
                 "//:playwright.config.ts",
                 "//:package.json",
-                "//:node_modules",
             ],
             env = {
                 "BASE_URL": "http://localhost:18789",

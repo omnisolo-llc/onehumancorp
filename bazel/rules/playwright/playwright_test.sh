@@ -83,20 +83,18 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died. Log:"
       tail -100 "${TEST_TMPDIR:-/tmp}/server.log" 2>/dev/null || true
-      exit 0
+      exit 1
     fi
     sleep 1
   done
 else
   echo "[playwright] Error: server binary not found or not executable at $SERVER_BIN"
-  exit 0
+  exit 1
 fi
 
 # Run Playwright on the host (no Docker for tests)
 export CI=true
 export BASE_URL="http://localhost:18789"
-npm install playwright
-npx playwright install chromium
 
 if [[ -n "$spec_file" ]]; then
   echo "[playwright] Running spec on host: $spec_file"
