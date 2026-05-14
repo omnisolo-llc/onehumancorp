@@ -26,7 +26,7 @@ oci_image(
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":backend_pkg"],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
@@ -36,7 +36,7 @@ oci_load(
     image = ":server_image",
     repo_tags = ["onehumancorp/server:latest"],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -47,7 +47,7 @@ oci_push(
     image = ":server_image",
     repository = "ghcr.io/onehumancorp/server",
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -58,7 +58,7 @@ oci_push(
     image = ":server_image",
     repository = "index.docker.io/onehumancorp/server",
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -84,7 +84,7 @@ oci_image(
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":agent_pkg"],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
@@ -94,7 +94,7 @@ oci_load(
     image = ":agent_image",
     repo_tags = ["onehumancorp/agent:bazel"],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -108,7 +108,7 @@ oci_image(
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":agent_pkg"],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
@@ -118,7 +118,7 @@ oci_load(
     image = ":default_agent_image",
     repo_tags = ["onehumancorp/internal-default-agent:bazel"],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -129,7 +129,7 @@ oci_push(
     image = ":agent_image",
     repository = "ghcr.io/onehumancorp/agent",
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -140,7 +140,7 @@ oci_push(
     image = ":agent_image",
     repository = "index.docker.io/onehumancorp/agent",
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -156,7 +156,7 @@ sh_test(
         "docker-compose.yml",
     ]) + ["BUILD.bazel"],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
@@ -186,7 +186,7 @@ sh_test(
         "requires-docker",
     ],
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//cpu:arm64"],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
