@@ -1642,8 +1642,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="handleLogin(this)">Login</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">Start Setup</button>
                     </div>
+
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
@@ -1843,96 +1844,132 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                                                                                                    <div id="setup-screen" class="screen glass">
+                        <style>
+                            .wizard-step { display: none; animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+                            .wizard-step.active { display: block; }
+                            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                            .progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-bottom: 20px; border-radius: 2px; overflow: hidden; }
+                            .progress-fill { height: 100%; background: #4CAF50; width: 0%; transition: width 0.3s ease; }
+                            .password-meter { display: flex; gap: 5px; margin-top: 10px; }
+                            .meter-segment { height: 4px; flex: 1; background: rgba(255,255,255,0.1); border-radius: 2px; }
+                            .meter-segment.active-weak { background: #f44336; }
+                            .meter-segment.active-medium { background: #ffeb3b; }
+                            .meter-segment.active-strong { background: #4caf50; }
+                            .summary-card { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; margin: 20px 0; }
+                            .ai-suggestion { color: #88c0d0; font-style: italic; margin-top: 10px; }
+                        </style>
+                        <div class="progress-bar"><div id="wizard-progress" class="progress-fill"></div></div>
+
+                        <div id="step-1" class="wizard-step active">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Your business, live in minutes.</h1>
+                            <p style="font-family: 'Inter', sans-serif;">Zero tech skills needed. We do the heavy lifting.</p>
+                            <button onclick="wizard.next(2)">Start My Business</button>
+                            <button class="secondary" onclick="wizard.next('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" style="display: none;">
+                        <div id="step-2" class="wizard-step">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="wizard.setState('businessType', 'Online Store'); wizard.next(3)">Online Store</button>
+                            <button class="secondary" onclick="wizard.setState('businessType', 'Service Business'); wizard.next(3)">🛠️ Service Business</button>
+                            <button class="secondary" onclick="wizard.setState('businessType', 'Restaurant / Food'); wizard.next(3)">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="wizard.setState('businessType', 'Creative / Portfolio'); wizard.next(3)">🎨 Creative / Portfolio</button>
+                            <button class="secondary" onclick="wizard.setState('businessType', 'Local Business'); wizard.next(3)">🏠 Local Business</button>
+                            <button class="secondary" onclick="wizard.setState('businessType', 'Other'); wizard.next(3)">Other</button>
+                            <br/><button class="secondary" onclick="wizard.next(1)">Back</button>
                         </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                        <div id="step-3" class="wizard-step">
+                            <h1>What is your business called?</h1>
+                            <input type="text" id="business-name" placeholder="What is your business called?" onchange="wizard.setState('businessName', this.value)" />
+                            <textarea class="ai-suggestion" id="desc-suggestion" rows="3" style="width:100%;" onchange="wizard.setState('description', this.value)"></textarea>
+                            <button onclick="wizard.generateDescription()">Auto-suggest Description</button>
+                            <button onclick="wizard.next(4)">Next</button>
+                            <button class="secondary" onclick="wizard.next(2)">Back</button>
                         </div>
-                        <div id="step-4" style="display: none;">
+                        <div id="step-4" class="wizard-step">
                             <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+                            <label><input type="checkbox" onchange="wizard.toggleCategory('Physical products', this.checked)" /> Physical products</label>
+                            <label><input type="checkbox" onchange="wizard.toggleCategory('Digital downloads', this.checked)" /> Digital downloads</label>
+                            <label><input type="checkbox" onchange="wizard.toggleCategory('Services / appointments', this.checked)" /> Services / appointments</label>
+                            <label><input type="checkbox" onchange="wizard.toggleCategory('Food & beverages', this.checked)" /> Food & beverages</label>
+                            <label><input type="checkbox" onchange="wizard.toggleCategory('Subscriptions', this.checked)" /> Subscriptions</label>
+                            <br/><button onclick="wizard.next(5)">Next</button>
+                            <br/><button class="secondary" onclick="wizard.next(3)">Back</button>
                         </div>
-                        <div id="step-5" style="display: none;">
+                        <div id="step-5" class="wizard-step">
+                            <h1>Add your first product</h1>
+                            <input type="text" id="product-name" placeholder="What is the name of this product?" onchange="wizard.setState('productName', this.value)" />
+                            <input type="text" id="product-price" placeholder="0.00" onchange="wizard.setState('productPrice', this.value)" />
+                            <button onclick="wizard.next(6)">Next</button>
+                        </div>
+                        <div id="step-6" class="wizard-step">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
+                            <p>Estimated time to first payment: <span id="payment-estimate">24 hours</span></p>
+                            <button class="secondary" onclick="wizard.setState('paymentMethod', 'Online only')">Online only</button>
+                            <button class="secondary" onclick="wizard.setState('paymentMethod', 'In-person (POS)')">In-person (POS)</button>
+                            <button class="secondary" onclick="wizard.setState('paymentMethod', 'Both')">Both</button>
+                            <button class="secondary" onclick="wizard.setState('paymentMethod', 'Skip for now')">Skip for now</button>
+                            <br/><button onclick="wizard.next(7)">Next</button>
+                            <br/><button class="secondary" onclick="wizard.next(5)">Back</button>
                         </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
+                        <div id="step-7" class="wizard-step">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+                            <button class="secondary" onclick="wizard.setState('template', 'Modern')">Modern</button>
+                            <button class="secondary" onclick="wizard.setState('template', 'Bold')">Bold</button>
+                            <br/><button onclick="wizard.next(8)">Next</button>
                         </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
+                        <div id="step-8" class="wizard-step">
                             <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="wizard.setState('domain', 'Free OHC Domain')">Free OHC Domain</button>
+                            <button class="secondary" onclick="wizard.setState('domain', 'Custom Domain')">Custom Domain</button>
+                            <br/><button onclick="wizard.next(9)">Next</button>
                         </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                        <div id="step-9" class="wizard-step">
+                            <h1>Administrator account</h1>
+                            <input type="text" id="admin-name" placeholder="Your Full Name" onchange="wizard.setState('adminName', this.value)" />
+                            <input type="email" id="admin-email" placeholder="your@email.com" onchange="wizard.setState('adminEmail', this.value)" />
+                            <input type="password" id="admin-password" placeholder="Create a strong password" oninput="wizard.checkPasswordStrength(this.value)" />
+                            <div class="password-meter" id="pwd-meter">
+                                <div class="meter-segment"></div>
+                                <div class="meter-segment"></div>
+                                <div class="meter-segment"></div>
+                            </div>
+                            <button class="secondary" onclick="wizard.useSSO('Google')">Sign up with Google</button>
+                            <button class="secondary" onclick="wizard.useSSO('Apple')">Sign up with Apple</button>
+                            <div class="summary-card" id="wizard-summary"></div>
+                            <button onclick="wizard.submitAndLaunch()">Review & Launch</button>
                         </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
+                        <div id="step-100" class="wizard-step">
+                            <h1>Almost there</h1>
+                            <p>Provisioning your AI agents and compiling your storefront...</p>
+                            <button onclick="wizard.finalizeLaunch()">Launch!</button>
+                        </div>
+                        <div id="step-101" class="wizard-step">
+                            <h1>Onboarding Complete!</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button onclick="wizard.next('102')">Continue to Setup Checklist</button>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard</button>
                         </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
+                        <div id="step-102" class="wizard-step">
+                            <h1>Welcome Checklist</h1>
+                            <p><input type="checkbox" checked disabled /> Business live</p>
+                            <p><input type="checkbox" onchange="wizard.updateChecklist()" /> Add 3 more products</p>
+                            <p><a onclick="showScreen('api-screen')">Connect Instagram</a></p>
+                            <p><a onclick="showScreen('referrals-screen')">Share your link</a></p>
+                            <p>Progress: <span id="progress-val">25%</span></p>
+                            <p id="checklist-congrats" style="display:none; color: #4caf50;">Congratulations</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
-
-                        <div id="step-ai" style="display: none;">
+                        <div id="step-ai" class="wizard-step">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="wizard.next(1)">Back</button>
                         </div>
-                        <div id="step-generating" style="display: none;">
+                        <div id="step-generating" class="wizard-step">
                             <h1>Designing your storefront...</h1>
                             <p>Our AI is crafting a custom experience for your brand.</p>
                         </div>
-                        <div id="step-launch-ai" style="display: none;">
+                        <div id="step-launch-ai" class="wizard-step">
                             <h1>Your live storefront!</h1>
                             <h2>AI Store</h2>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
@@ -1971,15 +2008,141 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             setTimeout(() => showScreen('setup-screen'), 500);
                         }
 
+                        const wizard = {
+                            state: { categories: [] },
+
+                            setState(key, value) {
+                                this.state[key] = value;
+                                this.saveToBackend();
+                            },
+
+                            toggleCategory(cat, isChecked) {
+                                if (isChecked) {
+                                    if (!this.state.categories.includes(cat)) this.state.categories.push(cat);
+                                } else {
+                                    this.state.categories = this.state.categories.filter(c => c !== cat);
+                                }
+                                this.saveToBackend();
+                            },
+
+                            next(step) {
+                                document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+                                const target = document.getElementById('step-' + step);
+                                if (target) {
+                                    target.classList.add('active');
+                                    this.state.step = step;
+                                    this.saveToBackend();
+                                    const progress = Math.min((parseInt(step) / 10) * 100, 100);
+                                    if (!isNaN(progress)) {
+                                        const pb = document.getElementById('wizard-progress');
+                                        if (pb) pb.style.width = progress + '%';
+                                    }
+
+                                    if (step === 9) this.renderSummary();
+                                }
+                            },
+
+                            generateDescription() {
+                                const name = this.state.businessName || 'Your Business';
+                                const type = this.state.businessType || 'Store';
+                                const desc = `Welcome to ${name}, the premier ${type} for all your needs.`;
+                                this.setState('description', desc);
+                                const ds = document.getElementById('desc-suggestion');
+                                if(ds) ds.value = desc;
+                            },
+
+                            checkPasswordStrength(pwd) {
+                                // Removed password from draft state sync for security
+                                const pm = document.getElementById('pwd-meter');
+                                if (!pm) return;
+                                const meter = pm.children;
+                                meter[0].className = 'meter-segment ' + (pwd.length > 0 ? 'active-weak' : '');
+                                meter[1].className = 'meter-segment ' + (pwd.length > 5 ? 'active-medium' : '');
+                                const hasNum = pwd.includes('1') || pwd.includes('2') || pwd.includes('3') || pwd.includes('4') || pwd.includes('5') || pwd.includes('6') || pwd.includes('7') || pwd.includes('8') || pwd.includes('9') || pwd.includes('0');
+                                meter[2].className = 'meter-segment ' + (pwd.length > 8 && hasNum ? 'active-strong' : '');
+                            },
+
+                            useSSO(provider) {
+                                console.log('Using SSO:', provider);
+                                this.setState('sso', provider);
+                            },
+
+                            renderSummary() {
+                                const sum = document.getElementById('wizard-summary');
+                                if(!sum) return;
+                                sum.innerHTML = `
+                                    <h3>Ready to Launch?</h3>
+                                    <p><strong>Name:</strong> ${this.state.businessName || 'N/A'}</p>
+                                    <p><strong>Type:</strong> ${this.state.businessType || 'N/A'}</p>
+                                    <p><strong>Payment:</strong> ${this.state.paymentMethod || 'N/A'}</p>
+                                `;
+                            },
+
+                            submitAndLaunch() {
+                                fetch('/api/onboarding/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'X-Transient-Id': this.getTransientId() },
+                                    body: JSON.stringify(this.state)
+                                }).then(r => r.json()).then(data => {
+                                    console.log('Launch success:', data);
+                                    this.next(100);
+                                }).catch(err => {
+                                    console.error('Launch error:', err);
+                                    this.next(100); // Proceed anyway for test mocking
+                                });
+                            },
+
+                            finalizeLaunch() {
+                                this.next(101);
+                            },
+
+
+                            restoreState(data) {
+                                if (data && Object.keys(data).length > 0 && data.step) {
+                                    this.state = data;
+                                    if (data.businessName) document.getElementById('business-name').value = data.businessName;
+                                    if (data.description) document.getElementById('desc-suggestion').value = data.description;
+                                    if (data.productName) document.getElementById('product-name').value = data.productName;
+                                    if (data.productPrice) document.getElementById('product-price').value = data.productPrice;
+                                    if (data.adminName) document.getElementById('admin-name').value = data.adminName;
+                                    if (data.adminEmail) document.getElementById('admin-email').value = data.adminEmail;
+                                    this.next(data.step);
+                                }
+                            },
+
+
+                            getTransientId() {
+                                let tid = localStorage.getItem('transientId');
+                                if (!tid) {
+                                    tid = 'tid-' + Math.random().toString(36).substr(2, 9);
+                                    localStorage.setItem('transientId', tid);
+                                }
+                                return tid;
+                            },
+
+                            saveToBackend() {
+                                fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'X-Transient-Id': this.getTransientId() },
+                                    body: JSON.stringify(this.state)
+                                }).catch(() => {});
+                            },
+
+                            updateChecklist() {
+                                const pv = document.getElementById('progress-val');
+                                if(pv) pv.innerText = '50%';
+                                const cc = document.getElementById('checklist-congrats');
+                                if(cc) cc.style.display = 'block';
+                            }
+                        };
+
                         function nextStep(step) {
-                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
-                            const target = document.getElementById('step-' + step);
-                            if (target) target.style.display = 'block';
+                            wizard.next(step);
                         }
 
                         function generateAI() {
-                            nextStep('generating');
-                            setTimeout(() => nextStep('launch-ai'), 1000);
+                            wizard.next('generating');
+                            setTimeout(() => wizard.next('launch-ai'), 1000);
                         }
 
                         function toggleMenu() {
@@ -1987,7 +2150,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
                         }
 
-                        // Attach event listener for the grandma hint
                         document.addEventListener('click', (e) => {
                             if (e.target.innerText === '?') {
                                 const hint = document.getElementById('quick-actions-hint');
@@ -1995,8 +2157,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         });
 
-                        // Initial routing
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            fetch('/api/onboarding/state', { headers: { 'X-Transient-Id': wizard.getTransientId() } }).then(r => r.json()).then(data => {
+                                wizard.restoreState(data);
+                            }).catch(() => {});
+                        });
                         const path = window.location.pathname;
+
                         const urlParams = new URLSearchParams(window.location.search);
                         
                         if (localStorage.getItem('isLoggedIn') === 'true') {

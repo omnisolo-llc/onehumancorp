@@ -30,11 +30,11 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
 
     // Test cross device resume -> Reload page
@@ -59,11 +59,11 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'AI Desc Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
@@ -118,11 +118,11 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');

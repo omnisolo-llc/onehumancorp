@@ -28,12 +28,12 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
 
     // 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'My Awesome Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000); // Wait for mock gen
     await page.click('button:has-text("Next")');
 
     // 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
 
     // 4: First Product -> 5
@@ -42,15 +42,15 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     await page.click('button:has-text("Next")');
 
     // 5: Payments -> 6
-    await page.click('text="Online"');
+    await page.click('text="Online only"');
     await page.click('button:has-text("Next")');
 
     // 6: Theme -> 7
-    await page.click('text="✨ Modern"');
+    await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
 
     // 7: Domain -> 8
-    await page.click('text="Get a free sub-domain"');
+    await page.click('text="Free OHC Domain"');
     await page.click('button:has-text("Next")');
 
     // 8: Admin Info -> 9
@@ -287,24 +287,24 @@ test('verify checklist flow and integration', async ({ page }) => {
     await page.click('button:has-text("Next")');
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
     await page.click('button:has-text("Next")');
     // Step 5: Payments -> 6
-    await page.click('text="Online"');
+    await page.click('text="Online only"');
     await page.click('button:has-text("Next")');
     // Step 6: Theme -> 7
-    await page.click('text="✨ Modern"');
+    await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
     // Step 7: Domain -> 8
-    await page.click('text="Get a free sub-domain"');
+    await page.click('text="Free OHC Domain"');
     await page.click('button:has-text("Next")');
     // Step 8: Admin Info -> 9
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
@@ -350,19 +350,19 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     await page.click('text="Online Store"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
     await page.click('button:has-text("Next")');
-    await page.click('text="Online"');
+    await page.click('text="Online only"');
     await page.click('button:has-text("Next")');
-    await page.click('text="✨ Modern"');
+    await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Get a free sub-domain"');
+    await page.click('text="Free OHC Domain"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
@@ -405,19 +405,19 @@ test('verify checklist share link routing', async ({ page }) => {
     await page.click('text="Online Store"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
     await page.click('button:has-text("Next")');
-    await page.click('text="Online"');
+    await page.click('text="Online only"');
     await page.click('button:has-text("Next")');
-    await page.click('text="✨ Modern"');
+    await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Get a free sub-domain"');
+    await page.click('text="Free OHC Domain"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
@@ -460,19 +460,19 @@ test('verify checklist fully completed state', async ({ page }) => {
     await page.click('text="Online Store"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
     await page.click('button:has-text("Next")');
-    await page.click('text="Online"');
+    await page.click('text="Online only"');
     await page.click('button:has-text("Next")');
-    await page.click('text="✨ Modern"');
+    await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Get a free sub-domain"');
+    await page.click('text="Free OHC Domain"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
@@ -519,19 +519,19 @@ test('verify checklist completion progress', async ({ page }) => {
     await page.click('text="Online Store"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
-    await page.click('button:has-text("Generate Description")');
+    await page.click('button:has-text("Auto-suggest Description")');
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
-    await page.check('text="Physical Products"');
+    await page.check('text="Physical products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
     await page.click('button:has-text("Next")');
-    await page.click('text="Online"');
+    await page.click('text="Online only"');
     await page.click('button:has-text("Next")');
-    await page.click('text="✨ Modern"');
+    await page.click('text="Modern"');
     await page.click('button:has-text("Next")');
-    await page.click('text="Get a free sub-domain"');
+    await page.click('text="Free OHC Domain"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');

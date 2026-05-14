@@ -24,7 +24,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     // Step 2: Company Info
     await expect(page.locator('text=What is your business called?')).toBeVisible();
-    await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').fill('Comprehensive Bakery');
+    await page.locator('input[placeholder="What is your business called?"]').fill('Comprehensive Bakery');
     await page.locator('button:has-text("Auto-suggest Description")').click();
     await page.waitForTimeout(1000); // Wait for auto-generation
     await page.locator('button:has-text("Next")').first().click();
@@ -57,9 +57,9 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     // Step 8: Admin Account
     await expect(page.locator('text=Administrator account')).toBeVisible();
-    await page.locator('input[placeholder="e.g. Maya Smith"]').fill('Jane Founder');
-    await page.locator('input[placeholder="you@email.com"]').fill('jane@example.com');
-    await page.locator('input[placeholder="Password"]').fill('securepassword!');
+    await page.locator('input[placeholder="Your Full Name"]').fill('Jane Founder');
+    await page.locator('input[placeholder="your@email.com"]').fill('jane@example.com');
+    await page.locator('input[placeholder="Create a strong password"]').fill('securepassword!');
 
     // Final Launch
     await page.locator('button:has-text("Review & Launch")').first().click();
