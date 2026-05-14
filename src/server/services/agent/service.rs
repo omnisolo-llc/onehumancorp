@@ -29,10 +29,12 @@ impl MyAgentManagerService {
             return Ok(snapshot);
         }
 
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
         let hub_cost = self.hub.clone();
-        let (agents, meetings, cost_res) = tokio::join!(
-            async { self.hub.get_agents() },
-            async { self.hub.get_meetings() },
+        let (agents_res, meetings_res, cost_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub1.get_agents()),
+            tokio::task::spawn_blocking(move || hub2.get_meetings()),
             async {
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
@@ -40,6 +42,8 @@ impl MyAgentManagerService {
                 }).await.unwrap_or((0.0, 0, vec![]))
             }
         );
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
         let mut agent_costs = Vec::new();
