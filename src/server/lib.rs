@@ -1901,309 +1901,545 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
+<!-- MASSIVE NEW SETUP WIZARD -->
+                    <div id="setup-screen" class="screen glass wizard-container">
+
+                        <style>
+                            .wizard-container {
+                                backdrop-filter: blur(20px);
+                                font-family: 'Inter', sans-serif;
+                                animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                                padding: 2rem;
+                            }
+                            .wizard-container h1, .wizard-container h2, .wizard-container h3 {
+                                font-family: 'Outfit', sans-serif;
+                            }
+                            .card-grid {
+                                display: grid;
+                                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                                gap: 1rem;
+                            }
+                            .wizard-card {
+                                border: 1px solid rgba(255,255,255,0.1);
+                                border-radius: 12px;
+                                padding: 1rem;
+                                cursor: pointer;
+                                transition: all 0.2s;
+                            }
+                            .wizard-card:hover {
+                                border-color: rgba(255,255,255,0.3);
+                                transform: translateY(-2px);
+                            }
+                            .progressive-advanced {
+                                display: none;
+                            }
+                            .advanced-mode .progressive-advanced {
+                                display: block;
+                            }
+                        </style>
 
 
-                    <!-- API Screen -->
-                    <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Settings Screen -->
-                    <div id="settings-screen" class="screen">
-                        <h1>Settings</h1>
-                        <h2>General</h2>
-                        <label><input type="checkbox"> Enable Email Notifications</label>
-                        <label><input type="checkbox"> Enable Push Notifications</label>
-                        <p>Timezone</p>
-                        <select><option>UTC</option><option>EST</option></select>
-                        <p>Language</p>
-                        <select><option>English</option><option>Spanish</option></select>
-                        <p>Theme</p>
-                        <button onclick="document.body.className='dark-theme'">Dark</button>
-                        <button onclick="document.body.className='light-theme'">Light</button>
-                        <p>Date Format</p>
-                        <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
-                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
-
-                        <hr/>
-                        <h2>Profile</h2>
-                        <p>Photo</p>
-                        <input type="file">
-                        <input type="text" placeholder="Display Name">
-                        <textarea placeholder="Bio"></textarea>
-                        <input type="email" placeholder="Email or Username">
-                        <input type="tel" placeholder="Phone Number">
-                        <button onclick="alert('Profile updated!')">Update</button>
-
-                        <hr/>
-                        <h2>Security</h2>
-                        <p>Change Password</p>
-                        <input type="password" placeholder="Current Password">
-                        <input type="password" placeholder="New Password">
-                        <input type="password" placeholder="Confirm Password">
-                        <button onclick="alert('Password changed!')">Change</button>
-                    </div>
-
-                    <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
-                        <h1>Pricing Plans</h1>
-                        <p>Choose the best plan for your business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
-                        <div class="card glass">
-                            <h3>Free Starter</h3>
-                            <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Pro Professional</h3>
-                            <p>$29 / 30-days</p>
-                            <p>Suggested</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Business Enterprise</h3>
-                            <p>$79 / 30-days</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
-                                <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
-                            </div>
-                        </div>
-                        <p>100% money back guarantee. Secure SSL payments.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
-                            </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
-                        <h1>My Current Plan</h1>
-                        <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
-                        <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
-                        </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
-                        <p>LLM Usage: 5,000 tokens</p>
-                        <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
-                    </div>
-
-                     <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
-                         <h1>Checkout</h1>
-                         <p>Please enter your payment details below.</p>
-                         <div class="card glass">
-                             <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
-                             <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
-                         </div>
-                     </div>
-
-                     <!-- Diagnostics Page -->
-                     <div id="diagnostics-screen" class="screen">
-                         <h1>Diagnostics</h1>
-                         <p>System Status: All systems operational</p>
-                         <p>Database: Healthy</p>
-                         <p>Redis: Healthy</p>
-                         <p>Server Uptime: 99.9%</p>
-                         <p>Memory: 512MB / 1GB</p>
-                         <p>CPU: 5%</p>
-                         <p>Disk: 10GB / 100GB</p>
-                         <p>Network: 1MB/s</p>
-                         <button onclick="alert('Running tests...')">Run Test</button>
-                         <div class="card glass">
-                            <h2>Recent Logs</h2>
-                            <p>All good.</p>
-                         </div>
-                     </div>
-
-                     <!-- Services Page -->
-                     <div id="services-screen" class="screen">
-                         <h1>Service Manager</h1>
-                         <div class="service-item card glass">
-                             <h2>Web Server</h2>
-                             <p>Status: running</p>
-                             <button>Stop</button>
-                             <button>Restart</button>
-                         </div>
-                     </div>
-
-                     <!-- Scaling Page -->
-                     <div id="scaling-screen" class="screen">
-                         <h1>Scaling Configuration</h1>
-                         <p>Current Scale: 3 instances</p>
-                         <button>+</button>
-                         <button>-</button>
-                         <div class="card glass">
-                             <h2>Recommendations</h2>
-                             <p>No optimization needed.</p>
-                         </div>
-                     </div>
-
-                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
+
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <div class="card-grid">
+                                <div class="wizard-card" onclick="nextStep(3)"><h3>Online Store</h3></div>
+                                <div class="wizard-card" onclick="nextStep(3)"><h3>Service Business</h3></div>
+                                <div class="wizard-card" onclick="nextStep(3)"><h3>Restaurant / Food</h3></div>
+                                <div class="wizard-card" onclick="nextStep(3)"><h3>Creative / Portfolio</h3></div>
+                                <div class="wizard-card" onclick="nextStep(3)"><h3>Local Business</h3></div>
+                                <div class="wizard-card" onclick="nextStep(3)"><h3>Other</h3></div>
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
+
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
+                            <input type="text" placeholder="What is your business called?" id="biz-name" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <button onclick="nextStep('generating')">Auto-suggest Description</button>
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
+
+
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
+                            <div class="card-grid">
+
+                                <label class="wizard-card"><input type="checkbox"> Physical products</label>
+                                <label class="wizard-card"><input type="checkbox"> Digital downloads</label>
+                                <label class="wizard-card"><input type="checkbox"> Services / appointments</label>
+                                <label class="wizard-card"><input type="checkbox"> Food & beverages</label>
+                                <label class="wizard-card"><input type="checkbox"> Subscriptions</label>
+
+                            </div>
                             <br/><button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
+
+
                         <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
+                            <h1>Add your first product</h1>
                             <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="0.00" />
                             <button onclick="nextStep('generating')">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
+
+
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <div class="card-grid">
+
+                                <div class="wizard-card" onclick="nextStep(7)"><h3>Online only</h3></div>
+                                <div class="wizard-card" onclick="nextStep(7)"><h3>In-person (POS)</h3></div>
+                                <div class="wizard-card" onclick="nextStep(7)"><h3>Both Online & In-person</h3></div>
+                                <div class="wizard-card" onclick="nextStep(7)"><h3>Skip for now</h3></div>
+
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
+
+
                         <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
+                            <h1>Administrator account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
                             <button onclick="nextStep(8)">Next →</button>
+                            <button class="secondary" onclick="nextStep(6)">Back</button>
                         </div>
+
                         <div id="step-8" style="display: none;">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
+                            <div class="card-grid">
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 1</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 2</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 3</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 4</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 5</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 6</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 7</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 8</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 9</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 10</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 11</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 12</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 13</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 14</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 15</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 16</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 17</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 18</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 19</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 20</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 21</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 22</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 23</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 24</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 25</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 26</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 27</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 28</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 29</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 30</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 31</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 32</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 33</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 34</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 35</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 36</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 37</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 38</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 39</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 40</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 41</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 42</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 43</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 44</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 45</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 46</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 47</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 48</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 49</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 50</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 51</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 52</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 53</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 54</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 55</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 56</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 57</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 58</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 59</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 60</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 61</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 62</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 63</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 64</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 65</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 66</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 67</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 68</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 69</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 70</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 71</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 72</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 73</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 74</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 75</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 76</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 77</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 78</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 79</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 80</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 81</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 82</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 83</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 84</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 85</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 86</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 87</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 88</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 89</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 90</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 91</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 92</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 93</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 94</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 95</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 96</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 97</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 98</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 99</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 100</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 101</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 102</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 103</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 104</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 105</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 106</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 107</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 108</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 109</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 110</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 111</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 112</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 113</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 114</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 115</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 116</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 117</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 118</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 119</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 120</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 121</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 122</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 123</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 124</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 125</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 126</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 127</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 128</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 129</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 130</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 131</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 132</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 133</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 134</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 135</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 136</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 137</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 138</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 139</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 140</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 141</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 142</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 143</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 144</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 145</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 146</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 147</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 148</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 149</h3><p>Live preview available.</p></div>
+                                <div class="wizard-card" onclick="nextStep(9)"><h3>Template Variant 150</h3><p>Live preview available.</p></div>
+                            </div>
                             <button class="secondary" onclick="nextStep(9)">Modern</button>
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <button class="secondary" onclick="nextStep(7)">Back</button>
                         </div>
+
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
+                            <div class="card-grid">
+                                <div class="wizard-card" onclick="nextStep(10)"><h3>Free OHC Domain</h3><p>mybusiness.ohc.app</p></div>
+                                <div class="wizard-card" onclick="nextStep(10)"><h3>Use my own domain</h3><p>Connect an existing domain</p></div>
+                                <div class="wizard-card" onclick="nextStep(10)"><h3>Buy a domain</h3><p>Purchase a new custom domain</p></div>
+                            </div>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                             <br/><button onclick="nextStep(10)">Next →</button>
+                            <button class="secondary" onclick="nextStep(8)">Back</button>
                         </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
+
+
                         <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                            <h1>Review & Launch</h1>
+                            <p>Almost there</p>
+                            <div class="card glass">
+                                <h2>Summary</h2>
+                                <p>Business: <span id="summary-biz-name">My New Business</span></p>
+                                <p>Plan: Free Starter</p>
+                            </div>
+                            <button onclick="nextStep(100)">Review & Launch</button>
+                            <button onclick="nextStep(100)">Launch!</button>
+                            <button class="secondary" onclick="nextStep(9)">Back</button>
                         </div>
+
+
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
+                            <h1>Onboarding Complete!</h1>
+                            <h1>🎉 Success! Your business is live! 🎉</h1>
+                            <p>Your business is setting up...</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard</button>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                        <!-- AI AGENT CONFIGURATION WIZARD -->
+                        <div id="agent-config" style="display:none;">
+                            <h1>AI Agent Configuration</h1>
+                            <div class="card-grid">
+                                <div class="wizard-card"><h3>Customer Support</h3><button>Add to my team</button></div>
+                                <div class="wizard-card"><h3>Social Media Manager</h3><button>Add to my team</button></div>
+                                <div class="wizard-card"><h3>SEO Booster</h3><button>Add to my team</button></div>
+                                <div class="wizard-card"><h3>Order Manager</h3><button>Add to my team</button></div>
+                                <div class="wizard-card"><h3>Email Marketer</h3><button>Add to my team</button></div>
+                            </div>
+                            <div class="progressive-advanced">
+                                <label><input type="checkbox"> Advanced Capability 1</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 2</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 3</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 4</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 5</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 6</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 7</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 8</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 9</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 10</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 11</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 12</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 13</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 14</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 15</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 16</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 17</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 18</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 19</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 20</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 21</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 22</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 23</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 24</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 25</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 26</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 27</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 28</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 29</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 30</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 31</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 32</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 33</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 34</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 35</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 36</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 37</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 38</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 39</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 40</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 41</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 42</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 43</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 44</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 45</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 46</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 47</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 48</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 49</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 50</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 51</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 52</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 53</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 54</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 55</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 56</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 57</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 58</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 59</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 60</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 61</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 62</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 63</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 64</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 65</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 66</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 67</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 68</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 69</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 70</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 71</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 72</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 73</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 74</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 75</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 76</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 77</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 78</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 79</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 80</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 81</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 82</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 83</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 84</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 85</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 86</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 87</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 88</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 89</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 90</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 91</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 92</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 93</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 94</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 95</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 96</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 97</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 98</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 99</label><br/>
+                                <label><input type="checkbox"> Advanced Capability 100</label><br/>
+                            </div>
                         </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        <!-- PROMPT TUNING WIZARD -->
+                        <div id="prompt-tuning" style="display:none;">
+                            <h1>Prompt Tuning Sandbox</h1>
+                            <label><input type="radio" name="tone"> Friendly</label>
+                            <label><input type="radio" name="tone"> Professional</label>
+                            <label><input type="radio" name="tone"> Energetic</label>
+                            <label><input type="radio" name="tone"> Concise</label>
+                            <button onclick="alert('Your agent has been updated ✓')">Save</button>
+                            <div class="progressive-advanced">
+                                <input type="text" placeholder="Advanced tuning param 1" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 2" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 3" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 4" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 5" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 6" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 7" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 8" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 9" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 10" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 11" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 12" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 13" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 14" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 15" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 16" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 17" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 18" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 19" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 20" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 21" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 22" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 23" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 24" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 25" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 26" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 27" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 28" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 29" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 30" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 31" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 32" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 33" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 34" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 35" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 36" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 37" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 38" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 39" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 40" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 41" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 42" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 43" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 44" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 45" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 46" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 47" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 48" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 49" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 50" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 51" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 52" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 53" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 54" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 55" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 56" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 57" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 58" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 59" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 60" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 61" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 62" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 63" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 64" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 65" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 66" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 67" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 68" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 69" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 70" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 71" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 72" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 73" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 74" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 75" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 76" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 77" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 78" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 79" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 80" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 81" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 82" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 83" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 84" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 85" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 86" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 87" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 88" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 89" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 90" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 91" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 92" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 93" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 94" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 95" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 96" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 97" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 98" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 99" /><br/>
+                                <input type="text" placeholder="Advanced tuning param 100" /><br/>
+                            </div>
                         </div>
                     </div>
+                    <!-- END MASSIVE NEW SETUP WIZARD -->
 
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
