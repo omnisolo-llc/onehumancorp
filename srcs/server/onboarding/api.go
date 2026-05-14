@@ -8,6 +8,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 	"os"
 )
 
@@ -188,6 +189,13 @@ func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if err := json.Unmarshal(payloadBytes, &claims); err != nil {
 			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 			return
+		}
+
+		if expFloat, ok := claims["exp"].(float64); ok {
+			if int64(expFloat) < time.Now().Unix() {
+				http.Error(w, "Token expired", http.StatusUnauthorized)
+				return
+			}
 		}
 
 		tenantID, ok := claims["tenant_id"].(string)

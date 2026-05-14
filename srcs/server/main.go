@@ -141,12 +141,12 @@ func main() {
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
 	mux.HandleFunc("/api/dashboard/growth/viral-coefficient", dashboard.HandleViralCoefficient)
 
-	mux.HandleFunc("/api/v1/stream", dashboard.HandleStream)
-	mux.HandleFunc("/api/v1/autodream/sync", dashboard.HandleAutoDreamSync)
-	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
-	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
+	mux.HandleFunc("/api/v1/stream", onboarding.TenantAuthMiddleware(dashboard.HandleStream))
+	mux.HandleFunc("/api/v1/autodream/sync", onboarding.TenantAuthMiddleware(dashboard.HandleAutoDreamSync))
+	mux.HandleFunc("/api/v1/autodream/query", onboarding.TenantAuthMiddleware(dashboard.HandleAutoDreamQuery))
+	mux.HandleFunc("/api/mesh/broadcast", onboarding.TenantAuthMiddleware(dashboard.HandleMeshBroadcast))
 	syncHandler := sync.NewSyncHandler(taskStore)
-	mux.HandleFunc("/api/sync/missions", syncHandler.HandleSyncMissions)
+	mux.HandleFunc("/api/sync/missions", onboarding.TenantAuthMiddleware(syncHandler.HandleSyncMissions))
 
 	go func() {
 		log.Println("Listening on :8080...")

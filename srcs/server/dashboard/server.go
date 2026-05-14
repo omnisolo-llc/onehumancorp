@@ -7,22 +7,33 @@ import (
 	"time"
 
 	"onehumancorp/srcs/server/telemetry"
+	"onehumancorp/srcs/server/onboarding"
 )
+
+type ClientConnection struct {
+	TenantID string
+	Chan     chan string
+}
+
+type TenantMessage struct {
+	TenantID string
+	Message  string
+}
 
 type EventBroker struct {
 	mu          sync.Mutex
-	clients     map[chan string]bool
-	newClients  chan chan string
-	deadClients chan chan string
-	messages    chan string
+	clients     map[string]map[chan string]bool
+	newClients  chan ClientConnection
+	deadClients chan ClientConnection
+	messages    chan TenantMessage
 }
 
 func NewEventBroker() *EventBroker {
 	return &EventBroker{
-		clients:     make(map[chan string]bool),
-		newClients:  make(chan chan string),
-		deadClients: make(chan chan string),
-		messages:    make(chan string),
+		clients:     make(map[string]map[chan string]bool),
+		newClients:  make(chan ClientConnection),
+		deadClients: make(chan ClientConnection),
+		messages:    make(chan TenantMessage),
 	}
 }
 
@@ -32,19 +43,29 @@ func (b *EventBroker) Start() {
 			select {
 			case s := <-b.newClients:
 				b.mu.Lock()
-				b.clients[s] = true
+				if _, ok := b.clients[s.TenantID]; !ok {
+					b.clients[s.TenantID] = make(map[chan string]bool)
+				}
+				b.clients[s.TenantID][s.Chan] = true
 				b.mu.Unlock()
 			case s := <-b.deadClients:
 				b.mu.Lock()
-				delete(b.clients, s)
-				close(s)
+				if tenantClients, ok := b.clients[s.TenantID]; ok {
+					delete(tenantClients, s.Chan)
+					if len(tenantClients) == 0 {
+						delete(b.clients, s.TenantID)
+					}
+				}
+				close(s.Chan)
 				b.mu.Unlock()
 			case msg := <-b.messages:
 				b.mu.Lock()
-				for s := range b.clients {
-					select {
-					case s <- msg:
-					default:
+				if tenantClients, ok := b.clients[msg.TenantID]; ok {
+					for s := range tenantClients {
+						select {
+						case s <- msg.Message:
+						default:
+						}
 					}
 				}
 				b.mu.Unlock()
@@ -52,6 +73,7 @@ func (b *EventBroker) Start() {
 		}
 	}()
 }
+
 
 var GlobalBroker = NewEventBroker()
 
@@ -64,10 +86,17 @@ func HandleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	tenantID, ok := r.Context().Value(onboarding.TenantContextKey).(string)
+	if !ok || tenantID == "" {
+		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
+		return
+	}
+
 	msgChan := make(chan string)
-	GlobalBroker.newClients <- msgChan
+	clientConn := ClientConnection{TenantID: tenantID, Chan: msgChan}
+	GlobalBroker.newClients <- clientConn
 	defer func() {
-		GlobalBroker.deadClients <- msgChan
+		GlobalBroker.deadClients <- clientConn
 	}()
 
 	flusher, ok := w.(http.Flusher)

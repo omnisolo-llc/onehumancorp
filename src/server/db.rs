@@ -101,7 +101,7 @@ impl DB {
                             let mut perms = metadata.permissions();
                             if perms.mode() & 0o777 != 0o600 {
                                 perms.set_mode(0o600);
-                                if let Err(e) = file.set_permissions(perms) {
+                                if let Err(e) = std::fs::set_permissions(&db_path, perms) {
                                     tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
                                     return Err(e.into());
                                 }
@@ -123,7 +123,9 @@ impl DB {
             let key = if let Some(k) = database_url.split("key=").nth(1) {
                 k.split('&').next().unwrap_or("").to_string()
             } else {
-                std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                std::env::var("OHC_LOCAL_DB_KEY").unwrap_or_else(|_| {
+                    std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_LOCAL_DB_KEY or OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                })
             };
 
             if key.is_empty() {

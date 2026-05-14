@@ -129,7 +129,7 @@ func NewSqliteProvider(db *sql.DB) *Provider {
 
 func NewTestProvider(t interface{}) *Provider {
 	os.Setenv("OHC_STANDALONE", "true")
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite3", "file::memory:?cache=shared&_pragma_cipher=sqlcipher&_pragma_key=testkey")
 	if err != nil {
 		panic(err)
 	}

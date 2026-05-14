@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"onehumancorp/srcs/server/onboarding"
 )
 
 func TestHandleStream(t *testing.T) {
@@ -15,6 +16,7 @@ func TestHandleStream(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	ctx = context.WithValue(ctx, onboarding.TenantContextKey, "test_tenant")
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -25,7 +27,7 @@ func TestHandleStream(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	GlobalBroker.messages <- "test event"
+	GlobalBroker.messages <- TenantMessage{TenantID: "test_tenant", Message: "test event"}
 
 	time.Sleep(100 * time.Millisecond)
 	cancel()
@@ -48,6 +50,8 @@ func TestHandleAutoDreamSync(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.WithValue(context.Background(), onboarding.TenantContextKey, "test_tenant")
+	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(HandleAutoDreamSync)
@@ -65,6 +69,8 @@ func TestHandleAutoDreamQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.WithValue(context.Background(), onboarding.TenantContextKey, "test_tenant")
+	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(HandleAutoDreamQuery)
@@ -82,6 +88,8 @@ func TestHandleMeshBroadcast(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.WithValue(context.Background(), onboarding.TenantContextKey, "test_tenant")
+	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(HandleMeshBroadcast)
