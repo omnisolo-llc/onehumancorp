@@ -76,6 +76,11 @@
 
 # Release Notes
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+- Scaling (Cloud): Major refactor of Sub-Agent Orchestration Queue and introduction of pricing/billing infrastructure for scalable agentic operations.
+- Privacy/Offline (Standalone): Enforced Cloud/Standalone state parity and hardened local sovereignty with SQLite-backed state management and PII-redacted telemetry.
+
 ## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
 
 - Scaling (Cloud): Add dual-mode caching layer to dashboard service to optimize latency (#11871).

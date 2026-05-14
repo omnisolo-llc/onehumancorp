@@ -5,6 +5,18 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implement high-performance Sub-Agent Orchestration Queue supporting Postgres, Redis, and SQLite.
+- Introduce pricing and billing infrastructure for fine-grained token usage tracking and budget management.
+- Overhaul Dashboard UI with glassmorphism aesthetics and improved navigation.
+
+### Privacy/Offline Improvements
+- Achieve Cloud/Standalone state parity via comprehensive parity testing suite.
+- Enhance Standalone sovereignty with robust SQLite-backed orchestration and local-first fallbacks.
+- Implement hybrid-aware telemetry with recursive PII redaction for both modes.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
