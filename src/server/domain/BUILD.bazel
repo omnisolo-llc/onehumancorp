@@ -11,6 +11,7 @@ filegroup(
         "sre.rs",
         "unified_tenant_test.rs",
         "//src/server/domain/repository:srcs",
+        "//src/server/domain/growth:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
