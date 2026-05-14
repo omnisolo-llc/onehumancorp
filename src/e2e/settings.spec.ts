@@ -23,7 +23,7 @@ test.describe('Settings Page', () => {
 
   test('should enable email notifications', async ({ page }) => {
     await page.goto('/settings');
-    const emailToggle = page.locator('input[type="checkbox"]').first();
+    const emailToggle = page.locator('input[type="checkbox"]').filter({ visible: true }).first();
     if (await emailToggle.isVisible()) {
       await emailToggle.check();
       await expect(page.locator('text=/saved|enabled/i')).toBeVisible({ timeout: 3000 });
@@ -32,7 +32,7 @@ test.describe('Settings Page', () => {
 
   test('should enable push notifications', async ({ page }) => {
     await page.goto('/settings');
-    const pushToggle = page.locator('text=/push/i').locator('..').locator('input[type="checkbox"]').first();
+    const pushToggle = page.locator('text=/push/i').locator('..').locator('input[type="checkbox"]').filter({ visible: true }).first();
     if (await pushToggle.isVisible()) {
       await pushToggle.check();
     }
@@ -45,7 +45,7 @@ test.describe('Settings Page', () => {
 
   test('should change timezone', async ({ page }) => {
     await page.goto('/settings');
-    const tzSelect = page.locator('select').first();
+    const tzSelect = page.locator('select').filter({ visible: true }).first();
     if (await tzSelect.isVisible()) {
       await tzSelect.selectOption({ index: 1 });
       await page.locator('button:has-text("Save")').click();
@@ -73,16 +73,16 @@ test.describe('Settings Page', () => {
 
   test('should switch to dark theme', async ({ page }) => {
     await page.goto('/settings');
-    const darkOption = page.locator('text=/dark|night/i').first();
+    const darkOption = page.locator('text=/dark|night/i').filter({ visible: true }).first();
     if (await darkOption.isVisible()) {
       await darkOption.click();
-      await expect(page.locator('[class*="dark"], [class*="dark-theme"]').first()).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[class*="dark"], [class*="dark-theme"]').filter({ visible: true }).first()).toBeVisible({ timeout: 3000 });
     }
   });
 
   test('should switch to light theme', async ({ page }) => {
     await page.goto('/settings');
-    const lightOption = page.locator('text=/light|bright/i').first();
+    const lightOption = page.locator('text=/light|bright/i').filter({ visible: true }).first();
     if (await lightOption.isVisible()) {
       await lightOption.click();
     }
@@ -114,7 +114,7 @@ test.describe('Settings Page', () => {
 
   test('should discard changes on cancel', async ({ page }) => {
     await page.goto('/settings');
-    const input = page.locator('input[type="text"]').first();
+    const input = page.locator('input[type="text"]').filter({ visible: true }).first();
     if (await input.isVisible()) {
       await input.fill('test value');
     }
@@ -131,7 +131,7 @@ test.describe('Profile Settings', () => {
 
   test('should upload profile picture', async ({ page }) => {
     await page.goto('/settings/profile');
-    const uploadArea = page.locator('input[type="file"]').first();
+    const uploadArea = page.locator('input[type="file"]').filter({ visible: true }).first();
     if (await uploadArea.isVisible()) {
       // File upload would require actual file - test exists check
       await expect(uploadArea).toBeAttached();
@@ -140,7 +140,7 @@ test.describe('Profile Settings', () => {
 
   test('should update display name', async ({ page }) => {
     await page.goto('/settings/profile');
-    const nameInput = page.locator('input[placeholder*="name" i]').first();
+    const nameInput = page.locator('input[placeholder*="name" i]').filter({ visible: true }).first();
     if (await nameInput.isVisible()) {
       await nameInput.fill('New Name');
       await page.locator('button:has-text("Update")').click();
@@ -149,7 +149,7 @@ test.describe('Profile Settings', () => {
 
   test('should update bio', async ({ page }) => {
     await page.goto('/settings/profile');
-    const bioInput = page.locator('textarea').first();
+    const bioInput = page.locator('textarea').filter({ visible: true }).first();
     if (await bioInput.isVisible()) {
       await bioInput.fill('This is my bio');
       await page.locator('button:has-text("Update")').click();
@@ -158,7 +158,7 @@ test.describe('Profile Settings', () => {
 
   test('should update email', async ({ page }) => {
     await page.goto('/settings/profile');
-    const emailInput = page.locator('input[type="email"]').first();
+    const emailInput = page.getByPlaceholder('Email or Username').filter({ visible: true }).first();
     if (await emailInput.isVisible()) {
       await emailInput.fill('newemail@example.com');
       await page.locator('button:has-text("Update")').click();
@@ -167,7 +167,7 @@ test.describe('Profile Settings', () => {
 
   test('should update phone number', async ({ page }) => {
     await page.goto('/settings/profile');
-    const phoneInput = page.locator('input[type="tel"]').first();
+    const phoneInput = page.locator('input[type="tel"]').filter({ visible: true }).first();
     if (await phoneInput.isVisible()) {
       await phoneInput.fill('+1234567890');
       await page.locator('button:has-text("Update")').click();
