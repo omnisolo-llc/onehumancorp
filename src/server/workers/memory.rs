@@ -23,7 +23,7 @@ impl MemoryConsolidationWorker {
             loop {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(180);
-                if let Err(e) = repository.prune_stale(older_than).await {
+                if let Err(e) = repository.prune_stale(older_than, &ohc_builtin_agent::memory_store::PruneConfig::default()).await {
                     tracing::error!("Failed to prune stale context: {}", e);
                 }
                 if let Err(e) = repository.auto_resolve_conflicts().await {

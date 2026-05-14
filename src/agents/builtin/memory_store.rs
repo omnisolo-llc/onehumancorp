@@ -1,6 +1,25 @@
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
-use async_trait::async_trait;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PruneConfig {
+    pub max_age_days: i64,
+    pub business_event_types_to_keep: Vec<String>,
+    pub min_owner_activity_level: i32,
+    pub min_reliability_score: i32,
+}
+
+impl Default for PruneConfig {
+    fn default() -> Self {
+        Self {
+            max_age_days: 30,
+            business_event_types_to_keep: vec!["subscription".to_string(), "invoice".to_string()],
+            min_owner_activity_level: 20,
+            min_reliability_score: 30,
+        }
+    }
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EmbeddingRecord {
@@ -16,6 +35,35 @@ pub struct EmbeddingRecord {
     pub reliability_score: i32,
     pub owner_override: bool,
     pub metadata: Option<String>,
+    pub business_event_type: Option<String>,
+    pub owner_activity_level: i32,
+}
+
+pub fn determine_conflict_winner<'a>(
+    a: &'a EmbeddingRecord,
+    b: &'a EmbeddingRecord,
+) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
+    if a.owner_override != b.owner_override {
+        if a.owner_override {
+            (a, b)
+        } else {
+            (b, a)
+        }
+    } else if a.reliability_score != b.reliability_score {
+        if a.reliability_score > b.reliability_score {
+            (a, b)
+        } else {
+            (b, a)
+        }
+    } else if a.created_at != b.created_at {
+        if a.created_at > b.created_at {
+            (a, b)
+        } else {
+            (b, a)
+        }
+    } else {
+        (a, b) // Fallback, just pick 'a'
+    }
 }
 
 pub enum VectorMemoryStore {
@@ -29,11 +77,15 @@ pub struct VectorRepository {
 
 impl VectorRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Postgres(pool) }
+        VectorRepository {
+            store: VectorMemoryStore::Postgres(pool),
+        }
     }
 
     pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
+        VectorRepository {
+            store: VectorMemoryStore::Sqlite(pool),
+        }
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
@@ -42,8 +94,8 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
-                     VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, owner_activity_level) \
+                     VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
                      ON CONFLICT(id) DO UPDATE SET \
                          content=excluded.content, \
                          embedding=excluded.embedding, \
@@ -52,7 +104,9 @@ impl VectorRepository {
                          reference_count=excluded.reference_count, \
                          reliability_score=excluded.reliability_score, \
                          owner_override=excluded.owner_override, \
-                         metadata=excluded.metadata"
+                         metadata=excluded.metadata, \
+                         business_event_type=excluded.business_event_type, \
+                         owner_activity_level=excluded.owner_activity_level"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
@@ -66,14 +120,16 @@ impl VectorRepository {
                 .bind(record.reliability_score)
                 .bind(record.owner_override)
                 .bind(&record.metadata)
+                .bind(&record.business_event_type)
+                .bind(record.owner_activity_level)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, owner_activity_level) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
                      ON CONFLICT(id) DO UPDATE SET \
                          content=excluded.content, \
                          embedding=excluded.embedding, \
@@ -82,7 +138,9 @@ impl VectorRepository {
                          reference_count=excluded.reference_count, \
                          reliability_score=excluded.reliability_score, \
                          owner_override=excluded.owner_override, \
-                         metadata=excluded.metadata"
+                         metadata=excluded.metadata, \
+                         business_event_type=excluded.business_event_type, \
+                         owner_activity_level=excluded.owner_activity_level"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
@@ -96,6 +154,8 @@ impl VectorRepository {
                 .bind(record.reliability_score)
                 .bind(record.owner_override)
                 .bind(&record.metadata)
+                .bind(&record.business_event_type)
+                .bind(record.owner_activity_level)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -105,26 +165,58 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+    pub async fn semantic_search(
+        &self,
+        tenant_id: &str,
+        query_embedding: &[f32],
+        limit: i64,
+        cross_department: bool,
+        target_agent: Option<&str>,
+    ) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                     FROM consolidated_memory \
-                     WHERE tenant_id = $1 \
-                     ORDER BY embedding <=> $2::vector \
-                     LIMIT $3"
-                )
-                .bind(tenant_id)
-                .bind(emb_str)
-                .bind(limit)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| e.to_string())?;
+                let (query_str, bind_limit) = if !cross_department && target_agent.is_some() {
+                    (
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, COALESCE(owner_activity_level, 50) as owner_activity_level \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = $1 AND agent_id = $2 \
+                         ORDER BY embedding <=> $3::vector \
+                         LIMIT $4",
+                         true
+                    )
+                } else {
+                    (
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, COALESCE(owner_activity_level, 50) as owner_activity_level \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = $1 \
+                         ORDER BY embedding <=> $2::vector \
+                         LIMIT $3",
+                         false
+                    )
+                };
+
+                let rows = if bind_limit {
+                    sqlx::query(query_str)
+                        .bind(tenant_id)
+                        .bind(target_agent.unwrap())
+                        .bind(&emb_str)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                } else {
+                    sqlx::query(query_str)
+                        .bind(tenant_id)
+                        .bind(&emb_str)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                };
 
                 let mut ids_to_update = Vec::new();
 
@@ -142,8 +234,11 @@ impl VectorRepository {
                     let reliability_score: i32 = row.get("reliability_score");
                     let owner_override: bool = row.get("owner_override");
                     let metadata: Option<String> = row.get("metadata");
+                    let business_event_type: Option<String> = row.get("business_event_type");
+                    let owner_activity_level: i32 = row.get("owner_activity_level");
 
-                    let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+                    let embedding: Vec<f32> =
+                        serde_json::from_str(&emb_str_res).unwrap_or_default();
 
                     results.push(EmbeddingRecord {
                         id,
@@ -158,6 +253,8 @@ impl VectorRepository {
                         reliability_score,
                         owner_override,
                         metadata,
+                        business_event_type,
+                        owner_activity_level,
                     });
                 }
 
@@ -177,19 +274,44 @@ impl VectorRepository {
                     .is_ok();
 
                 if has_vec_extension {
-                    let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                         FROM consolidated_memory \
-                         WHERE tenant_id = ? \
-                         ORDER BY vec_distance_cosine(embedding, ?) \
-                         LIMIT ?"
-                    )
-                    .bind(tenant_id)
-                    .bind(&emb_str)
-                    .bind(limit)
-                    .fetch_all(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    let (query_str, bind_limit) = if !cross_department && target_agent.is_some() {
+                        (
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, COALESCE(owner_activity_level, 50) as owner_activity_level \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? AND agent_id = ? \
+                             ORDER BY vec_distance_cosine(embedding, ?) \
+                             LIMIT ?",
+                             true
+                        )
+                    } else {
+                        (
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, COALESCE(owner_activity_level, 50) as owner_activity_level \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? \
+                             ORDER BY vec_distance_cosine(embedding, ?) \
+                             LIMIT ?",
+                             false
+                        )
+                    };
+
+                    let rows = if bind_limit {
+                        sqlx::query(query_str)
+                            .bind(tenant_id)
+                            .bind(target_agent.unwrap())
+                            .bind(&emb_str)
+                            .bind(limit)
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?
+                    } else {
+                        sqlx::query(query_str)
+                            .bind(tenant_id)
+                            .bind(&emb_str)
+                            .bind(limit)
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?
+                    };
 
                     let mut ids_to_update = Vec::new();
 
@@ -201,14 +323,23 @@ impl VectorRepository {
                         let content: String = row.get("content");
                         let emb_str_res: String = row.get("embedding");
                         let source_type: String = row.get("source_type");
-                        let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?;
-                        let last_referenced_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?;
+                        let created_at: DateTime<Utc> = row
+                            .try_get::<DateTime<Utc>, _>("created_at")
+                            .map_err(|e| e.to_string())?;
+                        let last_referenced_at: DateTime<Utc> = row
+                            .try_get::<DateTime<Utc>, _>("last_referenced_at")
+                            .map_err(|e| e.to_string())?;
                         let reference_count: i32 = row.get("reference_count");
                         let reliability_score: i32 = row.get("reliability_score");
                         let owner_override: bool = row.get("owner_override");
                         let metadata: Option<String> = row.get("metadata");
+                        let business_event_type: Option<String> =
+                            row.try_get("business_event_type").ok().flatten();
+                        let owner_activity_level: i32 =
+                            row.try_get("owner_activity_level").unwrap_or(50);
 
-                        let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+                        let embedding: Vec<f32> =
+                            serde_json::from_str(&emb_str_res).unwrap_or_default();
 
                         results.push(EmbeddingRecord {
                             id,
@@ -223,11 +354,17 @@ impl VectorRepository {
                             reliability_score,
                             owner_override,
                             metadata,
+                            business_event_type,
+                            owner_activity_level,
                         });
                     }
 
                     if !ids_to_update.is_empty() {
-                        let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                        let placeholders = ids_to_update
+                            .iter()
+                            .map(|_| "?")
+                            .collect::<Vec<_>>()
+                            .join(",");
                         let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
                         let mut q = sqlx::query(&query);
                         for id in ids_to_update {
@@ -236,21 +373,47 @@ impl VectorRepository {
                         let _ = q.execute(pool).await;
                     }
                 } else {
-                    let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                         FROM consolidated_memory \
-                         WHERE tenant_id = ? \
-                         LIMIT 1000"
-                    )
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    let (query_str, bind_limit) = if !cross_department && target_agent.is_some() {
+                        (
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, COALESCE(owner_activity_level, 50) as owner_activity_level \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? AND agent_id = ? \
+                             LIMIT 1000",
+                             true
+                        )
+                    } else {
+                        (
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, COALESCE(owner_activity_level, 50) as owner_activity_level \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? \
+                             LIMIT 1000",
+                             false
+                        )
+                    };
+
+                    let rows = if bind_limit {
+                        sqlx::query(query_str)
+                            .bind(tenant_id)
+                            .bind(target_agent.unwrap())
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?
+                    } else {
+                        sqlx::query(query_str)
+                            .bind(tenant_id)
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?
+                    };
 
                     let mut all_records = Vec::new();
                     for row in rows {
-                        let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
-                        let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+                        let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                .unwrap_or_default()
+                        });
+                        let embedding: Vec<f32> =
+                            serde_json::from_str(&emb_str_res).unwrap_or_default();
 
                         let record = EmbeddingRecord {
                             id: row.get("id"),
@@ -259,12 +422,18 @@ impl VectorRepository {
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
                             metadata: row.get("metadata"),
+                            business_event_type: row.try_get("business_event_type").ok().flatten(),
+                            owner_activity_level: row.try_get("owner_activity_level").unwrap_or(50),
                         };
                         all_records.push(record);
                     }
@@ -292,14 +461,21 @@ impl VectorRepository {
                     all_records.sort_by(|a, b| {
                         let dist_a = cosine_distance(&a.embedding, &query_emb);
                         let dist_b = cosine_distance(&b.embedding, &query_emb);
-                        dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                        dist_a
+                            .partial_cmp(&dist_b)
+                            .unwrap_or(std::cmp::Ordering::Equal)
                     });
 
                     results = all_records.into_iter().take(limit as usize).collect();
 
                     if !results.is_empty() {
-                        let ids_to_update: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
-                        let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                        let ids_to_update: Vec<String> =
+                            results.iter().map(|r| r.id.clone()).collect();
+                        let placeholders = ids_to_update
+                            .iter()
+                            .map(|_| "?")
+                            .collect::<Vec<_>>()
+                            .join(",");
                         let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
                         let mut q = sqlx::query(&query);
                         for id in ids_to_update {
@@ -314,17 +490,40 @@ impl VectorRepository {
         Ok(results)
     }
 
-    pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+    pub async fn prune_stale(
+        &self,
+        older_than: DateTime<Utc>,
+        config: &PruneConfig,
+    ) -> Result<(), String> {
+        let events_list = if config.business_event_types_to_keep.is_empty() {
+            "''".to_string()
+        } else {
+            let quoted: Vec<String> = config
+                .business_event_types_to_keep
+                .iter()
+                .map(|s| format!("'{}'", s))
+                .collect();
+            quoted.join(",")
+        };
+
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
+                let query = format!(
+                    "DELETE FROM consolidated_memory                      WHERE last_referenced_at < $1                      AND owner_override = FALSE                      AND reference_count < 5                      AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')                      AND reliability_score < {}                      AND owner_activity_level < {}                      AND (business_event_type IS NULL OR business_event_type NOT IN ({}))",
+                    config.min_reliability_score, config.min_owner_activity_level, events_list
+                );
+                sqlx::query(&query)
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')")
+                let query = format!(
+                    "DELETE FROM consolidated_memory                      WHERE last_referenced_at < ?                      AND owner_override = FALSE                      AND reference_count < 5                      AND (source_type LIKE 'TASK%' OR source_type = 'SESSION_SUMMARY' OR source_type = 'AUTO_DREAM' OR source_type = 'SESSION_DATA')                      AND reliability_score < {}                      AND owner_activity_level < {}                      AND (business_event_type IS NULL OR business_event_type NOT IN ({}))",
+                    config.min_reliability_score, config.min_owner_activity_level, events_list
+                );
+                sqlx::query(&query)
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -334,7 +533,8 @@ impl VectorRepository {
         Ok(())
     }
 
-    #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
+    #[allow(dead_code)]
+    pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
@@ -354,7 +554,11 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn resolve_conflict(&self, winner: &EmbeddingRecord, loser: &EmbeddingRecord) -> Result<(), String> {
+    pub async fn resolve_conflict(
+        &self,
+        winner: &EmbeddingRecord,
+        loser: &EmbeddingRecord,
+    ) -> Result<(), String> {
         self.delete(&loser.id).await?;
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count + 1;
@@ -368,27 +572,7 @@ impl VectorRepository {
         let mut resolved_count = 0;
 
         for (a, b) in conflicts {
-            let (winner, loser) = if a.owner_override != b.owner_override {
-                if a.owner_override {
-                    (&a, &b)
-                } else {
-                    (&b, &a)
-                }
-            } else if a.reliability_score != b.reliability_score {
-                if a.reliability_score > b.reliability_score {
-                    (&a, &b)
-                } else {
-                    (&b, &a)
-                }
-            } else if a.created_at != b.created_at {
-                if a.created_at > b.created_at {
-                    (&a, &b)
-                } else {
-                    (&b, &a)
-                }
-            } else {
-                (&a, &b) // Fallback, just pick 'a'
-            };
+            let (winner, loser) = determine_conflict_winner(&a, &b);
 
             self.resolve_conflict(winner, loser).await?;
             resolved_count += 1;
@@ -397,16 +581,17 @@ impl VectorRepository {
         Ok(resolved_count)
     }
 
-
-    pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
+    pub async fn get_conflicting_pairs(
+        &self,
+    ) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
         let mut conflicts = Vec::new();
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let query = "
                     SELECT
-                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
-                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata, a.business_event_type AS a_business_event_type, COALESCE(a.owner_activity_level, 50) AS a_owner_activity_level,
+                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata, b.business_event_type AS b_business_event_type, COALESCE(b.owner_activity_level, 50) AS b_owner_activity_level
                     FROM consolidated_memory a
                     JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
                     WHERE a.embedding <=> b.embedding < 0.05
@@ -418,16 +603,24 @@ impl VectorRepository {
                     .map_err(|e| e.to_string())?;
 
                 for row in rows {
-                    let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
-                    let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+                    let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| {
+                        String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default()
+                    });
+                    let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| {
+                        String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default()
+                    });
 
-                    let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
-                    let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
+                    let a_embedding: Vec<f32> =
+                        serde_json::from_str(&a_emb_str).unwrap_or_default();
+                    let b_embedding: Vec<f32> =
+                        serde_json::from_str(&b_emb_str).unwrap_or_default();
 
                     let a = EmbeddingRecord {
                         id: row.get("a_id"),
                         tenant_id: row.get("a_tenant_id"),
-                        agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                        agent_id: row
+                            .get::<Option<String>, _>("a_agent_id")
+                            .unwrap_or_default(),
                         content: row.get("a_content"),
                         embedding: a_embedding,
                         source_type: row.get("a_source_type"),
@@ -437,12 +630,16 @@ impl VectorRepository {
                         reliability_score: row.get("a_reliability_score"),
                         owner_override: row.get("a_owner_override"),
                         metadata: row.get("a_metadata"),
+                        business_event_type: row.try_get("a_business_event_type").ok().flatten(),
+                        owner_activity_level: row.try_get("a_owner_activity_level").unwrap_or(50),
                     };
 
                     let b = EmbeddingRecord {
                         id: row.get("b_id"),
                         tenant_id: row.get("b_tenant_id"),
-                        agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                        agent_id: row
+                            .get::<Option<String>, _>("b_agent_id")
+                            .unwrap_or_default(),
                         content: row.get("b_content"),
                         embedding: b_embedding,
                         source_type: row.get("b_source_type"),
@@ -452,6 +649,8 @@ impl VectorRepository {
                         reliability_score: row.get("b_reliability_score"),
                         owner_override: row.get("b_owner_override"),
                         metadata: row.get("b_metadata"),
+                        business_event_type: row.try_get("b_business_event_type").ok().flatten(),
+                        owner_activity_level: row.try_get("b_owner_activity_level").unwrap_or(50),
                     };
 
                     conflicts.push((a, b));
@@ -467,8 +666,8 @@ impl VectorRepository {
                 if has_vec_extension {
                     let query = "
                         SELECT
-                            a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
-                            b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                            a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata, a.business_event_type AS a_business_event_type, COALESCE(a.owner_activity_level, 50) AS a_owner_activity_level,
+                            b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata, b.business_event_type AS b_business_event_type, COALESCE(b.owner_activity_level, 50) AS b_owner_activity_level
                         FROM consolidated_memory a
                         JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
                         WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
@@ -480,40 +679,64 @@ impl VectorRepository {
                         .map_err(|e| e.to_string())?;
 
                     for row in rows {
-                        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
-                        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+                        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("a_embedding"))
+                                .unwrap_or_default()
+                        });
+                        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("b_embedding"))
+                                .unwrap_or_default()
+                        });
 
-                        let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
-                        let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
+                        let a_embedding: Vec<f32> =
+                            serde_json::from_str(&a_emb_str).unwrap_or_default();
+                        let b_embedding: Vec<f32> =
+                            serde_json::from_str(&b_emb_str).unwrap_or_default();
 
                         let a = EmbeddingRecord {
                             id: row.get("a_id"),
                             tenant_id: row.get("a_tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                            agent_id: row
+                                .get::<Option<String>, _>("a_agent_id")
+                                .unwrap_or_default(),
                             content: row.get("a_content"),
                             embedding: a_embedding,
                             source_type: row.get("a_source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("a_created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("a_last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("a_reference_count"),
                             reliability_score: row.get("a_reliability_score"),
                             owner_override: row.get("a_owner_override"),
                             metadata: row.get("a_metadata"),
+                        business_event_type: row.try_get("a_business_event_type").ok().flatten(),
+                        owner_activity_level: row.try_get("a_owner_activity_level").unwrap_or(50),
                         };
 
                         let b = EmbeddingRecord {
                             id: row.get("b_id"),
                             tenant_id: row.get("b_tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                            agent_id: row
+                                .get::<Option<String>, _>("b_agent_id")
+                                .unwrap_or_default(),
                             content: row.get("b_content"),
                             embedding: b_embedding,
                             source_type: row.get("b_source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("b_created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("b_last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("b_reference_count"),
                             reliability_score: row.get("b_reliability_score"),
                             owner_override: row.get("b_owner_override"),
                             metadata: row.get("b_metadata"),
+                        business_event_type: row.try_get("b_business_event_type").ok().flatten(),
+                        owner_activity_level: row.try_get("b_owner_activity_level").unwrap_or(50),
                         };
 
                         conflicts.push((a, b));
@@ -522,7 +745,7 @@ impl VectorRepository {
                     // Fallback for tests environments without sqlite-vec loaded:
                     let query = "
                         SELECT
-                            id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                            id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata, business_event_type, COALESCE(owner_activity_level, 50) AS owner_activity_level
                         FROM consolidated_memory LIMIT 1000
                     ";
                     let rows = sqlx::query(query)
@@ -532,8 +755,12 @@ impl VectorRepository {
 
                     let mut all_records = Vec::new();
                     for row in rows {
-                        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
-                        let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                .unwrap_or_default()
+                        });
+                        let embedding: Vec<f32> =
+                            serde_json::from_str(&emb_str).unwrap_or_default();
 
                         let record = EmbeddingRecord {
                             id: row.get("id"),
@@ -542,12 +769,18 @@ impl VectorRepository {
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
                             metadata: row.get("metadata"),
+                            business_event_type: row.try_get("business_event_type").ok().flatten(),
+                            owner_activity_level: row.try_get("owner_activity_level").unwrap_or(50),
                         };
                         all_records.push(record);
                     }
@@ -578,8 +811,10 @@ impl VectorRepository {
                             let b = &all_records[j];
                             if a.tenant_id == b.tenant_id {
                                 // Ensure a consistent ordering to avoid duplicate pairs in different orders
-                                let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
-                                let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
+                                let (record_a, record_b) =
+                                    if a.id < b.id { (a, b) } else { (b, a) };
+                                let distance =
+                                    cosine_distance(&record_a.embedding, &record_b.embedding);
                                 if distance < 0.05 {
                                     conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
@@ -598,9 +833,7 @@ impl VectorRepository {
         }
         Ok(conflicts)
     }
-
 }
-
 
 #[async_trait]
 pub trait OHCMemory: Send + Sync {
@@ -638,11 +871,15 @@ impl FileBasedMemory {
 impl OHCMemory for FileBasedMemory {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String> {
         let dir = self.secure_join(&[namespace])?;
-        tokio::fs::create_dir_all(&dir).await.map_err(|e| e.to_string())?;
-        
+        tokio::fs::create_dir_all(&dir)
+            .await
+            .map_err(|e| e.to_string())?;
+
         let path = self.secure_join(&[namespace, key])?;
-        tokio::fs::write(path, data).await.map_err(|e| e.to_string())?;
-        
+        tokio::fs::write(path, data)
+            .await
+            .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 
@@ -673,6 +910,8 @@ mod tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         let json = serde_json::to_string(&record).unwrap();
@@ -712,30 +951,46 @@ mod tests {
         assert_eq!(index, "Sample index content");
 
         // Test topic retrieve
-        store.write_topic("system_architecture", "Detailed DB schema").await.unwrap();
+        store
+            .write_topic("system_architecture", "Detailed DB schema")
+            .await
+            .unwrap();
         let topic_content = store.retrieve_topic("system_architecture").await.unwrap();
         assert_eq!(topic_content, "Detailed DB schema");
         assert!(store.retrieve_topic("nonexistent").await.is_err());
 
         // Test transcript search
-        store.append_transcript("session1", "User asked about memory.\n\nAgent replied 3-tier is better.").await.unwrap();
-        store.append_transcript("session2", "User requested weather.\n\nAgent gave forecast.").await.unwrap();
+        store
+            .append_transcript(
+                "session1",
+                "User asked about memory.\n\nAgent replied 3-tier is better.",
+            )
+            .await
+            .unwrap();
+        store
+            .append_transcript(
+                "session2",
+                "User requested weather.\n\nAgent gave forecast.",
+            )
+            .await
+            .unwrap();
 
-        let res = store.search_transcripts("3-tier is better", 10).await.unwrap();
+        let res = store
+            .search_transcripts("3-tier is better", 10)
+            .await
+            .unwrap();
         assert_eq!(res.len(), 1);
         assert!(res[0].contains("Agent replied 3-tier is better."));
 
         let _ = tokio::fs::remove_dir_all(base_dir).await;
     }
-
-    }
-
+}
 
 #[async_trait]
 pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     /// Retrieve relevant past conversations or state based on a query
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
-    
+
     /// Store a new piece of memory (e.g., an architectural decision or summary)
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
 
@@ -753,7 +1008,11 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
+    fn as_anthropic_accessor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+        None
+    }
 }
 
 pub struct PersistentMemoryStore {
@@ -775,17 +1034,30 @@ impl std::fmt::Debug for PersistentMemoryStore {
 #[async_trait]
 impl LongTermMemory for PersistentMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
-        let records = self.repo.semantic_search(&self.tenant_id, &embedding, limit as i64).await?;
+        let embedding = self
+            .llm
+            .generate_embedding(query)
+            .await
+            .map_err(|e| e.to_string())?;
+        let records = self
+            .repo
+            .semantic_search(&self.tenant_id, &embedding, limit as i64, false, None)
+            .await?;
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
-        let embedding = self.llm.generate_embedding(content).await.map_err(|e| e.to_string())?;
+        let embedding = self
+            .llm
+            .generate_embedding(content)
+            .await
+            .map_err(|e| e.to_string())?;
         let id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now();
 
-        let source_type = if tags.contains(&"AUTO_CONSOLIDATED".to_string()) || tags.contains(&"AUTO_CONSOLIDATED_LANGGRAPH".to_string()) {
+        let source_type = if tags.contains(&"AUTO_CONSOLIDATED".to_string())
+            || tags.contains(&"AUTO_CONSOLIDATED_LANGGRAPH".to_string())
+        {
             "TASK_SUMMARY"
         } else {
             "MANUAL"
@@ -804,6 +1076,8 @@ impl LongTermMemory for PersistentMemoryStore {
             reliability_score: 100,
             owner_override: false,
             metadata: Some(serde_json::to_string(&tags).unwrap_or_default()),
+            business_event_type: None,
+            owner_activity_level: 50,
         };
         self.repo.upsert(&record).await
     }
@@ -848,20 +1122,36 @@ impl Anthropic3TierMemoryStore {
     }
 
     pub async fn update_index(&self, content: &str) -> Result<(), String> {
-        tokio::fs::write(&self.index_file, content).await.map_err(|e| e.to_string())
+        tokio::fs::write(&self.index_file, content)
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
-        tokio::fs::write(path, content).await.map_err(|e| e.to_string())
+        tokio::fs::write(path, content)
+            .await
+            .map_err(|e| e.to_string())
     }
 
-    pub async fn append_transcript(&self, session_id: &str, turn_content: &str) -> Result<(), String> {
+    pub async fn append_transcript(
+        &self,
+        session_id: &str,
+        turn_content: &str,
+    ) -> Result<(), String> {
         let path = self.transcripts_dir.join(format!("{}.log", session_id));
         use tokio::io::AsyncWriteExt;
-        let mut file = tokio::fs::OpenOptions::new().create(true).append(true).open(path).await.map_err(|e| e.to_string())?;
-        file.write_all(format!("{}\n\n", turn_content).as_bytes()).await.map_err(|e| e.to_string())?;
+        let mut file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .await
+            .map_err(|e| e.to_string())?;
+        file.write_all(format!("{}\n\n", turn_content).as_bytes())
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 }
@@ -869,10 +1159,13 @@ impl Anthropic3TierMemoryStore {
 #[async_trait]
 impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
         if path.exists() {
-            tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())
+            tokio::fs::read_to_string(&path)
+                .await
+                .map_err(|e| e.to_string())
         } else {
             Err(format!("Topic '{}' not found", safe_name))
         }
@@ -880,9 +1173,13 @@ impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3Tie
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
-        let mut dir = tokio::fs::read_dir(&self.transcripts_dir).await.map_err(|e| e.to_string())?;
+        let mut dir = tokio::fs::read_dir(&self.transcripts_dir)
+            .await
+            .map_err(|e| e.to_string())?;
         while let Ok(Some(entry)) = dir.next_entry().await {
-            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
+            let content = tokio::fs::read_to_string(entry.path())
+                .await
+                .map_err(|e| e.to_string())?;
             for par in content.split("\n\n") {
                 if par.to_lowercase().contains(&query.to_lowercase()) {
                     results.push(par.to_string());
@@ -905,9 +1202,13 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             return Ok(results);
         }
 
-        let mut dir = tokio::fs::read_dir(&self.topics_dir).await.map_err(|e| e.to_string())?;
+        let mut dir = tokio::fs::read_dir(&self.topics_dir)
+            .await
+            .map_err(|e| e.to_string())?;
         while let Ok(Some(entry)) = dir.next_entry().await {
-            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
+            let content = tokio::fs::read_to_string(entry.path())
+                .await
+                .map_err(|e| e.to_string())?;
             if content.to_lowercase().contains(&query.to_lowercase()) {
                 results.push(content);
                 if results.len() >= limit {
@@ -928,7 +1229,11 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             content.to_string()
         };
 
-        let tags_str = if tags.is_empty() { String::new() } else { format!(" [{}]", tags.join(", ")) };
+        let tags_str = if tags.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", tags.join(", "))
+        };
         let new_entry = format!("- {}{}\n", truncated_content.replace('\n', " "), tags_str);
 
         existing_index.push_str(&new_entry);
@@ -939,17 +1244,22 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 
     async fn get_lightweight_index(&self) -> Result<String, String> {
         if self.index_file.exists() {
-            tokio::fs::read_to_string(&self.index_file).await.map_err(|e| e.to_string())
+            tokio::fs::read_to_string(&self.index_file)
+                .await
+                .map_err(|e| e.to_string())
         } else {
             Ok(String::new())
         }
     }
 
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
         if path.exists() {
-            tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())
+            tokio::fs::read_to_string(&path)
+                .await
+                .map_err(|e| e.to_string())
         } else {
             Err(format!("Topic '{}' not found", safe_name))
         }
@@ -957,9 +1267,13 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
-        let mut dir = tokio::fs::read_dir(&self.transcripts_dir).await.map_err(|e| e.to_string())?;
+        let mut dir = tokio::fs::read_dir(&self.transcripts_dir)
+            .await
+            .map_err(|e| e.to_string())?;
         while let Ok(Some(entry)) = dir.next_entry().await {
-            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
+            let content = tokio::fs::read_to_string(entry.path())
+                .await
+                .map_err(|e| e.to_string())?;
             for par in content.split("\n\n") {
                 if par.to_lowercase().contains(&query.to_lowercase()) {
                     results.push(par.to_string());
@@ -971,7 +1285,9 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         }
         Ok(results)
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+    fn as_anthropic_accessor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
     }
 }
@@ -1004,10 +1320,14 @@ impl RedisMemoryStore {
 #[async_trait]
 impl LongTermMemory for RedisMemoryStore {
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self
+            .client
+            .get_multiplexed_tokio_connection()
+            .await
+            .map_err(|e| e.to_string())?;
         let key = format!("{}:memory", self.namespace);
-        
-        // Simple LRANGE to get recent memories. 
+
+        // Simple LRANGE to get recent memories.
         // Real implementation would embed the query and use FT.SEARCH
         let results: Vec<String> = redis::cmd("LRANGE")
             .arg(&key)
@@ -1016,21 +1336,25 @@ impl LongTermMemory for RedisMemoryStore {
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(results)
     }
 
     async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
-        let mut conn = self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self
+            .client
+            .get_multiplexed_tokio_connection()
+            .await
+            .map_err(|e| e.to_string())?;
         let key = format!("{}:memory", self.namespace);
-        
+
         let _: () = redis::cmd("LPUSH")
             .arg(&key)
             .arg(content)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(())
     }
 }
@@ -1039,8 +1363,8 @@ impl LongTermMemory for RedisMemoryStore {
 mod get_conflicts_tests {
     #[tokio::test]
     async fn test_auto_resolve_conflicts_with_override_new() {
-        use std::str::FromStr;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
 
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1061,9 +1385,13 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1080,6 +1408,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: true,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
         let r2 = EmbeddingRecord {
             id: "rec2".to_string(),
@@ -1094,6 +1424,8 @@ mod get_conflicts_tests {
             reliability_score: 100,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         repo.upsert(&r1).await.unwrap();
@@ -1110,7 +1442,7 @@ mod get_conflicts_tests {
         assert_eq!(row_id, "rec1");
     }
     use super::*;
-    use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
 
     #[tokio::test]
@@ -1134,9 +1466,13 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1155,6 +1491,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
         let r2 = EmbeddingRecord {
             id: "rec1_b".to_string(),
@@ -1167,8 +1505,10 @@ mod get_conflicts_tests {
             last_referenced_at: now,
             reference_count: 1,
             reliability_score: 40,
-            owner_override: true, // Should win
+            owner_override: true,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         // 2. Conflict resolved by reliability_score
@@ -1185,6 +1525,8 @@ mod get_conflicts_tests {
             reliability_score: 80, // Should win
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
         let r4 = EmbeddingRecord {
             id: "rec2_b".to_string(),
@@ -1199,6 +1541,8 @@ mod get_conflicts_tests {
             reliability_score: 60,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         // 3. Conflict resolved by recency
@@ -1216,6 +1560,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
         let r6 = EmbeddingRecord {
             id: "rec3_b".to_string(),
@@ -1230,6 +1576,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         repo.upsert(&r1).await.unwrap();
@@ -1280,9 +1628,13 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1302,6 +1654,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         let record2 = EmbeddingRecord {
@@ -1317,13 +1671,25 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         repo.upsert(&record1).await.unwrap();
         repo.upsert(&record2).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(
+            now - chrono::Duration::days(180),
+            &PruneConfig {
+                max_age_days: 180,
+                business_event_types_to_keep: vec![],
+                min_owner_activity_level: 100, // force prune
+                min_reliability_score: 100,    // force prune
+            },
+        )
+        .await
+        .unwrap();
 
         // Verify prune
         let query = "SELECT id FROM consolidated_memory";
@@ -1360,9 +1726,13 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1380,18 +1750,26 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         repo.upsert(&record1).await.unwrap();
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
-            .fetch_one(&pool).await.unwrap();
+        let count: (i64,) =
+            sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(count.0, 1);
 
         repo.delete("rec1").await.unwrap();
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
-            .fetch_one(&pool).await.unwrap();
+        let count: (i64,) =
+            sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(count.0, 0);
     }
 
@@ -1416,9 +1794,13 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1436,6 +1818,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         let record2 = EmbeddingRecord {
@@ -1451,6 +1835,8 @@ mod get_conflicts_tests {
             reliability_score: 50,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         repo.upsert(&record1).await.unwrap();
@@ -1458,7 +1844,10 @@ mod get_conflicts_tests {
 
         // Testing the fallback behavior if vec_distance_cosine doesn't exist
         // or just the generic semantic search logic.
-        let results = repo.semantic_search("org1", &[1.0, 0.0, 0.0], 5).await.unwrap();
+        let results = repo
+            .semantic_search("org1", &[1.0, 0.0, 0.0], 5, false, None)
+            .await
+            .unwrap();
 
         // Either the results come back ordered by created_at or vec_distance_cosine.
         // We just make sure it returns something.
@@ -1487,9 +1876,13 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1507,11 +1900,16 @@ mod get_conflicts_tests {
             reliability_score: 80,
             owner_override: false,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         repo.upsert(&record1).await.unwrap();
 
-        let results = repo.semantic_search("org1", &[0.5, 0.5, 0.5], 5).await.unwrap();
+        let results = repo
+            .semantic_search("org1", &[0.5, 0.5, 0.5], 5, false, None)
+            .await
+            .unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].content, "customer unhappy with pricing");
         assert_eq!(results[0].agent_id, "sales_agent");
@@ -1519,14 +1917,17 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_persistent_memory_store_retrieve_store() {
-        use std::sync::Arc;
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
         use ohc_builtin_agent_llm::LlmClient;
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+        use std::sync::Arc;
 
         struct MockLlm;
         #[async_trait::async_trait]
         impl LlmClient for MockLlm {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant(""),
                     usage: Usage::default(),
@@ -1534,7 +1935,10 @@ mod get_conflicts_tests {
                     response_id: None,
                 })
             }
-            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![0.1, 0.2, 0.3])
             }
         }
@@ -1558,9 +1962,13 @@ mod get_conflicts_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let llm = Arc::new(MockLlm);
@@ -1571,14 +1979,16 @@ mod get_conflicts_tests {
             llm: llm.clone(),
         };
 
-        store.store("test content", vec!["tag1".to_string()]).await.unwrap();
+        store
+            .store("test content", vec!["tag1".to_string()])
+            .await
+            .unwrap();
 
         let retrieved = store.retrieve("query", 10).await.unwrap();
         assert_eq!(retrieved.len(), 1);
         assert_eq!(retrieved[0], "test content");
     }
 }
-
 
 #[cfg(test)]
 mod anthropic_memory_tests {
@@ -1594,8 +2004,20 @@ mod anthropic_memory_tests {
         assert_eq!(index, "");
 
         // Test storing multiple items
-        store.store("User explicitly requested to use glassmorphism across all UI components.", vec!["ui".to_string(), "design".to_string()]).await.unwrap();
-        store.store("The PostgreSQL deployment requires enabling row-level security for multi-tenancy.", vec![]).await.unwrap();
+        store
+            .store(
+                "User explicitly requested to use glassmorphism across all UI components.",
+                vec!["ui".to_string(), "design".to_string()],
+            )
+            .await
+            .unwrap();
+        store
+            .store(
+                "The PostgreSQL deployment requires enabling row-level security for multi-tenancy.",
+                vec![],
+            )
+            .await
+            .unwrap();
 
         let index2 = store.get_lightweight_index().await.unwrap();
         assert!(index2.contains("glassmorphism"));
@@ -1604,7 +2026,13 @@ mod anthropic_memory_tests {
 
         // Add a mock topic file to test retrieve
         store.write_topic("Database Architecture", "The database architecture relies heavily on PostgreSQL with row-level security enabled for multi-tenancy isolation. This is critical for data separation.").await.unwrap();
-        store.write_topic("Frontend Style", "Use flutter and glassmorphism. It should look modern.").await.unwrap();
+        store
+            .write_topic(
+                "Frontend Style",
+                "Use flutter and glassmorphism. It should look modern.",
+            )
+            .await
+            .unwrap();
 
         let results = store.retrieve("postgresql", 5).await.unwrap();
         assert_eq!(results.len(), 1);
@@ -1622,7 +2050,10 @@ mod anthropic_memory_tests {
     async fn test_prune_stale_owner_override_coverage() {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+        {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -1640,9 +2071,13 @@ mod anthropic_memory_tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        ).execute(&pool).await;
+                metadata TEXT,
+                business_event_type TEXT,
+                owner_activity_level INTEGER DEFAULT 50
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = super::VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1659,21 +2094,37 @@ mod anthropic_memory_tests {
             last_referenced_at: old_time,
             reference_count: 1,
             reliability_score: 50,
-            owner_override: true, // This should prevent it from being pruned
+            owner_override: true,
             metadata: None,
+            business_event_type: None,
+            owner_activity_level: 50,
         };
 
         repo.upsert(&record1).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(
+            now - chrono::Duration::days(180),
+            &PruneConfig {
+                max_age_days: 180,
+                business_event_types_to_keep: vec![],
+                min_owner_activity_level: 100, // force prune
+                min_reliability_score: 100,    // force prune
+            },
+        )
+        .await
+        .unwrap();
 
         // Verify it was NOT deleted
         use sqlx::Row;
         let query = "SELECT id FROM consolidated_memory";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
-        assert_eq!(rows.len(), 1, "The record should remain due to owner_override = true");
+        assert_eq!(
+            rows.len(),
+            1,
+            "The record should remain due to owner_override = true"
+        );
         let id: String = rows[0].try_get("id").unwrap();
         assert_eq!(id, "rec_override", "The correct record should remain");
     }
