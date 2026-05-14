@@ -167,3 +167,9 @@ kube-prometheus-stack:
         label: grafana_dashboard
         labelValue: "1"
 
+
+# Unified logging configuration
+# Ensures all pods output logs in JSON format for the observability pipeline
+logging:
+  format: "json"
+  level: "info"

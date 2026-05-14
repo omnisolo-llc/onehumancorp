@@ -8,7 +8,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-backend
+      app: {{ .Release.Name }}-backend
   policyTypes:
     - Ingress
     - Egress
@@ -19,7 +19,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-core
+              app: {{ .Release.Name }}-ohc-core
     - from:
         - namespaceSelector:
             matchLabels:
@@ -82,17 +82,6 @@ spec:
         - protocol: TCP
           port: 6379
     {{- end }}
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/1
-            except:
-              - 10.0.0.0/8
-        - ipBlock:
-            cidr: 128.0.0.0/1
-            except:
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.ohcCore.networkPolicy.enabled }}
@@ -105,7 +94,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-core
+      app: {{ .Release.Name }}-ohc-core
   policyTypes:
     - Ingress
     - Egress
@@ -137,17 +126,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/1
-            except:
-              - 10.0.0.0/8
-        - ipBlock:
-            cidr: 128.0.0.0/1
-            except:
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.chatwoot.enabled }}
@@ -160,7 +138,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-chatwoot
+      app: {{ .Release.Name }}-chatwoot
   policyTypes:
     - Ingress
     - Egress
@@ -192,17 +170,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/1
-            except:
-              - 10.0.0.0/8
-        - ipBlock:
-            cidr: 128.0.0.0/1
-            except:
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.powersync.enabled }}
@@ -215,7 +182,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-powersync
+      app: {{ .Release.Name }}-powersync
   policyTypes:
     - Ingress
     - Egress
@@ -247,17 +214,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/1
-            except:
-              - 10.0.0.0/8
-        - ipBlock:
-            cidr: 128.0.0.0/1
-            except:
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.redis.enabled }}
