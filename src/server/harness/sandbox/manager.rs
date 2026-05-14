@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use super::ast::ASTParser;
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
-use crate::telemetry::ViolationStore;
+use crate::telemetry::{ViolationStore, record_bubblewrap_violation};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct SandboxPolicy {
@@ -53,6 +53,7 @@ impl SandboxAdapter for SandboxManager {
         let mut ast_parser = ASTParser::new();
         if let Err(reason) = ast_parser.parse_for_security(cmd) {
             let details = json!({ "command": cmd, "reason": reason });
+            record_bubblewrap_violation();
             let _ = self.violation_store.record_violation(
                 "system",
                 "unknown_agent",
@@ -65,6 +66,7 @@ impl SandboxAdapter for SandboxManager {
 
         if !self.evaluator.evaluate(cmd) {
             let details = json!({ "command": cmd });
+            record_bubblewrap_violation();
             let _ = self.violation_store.record_violation(
                 "system",
                 "unknown_agent",
