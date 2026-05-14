@@ -2,6 +2,7 @@ filegroup(
     name = "srcs",
     srcs = [
         "chaos_bench.rs",
+        "dummy_padding_canvas.rs",
         "latency_bench.rs",
         "mod.rs",
 
