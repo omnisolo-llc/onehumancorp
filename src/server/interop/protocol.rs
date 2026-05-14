@@ -371,6 +371,51 @@ impl InteropProtocol {
         self.bus.subscribe(format!("system:job_status:{}", job_id), bus_handler).await
     }
 
+
+    /// Publishes a queue job for workers to process
+    pub async fn publish_queue_job(&self, job: proto::QueueJob) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+
+        let mut buf = Vec::new();
+        job.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let msg = Message {
+            topic: format!("system:queue_job:{}", job.tenant_id),
+            payload: buf,
+        };
+
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        loop {
+            match self.bus.publish(msg.clone()).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if retries >= 5 {
+                        return Err(format!("Failed to publish queue job after retries: {}", e));
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        }
+    }
+
+    /// Listens for queue jobs
+    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(proto::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let tenant_topic = format!("system:queue_job:{}", tenant_id);
+        let bus_handler = Box::new(move |msg: Message| {
+            if msg.topic.starts_with(&tenant_topic) {
+                use prost::Message as ProstMessage;
+                if let Ok(decoded) = proto::QueueJob::decode(&msg.payload[..]) {
+                    handler(decoded);
+                }
+            }
+        });
+
+        self.bus.subscribe(format!("system:queue_job:{}", tenant_id), bus_handler).await
+    }
+
 }
 
 #[cfg(test)]
@@ -378,6 +423,45 @@ mod tests {
     use super::*;
     use crate::msgbus::MemoryBus;
     use std::sync::atomic::{AtomicBool, Ordering};
+
+
+    #[tokio::test]
+    async fn test_interop_queue_job_publish_and_listen() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |job: proto::QueueJob| {
+            if job.id == "qjob_1" && job.tenant_id == "tenant_q" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let _cancel = protocol.listen_for_queue_jobs("tenant_q", handler).await.unwrap();
+
+        let job = proto::QueueJob {
+            id: "qjob_1".to_string(),
+            tenant_id: "tenant_q".to_string(),
+            parent_task_id: "".to_string(),
+            agent_role: "agent".to_string(),
+            payload: "data".to_string(),
+            status: "pending".to_string(),
+            attempts: 0,
+            max_attempts: 3,
+            run_after_ms: 0,
+            locked_until_ms: 0,
+            created_at_ms: 0,
+            updated_at_ms: 0,
+        };
+
+        protocol.publish_queue_job(job).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
 
     #[tokio::test]
     async fn test_interop_handoff_memory() {
