@@ -78,7 +78,7 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
+                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING id")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -89,7 +89,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
+                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000 FOR UPDATE SKIP LOCKED) RETURNING id")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
