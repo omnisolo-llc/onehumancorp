@@ -29,16 +29,37 @@ async fn start_onboarding(
 }
 
 async fn get_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
+    State(agent): State<Arc<OnboardingAgent>>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let row = sqlx::query("SELECT state_json FROM onboarding_state LIMIT 1")
+        .fetch_optional(&agent.db.pool)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(r) = row {
+        use sqlx::Row;
+        let json: serde_json::Value = r.get("state_json");
+        return Ok(Json(serde_json::json!({ "state": json.to_string() })));
+    }
+
     Ok(Json(serde_json::json!({
         "state": "{}"
     })))
 }
 
 async fn save_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let step = payload.get("step").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+    sqlx::query("INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, organization_id) DO UPDATE SET state_json = EXCLUDED.state_json, current_step = EXCLUDED.current_step")
+        .bind("default")
+        .bind("org-default")
+        .bind("usr-default")
+        .bind(step)
+        .bind(&payload)
+        .execute(&agent.db.pool)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::NO_CONTENT)
 }

@@ -1666,7 +1666,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button onclick="showScreen('setup-screen')">Start Setup</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
@@ -1713,6 +1713,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
+                        <h1>Setup Wizard</h1>
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
@@ -1730,12 +1731,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="What is your business called?" id="biz-name" onchange="saveState()" />
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
+                            <label><input type="checkbox" onchange="saveState()" value="Physical Products" /> Physical Products</label>
                             <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
                             <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
                             <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
@@ -1762,8 +1764,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
+                            <input type="text" placeholder="What is the name of this product?" onchange="saveState()" />
+                            <input type="text" placeholder="0.00" onchange="saveState()" />
+                            <button class="secondary" onclick="generateAI()">Generate AI Description</button>
                             <button onclick="nextStep(9)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
@@ -1777,17 +1780,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(100)">Publish my business →</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
+                            <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="nextStep(101)">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
                         <div id="step-101" style="display: none;">
+                            <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
+                            <p>⬜ Add 3 more products</p>
+                            <p>⬜ Connect Instagram</p>
+                            <p>⬜ Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
@@ -1841,10 +1845,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function nextStep(step) {
+                            window.currentStep = step;
+                            saveState();
                             document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
                             const target = document.getElementById('step-' + step);
                             if (target) target.style.display = 'block';
                         }
+
+
+                        function saveState() {
+                            const step = window.currentStep || 1;
+                            fetch('/api/onboarding/state', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ step: step, bizName: document.getElementById('biz-name')?.value })
+                            }).catch(console.error);
+                        }
+
+                        function generateDescription() {
+                            setTimeout(() => { console.log('Generated'); }, 500);
+                        }
+
+                        fetch('/api/onboarding/state').then(r => r.json()).then(data => {
+                            if (data && data.state && typeof data.state === 'string') {
+                                try {
+                                    const st = JSON.parse(data.state);
+                                    if (st.step && st.step > 1) {
+                                        // Try to load
+                                    }
+                                } catch(e){}
+                            }
+                        }).catch(console.error);
 
                         function generateAI() {
                             nextStep('generating');
