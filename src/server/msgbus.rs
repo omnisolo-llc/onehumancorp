@@ -549,12 +549,13 @@ pub struct StateHandoffManager {
     bus: std::sync::Arc<dyn Bus>,
     lock: std::sync::Arc<dyn DistributedLock>,
     node_id: String,
+    current_mode: i32,
 }
 
 #[allow(dead_code)]
 impl StateHandoffManager {
-    pub fn new(bus: std::sync::Arc<dyn Bus>, lock: std::sync::Arc<dyn DistributedLock>, node_id: String) -> Self {
-        Self { bus, lock, node_id }
+    pub fn new(bus: std::sync::Arc<dyn Bus>, lock: std::sync::Arc<dyn DistributedLock>, node_id: String, current_mode: i32) -> Self {
+        Self { bus, lock, node_id, current_mode }
     }
 
     pub async fn trigger_handoff(&self, mission_id: &str, tenant_id: &str, payload: Vec<u8>) -> Result<(), String> {
@@ -562,7 +563,7 @@ impl StateHandoffManager {
         let handoff = crate::interop::protocol::proto::StateHandoff {
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
-            source_mode: 0,
+            source_mode: self.current_mode,
             target_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             state_snapshot: payload,
@@ -587,12 +588,13 @@ impl StateHandoffManager {
 pub struct HealthMonitor {
     bus: std::sync::Arc<dyn Bus>,
     transport: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh>,
+    current_mode: i32,
 }
 
 #[allow(dead_code)]
 impl HealthMonitor {
-    pub fn new(bus: std::sync::Arc<dyn Bus>, transport: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
-        Self { bus, transport }
+    pub fn new(bus: std::sync::Arc<dyn Bus>, transport: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh>, current_mode: i32) -> Self {
+        Self { bus, transport, current_mode }
     }
 
     pub async fn ping(&self) -> Result<(), String> {
@@ -608,7 +610,7 @@ impl HealthMonitor {
         let cancel = self.bus.subscribe(ack_topic, handler).await?;
 
         let ping = crate::interop::protocol::proto::HealthPing {
-            current_mode: 0,
+            current_mode: self.current_mode,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: node_id.clone(),
         };
@@ -747,7 +749,7 @@ mod tests {
     async fn test_health_monitor_ping() {
         let bus = std::sync::Arc::new(MemoryBus::new());
         let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
-        let monitor = HealthMonitor::new(bus.clone(), transport);
+        let monitor = HealthMonitor::new(bus.clone(), transport, 0);
 
         let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let received_clone = received.clone();
@@ -786,7 +788,7 @@ mod tests {
     async fn test_state_handoff_trigger() {
         let bus = std::sync::Arc::new(MemoryBus::new());
         let lock = bus.clone();
-        let manager = StateHandoffManager::new(bus.clone(), lock, "node1".to_string());
+        let manager = StateHandoffManager::new(bus.clone(), lock, "node1".to_string(), 0);
 
         let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let received_clone = received.clone();
@@ -819,7 +821,7 @@ mod tests {
     async fn test_health_monitor_ping_success() {
         let bus = std::sync::Arc::new(MemoryBus::new());
         let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
-        let monitor = HealthMonitor::new(bus.clone(), transport);
+        let monitor = HealthMonitor::new(bus.clone(), transport, 0);
 
         // We need to listen for the ping and respond with an ack.
         let bus_clone = bus.clone();
@@ -852,7 +854,7 @@ mod tests {
     async fn test_health_monitor_ping_timeout() {
         let bus = std::sync::Arc::new(MemoryBus::new());
         let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
-        let monitor = HealthMonitor::new(bus.clone(), transport);
+        let monitor = HealthMonitor::new(bus.clone(), transport, 0);
 
         // Without any handler to respond with an ack, ping should timeout.
         let result = monitor.ping().await;
