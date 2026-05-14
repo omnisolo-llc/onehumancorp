@@ -10,6 +10,12 @@ debt_report: |
   - Evaluated the sync error and active agent tracking mechanisms in `src/server/orchestration/health.rs`.
 
   ## Phase 2: Hygiene
+  - Fixed `stuck_missions` Health Reporting in `src/server/api/health.rs`:
+    - The health endpoint correctly queries `SELECT count(*) FROM agent_missions WHERE status = 'STUCK'`. However, `prune_stale_missions` in `src/server/sip.rs` updates `STUCK` to `FAILED` in the database.
+    - Updated the health query to `SELECT count(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'`.
+  - Fixed Circular Dependency Avoidance Debt in `src/agents/builtin/agent.rs` and `BUILD.bazel`:
+    - The pricing module is located at `//src/server/pricing:server_pricing`. Added to dependencies in `src/agents/builtin/BUILD.bazel`.
+    - Replaced the hardcoded cost values in `src/agents/builtin/agent.rs` with a call to `server_pricing::calculator::get_pricing`.
   - Redundant logs and systemic noise sources have been sanitized in the codebase.
   - Verified that `BUILD.bazel` is accurately capturing dependencies.
 
