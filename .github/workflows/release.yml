@@ -24,8 +24,6 @@ jobs:
     name: Build release archives
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v5
 
@@ -89,8 +87,6 @@ jobs:
     name: Build Flutter Android
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v5
 
@@ -143,8 +139,6 @@ jobs:
     name: Build Flutter iOS
     runs-on: macos-latest
     timeout-minutes: 90
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v5
 
@@ -183,8 +177,6 @@ jobs:
     name: Build Flutter macOS
     runs-on: macos-latest
     timeout-minutes: 60
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v5
 
@@ -231,8 +223,6 @@ jobs:
     name: Build Flutter Windows
     runs-on: windows-latest
     timeout-minutes: 60
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     defaults:
       run:
         shell: bash
@@ -281,8 +271,6 @@ jobs:
     name: Build Flutter Linux
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v5
 
@@ -459,8 +447,6 @@ jobs:
     name: Push Docker images
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - uses: actions/checkout@v6
 
