@@ -40,7 +40,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache-dependency-path: "package-lock.json"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -118,7 +117,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache-dependency-path: "package-lock.json"
 
       - name: Install Bazelisk
         run: |
