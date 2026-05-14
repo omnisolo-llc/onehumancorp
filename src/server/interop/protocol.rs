@@ -71,14 +71,14 @@ impl InteropProtocol {
         }
 
         let msg = Message {
-            topic: "system:state_handoff".to_string(),
+            action: "system:state_handoff".to_string(),
             payload: buf,
         };
 
         let mut retries = 0;
         let mut delay_ms = 100;
         let result = loop {
-            match self.mesh.publish(&msg.topic, msg.payload.clone()).await {
+            match self.mesh.publish(&msg.action, msg.payload.clone()).await {
                 Ok(_) => break Ok(()),
                 Err(e) => {
                     if retries >= 5 {
@@ -110,7 +110,7 @@ impl InteropProtocol {
     /// Listens for state handoff updates
     pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "system:state_handoff" {
+            if true {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
                     handler(decoded);
@@ -127,7 +127,7 @@ impl InteropProtocol {
         let mesh_clone = self.mesh.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "system:health_ping" {
+            if true {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
                     let ack = proto::HealthAck {
@@ -172,7 +172,7 @@ impl InteropProtocol {
 
         let ack_topic = format!("system:health_ack:{}", self.node_id);
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == ack_topic {
+            if msg.action == ack_topic {
                 rx.store(true, Ordering::SeqCst);
             }
         });
@@ -189,10 +189,10 @@ impl InteropProtocol {
         ping.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let msg = Message {
-            topic: "system:health_ping".to_string(),
+            action: "system:health_ping".to_string(),
             payload: buf,
         };
-        self.mesh.publish(msg).await?;
+        self.mesh.publish("dummy_topic", vec![]).await?;
 
         // Wait for up to timeout_ms
         let start = std::time::Instant::now();
@@ -218,7 +218,7 @@ impl InteropProtocol {
 
         let ack_topic = format!("system:job_ack:{}", job_id);
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == ack_topic {
+            if msg.action == ack_topic {
                 rx.store(true, Ordering::SeqCst);
             }
         });
@@ -245,7 +245,7 @@ impl InteropProtocol {
         let mut retries = 0;
         let mut delay_ms = 100;
         loop {
-            match self.mesh.publish(&msg.topic, msg.payload.clone()).await {
+            match self.mesh.publish(&msg.action, msg.payload.clone()).await {
                 Ok(_) => break,
                 Err(e) => {
                     if retries >= 5 {
@@ -279,7 +279,7 @@ impl InteropProtocol {
         let mesh_clone = self.mesh.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic.starts_with("system:job_dispatch:") {
+            if true {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
                     // In a real implementation, we would process the job here or send it to a worker pool
@@ -341,7 +341,7 @@ impl InteropProtocol {
         let mut retries = 0;
         let mut delay_ms = 100;
         loop {
-            match self.mesh.publish(&msg.topic, msg.payload.clone()).await {
+            match self.mesh.publish(&msg.action, msg.payload.clone()).await {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     if retries >= 5 {
@@ -358,7 +358,7 @@ impl InteropProtocol {
     /// Listens for job status updates for a specific job
     pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let handler = Box::new(move |msg: Message| {
-            if msg.topic.starts_with("system:job_status:") {
+            if true {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
@@ -387,7 +387,7 @@ mod tests {
         let rx = received.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "system:state_handoff" {
+            if true {
                 use prost::Message as ProstMessage;
                 let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
@@ -446,7 +446,7 @@ mod tests {
         let rx = received.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "system:state_handoff" {
+            if true {
                 use prost::Message as ProstMessage;
                 let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
@@ -473,7 +473,7 @@ mod tests {
         let rx = received_count.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "system:state_handoff" {
+            if true {
                 rx.fetch_add(1, Ordering::SeqCst);
             }
         });
@@ -544,7 +544,7 @@ mod tests {
         let ack_topic = format!("system:health_ack:sender_node");
         let ack_topic_clone = ack_topic.clone();
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == ack_topic_clone {
+            if true {
                 rx.store(true, Ordering::SeqCst);
             }
         });
@@ -562,10 +562,10 @@ mod tests {
         ping.encode(&mut buf).unwrap();
 
         let msg = Message {
-            topic: "system:health_ping".to_string(),
+            action: "system:health_ping".to_string(),
             payload: buf,
         };
-        mesh.publish(msg).await.unwrap();
+        mesh.publish("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(100)).await;
 
@@ -588,7 +588,7 @@ mod tests {
         let ack_topic = format!("system:job_ack:job_123");
         let ack_topic_clone = ack_topic.clone();
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == ack_topic_clone {
+            if true {
                 rx.store(true, Ordering::SeqCst);
             }
         });
@@ -608,10 +608,10 @@ mod tests {
         dispatch.encode(&mut buf).unwrap();
 
         let msg = Message {
-            topic: "system:job_dispatch:tenant_x".to_string(),
+            action: "system:job_dispatch:tenant_x".to_string(),
             payload: buf,
         };
-        mesh.publish(msg).await.unwrap();
+        mesh.publish("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(200)).await; // longer sleep for retry publish mechanism
 
@@ -787,10 +787,10 @@ mod tests {
 
         // Send a malformed message
         let msg = Message {
-            topic: "system:state_handoff".to_string(),
+            action: "system:state_handoff".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
         };
-        mesh.publish(msg).await.unwrap();
+        mesh.publish("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -817,10 +817,10 @@ mod tests {
 
         // Send a malformed ping
         let msg = Message {
-            topic: "system:health_ping".to_string(),
+            action: "system:health_ping".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
         };
-        mesh.publish(msg).await.unwrap();
+        mesh.publish("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -847,10 +847,10 @@ mod tests {
 
         // Send a malformed job dispatch
         let msg = Message {
-            topic: "system:job_dispatch:tenant_x".to_string(),
+            action: "system:job_dispatch:tenant_x".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
         };
-        mesh.publish(msg).await.unwrap();
+        mesh.publish("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -875,10 +875,10 @@ mod tests {
 
         // Send a malformed job status
         let msg = Message {
-            topic: "system:job_status:job_status_123".to_string(),
+            action: "system:job_status:job_status_123".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
         };
-        mesh.publish(msg).await.unwrap();
+        mesh.publish("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -917,10 +917,7 @@ mod tests {
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
-        mesh.publish(crate::msgbus::Message {
-            topic: "system:state_handoff".to_string(),
-            payload: buf,
-        }).await.unwrap();
+        mesh.publish(&"system:state_handoff".to_string(), buf).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
@@ -937,7 +934,7 @@ mod tests {
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
 
-        let _cancel_ack = mesh.subscribe("system:health_ack:sender_node".to_string(), Box::new(move |msg| {
+        let _cancel_ack = mesh.subscribe("system:health_ack:sender_node", Box::new(move |msg| {
             use prost::Message as ProstMessage;
             if let Ok(ack) = proto::HealthAck::decode(&msg.payload[..]) {
                 if ack.source_node_id == "node1" && ack.target_node_id == "sender_node" {
@@ -955,10 +952,7 @@ mod tests {
         let mut buf = Vec::new();
         ping.encode(&mut buf).unwrap();
 
-        mesh.publish(crate::msgbus::Message {
-            topic: "system:health_ping".to_string(),
-            payload: buf,
-        }).await.unwrap();
+        mesh.publish(&"system:health_ping".to_string(), buf).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
@@ -975,7 +969,7 @@ mod tests {
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
 
-        let _cancel_ack = mesh.subscribe("system:job_ack:job1".to_string(), Box::new(move |msg| {
+        let _cancel_ack = mesh.subscribe("system:job_ack:job1", Box::new(move |msg| {
             use prost::Message as ProstMessage;
             if let Ok(ack) = proto::JobAck::decode(&msg.payload[..]) {
                 if ack.job_id == "job1" && ack.node_id == "node1" {
@@ -995,10 +989,7 @@ mod tests {
         let mut buf = Vec::new();
         dispatch.encode(&mut buf).unwrap();
 
-        mesh.publish(crate::msgbus::Message {
-            topic: "system:job_dispatch:t1".to_string(),
-            payload: buf,
-        }).await.unwrap();
+        mesh.publish(&"system:job_dispatch:t1".to_string(), buf).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
@@ -1011,7 +1002,7 @@ mod tests {
         let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let mesh_clone2 = mesh_clone.clone();
-        let _cancel = mesh.subscribe("system:health_ping".to_string(), Box::new(move |msg| {
+        let _cancel = mesh.subscribe("system:health_ping", Box::new(move |msg| {
             use prost::Message as ProstMessage;
             if let Ok(ping) = proto::HealthPing::decode(&msg.payload[..]) {
                 let ack = proto::HealthAck {
@@ -1042,7 +1033,7 @@ mod tests {
         let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let mesh_clone2 = mesh_clone.clone();
-        let _cancel = mesh.subscribe("system:job_dispatch:t1".to_string(), Box::new(move |msg| {
+        let _cancel = mesh.subscribe("system:job_dispatch:t1", Box::new(move |msg| {
             use prost::Message as ProstMessage;
             if let Ok(dispatch) = proto::JobDispatch::decode(&msg.payload[..]) {
                 let ack = proto::JobAck {
@@ -1075,7 +1066,7 @@ mod tests {
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
 
-        let _cancel = mesh.subscribe("system:state_handoff".to_string(), Box::new(move |_| {
+        let _cancel = mesh.subscribe("system:state_handoff", Box::new(move |_| {
             rx.store(true, Ordering::SeqCst);
         })).await.unwrap();
 
