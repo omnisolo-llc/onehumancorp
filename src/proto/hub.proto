@@ -790,6 +790,14 @@ message WaitlistResponse {
 }
 
 service GrowthService {
+    // Social Posting
+    rpc GenerateSocialPost (GenerateSocialPostRequest) returns (GenerateSocialPostResponse);
+    rpc ScheduleSocialPost (ScheduleSocialPostRequest) returns (ScheduleSocialPostResponse);
+
+    // Email Marketing
+    rpc GenerateEmailTemplate (GenerateEmailTemplateRequest) returns (GenerateEmailTemplateResponse);
+    rpc SendEmailCampaign (SendEmailCampaignRequest) returns (SendEmailCampaignResponse);
+
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   
@@ -1658,4 +1666,42 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
+}
+
+
+message GenerateSocialPostRequest {
+    string strategy = 1;
+    string product_info = 2;
+}
+
+message GenerateSocialPostResponse {
+    string drafted_post = 1;
+}
+
+message ScheduleSocialPostRequest {
+    string content = 1;
+    string platform = 2;
+    int64 schedule_time_unix = 3;
+}
+
+message ScheduleSocialPostResponse {
+    bool success = 1;
+}
+
+message GenerateEmailTemplateRequest {
+    string theme = 1;
+}
+
+message GenerateEmailTemplateResponse {
+    string template_body = 1;
+}
+
+message SendEmailCampaignRequest {
+    string audience = 1;
+    string template_body = 2;
+}
+
+message SendEmailCampaignResponse {
+    bool success = 1;
+    int32 emails_sent = 2;
 }

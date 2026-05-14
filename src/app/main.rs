@@ -6712,6 +6712,107 @@ mod remaining_e2e_tests {
     }
 
     #[test]
+
+    #[test]
+    fn test_e2e_growth_social_posting_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let grow_business_ui = app::GrowBusiness::new().unwrap();
+        grow_business_ui.set_selected_strategy("Connect Instagram".into());
+
+        let execute_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let execute_called_clone = execute_called.clone();
+
+        grow_business_ui.on_execute(move |strategy, _kpi| {
+            if strategy == "Connect Instagram" {
+                *execute_called_clone.borrow_mut() = true;
+            }
+        });
+
+        grow_business_ui.invoke_execute("Connect Instagram".into(), "".into());
+        assert!(*execute_called.borrow(), "Should execute Connect Instagram strategy");
+
+        let social_ui = app::SocialPosting::new().unwrap();
+        let connect_instagram_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let connect_instagram_called_clone = connect_instagram_called.clone();
+        social_ui.on_connect_instagram(move || { *connect_instagram_called_clone.borrow_mut() = true; });
+        social_ui.invoke_connect_instagram();
+        assert!(*connect_instagram_called.borrow());
+
+        social_ui.set_post_content("New product launch!".into());
+        assert_eq!(social_ui.get_post_content(), "New product launch!");
+
+        let approve_post_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let approve_post_called_clone = approve_post_called.clone();
+        social_ui.on_approve_post(move || { *approve_post_called_clone.borrow_mut() = true; });
+        social_ui.invoke_approve_post();
+        assert!(*approve_post_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_growth_email_marketing_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let grow_business_ui = app::GrowBusiness::new().unwrap();
+        grow_business_ui.set_selected_strategy("Run your first email campaign".into());
+
+        let execute_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let execute_called_clone = execute_called.clone();
+
+        grow_business_ui.on_execute(move |strategy, _kpi| {
+            if strategy == "Run your first email campaign" {
+                *execute_called_clone.borrow_mut() = true;
+            }
+        });
+
+        grow_business_ui.invoke_execute("Run your first email campaign".into(), "".into());
+        assert!(*execute_called.borrow(), "Should execute Email Campaign strategy");
+
+        let email_ui = app::EmailMarketing::new().unwrap();
+        let generate_template_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let generate_template_called_clone = generate_template_called.clone();
+        email_ui.on_generate_template(move |tmpl| {
+            if tmpl == "Flash sale" {
+                *generate_template_called_clone.borrow_mut() = true;
+            }
+        });
+        email_ui.invoke_generate_template("Flash sale".into());
+        assert!(*generate_template_called.borrow());
+
+        let send_campaign_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let send_campaign_called_clone = send_campaign_called.clone();
+        email_ui.on_send_campaign(move || { *send_campaign_called_clone.borrow_mut() = true; });
+        email_ui.invoke_send_campaign();
+        assert!(*send_campaign_called.borrow());
+    }
+
+#[test]
     fn test_e2e_success_milestones_flow() {
         crate::ui_tests::init();
 

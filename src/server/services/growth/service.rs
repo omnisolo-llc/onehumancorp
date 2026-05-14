@@ -1,4 +1,13 @@
 use tonic::{Request, Response, Status};
+use crate::ohc::orchestration::{
+    GenerateSocialPostRequest, GenerateSocialPostResponse,
+    ScheduleSocialPostRequest, ScheduleSocialPostResponse,
+    GenerateEmailTemplateRequest, GenerateEmailTemplateResponse,
+    SendEmailCampaignRequest, SendEmailCampaignResponse,
+};
+use super::social::{generate_social_post, schedule_social_post};
+use super::email::{generate_email_template, send_email_campaign};
+
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::growth_service_server::GrowthService;
 use crate::ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
@@ -45,6 +54,34 @@ impl MyGrowthService {
 
 #[tonic::async_trait]
 impl GrowthService for MyGrowthService {
+    async fn generate_social_post(
+        &self,
+        request: tonic::Request<GenerateSocialPostRequest>,
+    ) -> Result<tonic::Response<GenerateSocialPostResponse>, tonic::Status> {
+        generate_social_post(request).await
+    }
+
+    async fn schedule_social_post(
+        &self,
+        request: tonic::Request<ScheduleSocialPostRequest>,
+    ) -> Result<tonic::Response<ScheduleSocialPostResponse>, tonic::Status> {
+        schedule_social_post(request).await
+    }
+
+    async fn generate_email_template(
+        &self,
+        request: tonic::Request<GenerateEmailTemplateRequest>,
+    ) -> Result<tonic::Response<GenerateEmailTemplateResponse>, tonic::Status> {
+        generate_email_template(request).await
+    }
+
+    async fn send_email_campaign(
+        &self,
+        request: tonic::Request<SendEmailCampaignRequest>,
+    ) -> Result<tonic::Response<SendEmailCampaignResponse>, tonic::Status> {
+        send_email_campaign(request).await
+    }
+
     async fn get_landing_page_experiments(
         &self,
         _request: Request<EmptyRequest>,
