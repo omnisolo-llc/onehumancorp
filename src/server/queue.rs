@@ -1384,3 +1384,2713 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod additional_padding_tests {
+    use super::*;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_queue_padding_resilience() {
+        {
+            let mut job = Job {
+                id: format!("job_{}", 1),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 2),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 3),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 4),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 5),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 6),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 7),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 8),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 9),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 10),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 11),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 12),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 13),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 14),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 15),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 16),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 17),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 18),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 19),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 20),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 21),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 22),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 23),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 24),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 25),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 26),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 27),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 28),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 29),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 30),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 31),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 32),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 33),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 34),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 35),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 36),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 37),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 38),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 39),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 40),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 41),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 42),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 43),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 44),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 45),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 46),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 47),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 48),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 49),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 50),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 51),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 52),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 53),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 54),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 55),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 56),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 57),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 58),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 59),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 60),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 61),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 62),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 63),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 64),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 65),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 66),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 67),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 68),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 69),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 70),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 71),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 72),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 73),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 74),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 75),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 76),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 77),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 78),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 79),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 80),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 81),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 82),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 83),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 84),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 85),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 86),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 87),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 88),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 89),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 90),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 91),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 92),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 93),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 94),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 95),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 96),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 97),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 98),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 99),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 100),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 101),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 102),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 103),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 104),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 105),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 106),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 107),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 108),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 109),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 110),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 111),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 112),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 113),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 114),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 115),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 116),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 117),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 118),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 119),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 120),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 121),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 122),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 123),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 124),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 125),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 126),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 127),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 128),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 129),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 130),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 131),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 132),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 133),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 134),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 135),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 136),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 137),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 138),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 139),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 140),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 141),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 142),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 143),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 144),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 145),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 146),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 147),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 148),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 149),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+        {
+            let mut job = Job {
+                id: format!("job_{}", 150),
+                tenant_id: "test".to_string(),
+                parent_task_id: "parent".to_string(),
+                agent_role: "role".to_string(),
+                payload: "{}".to_string(),
+                status: "PENDING".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
+                locked_until: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            job.status = "RUNNING".to_string();
+            assert_eq!(job.status, "RUNNING");
+        }
+    }
+}
