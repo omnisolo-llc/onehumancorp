@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+Researcher: Zero WIP exit
