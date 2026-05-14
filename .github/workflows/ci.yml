@@ -38,11 +38,15 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
       - name: Set up Node
         uses: actions/setup-node@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           node-version: "24"
           cache: "npm"
@@ -50,10 +54,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Bazelisk locally
+        run: npm install -D @bazel/bazelisk
+
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -78,11 +85,11 @@ jobs:
 
 
       - name: Build release artifacts
-        run: bazelisk build //release:all_release_artifacts --config=linux
+        run: npx @bazel/bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
-          bazelisk test \
+          npx @bazel/bazelisk test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
@@ -108,11 +115,15 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
       - name: Set up Node
         uses: actions/setup-node@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           node-version: "24"
           cache: "npm"
@@ -120,10 +131,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Bazelisk locally
+        run: npm install -D @bazel/bazelisk
+
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -148,9 +162,9 @@ jobs:
 
       - name: Build all artifacts
         run: |
-          bazelisk build //... --config=linux
-          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
-          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
+          npx @bazel/bazelisk build //... --config=linux
+          npx @bazel/bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+          npx @bazel/bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
 #   playwright-e2e:
 #     runs-on: oci-runner
