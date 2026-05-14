@@ -90,7 +90,7 @@ fn test_quote_approval() {
 
     ui.set_current_messages(Rc::new(VecModel::from(msgs)).into());
 
-    // Mock the callback execution as if done via UI click
+    // Simulate the callback execution as if done via UI click
     let ui_handle = ui.as_weak();
     ui.on_approve_quote(move |id, _amount| {
         if let Some(app) = ui_handle.upgrade() {

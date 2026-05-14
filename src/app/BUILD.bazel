@@ -211,7 +211,6 @@ rust_test(
         "@crates//:chrono",
         "@crates//:copypasta",
         "@crates//:futures",
-        "@crates//:mockito",
         "@crates//:prost",
         "@crates//:reqwest",
         "@crates//:serde",

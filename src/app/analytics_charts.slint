@@ -60,14 +60,14 @@ export component AnalyticsCharts inherits Window {
 
                                 Text { text: point.display_value; font-size: 14px; font-weight: 700; font-family: "Inter"; color: #34d399; horizontal-alignment: center; }
 
-                                Rectangle {
+                                GlassCard {
                                     width: 40px;
                                     height: point.value * 1px;
                                     background: @linear-gradient(180deg, #a855f7 0%, #3b82f6 100%);
                                     border-radius: 4px;
 
                                     // Add a shimmer effect for the chart bars
-                                    Rectangle {
+                                    GlassCard {
                                         width: parent.width;
                                         height: parent.height;
                                         background: @linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);

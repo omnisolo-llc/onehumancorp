@@ -123,7 +123,7 @@ export component Dashboard inherits Window { // milestones
             TooltipElement { tooltip_id: "menu"; Button { text: "Menu"; height: 44px; clicked => { show_menu = !show_menu; } } }
         }
 
-        if (show_menu) : Rectangle {
+        if (show_menu) : GlassCard {
             border-color: rgba(255, 255, 255, 0.1);
             border-width: 1px;
             border-radius: 8px;
@@ -243,7 +243,7 @@ export component Dashboard inherits Window { // milestones
                 HorizontalBox {
                     spacing: 16px;
 
-                    Rectangle {
+                    GlassCard {
                         background: rgba(0, 0, 0, 0.2);
                         border-radius: 8px;
                         VerticalBox {
@@ -254,7 +254,7 @@ export component Dashboard inherits Window { // milestones
                         }
                     }
 
-                    Rectangle {
+                    GlassCard {
                         background: rgba(0, 0, 0, 0.2);
                         border-radius: 8px;
                         VerticalBox {
@@ -266,7 +266,7 @@ export component Dashboard inherits Window { // milestones
                     }
                 }
 
-                Rectangle {
+                GlassCard {
                     background: rgba(0, 0, 0, 0.1);
                     border-radius: 8px;
                     height: 200px;
@@ -379,7 +379,7 @@ export component Dashboard inherits Window { // milestones
                     HorizontalBox {
                         spacing: 8px;
                         alignment: start;
-                        Rectangle {
+                        GlassCard {
                             width: 24px;
                             height: 24px;
                             background: #8b5cf6;
@@ -450,7 +450,7 @@ export component Dashboard inherits Window { // milestones
 }
 
     // Floating Action Button (Bottom)
-    Rectangle {
+    GlassCard {
         y: parent.height - 80px;
         x: parent.width - 80px;
         width: 60px;
@@ -483,7 +483,7 @@ export component Dashboard inherits Window { // milestones
         x: 20px;
         spacing: 16px;
 
-        Rectangle {
+        GlassCard {
             width: 60px;
             height: 60px;
             background: #3b82f6;
@@ -506,7 +506,7 @@ export component Dashboard inherits Window { // milestones
             }
         }
 
-        Rectangle {
+        GlassCard {
             width: 60px;
             height: 60px;
             background: #10b981; // Emerald
@@ -552,7 +552,7 @@ export component Dashboard inherits Window { // milestones
     }
 
     // Floating Help & Chat Buttons
-    Rectangle {
+    GlassCard {
         x: parent.width - 130px;
         y: parent.height - 160px;
         width: 120px;
@@ -564,7 +564,7 @@ export component Dashboard inherits Window { // milestones
             // In-App Help Center '?' Button
             TooltipElement {
                 tooltip_id: "help_center";
-                Rectangle {
+                GlassCard {
                     width: 50px;
                     height: 50px;
                     border-radius: 25px;
@@ -590,7 +590,7 @@ export component Dashboard inherits Window { // milestones
             // AI-Powered Help Chat Button
             TooltipElement {
                 tooltip_id: "ask_ai";
-                Rectangle {
+                GlassCard {
                     width: 50px;
                     height: 50px;
                     border-radius: 25px;
@@ -614,7 +614,7 @@ export component Dashboard inherits Window { // milestones
     }
 
     // Tooltip overlay
-    if (TooltipRegistry.is_visible) : Rectangle {
+    if (TooltipRegistry.is_visible) : GlassCard {
         x: TooltipRegistry.active_x;
         y: TooltipRegistry.active_y;
         z: 1000;

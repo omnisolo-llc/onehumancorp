@@ -22,8 +22,8 @@ fn test_analytics_charts_e2e_flow() {
         }
     });
 
-    // 2. Mock backend call conceptually for UI test by directly setting data similar to main.rs logic
-    // Since this is a UI test, we mock the response data directly to test the UI's reaction
+    // 2. Simulate backend call conceptually for UI test by directly setting data similar to main.rs logic
+    // Since this is a UI test, we simulate the response data directly to test the UI's reaction
 
     let charts = vec![
         app::UiChartData {

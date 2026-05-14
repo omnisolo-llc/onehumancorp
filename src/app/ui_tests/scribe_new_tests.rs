@@ -40,7 +40,7 @@ fn test_scribe_api_docs_test_endpoint_valid() {
     let endpoint_tested = std::rc::Rc::new(std::cell::RefCell::new(false));
     let endpoint_tested_clone = endpoint_tested.clone();
 
-    // Mock the callback
+    // Simulate the callback
     ui.on_test_endpoint(move |_| {
         *endpoint_tested_clone.borrow_mut() = true;
     });
