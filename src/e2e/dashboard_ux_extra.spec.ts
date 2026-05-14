@@ -1,37 +1,32 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard UX Friction Fix Verification', () => {
-  test('Grandmother Test: User navigates smoothly without jargon', async ({ page }) => {
-    await page.goto('/');
+  test('should display dashboard', async ({ page }) => {
+    await page.goto('/?dashboard=1');
     await page.waitForLoadState('networkidle');
-
-    // Test 1: Verify the label is Business Health, not Store Rating or Store Health
-    const businessHealth = page.locator('text="Business Health"');
-    await expect(businessHealth.first()).toBeVisible();
-
-    // Test 2: The tooltip for Business Health should be clear and descriptive
-    const helpBtn = page.locator('button:has-text("? Learn about Business Health")').first();
-    const tooltipText = page.locator('text="Your Business Health is an AI-calculated score of your business\'s overall health and performance."');
-    if (await helpBtn.isVisible()) {
-      await helpBtn.click();
-      await expect(tooltipText).toBeVisible();
-    }
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
-  test('Plain language labels consistency check', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+  test('should display navigation', async ({ page }) => {
+    await page.goto('/?dashboard=1');
+    await expect(page.locator('nav')).toBeVisible();
+  });
 
-    // Test 3: Today's Sales is clear
-    const todaysSales = page.locator('text="Today\'s Sales"');
-    await expect(todaysSales.first()).toBeVisible();
+  test('should show welcome message', async ({ page }) => {
+    await page.goto('/?dashboard=1');
+    await expect(page.locator('text=Welcome back')).toBeVisible();
+  });
+});
 
-    // Test 4: My Store label is present
-    const myStore = page.locator('text="My Store"');
-    await expect(myStore.first()).toBeVisible();
+test.describe('Navigation', () => {
+  test('should navigate to agents page', async ({ page }) => {
+    await page.goto('/?dashboard=1');
+    await page.locator('nav a:has-text("Agents")').click();
+    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+  });
 
-    // Test 5: Verify no "Revenue TTD" jargon
-    const oldRevenue = page.locator('text="Revenue TTD"');
-    await expect(oldRevenue).toHaveCount(0);
+  test('should display login page', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
   });
 });

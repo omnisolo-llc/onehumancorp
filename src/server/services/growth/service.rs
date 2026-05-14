@@ -1,16 +1,18 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::growth_service_server::GrowthService;
-use crate::ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::growth_service_server::GrowthService;
+use ::server_ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
 use std::sync::RwLock;
 use std::collections::HashMap;
+use std::sync::Arc;
 use chrono::Utc;
 use sqlx::{PgPool, Row};
 use crate::services::growth::referral_api;
-use crate::utils::auth_utils::set_org_context;
+use ::server_common::auth_utils::set_org_context;
 
 pub struct MyGrowthService {
     pool: PgPool,
+    hub: Arc<crate::hub::Hub>,
     experiments: RwLock<Vec<LandingPageExperiment>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
@@ -19,9 +21,10 @@ pub struct MyGrowthService {
 }
 
 impl MyGrowthService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: PgPool, hub: Arc<crate::hub::Hub>) -> Self {
         MyGrowthService {
             pool,
+            hub,
             experiments: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
@@ -36,8 +39,7 @@ impl MyGrowthService {
             .to_str()
             .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?;
 
-        let (org_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str)
-            .map_err(|e| Status::permission_denied(e))?;
+        let (org_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str)?;
 
         Ok(org_id)
     }
@@ -126,7 +128,7 @@ impl GrowthService for MyGrowthService {
             .unwrap_or(None)
             .unwrap_or_else(|| "My Awesome Store".to_string());
 
-        let slug = crate::utils::slug::slugify(&business_name);
+        let slug = ::server_utils::slug::slugify(&business_name);
         let business_share_url = format!("ohc.app/b/{}", slug);
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -376,10 +378,10 @@ impl GrowthService for MyGrowthService {
         Err(Status::not_found("invite not found"))
     }
 
-    async fn get_viral_coefficient(
+    async fn get_referral_score(
         &self,
         request: Request<EmptyRequest>,
-    ) -> Result<Response<ViralCoefficientResponse>, Status> {
+    ) -> Result<Response<ReferralScoreResponse>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -405,29 +407,29 @@ impl GrowthService for MyGrowthService {
         }
         
         let unique_inviters = inviters.len() as i32;
-        let k_factor = if unique_inviters > 0 {
+        let score = if unique_inviters > 0 {
             total_conversions as f64 / unique_inviters as f64
         } else {
             0.0
         };
         
-        Ok(Response::new(ViralCoefficientResponse {
+        Ok(Response::new(ReferralScoreResponse {
             total_referrals,
             total_conversions,
             unique_inviters,
-            k_factor,
+            score,
         }))
     }
 
-    async fn get_viral_coefficient_metrics(
+    async fn get_referral_score_metrics(
         &self,
         request: Request<EmptyRequest>,
-    ) -> Result<Response<ViralCoefficientMetricsResponse>, Status> {
+    ) -> Result<Response<ReferralScoreMetricsResponse>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
-        let res = self.get_viral_coefficient(request).await?.into_inner();
+        let res = self.get_referral_score(request).await?.into_inner();
         
-        Ok(Response::new(ViralCoefficientMetricsResponse {
-            viral_coefficient: res.k_factor,
+        Ok(Response::new(ReferralScoreMetricsResponse {
+            referral_score: res.score,
             organization_id: org_id,
         }))
     }
@@ -508,7 +510,13 @@ impl GrowthService for MyGrowthService {
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
         let max_quota = 50 + (total_conversions as i32) * 10;
         
-        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota }))
+        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
+
+        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed }))
     }
 
     async fn get_waitlist(
@@ -554,7 +562,9 @@ mod tests {
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
-        let service = MyGrowthService::new(pool);
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
 
         let mut req = Request::new(CreateReferralRequest {
             user_id: "test_user".to_string(),

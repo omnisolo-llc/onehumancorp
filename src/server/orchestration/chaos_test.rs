@@ -33,7 +33,7 @@ impl TeammateMesh for CorruptedMockMesh {
     async fn subscribe(&self, _topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let counter = self.received_messages.clone();
         tokio::spawn(async move {
-            let corrupted_msg = Message {
+            let corrupted_msg = Message { agent_id: "sys".into(), action: "test".into(), status: "ok".into(),
 
                 payload: vec![255, 255, 255, 255, 0, 1, 2, 3], // invalid utf8 / JSON
                 msg_id: "corrupt_1".to_string(),
@@ -263,5 +263,92 @@ mod chaos_tests {
 
         // It must fallback safely returning an empty vector
         assert_eq!(tasks.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_cloud_db_transition_fallback() {
+        // Intentionally bad DB URL to simulate database failure / degraded performance
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool,
+            store: DbStore::Postgres,
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db, mesh);
+
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+
+        // Should fallback safely instead of panicking/blocking forever
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_cloud_db_pull_fallback() {
+        // Intentionally bad DB URL to simulate database failure / degraded performance
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool,
+            store: DbStore::Postgres,
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db, mesh);
+
+        let tasks = state_manager.pull_available_tasks(10).await;
+
+        // On connection failure (not timeout), it correctly propagates the error.
+        assert!(tasks.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_standalone_db_transition_fallback() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent").unwrap(),
+            store: DbStore::Sqlite(pool),
+        });
+
+        // The fallback is tested via a timeout on the inner lock block
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
+
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_standalone_db_pull_fallback() {
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            store: DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), mesh);
+
+        let tasks = state_manager.pull_available_tasks(10).await;
+
+        // With SleepingMockMesh, this triggers the inner lock timeout.
+        assert!(tasks.is_ok());
+        assert_eq!(tasks.unwrap().len(), 0);
     }
 }

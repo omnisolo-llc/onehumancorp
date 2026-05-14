@@ -1,0 +1,10 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "llm_client.rs",
+        "mod.rs",
+        "pipeline.rs",
+
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
