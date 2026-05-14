@@ -5,6 +5,10 @@ import { ToolProgress } from './components/ToolProgress';
 import { MarkdownText } from './components/MarkdownText';
 import { PromptInput } from './components/PromptInput';
 import { ErrorState } from './components/ErrorState';
+import { HelpCenter } from './components/HelpCenter';
+import { Tooltip } from './components/tooltips/Tooltip';
+import { FloatingHelpChat } from './components/chat/FloatingHelpChat';
+import { WalkthroughOverlay } from './components/walkthrough/WalkthroughOverlay';
 import { useOrchestrator } from './hooks/useOrchestrator';
 
 export const App = () => {
@@ -23,6 +27,14 @@ export const App = () => {
         <ErrorState error={error} />
       ) : (
         <>
+          <HelpCenter />
+
+          <Tooltip id="btn_new_sale">
+            <Text>New Sale Button</Text>
+          </Tooltip>
+
+          <WalkthroughOverlay step={1} totalSteps={4} message="Welcome to OHC! Let's get your store set up." />
+
           <AgentStatus status={status} />
           <ToolProgress tools={tools} />
 
@@ -40,6 +52,8 @@ export const App = () => {
           </Box>
 
           <PromptInput onSubmit={(val) => setInputs([...inputs, val])} promptText="Ask Agent >" />
+
+          <FloatingHelpChat />
         </>
       )}
     </Box>
