@@ -47,11 +47,6 @@ jobs:
             build --color=yes
             build --show_timestamps
 
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Build ironclaw archives (all platforms)
         run: |
           bazelisk build \
@@ -124,11 +119,6 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Build Android APK
         run: bazelisk run //release:flutter-build-android-apk
 
@@ -172,11 +162,6 @@ jobs:
             build --color=yes
             build --show_timestamps
 
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Build iOS (no code sign)
         run: bazelisk run //release:flutter-build-ios
 
@@ -214,11 +199,6 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Build macOS app
         run: bazelisk run //release:flutter-build-macos
@@ -268,11 +248,6 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Build Windows app
         run: bazelisk run //release:flutter-build-windows
@@ -327,11 +302,6 @@ jobs:
             clang cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev libstdc++-12-dev
 
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Build Linux app
         run: bazelisk run //release:flutter-build-linux
 
@@ -375,11 +345,6 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Build Web app
         run: bazelisk run //release:flutter-build-web
@@ -517,11 +482,6 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-
-      - name: Install Bazelisk via Go
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Push server image
         run: |
