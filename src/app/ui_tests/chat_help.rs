@@ -52,7 +52,7 @@ fn test_e2e_ai_help_chat_ask_anything_button_click() {
     let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
-    login_ui.on_login(move |email, password| {
+    login_ui.on_login(move |_email, _password| {
         *login_successful_clone.borrow_mut() = true;
     });
 
@@ -80,7 +80,7 @@ fn test_e2e_ai_help_chat_send_message_updates_ui() {
     let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
-    login_ui.on_login(move |email, password| {
+    login_ui.on_login(move |_email, _password| {
         *login_successful_clone.borrow_mut() = true;
     });
 
@@ -109,7 +109,7 @@ fn test_e2e_ai_help_chat_open_article_link() {
     let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
-    login_ui.on_login(move |email, password| {
+    login_ui.on_login(move |_email, _password| {
         *login_successful_clone.borrow_mut() = true;
     });
 
@@ -139,7 +139,7 @@ fn test_e2e_ai_help_chat_message_list_verification() {
     let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
-    login_ui.on_login(move |email, password| {
+    login_ui.on_login(move |_email, _password| {
         *login_successful_clone.borrow_mut() = true;
     });
 
@@ -172,7 +172,7 @@ fn test_e2e_ai_help_chat_initial_message_content() {
     let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
     let login_successful_clone = login_successful.clone();
 
-    login_ui.on_login(move |email, password| {
+    login_ui.on_login(move |_email, _password| {
         *login_successful_clone.borrow_mut() = true;
     });
 

@@ -37,14 +37,16 @@ test.describe('Task List Page', () => {
 
   test('should filter tasks by status', async ({ page }) => {
         const filterDropdown = page.locator('select, [class*="filter"]').first();
-    if (await filterDropdown.isVisible()) {
+    await filterDropdown.waitFor();
+    await filterDropdown
       await filterDropdown.selectOption({ index: 1 });
     }
   });
 
   test('should sort tasks', async ({ page }) => {
         const sortButton = page.locator('button:has-text("Sort"), [class*="sort"]').first();
-    if (await sortButton.isVisible()) {
+    await sortButton.waitFor();
+    await sortButton
       await sortButton.click();
       await expect(page.locator('text=/ascending|descending|priority/i')).toBeVisible();
     }
@@ -52,7 +54,8 @@ test.describe('Task List Page', () => {
 
   test('should search tasks', async ({ page }) => {
         const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
-    if (await searchInput.isVisible()) {
+    await searchInput.waitFor();
+    await searchInput
       await searchInput.fill('test task');
       await expect(page.locator('text=/test task/i')).toBeVisible();
     }
@@ -60,7 +63,8 @@ test.describe('Task List Page', () => {
 
   test('should create new task', async ({ page }) => {
         const newTaskBtn = page.locator('button:has-text("New"), button:has-text("Add")').first();
-    if (await newTaskBtn.isVisible()) {
+    await newTaskBtn.waitFor();
+    await newTaskBtn
       await newTaskBtn.click();
       await expect(page.locator('text=/create.*task|new.*task/i')).toBeVisible();
     }
@@ -68,7 +72,8 @@ test.describe('Task List Page', () => {
 
   test('should complete a task', async ({ page }) => {
         const completeBtn = page.locator('button:has-text("Complete"), button:has-text("Done")').first();
-    if (await completeBtn.isVisible()) {
+    await completeBtn.waitFor();
+    await completeBtn
       await completeBtn.click();
       await expect(page.locator('text=/completed|done/i')).toBeVisible({ timeout: 3000 });
     }
@@ -78,7 +83,8 @@ test.describe('Task List Page', () => {
         const taskItem = page.locator('[class*="task"]').first();
     await taskItem.hover();
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
-    if (await deleteBtn.isVisible()) {
+    await deleteBtn.waitFor();
+    await deleteBtn
       await deleteBtn.click();
       await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }
@@ -88,7 +94,8 @@ test.describe('Task List Page', () => {
         const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const assignSelect = page.locator('select, [class*="assign"]').first();
-    if (await assignSelect.isVisible()) {
+    await assignSelect.waitFor();
+    await assignSelect
       await assignSelect.selectOption({ index: 1 });
     }
   });
@@ -97,7 +104,8 @@ test.describe('Task List Page', () => {
         const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const priorityBtn = page.locator('button:has-text("Priority"), [class*="priority"]').first();
-    if (await priorityBtn.isVisible()) {
+    await priorityBtn.waitFor();
+    await priorityBtn
       await priorityBtn.click();
       await expect(page.locator('text=/high|low|medium/i')).toBeVisible();
     }
@@ -107,7 +115,8 @@ test.describe('Task List Page', () => {
         const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const dateInput = page.locator('input[type="date"], [class*="date"]').first();
-    if (await dateInput.isVisible()) {
+    await dateInput.waitFor();
+    await dateInput
       await dateInput.fill('2026-12-31');
     }
   });
@@ -123,7 +132,8 @@ test.describe('Task List Page', () => {
         const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const commentInput = page.locator('textarea, input[type="text"]').nth(1);
-    if (await commentInput.isVisible()) {
+    await commentInput.waitFor();
+    await commentInput
       await commentInput.fill('test comment');
       await page.locator('button:has-text("Comment"), button:has-text("Add")').click();
     }
@@ -133,7 +143,8 @@ test.describe('Task List Page', () => {
         const taskItem = page.locator('[class*="task"]').first();
     await taskItem.click();
     const activityTab = page.locator('button:has-text("Activity"), button:has-text("History")').first();
-    if (await activityTab.isVisible()) {
+    await activityTab.waitFor();
+    await activityTab
       await activityTab.click();
       await expect(page.locator('text=/activity|log|history/i')).toBeVisible();
     }
@@ -146,7 +157,8 @@ test.describe('Task List Page', () => {
 
   test('should navigate to next page', async ({ page }) => {
         const nextBtn = page.locator('button:has-text("Next"), button:has-text(">")').first();
-    if (await nextBtn.isVisible()) {
+    await nextBtn.waitFor();
+    await nextBtn
       await nextBtn.click();
       await expect(page.locator('text=/page \\d+/i')).toBeVisible({ timeout: 3000 });
     }
@@ -189,7 +201,8 @@ test.describe('Task List Mobile', () => {
 
   test('should swipe to complete task on mobile', async ({ page }) => {
         const taskItem = page.locator('[class*="task"]').first();
-    if (await taskItem.isVisible()) {
+    await taskItem.waitFor();
+    await taskItem
       await taskItem.swipe('left');
       await expect(page.locator('button:has-text("Complete")')).toBeVisible({ timeout: 3000 });
     }

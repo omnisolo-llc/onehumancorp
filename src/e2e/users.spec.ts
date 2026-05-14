@@ -26,7 +26,8 @@ test.describe('User Management', () => {
   test('should invite new user via referral program', async ({ page }) => {
     await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Invite User")').first();
-    if (await inviteBtn.isVisible()) {
+    await inviteBtn.waitFor();
+    await inviteBtn
       await expect(page.locator('text=Referral Program')).toBeVisible();
       await expect(page.locator('text=Share OHC with a friend')).toBeVisible();
       await inviteBtn.click();
@@ -37,10 +38,12 @@ test.describe('User Management', () => {
   test('should enter user email', async ({ page }) => {
     await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
-    if (await inviteBtn.isVisible()) {
+    await inviteBtn.waitFor();
+    await inviteBtn
       await inviteBtn.click();
       const emailInput = page.locator('input[type="email"]').first();
-      if (await emailInput.isVisible()) {
+      await emailInput.waitFor();
+    await emailInput
         await emailInput.fill('newuser@example.com');
       }
     }
@@ -49,10 +52,12 @@ test.describe('User Management', () => {
   test('should assign role to user', async ({ page }) => {
     await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
-    if (await inviteBtn.isVisible()) {
+    await inviteBtn.waitFor();
+    await inviteBtn
       await inviteBtn.click();
       const roleSelect = page.locator('select').first();
-      if (await roleSelect.isVisible()) {
+      await roleSelect.waitFor();
+    await roleSelect
         await roleSelect.selectOption({ index: 1 });
       }
     }
@@ -61,7 +66,8 @@ test.describe('User Management', () => {
   test('should send invitation', async ({ page }) => {
     await page.goto('/users');
     const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').first();
-    if (await inviteBtn.isVisible()) {
+    await inviteBtn.waitFor();
+    await inviteBtn
       await inviteBtn.click();
       await page.fill('input[type="email"]', 'newuser@example.com');
       await page.locator('button:has-text("Send"), button:has-text("Invite")').click();
@@ -72,7 +78,8 @@ test.describe('User Management', () => {
   test('should search users', async ({ page }) => {
     await page.goto('/users');
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
-    if (await searchInput.isVisible()) {
+    await searchInput.waitFor();
+    await searchInput
       await searchInput.fill('admin');
       await expect(page.locator('text=/admin/i')).toBeVisible();
     }
@@ -81,7 +88,8 @@ test.describe('User Management', () => {
   test('should filter users by role', async ({ page }) => {
     await page.goto('/users');
     const filterSelect = page.locator('select').first();
-    if (await filterSelect.isVisible()) {
+    await filterSelect.waitFor();
+    await filterSelect
       await filterSelect.selectOption({ index: 1 });
     }
   });
@@ -98,7 +106,8 @@ test.describe('User Management', () => {
     const userItem = page.locator('[class*="user"]').first();
     await userItem.click();
     const editBtn = page.locator('button:has-text("Edit"), button:has-text("Modify")').first();
-    if (await editBtn.isVisible()) {
+    await editBtn.waitFor();
+    await editBtn
       await editBtn.click();
       await expect(page.locator('text=/edit|update/i')).toBeVisible();
     }
@@ -109,7 +118,8 @@ test.describe('User Management', () => {
     const userItem = page.locator('[class*="user"]').first();
     await userItem.hover();
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
-    if (await deleteBtn.isVisible()) {
+    await deleteBtn.waitFor();
+    await deleteBtn
       await deleteBtn.click();
       await expect(page.locator('text=/deleted|removed|confirm/i')).toBeVisible({ timeout: 3000 });
     }
@@ -130,7 +140,8 @@ test.describe('User Management', () => {
   test('should export users list', async ({ page }) => {
     await page.goto('/users');
     const exportBtn = page.locator('button:has-text("Export"), [class*="export"]').first();
-    if (await exportBtn.isVisible()) {
+    await exportBtn.waitFor();
+    await exportBtn
       await exportBtn.click();
       await expect(page.locator('text=/download|csv/i')).toBeVisible({ timeout: 3000 });
     }
@@ -139,7 +150,8 @@ test.describe('User Management', () => {
   test('should show pending invitations', async ({ page }) => {
     await page.goto('/users');
     const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').first();
-    if (await pendingTab.isVisible()) {
+    await pendingTab.waitFor();
+    await pendingTab
       await pendingTab.click();
       await expect(page.locator('text=/pending|invitation/i')).toBeVisible();
     }
@@ -148,10 +160,12 @@ test.describe('User Management', () => {
   test('should resend invitation', async ({ page }) => {
     await page.goto('/users');
     const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').first();
-    if (await pendingTab.isVisible()) {
+    await pendingTab.waitFor();
+    await pendingTab
       await pendingTab.click();
       const resendBtn = page.locator('button:has-text("Resend"), button:has-text("Re-send")').first();
-      if (await resendBtn.isVisible()) {
+      await resendBtn.waitFor();
+    await resendBtn
         await resendBtn.click();
         await expect(page.locator('text=/sent|resent/i')).toBeVisible({ timeout: 3000 });
       }
@@ -161,10 +175,12 @@ test.describe('User Management', () => {
   test('should cancel invitation', async ({ page }) => {
     await page.goto('/users');
     const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').first();
-    if (await pendingTab.isVisible()) {
+    await pendingTab.waitFor();
+    await pendingTab
       await pendingTab.click();
       const cancelBtn = page.locator('button:has-text("Cancel"), button:has-text("Withdraw")').first();
-      if (await cancelBtn.isVisible()) {
+      await cancelBtn.waitFor();
+    await cancelBtn
         await cancelBtn.click();
         await expect(page.locator('text=/canceled|withdrawn/i')).toBeVisible({ timeout: 3000 });
       }
@@ -202,7 +218,8 @@ test.describe('Role Management', () => {
   test('should create new role', async ({ page }) => {
     await page.goto('/users/roles');
     const createBtn = page.locator('button:has-text("Create"), button:has-text("New Role")').first();
-    if (await createBtn.isVisible()) {
+    await createBtn.waitFor();
+    await createBtn
       await createBtn.click();
       await expect(page.locator('text=/create.*role|new.*role/i')).toBeVisible();
     }
@@ -213,7 +230,8 @@ test.describe('Role Management', () => {
     const roleCard = page.locator('[class*="role"]').first();
     await roleCard.click();
     const permissionCheckbox = page.locator('input[type="checkbox"]').first();
-    if (await permissionCheckbox.isVisible()) {
+    await permissionCheckbox.waitFor();
+    await permissionCheckbox
       await permissionCheckbox.check();
       await page.locator('button:has-text("Save")').click();
     }
@@ -224,7 +242,8 @@ test.describe('Role Management', () => {
     const roleCard = page.locator('[class*="role"]').first();
     await roleCard.hover();
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
-    if (await deleteBtn.isVisible()) {
+    await deleteBtn.waitFor();
+    await deleteBtn
       await deleteBtn.click();
       await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }

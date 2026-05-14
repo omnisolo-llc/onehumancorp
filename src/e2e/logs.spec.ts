@@ -32,7 +32,8 @@ test.describe('Logs Page', () => {
   test('should filter logs by level', async ({ page }) => {
     await page.goto('/logs');
     const filterSelect = page.locator('select').first();
-    if (await filterSelect.isVisible()) {
+    await filterSelect.waitFor();
+    await filterSelect
       await filterSelect.selectOption({ index: 1 });
     }
   });
@@ -40,7 +41,8 @@ test.describe('Logs Page', () => {
   test('should search logs', async ({ page }) => {
     await page.goto('/logs');
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
-    if (await searchInput.isVisible()) {
+    await searchInput.waitFor();
+    await searchInput
       await searchInput.fill('error');
       await expect(page.locator('text=/error/i')).toBeVisible();
     }
@@ -73,7 +75,8 @@ test.describe('Logs Page', () => {
   test('should export logs', async ({ page }) => {
     await page.goto('/logs');
     const exportBtn = page.locator('button:has-text("Export"), [class*="export"]').first();
-    if (await exportBtn.isVisible()) {
+    await exportBtn.waitFor();
+    await exportBtn
       await exportBtn.click();
       await expect(page.locator('text=/download|csv|json/i')).toBeVisible({ timeout: 3000 });
     }
@@ -82,7 +85,8 @@ test.describe('Logs Page', () => {
   test('should download logs as CSV', async ({ page }) => {
     await page.goto('/logs');
     const downloadBtn = page.locator('button:has-text("CSV"), button:has-text("Download CSV")').first();
-    if (await downloadBtn.isVisible()) {
+    await downloadBtn.waitFor();
+    await downloadBtn
       await downloadBtn.click();
     }
   });
@@ -90,7 +94,8 @@ test.describe('Logs Page', () => {
   test('should download logs as JSON', async ({ page }) => {
     await page.goto('/logs');
     const downloadBtn = page.locator('button:has-text("JSON"), button:has-text("Download JSON")').first();
-    if (await downloadBtn.isVisible()) {
+    await downloadBtn.waitFor();
+    await downloadBtn
       await downloadBtn.click();
     }
   });
@@ -98,7 +103,8 @@ test.describe('Logs Page', () => {
   test('should clear logs', async ({ page }) => {
     await page.goto('/logs');
     const clearBtn = page.locator('button:has-text("Clear"), button:has-text("Delete")').first();
-    if (await clearBtn.isVisible()) {
+    await clearBtn.waitFor();
+    await clearBtn
       await clearBtn.click();
       await expect(page.locator('text=/cleared|deleted/i')).toBeVisible({ timeout: 3000 });
     }
@@ -122,7 +128,8 @@ test.describe('Logs Page', () => {
   test('should filter logs by date range', async ({ page }) => {
     await page.goto('/logs');
     const dateFilter = page.locator('input[type="date"]').first();
-    if (await dateFilter.isVisible()) {
+    await dateFilter.waitFor();
+    await dateFilter
       await dateFilter.fill('2026-01-01');
       await page.locator('button:has-text("Apply"), button:has-text("Filter")').click();
     }
@@ -137,7 +144,8 @@ test.describe('Logs Page', () => {
   test('should refresh logs', async ({ page }) => {
     await page.goto('/logs');
     const refreshBtn = page.locator('button:has-text("Refresh"), button:has-text("Reload")').first();
-    if (await refreshBtn.isVisible()) {
+    await refreshBtn.waitFor();
+    await refreshBtn
       await refreshBtn.click();
     }
   });
@@ -165,7 +173,8 @@ test.describe('Logs Page', () => {
     const logEntry = page.locator('[class*="log"]').first();
     await logEntry.hover();
     const copyBtn = page.locator('button:has-text("Copy"), [class*="copy"]').first();
-    if (await copyBtn.isVisible()) {
+    await copyBtn.waitFor();
+    await copyBtn
       await copyBtn.click();
       await expect(page.locator('text=/copied/i')).toBeVisible({ timeout: 3000 });
     }
@@ -181,7 +190,8 @@ test.describe('Logs Retention', () => {
   test('should set retention period', async ({ page }) => {
     await page.goto('/logs/settings');
     const retentionSelect = page.locator('select').first();
-    if (await retentionSelect.isVisible()) {
+    await retentionSelect.waitFor();
+    await retentionSelect
       await retentionSelect.selectOption({ index: 1 });
       await page.locator('button:has-text("Save")').click();
     }
@@ -190,7 +200,8 @@ test.describe('Logs Retention', () => {
   test('should enable log archiving', async ({ page }) => {
     await page.goto('/logs/settings');
     const archiveToggle = page.locator('input[type="checkbox"]').first();
-    if (await archiveToggle.isVisible()) {
+    await archiveToggle.waitFor();
+    await archiveToggle
       await archiveToggle.check();
     }
   });

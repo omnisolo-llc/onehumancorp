@@ -27,9 +27,11 @@ test.describe('E2E Chaos Resilience', () => {
     // If a network error occurs, it should show a retry option or fail-safe message
     // simulating a transient failure handling
     const errorMsg = page.locator('text=/Network Error|Timeout|Retry/i');
-    if (await errorMsg.isVisible()) {
+    await errorMsg.waitFor();
+    await errorMsg
         const retryBtn = page.locator('button:has-text("Retry")').first();
-        if (await retryBtn.isVisible()) {
+        await retryBtn.waitFor();
+    await retryBtn
             await retryBtn.click();
         }
     }

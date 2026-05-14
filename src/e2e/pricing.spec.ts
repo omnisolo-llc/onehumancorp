@@ -62,7 +62,8 @@ test.describe('Pricing Page', () => {
   test('should select pro plan', async ({ page }) => {
     await page.goto('/pricing');
     const proButton = page.locator('button:has-text("Pro"), button:has-text("Choose")').first();
-    if (await proButton.isVisible()) {
+    await proButton.waitFor();
+    await proButton
       await proButton.click();
       await expect(page.locator('text=/checkout|payment/i')).toBeVisible();
     }
@@ -71,7 +72,8 @@ test.describe('Pricing Page', () => {
   test('should start free plan', async ({ page }) => {
     await page.goto('/pricing');
     const freeButton = page.locator('button:has-text("Free"), button:has-text("Start")').first();
-    if (await freeButton.isVisible()) {
+    await freeButton.waitFor();
+    await freeButton
       await freeButton.click();
       await expect(page.locator('text=/dashboard|welcome/i')).toBeVisible();
     }
@@ -80,7 +82,8 @@ test.describe('Pricing Page', () => {
   test('should contact sales for enterprise', async ({ page }) => {
     await page.goto('/pricing');
     const contactButton = page.locator('button:has-text("Contact"), button:has-text("Sales")').first();
-    if (await contactButton.isVisible()) {
+    await contactButton.waitFor();
+    await contactButton
       await contactButton.click();
       await expect(page.locator('text=/contact|sales|email/i')).toBeVisible();
     }
@@ -89,7 +92,8 @@ test.describe('Pricing Page', () => {
   test('should show annual billing discount', async ({ page }) => {
     await page.goto('/pricing');
     const annualToggle = page.locator('text=/annual|monthly/i').first();
-    if (await annualToggle.isVisible()) {
+    await annualToggle.waitFor();
+    await annualToggle
       await annualToggle.click();
       await expect(page.locator('text=/\\d+%.*off|discount|savings/i')).toBeVisible({ timeout: 3000 });
     }
@@ -104,7 +108,8 @@ test.describe('Pricing Page', () => {
   test('should expand FAQ item', async ({ page }) => {
     await page.goto('/pricing');
     const faqItem = page.locator('[class*="faq"], [class*="question"]').first();
-    if (await faqItem.isVisible()) {
+    await faqItem.waitFor();
+    await faqItem
       await faqItem.click();
       await expect(page.locator('text=/answer|description/i')).toBeVisible();
     }
@@ -171,7 +176,8 @@ test.describe('My Plan Page', () => {
   test('should show billing history', async ({ page }) => {
     await page.goto('/my-plan');
     const historyBtn = page.locator('button:has-text("History"), button:has-text("Invoices")').first();
-    if (await historyBtn.isVisible()) {
+    await historyBtn.waitFor();
+    await historyBtn
       await historyBtn.click();
       await expect(page.locator('text=/invoice|history|billing/i')).toBeVisible();
     }
@@ -180,7 +186,8 @@ test.describe('My Plan Page', () => {
   test('should upgrade plan', async ({ page }) => {
     await page.goto('/my-plan');
     const upgradeBtn = page.locator('button:has-text("Upgrade"), button:has-text("Change Plan")').first();
-    if (await upgradeBtn.isVisible()) {
+    await upgradeBtn.waitFor();
+    await upgradeBtn
       await upgradeBtn.click();
       await expect(page.locator('text=/pricing|plans/i')).toBeVisible();
     }
@@ -189,7 +196,8 @@ test.describe('My Plan Page', () => {
   test('should cancel subscription', async ({ page }) => {
     await page.goto('/my-plan');
     const cancelBtn = page.locator('button:has-text("Cancel"), button:has-text("Unsubscribe")').first();
-    if (await cancelBtn.isVisible()) {
+    await cancelBtn.waitFor();
+    await cancelBtn
       await cancelBtn.click();
       await expect(page.locator('text=/confirm|cancel.*subscription/i')).toBeVisible();
     }
@@ -198,7 +206,8 @@ test.describe('My Plan Page', () => {
   test('should update payment method', async ({ page }) => {
     await page.goto('/my-plan');
     const paymentBtn = page.locator('button:has-text("Payment"), button:has-text("Update")').first();
-    if (await paymentBtn.isVisible()) {
+    await paymentBtn.waitFor();
+    await paymentBtn
       await paymentBtn.click();
       await expect(page.locator('text=/card|payment|method/i')).toBeVisible();
     }
@@ -207,7 +216,8 @@ test.describe('My Plan Page', () => {
   test('should download invoice', async ({ page }) => {
     await page.goto('/my-plan');
     const downloadBtn = page.locator('button:has-text("Download"), [class*="download"]').first();
-    if (await downloadBtn.isVisible()) {
+    await downloadBtn.waitFor();
+    await downloadBtn
       await downloadBtn.click();
       await expect(page.locator('text=/pdf|invoice/i')).toBeVisible({ timeout: 3000 });
     }

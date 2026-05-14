@@ -9,7 +9,8 @@ test.describe('Health Monitoring Resilience E2E', () => {
         await page.waitForLoadState('networkidle');
         const loginBtn = page.locator('button:has-text("Log in")');
         // If login button is visible, perform login
-        if (await loginBtn.isVisible({ timeout: 1000 })) {
+        await loginBtn.waitFor();
+    await loginBtn timeout: 1000 })) {
             await loginBtn.click();
             await page.fill('input[type="email"]', 'test@example.com');
             await page.fill('input[type="password"]', 'password');

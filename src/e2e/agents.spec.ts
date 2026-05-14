@@ -147,7 +147,8 @@ test.describe('Agent Configuration', () => {
   test('should navigate through config steps', async ({ page }) => {
     await page.goto('/agents/configure');
     const nextBtn = page.locator('button:has-text("Next")');
-    if (await nextBtn.isVisible()) {
+    await nextBtn.waitFor();
+    await nextBtn
       await nextBtn.click();
       await expect(page.locator('text=/step \\d+/i')).toBeVisible();
     }
@@ -156,7 +157,8 @@ test.describe('Agent Configuration', () => {
   test('should set agent name in config', async ({ page }) => {
     await page.goto('/agents/configure');
     const nameInput = page.locator('input[type="text"]').first();
-    if (await nameInput.isVisible()) {
+    await nameInput.waitFor();
+    await nameInput
       await nameInput.fill('Sales Agent');
     }
   });
@@ -164,7 +166,8 @@ test.describe('Agent Configuration', () => {
   test('should set agent personality', async ({ page }) => {
     await page.goto('/agents/configure');
     const personalitySelect = page.locator('select, [class*="personality"]').first();
-    if (await personalitySelect.isVisible()) {
+    await personalitySelect.waitFor();
+    await personalitySelect
       await personalitySelect.selectOption({ index: 1 });
     }
   });
@@ -172,7 +175,8 @@ test.describe('Agent Configuration', () => {
   test('should set response tone', async ({ page }) => {
     await page.goto('/agents/configure');
     const toneOptions = page.locator('text=/formal|casual|professional/i');
-    if (await toneOptions.first().isVisible()) {
+    await toneOptions.first().waitFor();
+    await toneOptions.first()
       await toneOptions.first().click();
     }
   });
@@ -180,7 +184,8 @@ test.describe('Agent Configuration', () => {
   test('should save agent configuration', async ({ page }) => {
     await page.goto('/agents/configure');
     const saveBtn = page.locator('button:has-text("Save"), button:has-text("Finish")');
-    if (await saveBtn.isVisible()) {
+    await saveBtn.waitFor();
+    await saveBtn
       await saveBtn.click();
       await expect(page.locator('text=/saved|success/i')).toBeVisible({ timeout: 5000 });
     }
@@ -189,7 +194,8 @@ test.describe('Agent Configuration', () => {
   test('should show config preview', async ({ page }) => {
     await page.goto('/agents/configure');
     const previewBtn = page.locator('button:has-text("Preview")');
-    if (await previewBtn.isVisible()) {
+    await previewBtn.waitFor();
+    await previewBtn
       await previewBtn.click();
       await expect(page.locator('text=/preview/i')).toBeVisible();
     }
@@ -209,7 +215,8 @@ test.describe('Agent Interactions', () => {
     const agentCard = page.locator('[class*="card"]').first();
     await agentCard.click();
     const messageInput = page.locator('input[type="text"], textarea').first();
-    if (await messageInput.isVisible()) {
+    await messageInput.waitFor();
+    await messageInput
       await messageInput.fill('Hello agent');
       await page.locator('button:has-text("Send")').click();
     }
@@ -220,7 +227,8 @@ test.describe('Agent Interactions', () => {
     const agentCard = page.locator('[class*="card"]').first();
     await agentCard.click();
     const historyTab = page.locator('button:has-text("History"), button:has-text("Chat")').first();
-    if (await historyTab.isVisible()) {
+    await historyTab.waitFor();
+    await historyTab
       await historyTab.click();
       await expect(page.locator('text=/history|messages/i')).toBeVisible();
     }
@@ -229,7 +237,8 @@ test.describe('Agent Interactions', () => {
   test('should update agent status', async ({ page }) => {
     await page.goto('/agents');
     const statusDropdown = page.locator('[class*="status"]').first();
-    if (await statusDropdown.isVisible()) {
+    await statusDropdown.waitFor();
+    await statusDropdown
       await statusDropdown.click();
       await expect(page.locator('text=/active|idle|offline/i')).toBeVisible();
     }
@@ -240,7 +249,8 @@ test.describe('Agent Interactions', () => {
     const agentCard = page.locator('[class*="card"]').first();
     await agentCard.click();
     const assignBtn = page.locator('button:has-text("Assign"), button:has-text("Delegate")').first();
-    if (await assignBtn.isVisible()) {
+    await assignBtn.waitFor();
+    await assignBtn
       await assignBtn.click();
       await expect(page.locator('text=/task|assign/i')).toBeVisible();
     }
@@ -251,7 +261,8 @@ test.describe('Agent Interactions', () => {
     const agentCard = page.locator('[class*="card"]').first();
     await agentCard.click();
     const logsTab = page.locator('button:has-text("Logs"), button:has-text("Activity")').first();
-    if (await logsTab.isVisible()) {
+    await logsTab.waitFor();
+    await logsTab
       await logsTab.click();
       await expect(page.locator('text=/log|activity/i')).toBeVisible();
     }

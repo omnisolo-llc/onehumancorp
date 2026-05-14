@@ -24,7 +24,8 @@ test.describe('Security Settings', () => {
   test('should enable two-factor authentication', async ({ page }) => {
     await page.goto('/security');
     const enableBtn = page.locator('button:has-text("Enable"), button:has-text("Setup")').first();
-    if (await enableBtn.isVisible()) {
+    await enableBtn.waitFor();
+    await enableBtn
       await enableBtn.click();
       await expect(page.locator('text=/qr.*code|verify|authenticator/i')).toBeVisible();
     }
@@ -46,7 +47,8 @@ test.describe('Security Settings', () => {
     const sessionItem = page.locator('[class*="session"]').first();
     await sessionItem.hover();
     const revokeBtn = page.locator('button:has-text("Revoke"), button:has-text("Remove")').first();
-    if (await revokeBtn.isVisible()) {
+    await revokeBtn.waitFor();
+    await revokeBtn
       await revokeBtn.click();
       await expect(page.locator('text=/revoked|removed/i')).toBeVisible({ timeout: 3000 });
     }
@@ -55,7 +57,8 @@ test.describe('Security Settings', () => {
   test('should show login history', async ({ page }) => {
     await page.goto('/security');
     const historyTab = page.locator('button:has-text("History"), button:has-text("Login History")').first();
-    if (await historyTab.isVisible()) {
+    await historyTab.waitFor();
+    await historyTab
       await historyTab.click();
       await expect(page.locator('text=/login|history/i')).toBeVisible();
     }
@@ -69,7 +72,8 @@ test.describe('Security Settings', () => {
   test('should add trusted device', async ({ page }) => {
     await page.goto('/security');
     const addBtn = page.locator('button:has-text("Add"), button:has-text("Trust")').first();
-    if (await addBtn.isVisible()) {
+    await addBtn.waitFor();
+    await addBtn
       await addBtn.click();
       await expect(page.locator('text=/device.*added|trusted/i')).toBeVisible({ timeout: 3000 });
     }
@@ -80,7 +84,8 @@ test.describe('Security Settings', () => {
     const deviceItem = page.locator('[class*="device"]').first();
     await deviceItem.hover();
     const removeBtn = page.locator('button:has-text("Remove"), button:has-text("Delete")').first();
-    if (await removeBtn.isVisible()) {
+    await removeBtn.waitFor();
+    await removeBtn
       await removeBtn.click();
       await expect(page.locator('text=/removed|deleted/i')).toBeVisible({ timeout: 3000 });
     }
@@ -94,7 +99,8 @@ test.describe('Security Settings', () => {
   test('should create API key', async ({ page }) => {
     await page.goto('/security');
     const createBtn = page.locator('button:has-text("Create"), button:has-text("New Key")').first();
-    if (await createBtn.isVisible()) {
+    await createBtn.waitFor();
+    await createBtn
       await createBtn.click();
       await expect(page.locator('text=/api.*key|generated/i')).toBeVisible();
     }
@@ -105,7 +111,8 @@ test.describe('Security Settings', () => {
     const apiKeyItem = page.locator('[class*="key"]').first();
     await apiKeyItem.hover();
     const revokeBtn = page.locator('button:has-text("Revoke"), button:has-text("Delete")').first();
-    if (await revokeBtn.isVisible()) {
+    await revokeBtn.waitFor();
+    await revokeBtn
       await revokeBtn.click();
       await expect(page.locator('text=/revoked|removed/i')).toBeVisible({ timeout: 3000 });
     }
@@ -120,7 +127,8 @@ test.describe('Security Settings', () => {
   test('should enable security alerts', async ({ page }) => {
     await page.goto('/security');
     const alertToggle = page.locator('input[type="checkbox"]').first();
-    if (await alertToggle.isVisible()) {
+    await alertToggle.waitFor();
+    await alertToggle
       await alertToggle.check();
       await expect(page.locator('text=/enabled|saved/i')).toBeVisible({ timeout: 3000 });
     }
@@ -129,7 +137,8 @@ test.describe('Security Settings', () => {
   test('should show backup codes', async ({ page }) => {
     await page.goto('/security');
     const backupTab = page.locator('button:has-text("Backup"), button:has-text("Codes")').first();
-    if (await backupTab.isVisible()) {
+    await backupTab.waitFor();
+    await backupTab
       await backupTab.click();
       await expect(page.locator('text=/backup.*code|recovery/i')).toBeVisible();
     }
@@ -138,10 +147,12 @@ test.describe('Security Settings', () => {
   test('should regenerate backup codes', async ({ page }) => {
     await page.goto('/security');
     const backupTab = page.locator('button:has-text("Backup"), button:has-text("Codes")').first();
-    if (await backupTab.isVisible()) {
+    await backupTab.waitFor();
+    await backupTab
       await backupTab.click();
       const regenerateBtn = page.locator('button:has-text("Regenerate"), button:has-text("New Codes")').first();
-      if (await regenerateBtn.isVisible()) {
+      await regenerateBtn.waitFor();
+    await regenerateBtn
         await regenerateBtn.click();
         await expect(page.locator('text=/regenerated|new.*codes/i')).toBeVisible({ timeout: 3000 });
       }

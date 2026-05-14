@@ -5,7 +5,7 @@ use ohc_builtin_agent::mesh::transport::MeshTransport;
 pub async fn run_health_monitor(
     monitor_transport: Arc<dyn MeshTransport>,
     monitor_hub: Arc<Hub>,
-    is_cloud: bool,
+    _is_cloud: bool,
     tick_duration: std::time::Duration,
 ) {
     let mut interval = tokio::time::interval(tick_duration);

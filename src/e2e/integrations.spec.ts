@@ -55,7 +55,8 @@ test.describe('Integrations Page', () => {
   test('should connect slack integration', async ({ page }) => {
 
     const slackBtn = page.locator('button:has-text("Connect"), button:has-text("Slack")').first();
-    if (await slackBtn.isVisible()) {
+    await slackBtn.waitFor();
+    await slackBtn
       await slackBtn.click();
       await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
     }
@@ -66,7 +67,8 @@ test.describe('Integrations Page', () => {
     const integration = page.locator('[class*="integration"]').first();
     await integration.hover();
     const disconnectBtn = page.locator('button:has-text("Disconnect"), button:has-text("Remove")').first();
-    if (await disconnectBtn.isVisible()) {
+    await disconnectBtn.waitFor();
+    await disconnectBtn
       await disconnectBtn.click();
       await expect(page.locator('text=/disconnected|removed/i')).toBeVisible({ timeout: 3000 });
     }
@@ -83,7 +85,8 @@ test.describe('Integrations Page', () => {
     const integration = page.locator('[class*="integration"]').first();
     await integration.click();
     const settingsBtn = page.locator('button:has-text("Settings"), button:has-text("Configure")').first();
-    if (await settingsBtn.isVisible()) {
+    await settingsBtn.waitFor();
+    await settingsBtn
       await settingsBtn.click();
       await expect(page.locator('text=/settings|configure/i')).toBeVisible();
     }
@@ -98,7 +101,8 @@ test.describe('Integrations Page', () => {
   test('should search integrations', async ({ page }) => {
 
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
-    if (await searchInput.isVisible()) {
+    await searchInput.waitFor();
+    await searchInput
       await searchInput.fill('Manychat');
       await expect(page.locator('text=/Manychat/i')).toBeVisible();
       await expect(page.locator('text=/slack/i')).toBeVisible();
@@ -108,7 +112,8 @@ test.describe('Integrations Page', () => {
   test('should filter integrations by category', async ({ page }) => {
 
     const filterSelect = page.locator('select').first();
-    if (await filterSelect.isVisible()) {
+    await filterSelect.waitFor();
+    await filterSelect
       await filterSelect.selectOption({ index: 1 });
     }
   });
@@ -119,7 +124,8 @@ test.describe('Integrations Page', () => {
 
   test('should connect manychat integration', async ({ page }) => {
     const manychatBtn = page.locator('button:has-text("Connect"), button:has-text("Manychat")').first();
-    if (await manychatBtn.isVisible()) {
+    await manychatBtn.waitFor();
+    await manychatBtn
       await manychatBtn.click();
       await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
     }
@@ -131,7 +137,8 @@ test.describe('Integrations Page', () => {
 
   test('should connect zoom integration', async ({ page }) => {
     const zoomBtn = page.locator('button:has-text("Connect"), button:has-text("Zoom")').first();
-    if (await zoomBtn.isVisible()) {
+    await zoomBtn.waitFor();
+    await zoomBtn
       await zoomBtn.click();
       await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
     }
@@ -143,7 +150,8 @@ test.describe('Integrations Page', () => {
 
   test('should connect twilio integration', async ({ page }) => {
     const twilioBtn = page.locator('button:has-text("Connect"), button:has-text("Twilio")').first();
-    if (await twilioBtn.isVisible()) {
+    await twilioBtn.waitFor();
+    await twilioBtn
       await twilioBtn.click();
       await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
     }
@@ -155,7 +163,8 @@ test.describe('Integrations Page', () => {
 
   test('should connect calendly integration', async ({ page }) => {
     const calendlyBtn = page.locator('button:has-text("Connect"), button:has-text("Calendly")').first();
-    if (await calendlyBtn.isVisible()) {
+    await calendlyBtn.waitFor();
+    await calendlyBtn
       await calendlyBtn.click();
       await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
     }
@@ -199,7 +208,8 @@ test.describe('Pipeline Management', () => {
   test('should create new pipeline', async ({ page }) => {
 
     const newBtn = page.locator('button:has-text("New"), button:has-text("Create")').first();
-    if (await newBtn.isVisible()) {
+    await newBtn.waitFor();
+    await newBtn
       await newBtn.click();
       await expect(page.locator('text=/create.*pipeline|new.*pipeline/i')).toBeVisible();
     }
@@ -214,7 +224,8 @@ test.describe('Pipeline Management', () => {
   test('should drag to reorder stages', async ({ page }) => {
 
     const stage = page.locator('[class*="stage"]').first();
-    if (await stage.isVisible()) {
+    await stage.waitFor();
+    await stage
       await stage.dragTo(page.locator('[class*="stage"]').nth(2));
     }
   });
@@ -224,7 +235,8 @@ test.describe('Pipeline Management', () => {
     const stage = page.locator('[class*="stage"]').first();
     await stage.click();
     const editBtn = page.locator('button:has-text("Edit"), button:has-text("Modify")').first();
-    if (await editBtn.isVisible()) {
+    await editBtn.waitFor();
+    await editBtn
       await editBtn.click();
       await expect(page.locator('text=/edit|stage/i')).toBeVisible();
     }
@@ -235,7 +247,8 @@ test.describe('Pipeline Management', () => {
     const stage = page.locator('[class*="stage"]').first();
     await stage.hover();
     const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
-    if (await deleteBtn.isVisible()) {
+    await deleteBtn.waitFor();
+    await deleteBtn
       await deleteBtn.click();
       await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
     }
@@ -250,7 +263,8 @@ test.describe('Pipeline Management', () => {
   test('should run pipeline manually', async ({ page }) => {
 
     const runBtn = page.locator('button:has-text("Run"), button:has-text("Execute")').first();
-    if (await runBtn.isVisible()) {
+    await runBtn.waitFor();
+    await runBtn
       await runBtn.click();
       await expect(page.locator('text=/running|executing/i')).toBeVisible({ timeout: 3000 });
     }
@@ -259,7 +273,8 @@ test.describe('Pipeline Management', () => {
   test('should show pipeline run history', async ({ page }) => {
 
     const historyBtn = page.locator('button:has-text("History"), button:has-text("Runs")').first();
-    if (await historyBtn.isVisible()) {
+    await historyBtn.waitFor();
+    await historyBtn
       await historyBtn.click();
       await expect(page.locator('text=/history|runs|execution/i')).toBeVisible();
     }
@@ -268,7 +283,8 @@ test.describe('Pipeline Management', () => {
   test('should pause pipeline', async ({ page }) => {
 
     const pauseBtn = page.locator('button:has-text("Pause"), button:has-text("Disable")').first();
-    if (await pauseBtn.isVisible()) {
+    await pauseBtn.waitFor();
+    await pauseBtn
       await pauseBtn.click();
       await expect(page.locator('text=/paused|disabled/i')).toBeVisible({ timeout: 3000 });
     }
@@ -277,7 +293,8 @@ test.describe('Pipeline Management', () => {
   test('should resume pipeline', async ({ page }) => {
 
     const resumeBtn = page.locator('button:has-text("Resume"), button:has-text("Enable")').first();
-    if (await resumeBtn.isVisible()) {
+    await resumeBtn.waitFor();
+    await resumeBtn
       await resumeBtn.click();
       await expect(page.locator('text=/active|running/i')).toBeVisible({ timeout: 3000 });
     }
@@ -288,7 +305,8 @@ test.describe('Pipeline Management', () => {
     const pipeline = page.locator('[class*="pipeline"]').first();
     await pipeline.hover();
     const duplicateBtn = page.locator('button:has-text("Duplicate"), button:has-text("Copy")').first();
-    if (await duplicateBtn.isVisible()) {
+    await duplicateBtn.waitFor();
+    await duplicateBtn
       await duplicateBtn.click();
       await expect(page.locator('text=/duplicated|copied/i')).toBeVisible({ timeout: 3000 });
     }

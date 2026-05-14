@@ -91,7 +91,8 @@ test.describe('Diagnostics Page', () => {
   test('should run diagnostics test', async ({ page }) => {
     await page.goto('/diagnostics');
     const runBtn = page.locator('button:has-text("Run"), button:has-text("Test")').first();
-    if (await runBtn.isVisible()) {
+    await runBtn.waitFor();
+    await runBtn
       await runBtn.click();
       await expect(page.locator('text=/running|testing/i')).toBeVisible({ timeout: 3000 });
     }
@@ -100,7 +101,8 @@ test.describe('Diagnostics Page', () => {
   test('should show test results', async ({ page }) => {
     await page.goto('/diagnostics');
     const runBtn = page.locator('button:has-text("Run"), button:has-text("Test")').first();
-    if (await runBtn.isVisible()) {
+    await runBtn.waitFor();
+    await runBtn
       await runBtn.click();
       await expect(page.locator('text=/result|passed|failed/i')).toBeVisible({ timeout: 5000 });
     }
@@ -120,7 +122,8 @@ test.describe('Diagnostics Page', () => {
   test('should export diagnostics report', async ({ page }) => {
     await page.goto('/diagnostics');
     const exportBtn = page.locator('button:has-text("Export"), button:has-text("Download")').first();
-    if (await exportBtn.isVisible()) {
+    await exportBtn.waitFor();
+    await exportBtn
       await exportBtn.click();
       await expect(page.locator('text=/download|report/i')).toBeVisible({ timeout: 3000 });
     }
@@ -129,7 +132,8 @@ test.describe('Diagnostics Page', () => {
   test('should refresh diagnostics data', async ({ page }) => {
     await page.goto('/diagnostics');
     const refreshBtn = page.locator('button:has-text("Refresh"), button:has-text("Update")').first();
-    if (await refreshBtn.isVisible()) {
+    await refreshBtn.waitFor();
+    await refreshBtn
       await refreshBtn.click();
     }
   });
@@ -142,7 +146,8 @@ test.describe('Diagnostics Page', () => {
   test('should configure alert threshold', async ({ page }) => {
     await page.goto('/diagnostics');
     const thresholdInput = page.locator('input[type="number"], input[placeholder*="threshold"]').first();
-    if (await thresholdInput.isVisible()) {
+    await thresholdInput.waitFor();
+    await thresholdInput
       await thresholdInput.fill('80');
       await page.locator('button:has-text("Save")').click();
     }
@@ -170,7 +175,8 @@ test.describe('Service Manager', () => {
   test('should start a service', async ({ page }) => {
     await page.goto('/services');
     const startBtn = page.locator('button:has-text("Start"), button:has-text("Start Service")').first();
-    if (await startBtn.isVisible()) {
+    await startBtn.waitFor();
+    await startBtn
       await startBtn.click();
       await expect(page.locator('text=/starting|running/i')).toBeVisible({ timeout: 5000 });
     }
@@ -179,7 +185,8 @@ test.describe('Service Manager', () => {
   test('should stop a service', async ({ page }) => {
     await page.goto('/services');
     const stopBtn = page.locator('button:has-text("Stop"), button:has-text("Stop Service")').first();
-    if (await stopBtn.isVisible()) {
+    await stopBtn.waitFor();
+    await stopBtn
       await stopBtn.click();
       await expect(page.locator('text=/stopped|stopping/i')).toBeVisible({ timeout: 5000 });
     }
@@ -188,7 +195,8 @@ test.describe('Service Manager', () => {
   test('should restart a service', async ({ page }) => {
     await page.goto('/services');
     const restartBtn = page.locator('button:has-text("Restart"), button:has-text("Reload")').first();
-    if (await restartBtn.isVisible()) {
+    await restartBtn.waitFor();
+    await restartBtn
       await restartBtn.click();
       await expect(page.locator('text=/restarting|running/i')).toBeVisible({ timeout: 5000 });
     }
@@ -199,7 +207,8 @@ test.describe('Service Manager', () => {
     const service = page.locator('[class*="service"]').first();
     await service.click();
     const logsTab = page.locator('button:has-text("Logs"), button:has-text("Log")').first();
-    if (await logsTab.isVisible()) {
+    await logsTab.waitFor();
+    await logsTab
       await logsTab.click();
       await expect(page.locator('text=/log|output/i')).toBeVisible();
     }
@@ -210,7 +219,8 @@ test.describe('Service Manager', () => {
     const service = page.locator('[class*="service"]').first();
     await service.click();
     const configTab = page.locator('button:has-text("Config"), button:has-text("Configuration")').first();
-    if (await configTab.isVisible()) {
+    await configTab.waitFor();
+    await configTab
       await configTab.click();
       await expect(page.locator('text=/config|settings/i')).toBeVisible();
     }
@@ -221,10 +231,12 @@ test.describe('Service Manager', () => {
     const service = page.locator('[class*="service"]').first();
     await service.click();
     const configTab = page.locator('button:has-text("Config"), button:has-text("Configuration")').first();
-    if (await configTab.isVisible()) {
+    await configTab.waitFor();
+    await configTab
       await configTab.click();
       const input = page.locator('input[type="text"], input[type="number"]').first();
-      if (await input.isVisible()) {
+      await input.waitFor();
+    await input
         await input.fill('newvalue');
         await page.locator('button:has-text("Apply"), button:has-text("Save")').click();
       }
@@ -250,7 +262,8 @@ test.describe('Service Manager', () => {
     const service = page.locator('[class*="service"]').first();
     await service.click();
     const autoRestartToggle = page.locator('text=/auto.*restart|automatic/i').locator('input[type="checkbox"]').first();
-    if (await autoRestartToggle.isVisible()) {
+    await autoRestartToggle.waitFor();
+    await autoRestartToggle
       await autoRestartToggle.check();
     }
   });
@@ -270,7 +283,8 @@ test.describe('Scaling Configuration', () => {
   test('should increase instance count', async ({ page }) => {
     await page.goto('/scaling');
     const increaseBtn = page.locator('button:has-text("+"), button:has-text("Increase")').first();
-    if (await increaseBtn.isVisible()) {
+    await increaseBtn.waitFor();
+    await increaseBtn
       await increaseBtn.click();
       await expect(page.locator('text=/\\d+.*instance|\\d+.*replica/i')).toBeVisible({ timeout: 3000 });
     }
@@ -279,7 +293,8 @@ test.describe('Scaling Configuration', () => {
   test('should decrease instance count', async ({ page }) => {
     await page.goto('/scaling');
     const decreaseBtn = page.locator('button:has-text("-"), button:has-text("Decrease")').first();
-    if (await decreaseBtn.isVisible()) {
+    await decreaseBtn.waitFor();
+    await decreaseBtn
       await decreaseBtn.click();
       await expect(page.locator('text=/\\d+.*instance|\\d+.*replica/i')).toBeVisible({ timeout: 3000 });
     }
@@ -288,7 +303,8 @@ test.describe('Scaling Configuration', () => {
   test('should set auto-scaling threshold', async ({ page }) => {
     await page.goto('/scaling');
     const thresholdInput = page.locator('input[type="number"], input[placeholder*="threshold"]').first();
-    if (await thresholdInput.isVisible()) {
+    await thresholdInput.waitFor();
+    await thresholdInput
       await thresholdInput.fill('75');
       await page.locator('button:has-text("Apply"), button:has-text("Save")').click();
     }
@@ -297,7 +313,8 @@ test.describe('Scaling Configuration', () => {
   test('should enable auto-scaling', async ({ page }) => {
     await page.goto('/scaling');
     const autoScaleToggle = page.locator('text=/auto.*scale|automatic/i').locator('input[type="checkbox"]').first();
-    if (await autoScaleToggle.isVisible()) {
+    await autoScaleToggle.waitFor();
+    await autoScaleToggle
       await autoScaleToggle.check();
       await expect(page.locator('text=/enabled|active/i')).toBeVisible({ timeout: 3000 });
     }
@@ -312,7 +329,8 @@ test.describe('Scaling Configuration', () => {
   test('should show scaling history', async ({ page }) => {
     await page.goto('/scaling');
     const historyTab = page.locator('button:has-text("History"), button:has-text("Scaling History")').first();
-    if (await historyTab.isVisible()) {
+    await historyTab.waitFor();
+    await historyTab
       await historyTab.click();
       await expect(page.locator('text=/history|scaled|iinstance/i')).toBeVisible();
     }
@@ -326,7 +344,8 @@ test.describe('Scaling Configuration', () => {
   test('should configure scaling metrics', async ({ page }) => {
     await page.goto('/scaling');
     const metricsSelect = page.locator('select').first();
-    if (await metricsSelect.isVisible()) {
+    await metricsSelect.waitFor();
+    await metricsSelect
       await metricsSelect.selectOption({ index: 1 });
       await page.locator('button:has-text("Apply")').click();
     }

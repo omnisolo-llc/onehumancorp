@@ -39,7 +39,8 @@ test.describe('Help Center', () => {
       page.locator('text="?"').first().click()
     ]);
     const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-    if (await searchInput.isVisible()) {
+    await searchInput.waitFor();
+    await searchInput
       await searchInput.fill('Getting Started');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=/result|article|topic/i')).toBeVisible();
@@ -78,7 +79,8 @@ test.describe('Help Center', () => {
       page.locator('text="?"').first().click()
     ]);
     const faqItem = page.locator('[class*="faq"], [class*="question"]').first();
-    if (await faqItem.isVisible()) {
+    await faqItem.waitFor();
+    await faqItem
       await faqItem.click();
       await expect(page.locator('text=/answer|solution/i')).toBeVisible();
     }
@@ -143,7 +145,8 @@ test.describe('Help Center', () => {
       page.locator('text="?"').first().click()
     ]);
     const ticketBtn = page.locator('button:has-text("Submit"), button:has-text("Ticket")').first();
-    if (await ticketBtn.isVisible()) {
+    await ticketBtn.waitFor();
+    await ticketBtn
       await ticketBtn.click();
       await expect(page.locator('text=/ticket|subject|description/i')).toBeVisible();
     }
@@ -190,7 +193,8 @@ test.describe('AI Help Chat', () => {
       page.locator('text="Ask AI"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
-    if (await input.isVisible()) {
+    await input.waitFor();
+    await input
       await input.fill('How do I set up agents?');
       await page.locator('button:has-text("Send"), button:has-text("Ask")').click();
     }
@@ -202,7 +206,8 @@ test.describe('AI Help Chat', () => {
       page.locator('text="Ask AI"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
-    if (await input.isVisible()) {
+    await input.waitFor();
+    await input
       await input.fill('How do I set up agents?');
       await page.locator('button:has-text("Send"), button:has-text("Ask")').click();
       await expect(page.locator('text=/agent|setup|configure/i')).toBeVisible({ timeout: 5000 });
@@ -215,7 +220,8 @@ test.describe('AI Help Chat', () => {
       page.locator('text="Ask AI"').first().click()
     ]);
     const input = page.locator('input[type="text"], textarea').last();
-    if (await input.isVisible()) {
+    await input.waitFor();
+    await input
       await input.fill('How do I set up agents?');
       await page.locator('button:has-text("Send"), button:has-text("Ask")').click();
       await expect(page.locator('text=/typing|thinking|processing/i')).toBeVisible({ timeout: 3000 });
@@ -246,7 +252,8 @@ test.describe('AI Help Chat', () => {
       page.locator('text="Ask AI"').first().click()
     ]);
     const clearBtn = page.locator('button:has-text("Clear"), button:has-text("Reset")').first();
-    if (await clearBtn.isVisible()) {
+    await clearBtn.waitFor();
+    await clearBtn
       await clearBtn.click();
       await expect(page.locator('text=/cleared|new.*chat/i')).toBeVisible({ timeout: 3000 });
     }
@@ -288,7 +295,8 @@ test.describe('Interactive Walkthrough', () => {
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const nextBtn = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
-    if (await nextBtn.isVisible()) {
+    await nextBtn.waitFor();
+    await nextBtn
       await nextBtn.click();
     }
   });
@@ -300,7 +308,8 @@ test.describe('Interactive Walkthrough', () => {
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const backBtn = page.locator('button:has-text("Back"), button:has-text("Previous")').first();
-    if (await backBtn.isVisible()) {
+    await backBtn.waitFor();
+    await backBtn
       await backBtn.click();
     }
   });
@@ -312,7 +321,8 @@ test.describe('Interactive Walkthrough', () => {
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const skipBtn = page.locator('button:has-text("Skip"), button:has-text("Skip Tour")').first();
-    if (await skipBtn.isVisible()) {
+    await skipBtn.waitFor();
+    await skipBtn
       await skipBtn.click();
     }
   });
@@ -334,7 +344,8 @@ test.describe('Interactive Walkthrough', () => {
       page.locator('button:has-text("App Tour")').first().click()
     ]);
     const finishBtn = page.locator('button:has-text("Finish"), button:has-text("Done")').first();
-    if (await finishBtn.isVisible()) {
+    await finishBtn.waitFor();
+    await finishBtn
       await finishBtn.click();
       await expect(page.locator('text=/complete|finished|congratulations/i')).toBeVisible({ timeout: 5000 });
     }
@@ -376,7 +387,8 @@ test.describe('Video Tutorials', () => {
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const playBtn = page.locator('button:has-text("Play"), [class*="play"]').first();
-    if (await playBtn.isVisible()) {
+    await playBtn.waitFor();
+    await playBtn
       await playBtn.click();
       await expect(page.locator('[class*="video"], video')).toBeVisible();
     }
@@ -389,7 +401,8 @@ test.describe('Video Tutorials', () => {
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const playBtn = page.locator('button:has-text("Play"), [class*="play"]').first();
-    if (await playBtn.isVisible()) {
+    await playBtn.waitFor();
+    await playBtn
       await playBtn.click();
       await expect(page.locator('text=/pause|volume|fullscreen/i')).toBeVisible({ timeout: 3000 });
     }
@@ -402,10 +415,12 @@ test.describe('Video Tutorials', () => {
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const playBtn = page.locator('button:has-text("Play"), [class*="play"]').first();
-    if (await playBtn.isVisible()) {
+    await playBtn.waitFor();
+    await playBtn
       await playBtn.click();
       const pauseBtn = page.locator('button:has-text("Pause"), [class*="pause"]').first();
-      if (await pauseBtn.isVisible()) {
+      await pauseBtn.waitFor();
+    await pauseBtn
         await pauseBtn.click();
       }
     }
@@ -418,7 +433,8 @@ test.describe('Video Tutorials', () => {
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const categoryTab = page.locator('button:has-text("Beginner"), button:has-text("Advanced")').first();
-    if (await categoryTab.isVisible()) {
+    await categoryTab.waitFor();
+    await categoryTab
       await categoryTab.click();
       await expect(page.locator('text=/video|tutorial/i')).toBeVisible();
     }
@@ -431,7 +447,8 @@ test.describe('Video Tutorials', () => {
       page.locator('button:has-text("Video Tutorials")').first().click()
     ]);
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]').first();
-    if (await searchInput.isVisible()) {
+    await searchInput.waitFor();
+    await searchInput
       await searchInput.fill('agents');
       await expect(page.locator('text=/agent/i')).toBeVisible();
     }

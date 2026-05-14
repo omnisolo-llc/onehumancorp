@@ -330,7 +330,8 @@ test.describe('Business Setup Wizard Validation', () => {
   test('should require business type selection', async ({ page }) => {
     await page.click('text=Guided Setup →');
     const nextBtn = page.locator('text=Next →');
-    if (await nextBtn.isVisible()) {
+    await nextBtn.waitFor();
+    await nextBtn
       await nextBtn.click();
       await expect(page.locator('text=/select.*type|choose.*type/i')).toBeVisible({ timeout: 3000 });
     }

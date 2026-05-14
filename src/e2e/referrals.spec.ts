@@ -41,7 +41,8 @@ test.describe('Referral Program', () => {
     await page.goto('/referrals');
     await page.locator('button:has-text("New Link")').click();
     const copyBtn = page.locator('button:has-text("Copy"), [class*="copy"]').first();
-    if (await copyBtn.isVisible()) {
+    await copyBtn.waitFor();
+    await copyBtn
       await copyBtn.click();
       await expect(page.locator('text=/copied|success/i')).toBeVisible({ timeout: 10000 });
     }
@@ -71,7 +72,8 @@ test.describe('Referral Program', () => {
     await page.goto('/referrals');
     await page.locator('button:has-text("New Link")').click();
     const shareBtn = page.locator('button:has-text("Share"), [class*="share"]').first();
-    if (await shareBtn.isVisible()) {
+    await shareBtn.waitFor();
+    await shareBtn
       await shareBtn.click();
       await expect(page.locator('text=/twitter|facebook|instagram|linkedin/i')).toBeVisible();
     }
@@ -117,7 +119,8 @@ test.describe('Referral Program', () => {
   test('should show referral history', async ({ page }) => {
     await page.goto('/referrals');
     const historyTab = page.locator('button:has-text("History"), button:has-text("Activity")').first();
-    if (await historyTab.isVisible()) {
+    await historyTab.waitFor();
+    await historyTab
       await historyTab.click();
       await expect(page.locator('text=/history|recent|activity/i')).toBeVisible();
     }
@@ -126,7 +129,8 @@ test.describe('Referral Program', () => {
   test('should export referral data', async ({ page }) => {
     await page.goto('/referrals');
     const exportBtn = page.locator('button:has-text("Export"), [class*="export"]').first();
-    if (await exportBtn.isVisible()) {
+    await exportBtn.waitFor();
+    await exportBtn
       await exportBtn.click();
       await expect(page.locator('text=/download|csv|excel/i')).toBeVisible({ timeout: 10000 });
     }
@@ -157,7 +161,8 @@ test.describe('Referral Program Admin', () => {
   test('should configure reward amount', async ({ page }) => {
     await page.goto('/referrals/settings');
     const rewardInput = page.locator('input[type="number"], input[placeholder*="reward"]').first();
-    if (await rewardInput.isVisible()) {
+    await rewardInput.waitFor();
+    await rewardInput
       await rewardInput.fill('25');
       await page.locator('button:has-text("Save")').click();
     }
@@ -166,7 +171,8 @@ test.describe('Referral Program Admin', () => {
   test('should set referral program enabled state', async ({ page }) => {
     await page.goto('/referrals/settings');
     const toggle = page.locator('input[type="checkbox"], [class*="toggle"]').first();
-    if (await toggle.isVisible()) {
+    await toggle.waitFor();
+    await toggle
       await toggle.click();
       await expect(page.locator('text=/enabled|disabled/i')).toBeVisible();
     }
