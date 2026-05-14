@@ -118,7 +118,7 @@ filegroup(
         # ":app_tar",
         # ":app_deb",
         # ":app_windows_zip",
-        ":app_image_tarball",
+        # ":app_image_tarball",
     ],
     visibility = ["//visibility:public"],
 )
