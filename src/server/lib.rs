@@ -1460,6 +1460,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
+        .route("/growth/referral", axum::routing::get(ui_handler))
+        .route("/growth/social", axum::routing::get(ui_handler))
+        .route("/growth/email", axum::routing::get(ui_handler))
+        .route("/growth/upgrade", axum::routing::get(ui_handler))
+        .route("/growth/milestones", axum::routing::get(ui_handler))
+        .route("/store/:id", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
@@ -2218,8 +2224,98 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
+
+                    <!-- Growth Features Screens -->
+                    <div id="referral-program-screen" class="screen glass">
+                        <h1>Referral Program</h1>
+                        <p>Share OHC with a friend, both get 1 month free Pro.</p>
+                        <input type="text" value="ohc://join?ref=YOURCODE" readonly />
+                        <button onclick="alert('Copied link and pre-filled message!')">Share my business</button>
+                        <h2>Your Invites</h2>
+                        <p>Sent: 5 | Accepted: 2</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <div id="social-media-screen" class="screen glass">
+                        <h1>Social Media Auto-Posting</h1>
+                        <p>AI agent feature — auto-generates and schedules posts.</p>
+                        <button>Connect Instagram</button>
+                        <button>Connect Facebook</button>
+                        <button>Connect X</button>
+                        <hr/>
+                        <h2>Pending Approvals</h2>
+                        <div class="card glass">
+                            <p>New arrivals at our store! Check them out #fashion</p>
+                            <button onclick="alert('Post Approved')">Approve with 1 tap</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <div id="email-marketing-screen" class="screen glass">
+                        <h1>Email Marketing</h1>
+                        <p>Built-in email campaign tool.</p>
+                        <select>
+                            <option>All Contacts</option>
+                            <option>Past Customers</option>
+                        </select>
+                        <select>
+                            <option>New arrivals</option>
+                            <option>Flash sale</option>
+                            <option>Thank you</option>
+                        </select>
+                        <button onclick="alert('Previewing AI template')">Preview</button>
+                        <button onclick="alert('Emails sent!')">Send Campaign</button>
+                        <h2>Metrics</h2>
+                        <p>Open Rate: 45%</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <div id="upgrade-funnel-screen" class="screen glass">
+                        <h1>Your Plan</h1>
+                        <p>Current: Free Tier (1 AI agent, 10 products, OHC subdomain)</p>
+                        <div class="card glass" style="border-color: #0055ff;">
+                            <h2>Pro Tier</h2>
+                            <p>Unlimited products, custom domain, 5 AI agents.</p>
+                            <p>Value: Grow your business 10x faster with dedicated AI support.</p>
+                            <button onclick="alert('Upgrading to Pro...')">Upgrade to Pro</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <div id="success-milestones-screen" class="screen glass">
+                        <h1>Success Milestones</h1>
+                        <div class="card glass">
+                            <h3>🎉 You just got your 10th order!</h3>
+                            <p>Keep up the great work.</p>
+                        </div>
+                        <div class="card glass">
+                            <h3>🚀 Your store has 100 visitors today!</h3>
+                            <p>Traffic is booming.</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <div id="public-storefront-screen" class="screen glass">
+                        <h1>My Business Storefront</h1>
+                        <div id="store-content">
+                            <!-- Store content goes here -->
+                            <p>Welcome to our store!</p>
+                        </div>
+                        <footer style="margin-top: 40px; padding: 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <a href="/signup" style="color: #4da6ff; text-decoration: none; font-size: 0.9em;">
+                                Built with OHC — Start your free business →
+                            </a>
+                        </footer>
+                    </div>
+
                     <script>
                         const pathMap = {
+                            'referral-program-screen': '/growth/referral',
+                            'social-media-screen': '/growth/social',
+                            'email-marketing-screen': '/growth/email',
+                            'upgrade-funnel-screen': '/growth/upgrade',
+                            'success-milestones-screen': '/growth/milestones',
+                            'public-storefront-screen': '/store/preview',
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
@@ -2238,6 +2334,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
+
+
+                        function handleLogin(btn) {
+                            btn.textContent = 'Logging in...';
+                            setTimeout(() => {
+                                showScreen('dashboard-screen');
+                            }, 500);
+                        }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
