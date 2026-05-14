@@ -285,7 +285,7 @@ func syncPendingEscalations(ctx context.Context, localDB SQLiteProvider, cloudDB
 		var payloadBytes, depsBytes []byte
 		if err := rows.Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status,
-			&task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
+			&task.AgentID, &task.Priority, &payloadBytes, &task.ParentPlanID, &depsBytes,
 		); err != nil {
 			if syncDaemonErrorTotal != nil {
 				syncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode), attribute.String("error", "DB_ITERATION_ERROR")))
@@ -379,7 +379,7 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 
 	for _, id := range taskIDs {
 		// Check cloud DB
-		cloudTask, err := cloudDB.GetTask(ctx, id, "")
+		cloudTask, err := cloudDB.GetTask(ctx, id, localTask.OrganizationID)
 		if err != nil {
 			if err != sql.ErrNoRows {
 				log.Printf("Error getting task from cloud DB: %v", err)

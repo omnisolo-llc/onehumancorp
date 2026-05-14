@@ -91,7 +91,7 @@ func TestSyncLocalToCloud(t *testing.T) {
 			savedLocalMission.Title,
 			savedLocalMission.Description,
 			savedLocalMission.Status,
-			savedLocalMission.AssignedAgentID,
+			savedLocalMission.AgentID,
 			savedLocalMission.Priority,
 			sanitizedPayloadBytes,
 			savedLocalMission.ParentPlanID,

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	interoppb "onehumancorp/srcs/server/pb"
+	interoppb "onehumancorp/srcs/server/pb/interop"
 )
 
 type MockBus struct {
