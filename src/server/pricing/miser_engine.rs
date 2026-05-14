@@ -13,7 +13,7 @@ impl MiserEngine {
         }
     }
 
-    pub fn get_recommendations(&self, tenant_id: &str, budget: &BudgetManager) -> Vec<MiserRecommendation> {
+    pub fn get_recommendations(&self, _tenant_id: &str, budget: &BudgetManager) -> Vec<MiserRecommendation> {
         let mut recs = get_active_recommendations();
 
         let remaining = budget.get_remaining_cents();
