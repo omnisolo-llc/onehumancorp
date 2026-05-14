@@ -34,7 +34,8 @@ export default function HelpChat() {
                 <button onClick={() => setIsOpen(true)} style={{
                     borderRadius: '50%', width: '50px', height: '50px',
                     background: '#0070f3', color: '#fff', border: 'none',
-                    backdropFilter: 'blur(20px) saturate(200%)'
+                    backdropFilter: 'blur(20px) saturate(200%)',
+                    cursor: 'pointer'
                 }}>Ask</button>
             )}
 
@@ -52,12 +53,21 @@ export default function HelpChat() {
                     boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
                 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <h3>Ask anything</h3>
-                        <button onClick={() => setIsOpen(false)}>X</button>
+                        <h3 style={{ margin: 0 }}>Ask anything</h3>
+                        <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', marginTop: '10px' }}>
-                        {reply && <div className="reply" style={{lineHeight: "1.5"}}>{reply} {articleLink && <div style={{marginTop: "8px"}}><a href={articleLink} style={{color: "#0070f3", textDecoration: "none", fontWeight: "bold"}}>Read the full article →</a></div>}</div>}
+                        {reply && (
+                            <div className="reply" style={{ lineHeight: "1.5" }}>
+                                {reply}
+                                {articleLink && (
+                                    <div style={{ marginTop: "8px" }}>
+                                        <a href={articleLink} style={{ color: "#0070f3", textDecoration: "none", fontWeight: "bold" }}>Read the full article →</a>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <form onSubmit={sendChat} style={{ display: 'flex', marginTop: '10px' }}>
@@ -68,7 +78,7 @@ export default function HelpChat() {
                             style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                             placeholder="How do I setup my store?"
                         />
-                        <button type="submit" style={{ marginLeft: '8px', padding: '8px' }}>Send</button>
+                        <button type="submit" style={{ marginLeft: '8px', padding: '8px', background: '#0070f3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Send</button>
                     </form>
                 </div>
             )}

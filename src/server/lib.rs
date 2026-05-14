@@ -1456,7 +1456,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let app = axum::Router::new()
-        .merge(api::help::help_routes())
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))

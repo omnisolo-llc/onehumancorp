@@ -1,4 +1,3 @@
-
 import React from 'react';
 import TooltipRegistry from '../components/help/TooltipRegistry';
 import Walkthrough from '../components/help/Walkthrough';

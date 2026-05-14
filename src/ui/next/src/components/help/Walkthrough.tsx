@@ -30,8 +30,8 @@ export default function Walkthrough() {
                     });
 
                     document.querySelectorAll('.ohc-walkthrough-highlight').forEach(e => e.classList.remove('ohc-walkthrough-highlight'));
-
                     el.classList.add('ohc-walkthrough-highlight');
+
                     if (document.getElementById('ohc-walkthrough-style') === null) {
                         const style = document.createElement('style');
                         style.id = 'ohc-walkthrough-style';
@@ -45,25 +45,37 @@ export default function Walkthrough() {
                         `;
                         document.head.appendChild(style);
                     }
-
                 } else {
                     setCoords(c => ({...c, opacity: 0}));
                 }
             };
 
-            // Initial check
             positionHighlight();
 
-            // Setup MutationObserver to watch for dynamic DOM changes (better than setInterval)
+            let isHighlighting = false;
             observerRef.current = new MutationObserver((mutations) => {
-                positionHighlight();
+                if (isHighlighting) return;
+
+                const relevantMutation = mutations.some(m => {
+                    if (m.type === 'attributes' && m.attributeName === 'class') {
+                        const target = m.target as HTMLElement;
+                        return !target.classList.contains('ohc-walkthrough-highlight');
+                    }
+                    return true;
+                });
+
+                if (relevantMutation) {
+                    isHighlighting = true;
+                    positionHighlight();
+                    setTimeout(() => { isHighlighting = false; }, 100);
+                }
             });
 
             observerRef.current.observe(document.body, {
                 childList: true,
                 subtree: true,
                 attributes: true,
-                attributeFilter: ['style', 'class']
+                attributeFilter: ['style']
             });
 
             return () => {

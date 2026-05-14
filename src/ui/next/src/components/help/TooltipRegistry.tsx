@@ -22,7 +22,6 @@ export default function TooltipRegistry() {
             const target = e.target as HTMLElement;
             if (!target) return;
 
-            // Check if target matches any tooltip selector using event delegation
             for (const t of tooltips) {
                 if (target.matches(t.element_selector) || target.closest(t.element_selector)) {
                     const el = target.matches(t.element_selector) ? target : target.closest(t.element_selector)!;
@@ -47,7 +46,6 @@ export default function TooltipRegistry() {
             pressTimer = setTimeout(() => handleInteraction(e), 500);
         };
 
-        // Delegate to document for dynamically rendered elements
         document.addEventListener('mouseover', handleInteraction);
         document.addEventListener('mouseout', handleHide);
         document.addEventListener('touchstart', handleTouchStart);

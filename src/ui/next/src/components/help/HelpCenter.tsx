@@ -1,8 +1,6 @@
-
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 
-// Extensive and robust Help Center implementation
 export default function HelpCenter() {
     const [articles, setArticles] = useState<{id: string, title: string, content: string, topic: string, keywords: string[]}[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +36,21 @@ export default function HelpCenter() {
         });
     }, [articles, searchTerm, activeTopic]);
 
+    const renderMarkdown = (text: string) => {
+        let html = text
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
+            .replace(/\*\*(.*)\*\*/gim, '<b>$1</b>')
+            .replace(/\*(.*)\*/gim, '<i>$1</i>')
+            .replace(/!\[(.*?)\]\((.*?)\)/gim, "<img alt='$1' src='$2' />")
+            .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2'>$1</a>")
+            .replace(/\n$/gim, '<br />');
+
+        return { __html: html.trim() };
+    };
+
     if (isLoading) return <div style={{ padding: '20px' }}>Loading Help Center...</div>;
 
     return (
@@ -52,7 +65,6 @@ export default function HelpCenter() {
             <p style={{ color: '#666', marginBottom: '32px', fontSize: '1.1rem' }}>Find answers, guides, and tutorials to help you grow your business.</p>
 
             <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                {/* Sidebar Navigation */}
                 <aside style={{ flex: '1 1 250px', minWidth: '250px' }}>
                     <div style={{ position: 'sticky', top: '24px' }}>
                         <div style={{ marginBottom: '24px' }}>
@@ -121,7 +133,6 @@ export default function HelpCenter() {
                     </div>
                 </aside>
 
-                {/* Content Area */}
                 <main style={{ flex: '3 1 600px' }}>
                     {filtered.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '48px', background: 'rgba(255,255,255,0.5)', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
@@ -151,7 +162,7 @@ export default function HelpCenter() {
                                         </span>
                                     </div>
                                     <h2 style={{ fontSize: '1.5rem', marginBottom: '12px', color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{a.title}</h2>
-                                    <p style={{ color: '#334155', lineHeight: '1.6', fontSize: '1.05rem' }}>{a.content}</p>
+                                    <div style={{ color: '#334155', lineHeight: '1.6', fontSize: '1.05rem' }} dangerouslySetInnerHTML={renderMarkdown(a.content)} />
 
                                     <div style={{ marginTop: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                         {a.keywords.map(kw => (

@@ -1,6 +1,7 @@
 
 use axum::{routing::{get, post}, Router, Json};
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HelpArticle {
@@ -54,21 +55,12 @@ pub struct ChatResponse {
     pub article_link: Option<String>,
 }
 
-pub fn help_routes() -> Router {
-    Router::new()
-        .route("/api/help/articles", get(get_articles))
-        .route("/api/help/tooltips", get(get_tooltips))
-        .route("/api/help/walkthroughs", get(get_walkthroughs))
-        .route("/api/help/videos", get(get_videos))
-        .route("/api/help/changelog", get(get_changelog))
-        .route("/api/help/chat", post(chat))
-}
+static CACHED_ARTICLES: OnceLock<Vec<HelpArticle>> = OnceLock::new();
 
-async fn get_articles() -> Json<Vec<HelpArticle>> {
+fn init_articles() -> Vec<HelpArticle> {
     let mut articles = Vec::new();
     let docs_dir = "docs/business/public/app/help_center_content";
 
-    // Read directly from markdown source
     if let Ok(entries) = std::fs::read_dir(docs_dir) {
         let mut paths: Vec<_> = entries.filter_map(|e| e.ok()).map(|e| e.path()).collect();
         paths.sort();
@@ -96,9 +88,59 @@ async fn get_articles() -> Json<Vec<HelpArticle>> {
             topic: "Onboarding".into(),
             keywords: vec!["start".into(), "setup".into(), "onboarding".into()],
         });
+        articles.push(HelpArticle {
+            id: "managing-agents".into(),
+            title: "How to Manage AI Agents".into(),
+            content: "Your AI Agents act as autonomous employees. Go to the 'Agents' tab to view their current tasks. You can assign new missions by typing in plain English. Remember: they learn from your feedback, so correct them if they make mistakes.".into(),
+            topic: "Agents".into(),
+            keywords: vec!["agents".into(), "ai".into(), "tasks".into(), "automation".into()],
+        });
+        articles.push(HelpArticle {
+            id: "accepting-payments".into(),
+            title: "Accepting Your First Payment".into(),
+            content: "Before accepting payments, ensure your bank account is linked under 'Settings > Integrations'. Once linked, you can generate an invoice or send a direct payment link to your customers from the 'Payments' dashboard.".into(),
+            topic: "Finance".into(),
+            keywords: vec!["payments".into(), "money".into(), "invoices".into(), "billing".into()],
+        });
+        articles.push(HelpArticle {
+            id: "customizing-storefront".into(),
+            title: "Customizing Your Storefront".into(),
+            content: "Navigate to the 'Website Builder' to change your store's theme, colors, and layout. All themes are mobile-responsive by default. You can preview changes in real-time before publishing.".into(),
+            topic: "Design".into(),
+            keywords: vec!["design".into(), "store".into(), "theme".into(), "website".into()],
+        });
+        articles.push(HelpArticle {
+            id: "marketing-campaigns".into(),
+            title: "Launching Marketing Campaigns".into(),
+            content: "Use the 'Growth' tab to start a new campaign. Your Marketing Agent can draft emails, schedule social media posts, and analyze engagement metrics automatically based on your product catalog.".into(),
+            topic: "Marketing".into(),
+            keywords: vec!["marketing".into(), "growth".into(), "emails".into(), "campaigns".into()],
+        });
+        articles.push(HelpArticle {
+            id: "understanding-analytics".into(),
+            title: "Understanding Dashboard Analytics".into(),
+            content: "The dashboard provides a real-time overview of your business health. 'MRR' stands for Monthly Recurring Revenue. 'Active Users' counts unique visitors to your storefront in the last 30 days.".into(),
+            topic: "Analytics".into(),
+            keywords: vec!["analytics".into(), "metrics".into(), "dashboard".into(), "data".into()],
+        });
     }
 
-    Json(articles)
+    articles
+}
+
+pub fn help_routes() -> Router {
+    Router::new()
+        .route("/api/help/articles", get(get_articles))
+        .route("/api/help/tooltips", get(get_tooltips))
+        .route("/api/help/walkthroughs", get(get_walkthroughs))
+        .route("/api/help/videos", get(get_videos))
+        .route("/api/help/changelog", get(get_changelog))
+        .route("/api/help/chat", post(chat))
+}
+
+async fn get_articles() -> Json<Vec<HelpArticle>> {
+    let articles = CACHED_ARTICLES.get_or_init(init_articles);
+    Json(articles.clone())
 }
 
 async fn get_tooltips() -> Json<Vec<Tooltip>> {

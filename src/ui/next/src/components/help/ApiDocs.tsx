@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState } from 'react';
 
@@ -6,11 +5,6 @@ export default function ApiDocs() {
     const [specUrl, setSpecUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        // In a real app we'd load swagger-ui-react, but we can't install npm packages easily.
-        // The safest approach for an interactive UI without new dependencies is an iframe to a hosted Swagger UI
-        // with the spec passed as a query parameter (or falling back to the standard petstore if internal is unavailable).
-        // We ensure we don't hardcode localhost for production stability.
-
         const host = typeof window !== 'undefined' ? window.location.origin : 'https://api.onehumancorp.com';
         setSpecUrl(`${host}/api/docs/openapi.json`);
     }, []);
