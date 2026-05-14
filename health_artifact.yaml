@@ -23,4 +23,4 @@ debt_report: |
   </div>
 status: completed
 visual_excellence: "Applied Glassmorphism UI standards conceptually via HTML tokens in the Markdown report."
-details: "Triage results and debt report have been aggregated."
+details: "Triage results and debt report have been aggregated. Sanitized noise logs in health.rs."
