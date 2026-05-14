@@ -1,5 +1,6 @@
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
+use crate::proto::orchestration::*;
 use ::server_ohc::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
 

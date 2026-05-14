@@ -1,5 +1,6 @@
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
+use crate::proto::orchestration::EmptyRequest;
 use ::server_ohc::orchestration::org_service_server::OrgService;
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;

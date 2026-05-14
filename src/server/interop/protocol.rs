@@ -4,9 +4,7 @@ use crate::msgbus::{Bus, DistributedLock, Message};
 use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
 
-pub mod proto {
-    pub use interop_proto::ohc::interop::*;
-}
+pub use crate::proto::interop as proto;
 
 /// Interop Layer protocol for mode-switch behaviour and sync
 pub struct InteropProtocol {
