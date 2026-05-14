@@ -2,6 +2,7 @@ filegroup(
     name = "srcs",
     srcs = [
         "auditor.rs",
+        "dashboard.rs",
         "mod.rs",
         "service.rs",
     ],

@@ -1582,7 +1582,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Server listening on {}", addr);
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
-    let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
+    let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor(), std::sync::Arc::new(hub.tracker().clone()));
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))

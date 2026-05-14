@@ -41,7 +41,59 @@ message BudgetAlert {
   bool triggered = 5;
 }
 
+message GetMyPlanRequest {
+  string organization_id = 1;
+}
+
+message GetMyPlanResponse {
+  string current_tier = 1;
+  uint32 ai_actions_used = 2;
+  uint32 ai_actions_limit = 3;
+  int64 storage_used_bytes = 4;
+  int64 storage_limit_bytes = 5;
+  double estimated_next_bill_usd = 6;
+}
+
+message UpgradePlanRequest {
+  string organization_id = 1;
+  string target_tier = 2; // "Starter", "Pro", "Business"
+}
+
+message UpgradePlanResponse {
+  bool success = 1;
+  string checkout_url = 2; // e.g. Stripe checkout URL
+}
+
+message CancelPlanRequest {
+  string organization_id = 1;
+}
+
+message CancelPlanResponse {
+  bool success = 1;
+}
+
+message GetBillingHistoryRequest {
+  string organization_id = 1;
+}
+
+message BillingHistoryItem {
+  string invoice_id = 1;
+  double amount_usd = 2;
+  string status = 3; // "paid", "open"
+  string invoice_pdf_url = 4;
+  int64 date_unix = 5;
+}
+
+message GetBillingHistoryResponse {
+  repeated BillingHistoryItem history = 1;
+}
+
 service BillingService {
   rpc TrackTokenUsage(TokenUsage) returns (TokenUsage);
   rpc GetCostSummary(TokenUsage) returns (CostSummary);
+
+  rpc GetMyPlan(GetMyPlanRequest) returns (GetMyPlanResponse);
+  rpc UpgradePlan(UpgradePlanRequest) returns (UpgradePlanResponse);
+  rpc CancelPlan(CancelPlanRequest) returns (CancelPlanResponse);
+  rpc GetBillingHistory(GetBillingHistoryRequest) returns (GetBillingHistoryResponse);
 }
