@@ -3,19 +3,18 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
-      "id": 1,
+      "title": "",
       "gridPos": {
-        "h": 2,
-        "w": 24,
         "x": 0,
-        "y": 0
+        "y": 0,
+        "w": 12,
+        "h": 3
       },
+      "id": 9999,
       "options": {
-        "mode": "html",
-        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
-      },
-      "transparent": true
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%);\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n      border-radius: 12px !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>\n<div style=\"backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>",
+        "mode": "html"
+      }
     },
     {
       "title": "Harness Init Latency",

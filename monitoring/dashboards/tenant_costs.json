@@ -25,6 +25,21 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 3
+      },
+      "id": 9999,
+      "options": {
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%);\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n      border-radius: 12px !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>\n<div style=\"backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>",
+        "mode": "html"
+      }
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -86,7 +101,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "id": 1,
       "options": {
@@ -176,7 +191,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 8
       },
       "id": 2,
       "options": {
@@ -266,7 +281,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 16
       },
       "id": 3,
       "options": {
@@ -311,7 +326,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Tenant Cost Visibility (💰 Miser)",
+  "title": "Tenant Cost Visibility (\ud83d\udcb0 Miser)",
   "uid": "tenant_costs",
   "version": 1,
   "weekStart": ""

@@ -54,19 +54,18 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
+      "title": "",
       "gridPos": {
-        "h": 2,
-        "w": 24,
         "x": 0,
-        "y": 0
+        "y": 0,
+        "w": 12,
+        "h": 3
       },
+      "id": 9999,
       "options": {
-        "mode": "html",
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">Agent Audit Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #aaa; font-size: 14px;\">OHC Swarm Intelligence Protocol</p>\n</div>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
-      },
-      "pluginVersion": "10.0.0",
-      "transparent": true
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%);\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n      border-radius: 12px !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>\n<div style=\"backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>",
+        "mode": "html"
+      }
     },
     {
       "title": "Agent Violations Feed",
@@ -75,7 +74,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 2
+        "y": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -101,7 +100,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 2
+        "y": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -122,7 +121,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 2
+        "y": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -199,7 +198,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 28
       },
       "id": 100,
       "options": {
@@ -294,7 +293,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 28
       },
       "id": 101,
       "options": {
@@ -389,7 +388,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 36
       },
       "id": 102,
       "options": {
