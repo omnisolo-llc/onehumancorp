@@ -27,8 +27,6 @@ pub enum AgentEvent {
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
-    pub permission_mode: crate::types::PermissionMode,
-    pub permission_config: crate::permissions::PermissionConfig,
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     pub max_retries: usize,
@@ -79,8 +77,6 @@ pub enable_llmcompiler_plan_and_execute: bool,
 impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
-            permission_mode: crate::types::PermissionMode::Permissive,
-            permission_config: crate::permissions::PermissionConfig::default(),
             agent_id: "default-agent".to_string(),
             max_retries: 2,
             model: String::new(),
@@ -1279,10 +1275,6 @@ impl Agent {
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
         let mut last_response_id: Option<String> = None;
-        let permission_manager = crate::permissions::PermissionManager::new(
-            final_cfg.permission_mode.clone(),
-            final_cfg.permission_config.clone()
-        );
         let mut last_assistant_content = String::new();
 
         let max_iterations = if final_cfg.max_iterations <= 0 { 100 } else { final_cfg.max_iterations };
@@ -1693,21 +1685,6 @@ impl Agent {
 
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
-
-                // Permission Architecture: Restrictive vs Permissive Check
-                if let Some(tool) = session_tools.iter().find(|t| t.name == tc.name) {
-                    if let Err(perm_err) = permission_manager.check_permission(&tool.name, tool.is_read_only, tc).await {
-                        on_event(AgentEvent::UserInterventionRequired { error: perm_err.clone() });
-                        let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-                        tool_results[idx] = ToolResult {
-                            tool_call_id: tc.id.clone(),
-                            content: String::new(),
-                            error: perm_err,
-                        };
-                        continue;
-                    }
-                }
-
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
@@ -1878,15 +1855,6 @@ impl Agent {
                         on_event(AgentEvent::Handoff { target_agent: target.clone() });
                         return Ok(format!("Handoff requested to {}", target));
                     }
-                }
-            }
-
-
-            // Handle special user "approve" inputs
-            if let Some(last) = messages.last() {
-                if last.role == crate::types::Role::User && last.content.starts_with("approve ") {
-                    let call_id = last.content.trim_start_matches("approve ").trim();
-                    permission_manager.approve(call_id).await;
                 }
             }
 
@@ -5297,5 +5265,4 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
-
     }
