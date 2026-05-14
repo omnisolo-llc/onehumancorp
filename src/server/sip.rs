@@ -498,6 +498,75 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_backlog_management_sanitization_and_priority() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            // Insert initial record STUCK
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP - INTERVAL '2 hours') ON CONFLICT DO NOTHING")
+                .bind("stuck_mission_id")
+                .bind("STUCK")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Insert initial record PENDING
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP - INTERVAL '3 hours') ON CONFLICT DO NOTHING")
+                .bind("pending_mission_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Call prune_stale_missions
+            let res = sip_db.prune_stale_missions(chrono::Duration::days(7)).await;
+            assert!(res.is_ok());
+
+            // Verify
+            let row = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = row.get("status");
+            assert_eq!(status, "FAILED", "Backlog manager must correctly sanitize stuck missions to FAILED");
+
+            // Clean up
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'pending_mission_id')").execute(&pool).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
         // Just verify it doesn't crash on execution with a valid pool.
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })

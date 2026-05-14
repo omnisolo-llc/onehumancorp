@@ -1,4 +1,42 @@
 use std::sync::Arc;
+
+pub mod triage {
+    pub enum IssueCategory {
+        Bug,
+        Feature,
+        Refactor,
+        Cleanup,
+        Docs,
+        Security,
+    }
+
+    impl IssueCategory {
+        pub fn as_str(&self) -> &'static str {
+            match self {
+                IssueCategory::Bug => "bug",
+                IssueCategory::Feature => "feature",
+                IssueCategory::Refactor => "refactor",
+                IssueCategory::Cleanup => "cleanup",
+                IssueCategory::Docs => "docs",
+                IssueCategory::Security => "security",
+            }
+        }
+
+        pub fn categorize(msg: &str) -> Self {
+            let msg_lower = msg.to_lowercase();
+            if msg_lower.contains("panic") || msg_lower.contains("error") || msg_lower.contains("fail") || msg_lower.contains("unresponsive") {
+                IssueCategory::Bug
+            } else if msg_lower.contains("timeout") || msg_lower.contains("latency") || msg_lower.contains("degraded") || msg_lower.contains("sync") {
+                IssueCategory::Cleanup
+            } else if msg_lower.contains("unauthorized") || msg_lower.contains("spire") {
+                IssueCategory::Security
+            } else {
+                IssueCategory::Feature
+            }
+        }
+    }
+}
+
 use crate::hub::Hub;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -20,14 +58,16 @@ pub async fn run_health_monitor(
         };
 
         if !ping_ok {
-            tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
+            let cat = triage::IssueCategory::categorize("Active probe (ping) failed or timed out.");
+            tracing::trace!("HEALTH MONITOR [{}]: Active probe (ping) failed or timed out.", cat.as_str());
         }
 
         // Hybrid mode health check
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
-                    tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
+                    let cat = triage::IssueCategory::categorize("Hybrid mode is degraded.");
+                    tracing::trace!("HEALTH MONITOR [{}]: Hybrid mode is degraded.", cat.as_str());
                 }
             }
         }
@@ -36,7 +76,8 @@ pub async fn run_health_monitor(
         if let Ok(health) = monitor_hub.check_health().await {
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
-                    tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
+                    let cat = triage::IssueCategory::categorize("sync error");
+                    tracing::warn!("HEALTH MONITOR [{}]: High sync error count detected: {}", cat.as_str(), sync_errors);
                 } else if sync_errors > 0 {
                     tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
                 }
@@ -49,7 +90,7 @@ pub async fn run_health_monitor(
                 let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
 
                 if agents.is_empty() {
-                    tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
+
                 }
 
                 let mut active_agent_ids = std::collections::HashSet::new();
@@ -71,7 +112,7 @@ pub async fn run_health_monitor(
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
-                        tracing::trace!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
+
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
@@ -94,6 +135,14 @@ pub async fn run_health_monitor(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_triage_categorization() {
+        assert_eq!(triage::IssueCategory::categorize("failed to ping").as_str(), "bug");
+        assert_eq!(triage::IssueCategory::categorize("sync errors").as_str(), "cleanup");
+        assert_eq!(triage::IssueCategory::categorize("unauthorized access").as_str(), "security");
+        assert_eq!(triage::IssueCategory::categorize("normal operation").as_str(), "feature");
+    }
 
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
 
