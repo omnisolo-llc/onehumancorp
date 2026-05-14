@@ -38,15 +38,11 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
       - name: Set up Node
         uses: actions/setup-node@v4
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           node-version: "24"
           cache: "npm"
@@ -91,7 +87,7 @@ jobs:
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            //... -- -//src/e2e/...
+            //... -//src/e2e/...
 
   bazel-build:
     runs-on: oci-runner
@@ -112,15 +108,11 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           go-version: "1.24"
 
       - name: Set up Node
         uses: actions/setup-node@v4
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
         with:
           node-version: "24"
           cache: "npm"
@@ -166,6 +158,8 @@ jobs:
 #     steps:
 #       - uses: actions/checkout@v6
 #
+#       - name: Install base dependencies
+#         run: |
 #           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
 #           sudo apt-get update -qq
 #           sudo apt-get install -y --no-install-recommends --fix-missing \
@@ -173,7 +167,15 @@ jobs:
 #             libdbus-1-dev libatk1.0-dev libgtk-3-dev \
 #             libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
 #             librsvg2-dev libsoup-3.0-dev \
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+#             ca-certificates curl git
+#
+#       - name: Set up Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version: "1.24"
+#
+#       - name: Set up Node
+#         uses: actions/setup-node@v4
 #         with:
 #           node-version: "24"
 #           cache: "npm"
