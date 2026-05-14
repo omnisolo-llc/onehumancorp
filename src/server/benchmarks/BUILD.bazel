@@ -4,7 +4,8 @@ filegroup(
         "chaos_bench.rs",
         "latency_bench.rs",
         "mod.rs",
-
+        "dashboard_benchmark.rs",
+        "db_optimization_benchmark.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

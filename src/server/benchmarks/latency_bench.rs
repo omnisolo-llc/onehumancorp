@@ -379,3 +379,18 @@ mod tests {
         assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_dashboard_benchmark() {
+        crate::benchmarks::dashboard_benchmark::run_dashboard_performance_suite().await;
+    }
+
+    #[tokio::test]
+    async fn test_db_optimization_benchmark() {
+        crate::benchmarks::db_optimization_benchmark::run_db_optimization_suite().await;
+    }
+}
