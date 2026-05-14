@@ -7,7 +7,7 @@ test.describe('🎨 Canvas: AutoDream Memory Pipeline UI Tests', () => {
 
     // Fill in credentials and sign in
     await page.locator('input[type="email"]').first().fill('test@example.com');
-    await page.fill('input[type="password"]', 'password123');
+    await page.locator('input[type="password"]').first().fill('password123');
     await page.click('button:has-text("Sign In")');
 
     // Wait for Dashboard to load
