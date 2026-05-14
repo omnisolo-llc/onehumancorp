@@ -1901,17 +1901,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
 
 
                     <!-- API Screen -->
@@ -2088,120 +2077,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                    <div id="setup-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif;">
+                        <div id="step-welcome">
+                            <h1 style="font-family: 'Outfit', sans-serif; font-size: 24px;">Your business, live in minutes.</h1>
+                            <p style="font-family: 'Inter', sans-serif; font-size: 16px;">Zero tech skills needed. We do the heavy lifting.</p>
+                            <button onclick="nextStep('name')" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px;">🚀 Start My Business</button>
                         </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                        <div id="step-name" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">1. What is your business called?</h1>
+                            <input type="text" id="business-name" placeholder="e.g. Maya's Cakes" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; margin-bottom: 10px;" />
+                            <button onclick="nextStep('service')" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep('welcome')" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; margin-top: 10px;">Back</button>
                         </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                        <div id="step-service" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">2. What is your primary service?</h1>
+                            <input type="text" id="business-service" placeholder="e.g. Custom cakes and pastries" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; margin-bottom: 10px;" />
+                            <button onclick="nextStep('language')" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep('name')" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; margin-top: 10px;">Back</button>
                         </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                        <div id="step-language" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">3. Preferred language?</h1>
+                            <select id="business-language" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; margin-bottom: 10px;">
+                                <option value="en">English</option>
+                                <option value="es">Español</option>
+                            </select>
+                            <button onclick="finishSetup()" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px;">Launch My Business →</button>
+                            <button class="secondary" onclick="nextStep('service')" style="width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; margin-top: 10px;">Back</button>
                         </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        <div id="step-launching" style="display: none; text-align: center;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Building your storefront...</h1>
+                            <p style="font-family: 'Inter', sans-serif;">Our AI is crafting a custom experience for your brand.</p>
+                            <div class="loader" style="margin: 20px auto;"></div>
                         </div>
                     </div>
 
@@ -2219,6 +2125,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        function nextStep(step) {
+                            const steps = ['welcome', 'name', 'service', 'language', 'launching'];
+                            steps.forEach(s => {
+                                const el = document.getElementById('step-' + s);
+                                if (el) el.style.display = 'none';
+                            });
+                            const target = document.getElementById('step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+                        function finishSetup() {
+                            nextStep('launching');
+                            setTimeout(() => {
+                                showScreen('dashboard-screen');
+                                nextStep('welcome'); // reset
+                            }, 1500);
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
