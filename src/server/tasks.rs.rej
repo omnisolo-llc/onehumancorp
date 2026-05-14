@@ -1,0 +1,11 @@
+--- tasks.rs
++++ tasks.rs
+@@ -155,7 +155,7 @@
+             DbStore::Sqlite(sqlite_pool) => {
+                 sqlx::query(
+-                    "INSERT INTO tasks (id, title, description, status, assigned_agent_role, priority) VALUES (?, ?, ?, ?, ?, ?)"
++                    "INSERT INTO tasks (id, title, description, status, assigned_agent_role, priority, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                 )
+                 .bind(&id)
+                 .bind(title)
+                 .bind(description)

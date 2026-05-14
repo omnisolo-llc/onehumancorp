@@ -1,0 +1,26 @@
+--- db.rs
++++ db.rs
+@@ -482,6 +482,23 @@
+                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                     );
++
++                    CREATE TABLE IF NOT EXISTS agents (
++                        id TEXT PRIMARY KEY,
++                        tenant_id TEXT NOT NULL,
++                        department TEXT NOT NULL,
++                        status TEXT NOT NULL,
++                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++                    );
++
++                    CREATE TABLE IF NOT EXISTS memories (
++                        id TEXT PRIMARY KEY,
++                        tenant_id TEXT NOT NULL,
++                        customer_id TEXT,
++                        embedding TEXT,
++                        context TEXT NOT NULL,
++                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++                    );
+
+                     CREATE TABLE IF NOT EXISTS tasks (
+                         id TEXT PRIMARY KEY,
+                         title TEXT NOT NULL,

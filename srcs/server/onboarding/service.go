@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sync"
 
-	"onehumancorp/srcs/server/db"
-
 	"onehumancorp/srcs/server/orchestration"
 )
 
@@ -82,7 +80,7 @@ func (s *Service) StartOnboarding(ctx context.Context, req OnboardingRequest) (*
 				Priority:       "P0",
 				Payload:        &rawPayload,
 			}
-			if err := s.taskStore.CreateTask(context.WithValue(ctx, db.TenantKey, "system"), task); err != nil {
+			if err := s.taskStore.CreateTask(ctx, task); err != nil {
 				errs <- fmt.Errorf("failed to dispatch task %s: %w", tTitle, err)
 			}
 		}(taskData.Title, taskData.Description)
