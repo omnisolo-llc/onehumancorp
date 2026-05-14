@@ -1670,3 +1670,53 @@ message DownloadInvoiceRequest {
 message DownloadInvoiceResponse {
   string pdf_url = 1;
 }
+
+message HelpArticle {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string category = 4;
+  string summary = 5;
+}
+
+message GetHelpCenterRequest {
+  string query = 1;
+}
+
+message GetHelpCenterResponse {
+  repeated HelpArticle articles = 1;
+}
+
+message HelpTooltip {
+  string id = 1;
+  string content = 2;
+  string target_element = 3;
+}
+
+message GetTooltipsRequest {
+  string screen = 1;
+}
+
+message GetTooltipsResponse {
+  repeated HelpTooltip tooltips = 1;
+}
+
+message HelpVideo {
+  string id = 1;
+  string title = 2;
+  string url = 3;
+  string thumbnail = 4;
+}
+
+message GetHelpVideosRequest {
+}
+
+message GetHelpVideosResponse {
+  repeated HelpVideo videos = 1;
+}
+
+service HelpService {
+  rpc GetHelpArticles(GetHelpCenterRequest) returns (GetHelpCenterResponse);
+  rpc GetTooltips(GetTooltipsRequest) returns (GetTooltipsResponse);
+  rpc GetHelpVideos(GetHelpVideosRequest) returns (GetHelpVideosResponse);
+}
