@@ -6,7 +6,6 @@ filegroup(
         "billing_webhook_test.rs",
         "growth.rs",
         "health.rs",
-        "help.rs",
         "mesh_handler.rs",
         "mod.rs",
         "telemetry.rs",
