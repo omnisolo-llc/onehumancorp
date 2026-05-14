@@ -5263,6 +5263,6 @@ mod stream_tests {
         let _result = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
 
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
-        let _ = rewind_emitted; // Ensure we avoid unused variable warnings
+        let _ = rewind_emitted;
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
