@@ -5,6 +5,16 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Cloud scaling by moving Bazel tests to run hermetically on ubuntu-latest runners.
+
+### Privacy/Offline Improvements
+- Ensure hermetic CI execution for privacy and offline consistency across test environments.
+
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements

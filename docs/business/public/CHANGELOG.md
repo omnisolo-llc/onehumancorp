@@ -5,4 +5,11 @@
 
 # CHANGELOG.md
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+- Scaling (Cloud): Optimize Cloud scaling by moving Bazel tests to run hermetically on ubuntu-latest runners.
+- Privacy/Offline (Standalone): Ensure hermetic CI execution for privacy and offline consistency across test environments.
+
+
+
 Stub file.
