@@ -30,7 +30,6 @@ pub mod orchestration;
 pub mod storage;
 pub mod interop;
 #[cfg(test)]
-pub mod benchmarks;
 
 pub use ::server_config as config;
 pub use ::server_common as common;
@@ -2280,3 +2279,4 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     };
     axum::response::Html(content)
 }
+pub mod benchmarks;
