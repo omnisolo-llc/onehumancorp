@@ -1,1 +1,1 @@
-📝 Scribe: Zero WIP
+Maintainer: Zero WIP exit
