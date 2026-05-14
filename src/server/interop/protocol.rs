@@ -111,11 +111,24 @@ impl InteropProtocol {
 
     /// Listens for state handoff updates
     pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let node_id = self.node_id.clone();
+        let lock = self.lock.clone();
+        let shared_handler = Arc::new(handler);
+
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
-                    handler(decoded);
+                    let idempotency_lock_resource = format!("handoff:processed:listener:{}", decoded.mission_id);
+                    let attempt_owner = format!("{}_{}", node_id, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+
+                    let l = lock.clone();
+                    let h = shared_handler.clone();
+                    tokio::spawn(async move {
+                        if l.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.unwrap_or(false) {
+                            h(decoded);
+                        }
+                    });
                 }
             }
         });
