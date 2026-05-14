@@ -498,6 +498,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    login_ui.on_send_otp({
+        let login_handle = login_ui.as_weak();
+        move |_phone| {
+            if let Some(ui) = login_handle.upgrade() {
+                ui.set_loading(true);
+                let weak_ui = login_handle.clone();
+                slint::spawn_local(async move {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                    if let Some(ui) = weak_ui.upgrade() {
+                        ui.set_loading(false);
+                        ui.set_is_otp_sent(true);
+                    }
+                }).unwrap();
+            }
+        }
+    });
+
+    login_ui.on_verify_otp({
+        let login_handle = login_ui.as_weak();
+        move |_phone, otp| {
+            if let Some(ui) = login_handle.upgrade() {
+                ui.set_loading(true);
+                let weak_ui = login_handle.clone();
+                let is_valid = otp.trim() == "123456" || otp.trim().len() == 6; // Mock validation
+                slint::spawn_local(async move {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                    if let Some(ui) = weak_ui.upgrade() {
+                        ui.set_loading(false);
+                        if is_valid {
+                            ui.invoke_start_setup_wizard();
+                        } else {
+                            ui.set_error_message("Invalid OTP code".into());
+                        }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+
     login_ui.on_login({
         let login_handle = login_ui_handle.clone();
         move |_email, _password| {

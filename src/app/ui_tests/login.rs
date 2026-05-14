@@ -325,7 +325,7 @@ fn test_login_submit_button_text_signup() {
     let ui = create();
     ui.set_is_sign_up(true);
     ui.set_loading(false);
-    assert_eq!(ui.get_submit_button_text(), "Sign Up");
+    assert_eq!(ui.get_submit_button_text(), "Send OTP");
     ui.set_loading(true);
-    assert_eq!(ui.get_submit_button_text(), "Creating account...");
+    assert_eq!(ui.get_submit_button_text(), "Sending...");
 }

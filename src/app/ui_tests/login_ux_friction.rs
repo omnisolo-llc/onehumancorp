@@ -19,7 +19,7 @@ fn test_login_submit_button_text_signup_loading() {
     let ui = create();
     ui.set_is_sign_up(true);
     ui.set_loading(true);
-    assert_eq!(ui.get_submit_button_text(), "Creating account...");
+    assert_eq!(ui.get_submit_button_text(), "Sending...");
 }
 
 #[test]
