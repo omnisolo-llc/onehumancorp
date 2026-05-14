@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: 'html',
   outputDir: './test-results/screenshots',
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:8081',
+    baseURL: process.env.BASE_URL || 'http://localhost:18789',
     trace: 'on-first-retry',
     screenshot: 'always',
     video: 'on',

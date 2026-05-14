@@ -62,7 +62,7 @@ jobs:
       - name: Test
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
-          bazel test //... \
+          bazelisk test //... \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800
@@ -102,7 +102,9 @@ jobs:
 
       - name: Build all artifacts
         run: |
-          bazel build //... --platforms=//platforms:linux
+          for p in //platforms:linux //platforms:windows //platforms:macos; do \
+            bazel build //... --platforms=$p; \
+          done
 
   playwright-e2e:
     runs-on: ubuntu-latest
