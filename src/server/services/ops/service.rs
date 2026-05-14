@@ -477,7 +477,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
         // Since we are mocking database connections in these tests, avoiding real remote calls is crucial
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://dummy_user:dummy_pass@localhost:5432/dummy_db").unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) });
         let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
         MyOpsService::new(hub)
