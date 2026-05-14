@@ -42,7 +42,7 @@ async function main() {
     env: { ...process.env, DATABASE_URL: 'postgres://ohc:ohc@localhost:5432/ohc' },
   });
 
-  await setTimeout(2000); // Give server time to start
+  await setTimeout(3000); // Give server time to start
 
   // Run Playwright tests
   console.log('[run-playwright] Skipping actual playwright tests due to sandbox issues...');

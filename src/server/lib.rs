@@ -1468,6 +1468,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/test/inject_approval", api::agents::test_inject::router(dept_orchestrator.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
@@ -1625,6 +1626,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>
+                        <a onclick="showScreen('approvals-screen')">Approvals</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
@@ -1668,6 +1670,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="showScreen('approvals-screen')">Pending Approvals <span id="approval-badge" style="background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; display: none;">0</span></button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="toggleMenu()">Menu</button>
@@ -1685,6 +1688,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Share Store</button>
                         </div>
+                    </div>
+
+                    <!-- Approvals Screen -->
+                    <div id="approvals-screen" class="screen glass">
+                        <h1>Pending Approvals</h1>
+                        <div id="approvals-list">
+                            <p>No pending approvals.</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <!-- Inbox Screen -->
@@ -1946,12 +1958,66 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'approvals-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
+
+                        async function fetchApprovals() {
+                            try {
+                                const response = await fetch('/api/agents/approvals');
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    const list = document.getElementById('approvals-list');
+                                    const badge = document.getElementById('approval-badge');
+
+                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                        badge.innerText = data.pending_approvals.length;
+                                        badge.style.display = 'inline-block';
+
+                                        let html = '';
+                                        data.pending_approvals.forEach(approval => {
+                                            html += `<div class="card glass" id="approval-${approval.id}">`;
+                                            html += `<h3>${approval.department} Action</h3>`;
+                                            html += `<p>${approval.description}</p>`;
+                                            html += `<button onclick="handleApproval('${approval.id}', true)" style="min-width: 44px; min-height: 44px;">Approve & Send</button>`;
+                                            html += `<button class="secondary" onclick="handleApproval('${approval.id}', false)" style="min-width: 44px; min-height: 44px;">Reject / Edit</button>`;
+                                            html += `</div>`;
+                                        });
+                                        list.innerHTML = html;
+                                    } else {
+                                        badge.style.display = 'none';
+                                        list.innerHTML = '<p>No pending approvals.</p>';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to fetch approvals', e);
+                            }
+                        }
+
+                        async function handleApproval(id, approved) {
+                            try {
+                                const response = await fetch(`/api/agents/approvals/${id}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ approved })
+                                });
+                                if (response.ok) {
+                                    fetchApprovals();
+                                }
+                            } catch (e) {
+                                console.error('Failed to submit approval', e);
+                            }
+                        }
+
+                        // Start polling for approvals
+                        setInterval(() => {
+                            if (localStorage.getItem('isLoggedIn') === 'true') {
+                                fetchApprovals();
+                            }
+                        }, 5000);
 
                         function handleLogin(btn) {
                             const email = document.querySelector('#login-screen input[type="email"]').value;
@@ -1962,7 +2028,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     btn.innerText = 'Sign In';
                                 }, 500);
                             } else {
-                                setTimeout(() => showScreen('dashboard-screen'), 500);
+                                setTimeout(() => { showScreen('dashboard-screen'); fetchApprovals(); }, 500);
                             }
                         }
 
@@ -2004,6 +2070,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 showScreen('pricing-screen');
                             } else if (path === '/my-plan' || path === '/billing') {
                                 showScreen('my-plan-screen');
+                            } else if (path === '/approvals') {
+                                showScreen('approvals-screen');
                             } else if (path === '/agents') {
                                 showScreen('agents-screen');
                             } else if (path === '/diagnostics') {
@@ -2017,7 +2085,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } else if (path === '/checkout') {
                                 showScreen('checkout-screen');
                             } else {
-                                showScreen('dashboard-screen');
+                                showScreen('dashboard-screen'); fetchApprovals();
                             }
                         } else {
                             if (urlParams.has('signup') || path === '/signup') {
