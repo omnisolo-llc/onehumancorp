@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	apiharness "onehumancorp/srcs/server/api/harness"
+	apiharness "onehumancorp/src/server/api/harness"
 )
 
 type MockHarness struct{}

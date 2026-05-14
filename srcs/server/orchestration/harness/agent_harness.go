@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"os/exec"
 
-	apiharness "onehumancorp/srcs/server/api/harness"
+	apiharness "onehumancorp/src/server/api/harness"
 )
 
 type AssistantAgentHarness struct {

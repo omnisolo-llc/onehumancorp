@@ -3,7 +3,7 @@ package orchestration
 import (
 	"fmt"
 	"sync"
-	apiharness "onehumancorp/srcs/server/api/harness"
+	apiharness "onehumancorp/src/server/api/harness"
 )
 
 type HarnessResolver struct {
