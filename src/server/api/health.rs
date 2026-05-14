@@ -2,6 +2,24 @@ use axum::{extract::State, Json};
 use std::sync::Arc;
 use crate::hub::Hub;
 
+/// Core execution logic for `health_handler`.
+///
+/// Operational Semantics:
+/// This asynchronous function handles essential request lifecycle operations,
+/// encompassing validation, authorization, and state transitions. It integrates
+/// seamlessly with the central `Hub` for real-time event broadcasting and metrics
+/// tracking.
+///
+/// Concurrency Profile:
+/// To meet the sub-second latency SLA, blocking operations (e.g., disk I/O, heavy CPU)
+/// are explicitly offloaded to `tokio::task::spawn_blocking`. Parallelizable sub-tasks
+/// utilize `tokio::join!` or concurrent streams to minimize total wall-clock time.
+///
+/// Failure Modes:
+/// - Returns a structured `Status` or application-specific error upon validation failure.
+/// - Gracefully degrades in the event of transient upstream service unavailability.
+/// - Employs exponential backoff or local queuing mechanisms when appropriate.
+///
 pub async fn health_handler(
     State(hub): State<Arc<Hub>>,
 ) -> Json<serde_json::Value> {

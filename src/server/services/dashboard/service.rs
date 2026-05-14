@@ -9,6 +9,79 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 
+static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
@@ -58,6 +131,7 @@ impl DashboardService for MyDashboardService {
         let org_id1 = req.organization_id.clone();
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
+        let org_id_cost = req.organization_id.clone();
 
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
@@ -70,14 +144,24 @@ impl DashboardService for MyDashboardService {
             tokio::task::spawn_blocking(move || {
                 Ok::<_, String>(hub2.get_meetings())
             }),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
-                    cost_auditor.get_total_cost(),
-                    cost_auditor.get_total_tokens(),
-                    cost_auditor.get_agent_costs_snapshot(),
-                ))
-            }),
+            async {
+                let org_id = org_id_cost;
+                let cache_key = format!("hub:costs:{}",&org_id);
+                let cache = COST_CACHE.get_or_init(|| HybridCache::new(hub3.redis_client.clone()));
+                if let Some(costs) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(costs);
+                }
+                let costs = tokio::task::spawn_blocking(move || {
+                    let cost_auditor = hub3.get_cost_auditor();
+                    (
+                        cost_auditor.get_total_cost(),
+                        cost_auditor.get_total_tokens(),
+                        cost_auditor.get_agent_costs_snapshot(),
+                    )
+                }).await.map_err(|e| e.to_string())?;
+                cache.set(&cache_key, costs.clone(), std::time::Duration::from_secs(3600)).await;
+                Ok::<_, String>(costs)
+            },
             async {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}", org_id);
@@ -242,10 +326,7 @@ impl DashboardService for MyDashboardService {
         let _meetings = meetings_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) =
-            cost_res
-                .map_err(|e| Status::internal(e.to_string()))?
-                .map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
