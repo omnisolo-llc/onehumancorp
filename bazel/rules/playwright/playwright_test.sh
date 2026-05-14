@@ -158,13 +158,6 @@ fi
 # Run Playwright on the host (no Docker for tests)
 export CI=true
 export BASE_URL="http://localhost:18789"
-export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-
-if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
-  echo "[playwright] Using hermetic browsers from: $PLAYWRIGHT_BROWSERS_PATH"
-  # Ensure the path is absolute for Playwright
-  export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
-fi
 
 # Use npx to run playwright - it will find the local installation via package.json
 if [[ -n "$spec_file" ]]; then
