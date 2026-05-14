@@ -4,9 +4,9 @@ test.describe('Viral Referral Loop', () => {
   test('should navigate to user management and interact with the viral referral loop widget', async ({ page }) => {
     // 1. start from the home page after user login with no pre-authenticated shortcuts
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     // 2. navigate the entire feature flow by clicking UI links/buttons exactly as a real user would
@@ -37,15 +37,15 @@ test.describe('Viral Referral Loop', () => {
     await inviteUserBtn.click();
 
     // 4. assert that the final product matches the design and research docs
-    const emailInput = page.getByPlaceholder('Email or Username').first().first();
+    const emailInput = page.locator('input[type="email"]').first();
     await expect(emailInput).toBeVisible({ timeout: 5000 });
   });
 
   test('should verify widget hover state micro-animations and layout resilience', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
@@ -70,9 +70,9 @@ test.describe('Viral Referral Loop', () => {
 
   test('should assert glassmorphism background token on referral widget', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
@@ -87,9 +87,9 @@ test.describe('Viral Referral Loop', () => {
 
   test('should assert proper typography and text colors on referral widget', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
@@ -106,9 +106,9 @@ test.describe('Viral Referral Loop', () => {
     await page.setViewportSize({ width: 375, height: 812 });
 
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const menuBtn = page.locator('button:has-text("Menu")').first();

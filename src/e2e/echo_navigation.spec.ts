@@ -5,11 +5,11 @@ test.describe('Dashboard Navigation UX Simplification', () => {
 
   test('Bottom navigation bar is present and has exact required actions', async ({ page }) => {
     // 1. Start from home page (login)
-    await page.goto('/login');
+    await page.goto('/');
 
     // 2. Perform the exact login flow as a user would
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
 
     // 3. Wait for dashboard to load
@@ -33,9 +33,9 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Add Product in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
@@ -49,9 +49,9 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking View Orders in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
@@ -64,9 +64,9 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Check Messages in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
@@ -78,9 +78,9 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking See Analytics in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
@@ -92,9 +92,9 @@ test.describe('Dashboard Navigation UX Simplification', () => {
   });
 
   test('Clicking Share Store in bottom nav completes action', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 

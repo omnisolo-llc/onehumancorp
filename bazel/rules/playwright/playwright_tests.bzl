@@ -35,8 +35,7 @@ def define_playwright_tests():
                 "e2e",
                 "no-remote-exec",
                 "requires-docker",
-                "no-sandbox",
-                "local",
+
             ],
             target_compatible_with = select({
                 "@platforms//os:linux": [],

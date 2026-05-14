@@ -16,7 +16,6 @@ build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
 build --spawn_strategy=remote,sandboxed,local
-build --sandbox_add_mount_pair=/var/run/docker.sock
 build --incompatible_strict_action_env
 build --announce_rc
 build --linkopt=-fuse-ld=bfd
@@ -37,7 +36,7 @@ test --build_tests_only
 test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
-test --local_test_jobs=1
+test --local_test_jobs=4
 # Allow up to 200 parallel remote build actions during tests.
 test --jobs=200
 

@@ -1,34 +1,62 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Login Screen Visual Audit', () => {
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' }).filter({ visible: true })).toBeVisible();
-    await expect(page.getByPlaceholder('Email or Username').first()).toBeVisible();
-    await expect(page.locator('input[type="password"]').first()).toBeVisible();
-  });
-
-  test('should display dashboard', async ({ page }) => {
+  test('should display canonical design elements and actions', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
+
+    // Canonical Text check
+    const headerText = page.locator('text=One Human Corp').first();
+    await expect(headerText).toBeVisible({ timeout: 15000 });
+
+    // Verify critical buttons
+    const startBusinessBtn = page.locator('button:has-text("🚀 Start Business Setup")').first();
+    await expect(startBusinessBtn).toBeVisible();
+
+    const settingsBtn = page.locator('button:has-text("Fix App Issues")').first();
+    await expect(settingsBtn).toBeVisible();
+
+    const oauthBtn = page.locator('button:has-text("Continue with Google/Apple")').first();
+    await expect(oauthBtn).toBeVisible();
   });
 
-  test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
-  });
-});
-
-test.describe('Navigation', () => {
-  test('should navigate via nav links', async ({ page }) => {
+  test('should handle loading states dynamically on submit', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
+
+    // Fill credentials
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+
+    // Click submit
+    const submitBtn = page.locator('button:has-text("Sign In")').first();
+    await submitBtn.click();
+
+    // Check loading text - relying on the immediate UI state change via Slint
+    const loadingBtn = page.locator('button:has-text("Signing in...")').first();
+    await expect(loadingBtn).toBeVisible();
+    await expect(loadingBtn).toBeDisabled();
+
+    // Toggle button should be disabled during loading
+    const toggleBtn = page.locator('button:has-text("Don\'t have an account? Sign Up")').first();
+    await expect(toggleBtn).toBeDisabled();
   });
 
-  test('should show welcome message', async ({ page }) => {
+  test('should handle loading states dynamically on signup', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+
+    // Switch to sign up
+    await page.locator('button:has-text("Don\'t have an account? Sign Up")').first().click();
+
+    // Fill credentials
+    await page.fill('input[type="email"]', 'new@example.com');
+    await page.fill('input[type="password"]', 'password123');
+
+    // Click submit
+    const submitBtn = page.locator('button:has-text("Sign Up")').first();
+    await submitBtn.click();
+
+    // Check loading text
+    const loadingBtn = page.locator('button:has-text("Creating account...")').first();
+    await expect(loadingBtn).toBeVisible();
+    await expect(loadingBtn).toBeDisabled();
   });
 });

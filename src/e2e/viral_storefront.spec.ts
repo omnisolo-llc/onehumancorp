@@ -39,9 +39,9 @@ test.describe('Viral Storefront E2E', () => {
 
   test('should assert viral footer exists on desktop storefront', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     await page.goto('/website-builder');
@@ -60,9 +60,9 @@ test.describe('Viral Storefront E2E', () => {
   test('should assert viral footer exists on mobile storefront', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     await page.goto('/website-builder');
@@ -80,9 +80,9 @@ test.describe('Viral Storefront E2E', () => {
 
   test('should verify viral footer text matches precise marketing copy', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     await page.goto('/website-builder');
@@ -100,9 +100,9 @@ test.describe('Viral Storefront E2E', () => {
 
   test('should verify clicking viral footer initiates redirect workflow', async ({ page, context }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().first().fill('password123');
-    await page.getByRole('button', { name: /Login|Sign In/i }).first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     await page.goto('/website-builder');

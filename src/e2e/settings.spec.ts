@@ -158,7 +158,7 @@ test.describe('Profile Settings', () => {
 
   test('should update email', async ({ page }) => {
     await page.goto('/settings/profile');
-    const emailInput = page.getByPlaceholder('Email or Username').first().first();
+    const emailInput = page.locator('input[type="email"]').first();
     if (await emailInput.isVisible()) {
       await emailInput.fill('newemail@example.com');
       await page.locator('button:has-text("Update")').click();

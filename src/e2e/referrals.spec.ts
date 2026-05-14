@@ -4,9 +4,9 @@ test.describe('Referral Program', () => {
   test('should display referral dashboard and generate link', async ({ page }) => {
     // 1. Start from home page after login
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
 
     // 2. Navigate to Referrals dashboard via dashboard UI button
     await page.waitForURL('**/dashboard');
@@ -36,9 +36,9 @@ test.describe('Referral Program', () => {
 
   test('should verify Instagram sharing from referrals', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const referralsBtn = page.locator('button:has-text("Referrals")').first();
@@ -52,9 +52,9 @@ test.describe('Referral Program', () => {
 
   test('should verify invite message copying', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const referralsBtn = page.locator('button:has-text("Referrals")').first();
@@ -70,9 +70,9 @@ test.describe('Referral Program', () => {
 
   test('should view referral history', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const referralsBtn = page.locator('button:has-text("Referrals")').first();
@@ -86,9 +86,9 @@ test.describe('Referral Program', () => {
 
   test('should export referral data', async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.locator('input[type="email"]').fill('test@example.com');
+    await page.locator('input[type="password"]').fill('password123');
+    await page.locator('button:has-text("Login")').click();
     await page.waitForURL('**/dashboard');
 
     const referralsBtn = page.locator('button:has-text("Referrals")').first();

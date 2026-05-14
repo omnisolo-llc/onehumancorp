@@ -2,13 +2,13 @@ import { test, expect } from '@playwright/test';
 
 test('verify omnichannel inbox AI draft flow', async ({ page }) => {
     // 1. Login and navigate to Check Messages to open the unified inbox
-    await page.goto('/login');
+    await page.goto('/');
 
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -31,13 +31,13 @@ test('verify omnichannel inbox AI draft flow', async ({ page }) => {
 test('verify inbox mobile layout constraints', async ({ page }) => {
     // 5. Test mobile layout and navigation (e.g., < Back button)
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/login');
+    await page.goto('/');
 
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -51,13 +51,13 @@ test('verify inbox mobile layout constraints', async ({ page }) => {
 });
 
 test('verify quick reply usage', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -70,13 +70,13 @@ test('verify quick reply usage', async ({ page }) => {
 });
 
 test('verify sending custom message clears input', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -91,13 +91,13 @@ test('verify sending custom message clears input', async ({ page }) => {
 });
 
 test('verify empty state when no conversation is selected', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
     await expect(page.locator('text="Customer Inbox"')).toBeVisible();
@@ -106,13 +106,13 @@ test('verify empty state when no conversation is selected', async ({ page }) => 
 });
 
 test('verify connecting social media creates inbox conversation and allows reply', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/');
 
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login")');
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
 
     const integrationsMenu = page.locator('text=/Integrations/i, text=/Connect/i').first();
     if (await integrationsMenu.isVisible()) {
