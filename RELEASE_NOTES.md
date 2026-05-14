@@ -1,3 +1,15 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Add auto-scaling limits for Sub-Agent Queue and Teammate Mesh APIs to handle increased load spikes.
+- Optimized multi-tenant PostgreSQL sync operations to reduce lock contention across nodes.
+- Maintainer System Health Audit: Cleaned codebase, pruned stale agent missions, and improved Swarm Dashboard observability metrics.
+
+### Privacy/Offline Improvements
+- Ensure full local SIPDB SQLite encryption parity for Standalone builds to protect sensitive user telemetry.
+- Reduced noise for local debug sessions and optimized standalone KAIROS state machines via SQLite fallback optimizations.
+- Playwright E2E UI testing validated against Standalone configuration.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
