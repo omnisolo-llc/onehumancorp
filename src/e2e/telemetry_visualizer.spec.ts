@@ -6,8 +6,8 @@ test.describe('🎨 Canvas: AutoDream Memory Pipeline UI Tests', () => {
     await page.goto('/login');
 
     // Fill in credentials and sign in
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
     await page.click('button:has-text("Sign In")');
 
     // Wait for Dashboard to load
@@ -15,7 +15,7 @@ test.describe('🎨 Canvas: AutoDream Memory Pipeline UI Tests', () => {
 
     // Enable advanced telemetry to make the component visible unconditionally for tests
     await page.click('button:has-text("Settings"), a:has-text("Settings")');
-    const advancedTab = page.locator('text=Advanced').filter({ visible: true }).first();
+    const advancedTab = page.locator('text=Advanced').first();
     await advancedTab.click();
 
     // Attempt to click Advanced Mode toggle
