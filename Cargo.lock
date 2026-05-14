@@ -3380,6 +3380,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "paste",
  "prost",
  "prost-types",
  "protoc-gen-prost",

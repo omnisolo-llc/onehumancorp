@@ -48,6 +48,7 @@ rust_library(
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
+        "@crates//:paste",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -136,6 +137,7 @@ rust_test(
     },
     proc_macro_deps = [
         "@crates//:async-trait",
+        "@crates//:paste",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
