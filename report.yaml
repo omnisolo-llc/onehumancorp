@@ -1,5 +1,7 @@
-issue_category: cleanup
-debt_report:
-  description: "Bump version to v0.4.41"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+triage_status: "resolved"
+issue_category: "hybrid_maintenance"
+debt_report: |
+  Cleaned up unbounded cache files without skipping nested folders.
+  Ensured all database tables storing tenant specific information properly use Postgres RLS security policies.
+  Decoupled backend code feature flags from compiler directives in favor of runtime mode detection.
+  Deleted orphaned test file backup.
