@@ -227,6 +227,8 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("address") ||
     k.contains("name") ||
     k.contains("pii") ||
+    k.contains("social_security") ||
+    k.contains("tax_id") ||
     k.contains("tenant_id") ||
     k.contains("organization_id") ||
     k.contains("session_id") ||

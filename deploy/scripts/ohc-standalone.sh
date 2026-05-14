@@ -30,7 +30,7 @@ export OHC_RUNTIME_DIR=".ohc/runtime"
 export OHC_MEMORY_DIR="${OHC_RUNTIME_DIR}/memory"
 export OHC_STATUS_DIR="${OHC_RUNTIME_DIR}/status"
 
-if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
+if [ "$OHC_STANDALONE" = "true" ] || [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
 fi
 

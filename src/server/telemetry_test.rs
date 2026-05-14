@@ -488,7 +488,7 @@ fn test_standalone_wrapper_audit() {
     }
     let content = std::fs::read_to_string(script_path).expect("Failed to read ohc-standalone.sh script");
 
-    let expected_telemetry_check = r#"if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
+    let expected_telemetry_check = r#"if [ "$OHC_STANDALONE" = "true" ] || [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
 fi"#;
 
