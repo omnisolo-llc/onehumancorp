@@ -66,6 +66,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
+    pub enable_permissive_architecture: bool,
     pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
@@ -115,6 +116,7 @@ enable_llmcompiler_plan_and_execute: false,
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_single_agent_maximization: false,
+            enable_permissive_architecture: true,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
@@ -2262,7 +2264,13 @@ impl Agent {
 
 
     // Anthropic Mechanic: 3-Stage Tool Gating
+    // Architectural Decision 5: Permission Architecture
+    // Permissive (auto-approve) vs Restrictive (require approval).
     fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
+        if cfg.enable_permissive_architecture {
+            return Ok(());
+        }
+
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
             return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
@@ -2937,6 +2945,99 @@ mod tests {
         assert!(err_str.contains("Handoff requested to: Task requires multi-agent split: >10 overlapping tools provided"));
     }
 
+
+    #[tokio::test]
+    async fn test_permissive_architecture_bypasses_tool_gating() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "mutating_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id2".to_string()),
+                },
+            ]),
+        });
+
+        let tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "test".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![tool]);
+
+        // Scenario 1: Restrictive (Default) - fails because project not trusted
+        let mut cfg1 = AgentRunConfig::default();
+        cfg1.enable_permissive_architecture = false;
+        cfg1.project_trusted = false;
+
+        let mut events1 = vec![];
+        let mut on_event1 = |e| { events1.push(e); };
+        let res1 = agent.run(&cfg1, "Hello", &mut on_event1).await;
+        assert!(res1.is_err(), "Restrictive should block mutating tool if not trusted");
+
+        // We need to recreate the client since it exhausted its responses
+        let client2 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "mutating_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id2".to_string()),
+                },
+            ]),
+        });
+        let agent2 = Agent::new(client2, vec![Tool {
+            name: "mutating_tool".to_string(),
+            description: "test".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }]);
+
+        // Scenario 2: Permissive - succeeds even though project not trusted
+        let mut cfg2 = AgentRunConfig::default();
+        cfg2.enable_permissive_architecture = true;
+        cfg2.project_trusted = false;
+
+        let mut events2 = vec![];
+        let mut on_event2 = |e| { events2.push(e); };
+        let res2 = agent2.run(&cfg2, "Hello", &mut on_event2).await;
+        assert!(res2.is_ok(), "Permissive should allow mutating tool even if not trusted");
+    }
     #[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
         let client = Arc::new(MockLlmClient {
@@ -2995,6 +3096,7 @@ mod tests {
 
         // Test 1: Untrusted project rejects mutating tools
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_permissive_architecture = false;
         cfg.project_trusted = false;
 
         let mut events = vec![];
@@ -3037,6 +3139,7 @@ mod tests {
 
         // Test 2: Permission check blocks unallowed tools
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_permissive_architecture = false;
         cfg.project_trusted = true;
         cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
 
@@ -3080,6 +3183,7 @@ mod tests {
         ]);
 
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_permissive_architecture = false;
         cfg.project_trusted = true;
         cfg.high_risk_tools = vec!["high_risk_tool".to_string()];
         // Not in approved_tool_calls
