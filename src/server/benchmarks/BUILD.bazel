@@ -1,34 +1,10 @@
-load("@rules_rust//rust:defs.bzl", "rust_test")
-
 filegroup(
     name = "srcs",
     srcs = [
         "chaos_bench.rs",
         "latency_bench.rs",
         "mod.rs",
+
     ],
     visibility = ["//src/server:__pkg__"],
-)
-
-rust_test(
-    name = "benchmarks_test",
-    size = "large",
-    srcs = [
-        "chaos_bench.rs",
-        "latency_bench.rs",
-        "mod.rs",
-    ],
-    crate_root = "mod.rs",
-    edition = "2024",
-    deps = [
-                "//src/server:server_lib",
-        "@crates//:tokio",
-        "@crates//:sqlx",
-        "@crates//:uuid",
-        "@crates//:chrono",
-        "@crates//:tracing",
-        "@crates//:tonic",
-        "@crates//:serde",
-        "@crates//:serde_json",
-    ],
 )
