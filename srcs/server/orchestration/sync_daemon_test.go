@@ -332,3 +332,36 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		require.Equal(t, expected, synced)
 	}
 }
+
+func TestHybridMCPRAGDaemon_SyncHealthProbe(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	defer db.Close()
+
+	_, err = db.Exec(`
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT NOT NULL,
+			payload TEXT NOT NULL,
+			synced_to_cloud BOOLEAN DEFAULT FALSE
+		)
+	`)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`
+		INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES
+		('mission-1', 'CLOUD_ESCALATION', '{"key": "value1"}', FALSE),
+		('mission-2', 'CLOUD_ESCALATION', '{"key": "value2"}', FALSE),
+		('mission-3', 'PENDING', '{"key": "value3"}', FALSE),
+		('mission-4', 'CLOUD_ESCALATION', '{"key": "value4"}', TRUE)
+	`)
+	require.NoError(t, err)
+
+	daemon := NewHybridMCPRAGDaemon(db, "http://remote-url")
+
+	probe, err := daemon.SyncHealthProbe(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, "healthy", probe["status"])
+	assert.Equal(t, 2, probe["sync_backlog"])
+}

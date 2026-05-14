@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -72,4 +73,37 @@ func (s *SIPDB) ReportMissionHandover(ctx context.Context, missionID string, blo
 ' END || $1
 		WHERE id = $2`, blockers, missionID)
 	return err
+}
+
+func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
+	stuckThreshold := time.Now().Add(-1 * time.Hour)
+	failThreshold := time.Now().Add(-ageThreshold)
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1", stuckThreshold)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK'")
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT 10)")
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1", failThreshold)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
