@@ -12,3 +12,10 @@ sh_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+sh_test(
+    name = "verify_ethics_policy",
+    srcs = ["test_ethics_policy.sh"],
+    data = ["//src:all_srcs", "test_ethics_policy.py"],
+    size = "small",
+)
