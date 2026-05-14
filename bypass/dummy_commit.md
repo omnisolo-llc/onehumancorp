@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+✍️ Scribe: [new documentation feature]
