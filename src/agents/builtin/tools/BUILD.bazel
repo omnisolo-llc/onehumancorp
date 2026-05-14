@@ -31,6 +31,7 @@ rust_library(
         "task.rs",
         "todowrite.rs",
         "todowrite_test.rs",
+        "tool_forge.rs",
         "toolsearch.rs",
         "webfetch.rs",
         "websearch.rs",

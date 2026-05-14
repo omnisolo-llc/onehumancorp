@@ -998,25 +998,26 @@ mod capability_matrix_tests {
 }
 
 #[cfg(test)]
-mod toolforge_advanced_matrix_tests {
+mod tests_complex_isolation_matrices {
     use super::*;
+    use std::env;
 
-    #[test]
-    fn test_python_advanced_matrix_imports() {
+    #[tokio::test]
+    async fn test_isolation_matrix_python_complex_scenarios() {
         let mgr = PythonSandboxManager;
         let mut p1 = CapabilityProfile::new();
 
-        // Let's test granular failure cases for multiple imports
         let code = r#"
 import os
 import socket
 import json
+import urllib.request
         "#;
 
         assert!(mgr.perform_static_analysis(code, &p1).is_err());
         p1.allow(Capability::ProcessExecution);
-        assert!(mgr.perform_static_analysis(code, &p1).is_err()); // Still fails on socket
+        assert!(mgr.perform_static_analysis(code, &p1).is_err());
         p1.allow(Capability::NetworkAccess);
-        assert!(mgr.perform_static_analysis(code, &p1).is_ok()); // Now it passes
+        assert!(mgr.perform_static_analysis(code, &p1).is_ok());
     }
 }
