@@ -169,6 +169,8 @@ pub async fn buffer_metric(
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
+    let mut tx = pool.begin().await?;
+    ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
     query(
         "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
          VALUES ($1, $2, $3, $4, $5, 'pending')"
@@ -178,8 +180,9 @@ pub async fn buffer_metric(
     .bind(value)
     .bind(labels_json)
     .bind(Utc::now())
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
 
     Ok(())
 }

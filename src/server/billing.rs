@@ -186,14 +186,6 @@ impl Tracker {
         }
     }
 
-    pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
-        if let Some(ref client) = self.stripe_client {
-            client.get_subscription(subscription_id).await
-        } else {
-            Err("Stripe client not configured".to_string())
-        }
-    }
-
     pub fn summary(&self, _scope: &str) -> TokenSummary {
         TokenSummary::default()
     }
