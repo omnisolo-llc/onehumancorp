@@ -24,8 +24,20 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
 validation:
     nav:
+  - Help Center:
+      - Getting Started: help_center/getting_started.md
+      - Payments: help_center/payments.md
+      - Marketing: help_center/marketing.md
+      - AI Agents: help_center/ai_agents.md
+      - Account & Billing: help_center/account_billing.md
         omitted_files: ignore
 nav:
+  - Help Center:
+      - Getting Started: help_center/getting_started.md
+      - Payments: help_center/payments.md
+      - Marketing: help_center/marketing.md
+      - AI Agents: help_center/ai_agents.md
+      - Account & Billing: help_center/account_billing.md
   - Home: index.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
