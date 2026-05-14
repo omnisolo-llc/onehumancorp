@@ -1,5 +1,29 @@
-issue_category: cleanup
+version: 1
+triage_report:
+  summary: |
+    <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #333;">
+      <h2 style="margin-top: 0; font-family: 'Outfit', sans-serif;">🧹 System Hygiene & Security Audit</h2>
+      <p style="font-family: 'Inter', sans-serif;">Completed a multi-tenant safety audit checking for insecure connection scoping and missing RLS policies.</p>
+    </div>
+  issues:
+    - issue_category: security
+      title: "Insecure tenant_id read from request header"
+      description: |
+        <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); border-radius: 8px; padding: 15px; font-family: 'Inter', sans-serif;">
+          In `src/server/lib.rs`, `tenant_id` was being read from the unauthenticated `x-tenant-id` header in `get_my_plan`, `get_cost_dashboard`, and `select_plan`. Replaced with secure SPIFFE ID extraction using `x-spiffe-id` and `::server_auth::parse_spiffe_id`.
+        </div>
+      files_affected:
+        - src/server/lib.rs
+      status: resolved
+    - issue_category: security
+      title: "Missing ENABLE ROW LEVEL SECURITY on tenant tables"
+      description: |
+        <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); border-radius: 8px; padding: 15px; font-family: 'Inter', sans-serif;">
+          Identified several tables in `src/server/migrations/001_initial_schema.sql` missing `ENABLE ROW LEVEL SECURITY` and `CREATE POLICY` statements, including `roles`, `revoked_tokens`, `agent_missions`, `agent_status`, `order_items`, and `task_dependencies`. Appended the required statements to the migration file.
+        </div>
+      files_affected:
+        - src/server/migrations/001_initial_schema.sql
+      status: resolved
 debt_report:
-  description: "Bump version to v0.4.41"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+  dead_code_removed: []
+  dependencies_removed: []
