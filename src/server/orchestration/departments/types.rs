@@ -47,6 +47,7 @@ impl std::fmt::Display for DepartmentType {
 pub struct DepartmentConfig {
     pub tone_of_voice: String,
     pub auto_approve_limits: f64,
+    pub confidence_threshold: f64, // 0.0 to 1.0, where e.g., 0.8 means 80% confident
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

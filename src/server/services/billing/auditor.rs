@@ -264,7 +264,21 @@ impl CostAuditor {
         let budget = agent_budgets.get(agent_id);
 
         if let Some(budget) = budget {
-            cost > budget
+            cost >= budget
+        } else {
+            false
+        }
+    }
+
+    pub fn is_agent_near_budget(&self, agent_id: &str, threshold: f64) -> bool {
+        let agent_costs = self.agent_costs.lock().unwrap();
+        let agent_budgets = self.agent_budgets.lock().unwrap();
+
+        let cost = agent_costs.get(agent_id).unwrap_or(&0.0);
+        let budget = agent_budgets.get(agent_id);
+
+        if let Some(budget) = budget {
+            cost >= &(budget * threshold) && cost < budget
         } else {
             false
         }
@@ -303,9 +317,14 @@ mod tests {
         
         auditor.set_agent_budget("agent1", 1.0);
         assert!(auditor.is_agent_over_budget("agent1"));
+        assert!(!auditor.is_agent_near_budget("agent1", 0.9));
         
+        auditor.set_agent_budget("agent1", 2.1);
+        assert!(!auditor.is_agent_over_budget("agent1"));
+        assert!(auditor.is_agent_near_budget("agent1", 0.9));
+
         let report = auditor.generate_report();
-        assert!(report.contains("OVER BUDGET"));
+        assert!(!report.contains("OVER BUDGET"));
     }
 
     #[test]
