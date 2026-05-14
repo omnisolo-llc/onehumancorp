@@ -34,7 +34,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -52,7 +52,7 @@ jobs:
             build --show_timestamps
 
       - name: Build docs site
-        run: npx @bazel/bazelisk run //:docs_build
+        run: bazelisk run //:docs_build
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3

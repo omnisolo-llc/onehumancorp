@@ -29,7 +29,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -48,7 +48,7 @@ jobs:
 
       - name: Build ironclaw archives (all platforms)
         run: |
-          npx @bazel/bazelisk build \
+          bazelisk build \
             //release:ironclaw-x86_64-unknown-linux-gnu \
             //release:ironclaw-aarch64-unknown-linux-gnu \
             //release:ironclaw-x86_64-apple-darwin \
@@ -65,7 +65,7 @@ jobs:
             ironclaw-x86_64-apple-darwin \
             ironclaw-aarch64-apple-darwin \
             ironclaw-x86_64-pc-windows-msvc; do
-            src=$(npx @bazel/bazelisk cquery --output=files //release:${target} 2>/dev/null | head -1)
+            src=$(bazelisk cquery --output=files //release:${target} 2>/dev/null | head -1)
             if [ -n "$src" ] && [ -f "$src" ]; then
               cp "$src" "dist/${target}.tar.gz"
             fi
@@ -92,7 +92,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -119,10 +119,10 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Build Android APK
-        run: npx @bazel/bazelisk run //release:flutter-build-android-apk
+        run: bazelisk run //release:flutter-build-android-apk
 
       - name: Build Android App Bundle
-        run: npx @bazel/bazelisk run //release:flutter-build-android-aab
+        run: bazelisk run //release:flutter-build-android-aab
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
@@ -144,7 +144,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -162,7 +162,7 @@ jobs:
             build --show_timestamps
 
       - name: Build iOS (no code sign)
-        run: npx @bazel/bazelisk run //release:flutter-build-ios
+        run: bazelisk run //release:flutter-build-ios
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
@@ -182,7 +182,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -200,7 +200,7 @@ jobs:
             build --show_timestamps
 
       - name: Build macOS app
-        run: npx @bazel/bazelisk run //release:flutter-build-macos
+        run: bazelisk run //release:flutter-build-macos
 
       - name: Archive macOS .app
         run: |
@@ -231,7 +231,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -249,7 +249,7 @@ jobs:
             build --show_timestamps
 
       - name: Build Windows app
-        run: npx @bazel/bazelisk run //release:flutter-build-windows
+        run: bazelisk run //release:flutter-build-windows
 
       - name: Archive Windows build
         run: |
@@ -276,7 +276,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -301,7 +301,7 @@ jobs:
             libgtk-3-dev liblzma-dev libstdc++-12-dev
 
       - name: Build Linux app
-        run: npx @bazel/bazelisk run //release:flutter-build-linux
+        run: bazelisk run //release:flutter-build-linux
 
       - name: Archive Linux build
         run: |
@@ -327,7 +327,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -345,7 +345,7 @@ jobs:
             build --show_timestamps
 
       - name: Build Web app
-        run: npx @bazel/bazelisk run //release:flutter-build-web
+        run: bazelisk run //release:flutter-build-web
 
       - name: Archive Web build
         run: |
@@ -378,7 +378,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -464,7 +464,7 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          npx @bazel/bazelisk-cache: true
+          bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
           external-cache: true
@@ -483,19 +483,19 @@ jobs:
 
       - name: Push server image
         run: |
-          npx @bazel/bazelisk run //deploy:server_push_ghcr \
+          bazelisk run //deploy:server_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          npx @bazel/bazelisk run //deploy:server_push_dockerhub \
+          bazelisk run //deploy:server_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
 
       - name: Push agent image
         run: |
-          npx @bazel/bazelisk run //deploy:agent_push_ghcr \
+          bazelisk run //deploy:agent_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          npx @bazel/bazelisk run //deploy:agent_push_dockerhub \
+          bazelisk run //deploy:agent_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
 
       - name: Push UI image
         run: |
-          npx @bazel/bazelisk run //deploy:ui_push \
+          bazelisk run //deploy:ui_push \
             -- --tag "${{ github.ref_name }}"
