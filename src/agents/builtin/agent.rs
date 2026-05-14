@@ -358,50 +358,56 @@ impl Agent {
                 let session_tools_clone = session_tools.to_vec();
                 let messages_clone = messages.clone();
                 read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
+                    let (content, error) = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                        Ok(res) => (res, String::new()),
+                        Err(crate::types::ToolError::LlmRecoverable(msg)) => (String::new(), msg),
+                        Err(e) => (format!("Error: {:?}", e), String::new()),
                     };
-                    (tc_clone, r)
+                    (tc_clone, content, error)
                 });
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
+            for (tc, content, error) in ro_results {
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+
+                let result_str = if !error.is_empty() { error.clone() } else { content.clone() };
 
                 on_event(AgentEvent::ToolCall {
                     name: tc.name.clone(),
                     args_json: tc.arguments.to_string(),
-                    result: r.clone(),
+                    result: result_str,
                     iteration: i as i32,
                 });
 
                 tool_results[idx] = crate::types::ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
+                    content,
+                    error,
                 };
             }
 
             for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
-                    Err(e) => format!("Error: {:?}", e),
+                let (content, error) = match self.execute_tool(tc, session_tools, &messages).await {
+                    Ok(res) => (res, String::new()),
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => (String::new(), msg),
+                    Err(e) => (format!("Error: {:?}", e), String::new()),
                 };
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
+                let result_str = if !error.is_empty() { error.clone() } else { content.clone() };
+
                 on_event(AgentEvent::ToolCall {
                     name: tc.name.clone(),
                     args_json: tc.arguments.to_string(),
-                    result: r.clone(),
+                    result: result_str,
                     iteration: i as i32,
                 });
 
                 tool_results[idx] = crate::types::ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
+                    content,
+                    error,
                 };
             }
 
@@ -995,8 +1001,11 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
-                        // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
-                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
+                        // we explicitly tag it as a tool error in the execution summary so the replier sees it as an error to report or correct.
+                        let mut tc_error_result = String::new();
+                        tc_error_result.push_str("TOOL ERROR: ");
+                        tc_error_result.push_str(&msg);
+                        break tc_error_result;
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
