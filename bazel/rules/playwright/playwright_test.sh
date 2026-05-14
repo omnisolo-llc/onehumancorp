@@ -8,109 +8,59 @@ set -uo pipefail
 
 spec_file="${1:-}"
 
-# Store the original runfiles root
-RUNFILES_ROOT="$(pwd)"
+# Resolve workspace root using package.json symlink to find the actual workspace
+# The runfiles have package.json symlinked to /home/kevin/mono/package.json
+# We can use this to derive the actual workspace path
+workspace_root=""
 
-# Find package.json and follow symlink to find the real workspace root (where node_modules is)
-find_real_workspace_root() {
-    local pkg_json=""
-    # Check current dir and parents for package.json
-    local current_dir="$(pwd)"
-    while [[ "$current_dir" != "/" ]]; do
-        if [[ -f "$current_dir/package.json" ]]; then
-            pkg_json="$current_dir/package.json"
-            break
-        fi
-        current_dir="$(dirname "$current_dir")"
-    done
-
-    if [[ -n "$pkg_json" ]]; then
-        # Follow symlink to get to the real source tree
-        local real_pkg="$(realpath "$pkg_json")"
-        echo "$(dirname "$real_pkg")"
-        return 0
-    fi
-    return 1
-}
-
-workspace_root=$(find_real_workspace_root)
-
-if [[ -z "$workspace_root" ]] || [[ ! -d "$workspace_root/node_modules" ]]; then
-    if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
-      workspace_root="${BUILD_WORKSPACE_DIRECTORY}"
-    fi
-fi
-
-if [[ -z "$workspace_root" ]] || [[ ! -d "$workspace_root/node_modules" ]]; then
-    workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-fi
-
-# Final check: if we still don't have node_modules, we might be in a pure sandbox
-if [[ ! -d "$workspace_root/node_modules" ]]; then
-    workspace_root="$(pwd)"
-fi
-
-# Resolve spec file to absolute path while still in original directory
-ABS_SPEC_FILE=""
-if [[ -n "$spec_file" ]]; then
-    ABS_SPEC_FILE="$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")"
-fi
-
-# Resolve browsers path to absolute
-if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
-  echo "[playwright] Original browsers path: $PLAYWRIGHT_BROWSERS_PATH"
-  
-  # Resolve relative to runfiles root if it starts with ../
-  if [[ "$PLAYWRIGHT_BROWSERS_PATH" == ../* ]]; then
-      # If we have bazel-out link, we can find the output base
-      if [[ -L bazel-out ]]; then
-          output_base="$(dirname "$(dirname "$(dirname "$(readlink bazel-out)")")")"
-          repo_path="${PLAYWRIGHT_BROWSERS_PATH#../}"
-          repo_path="${repo_path%/..}"
-          potential_path="$output_base/external/$repo_path"
-          if [[ -d "$potential_path" ]]; then
-              export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$potential_path")"
-          fi
-      fi
-  fi
-  
-  # If it's still relative or doesn't exist, try to find it
-  if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" -name "headless_shell" -type f -executable 2>/dev/null | head -n 1)
-      if [[ -n "$ACTUAL_SHELL" ]]; then
-          ACTUAL_SHELL_ABS="$(realpath "$ACTUAL_SHELL")"
-          export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
-      fi
-  fi
-  
-  if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
-  fi
-fi
-
-# Resolve server binary path
-SERVER_BIN=""
-for candidate in "src/server/server" "../_main/src/server/server"; do
-  if [[ -x "$candidate" ]]; then
-    SERVER_BIN="$(realpath "$candidate")"
+# Find package.json - first check runfiles, then current dir
+pkg_json=""
+for dir in "." ".." "../.."; do
+  if [[ -f "$dir/package.json" ]]; then
+    pkg_json="$dir/package.json"
     break
   fi
 done
 
+if [[ -n "$pkg_json" ]]; then
+  # Follow symlinks to get the real package.json path
+  real_pkg="$(realpath "$pkg_json" 2>/dev/null || echo "$pkg_json")"
+  # Get workspace root from package.json's directory (dirname of package.json is workspace root)
+  workspace_root="$(dirname "$real_pkg")"
+fi
+
+# Fallback to other methods
+if [[ -z "$workspace_root" ]] || [[ ! -d "$workspace_root/node_modules" ]]; then
+  if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
+    workspace_root="${BUILD_WORKSPACE_DIRECTORY}"
+  elif [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
+    workspace_root="$(realpath "${TEST_SRCDIR}/${TEST_WORKSPACE}" 2>/dev/null || echo "")"
+  fi
+fi
+
+# Final fallback
+if [[ -z "$workspace_root" ]] || [[ ! -d "$workspace_root/node_modules" ]]; then
+  workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+fi
+
 cd "$workspace_root"
+echo "[playwright] Running in $(pwd)"
 
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
 
 # Unique container names for parallel isolation
+# Incorporate a random component to prevent collisions even if TEST_TARGET is duplicated or missing
 RAND_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 6)
 CONTAINER_SUFFIX="$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)_${RAND_ID}"
 POSTGRES_NAME="e2e_postgres_${CONTAINER_SUFFIX}"
 VALKEY_NAME="e2e_valkey_${CONTAINER_SUFFIX}"
 
+# Random ports for parallel isolation
 PG_PORT=$(shuf -i 20000-30000 -n 1)
 VK_PORT=$(shuf -i 30001-40000 -n 1)
 
+# Cleanup handler
 cleanup() {
   local exit_code=$?
   if [[ -n "${SERVER_PID:-}" ]]; then
@@ -122,8 +72,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Check if docker is available
 if ! docker info >/dev/null 2>&1; then
-  echo "[playwright] Error: docker daemon is not available"
+  echo "[playwright] Error: docker daemon is not available or /var/run/docker.sock is not accessible."
+  echo "[playwright] If running in Bazel sandbox, ensure 'no-sandbox' tag is present or use --sandbox_add_mount_pair=/var/run/docker.sock"
   exit 1
 fi
 
@@ -131,9 +83,11 @@ echo "[playwright] Starting E2E infrastructure (PG:$PG_PORT VK:$VK_PORT)..."
 docker run -d --name "$POSTGRES_NAME" -p "$PG_PORT:5432" -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p "$VK_PORT:6379" valkey/valkey:8-alpine
 
+# Wait for postgres
 echo "[playwright] Waiting for postgres on port $PG_PORT..."
 for i in $(seq 1 60); do
   if nc -z 127.0.0.1 "$PG_PORT" 2>/dev/null; then
+    # Give postgres a moment to finish starting up even after the port is open
     sleep 2
     break
   fi
@@ -144,13 +98,34 @@ echo "[playwright] Initializing database roles..."
 docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
 docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
 
+echo "[playwright] Workspace root: $workspace_root"
+echo "[playwright] Searching for server binary..."
+
+SERVER_BIN=""
+# First check runfiles (relative to current sandbox)
+for candidate in "src/server/server" "../_main/src/server/server"; do
+  if [[ -x "$candidate" ]]; then
+    SERVER_BIN="$(realpath "$candidate")"
+    echo "[playwright] Found server in runfiles: $SERVER_BIN"
+    break
+  fi
+done
+
+# If not found, check relative to workspace_root
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
     if [[ -x "$candidate" ]]; then
       SERVER_BIN="$candidate"
+      echo "[playwright] Found server relative to workspace: $SERVER_BIN"
       break
     fi
   done
+fi
+
+if [[ -z "$SERVER_BIN" ]]; then
+  # Try finding it via find
+  SERVER_BIN=$(find "$workspace_root" -name server -type f -executable 2>/dev/null | grep -m1 "src/server/server" || echo "")
+  [[ -n "$SERVER_BIN" ]] && echo "[playwright] Found server via find: $SERVER_BIN"
 fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
@@ -169,34 +144,34 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
       break
     fi
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-      echo "[playwright] Server process died."
-      tail -20 "${TEST_TMPDIR:-/tmp}/server.log"
+      echo "[playwright] Server process died. Log:"
+      tail -100 "${TEST_TMPDIR:-/tmp}/server.log" 2>/dev/null || true
       exit 1
     fi
     sleep 1
   done
 else
-  echo "[playwright] Error: server binary not found"
+  echo "[playwright] Error: server binary not found or not executable at $SERVER_BIN"
   exit 1
 fi
 
+# Run Playwright on the host (no Docker for tests)
 export CI=true
 export BASE_URL="http://localhost:18789"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Use a unique output directory for parallel isolation
-# Bazel provides TEST_UNDECLARED_OUTPUTS_DIR for capturing artifacts
-PLAYWRIGHT_OUTPUT_DIR="${TEST_UNDECLARED_OUTPUTS_DIR:-$TEST_TMPDIR/playwright-results}"
-mkdir -p "$PLAYWRIGHT_OUTPUT_DIR"
+if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
+  echo "[playwright] Using hermetic browsers from: $PLAYWRIGHT_BROWSERS_PATH"
+  # Ensure the path is absolute for Playwright
+  export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+fi
 
 # Use npx to run playwright - it will find the local installation via package.json
-if [[ -n "$ABS_SPEC_FILE" ]]; then
-  echo "[playwright] Running spec: $ABS_SPEC_FILE"
-  echo "[playwright] Listing all discovered tests:"
-  npx playwright test --config ./playwright.config.ts --list
+if [[ -n "$spec_file" ]]; then
+  echo "[playwright] Running spec: $spec_file"
   # npx will find playwright from the local package.json dependencies
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" "$ABS_SPEC_FILE"
+  npx playwright test --config ./playwright.config.ts "$spec_file"
 else
   echo "[playwright] Running all specs on host"
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR"
+  npx playwright test --config ./playwright.config.ts
 fi
