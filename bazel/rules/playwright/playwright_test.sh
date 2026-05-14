@@ -95,6 +95,8 @@ fi
 # Run Playwright on the host (no Docker for tests)
 export CI=true
 export BASE_URL="http://localhost:18789"
+npm install playwright
+npx playwright install chromium
 
 if [[ -n "$spec_file" ]]; then
   echo "[playwright] Running spec on host: $spec_file"
