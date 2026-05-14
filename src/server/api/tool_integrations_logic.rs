@@ -53,10 +53,7 @@ pub fn tool_integration_routes(registry: Arc<IntegrationsRegistry>) -> Router {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::body::Body;
-    use axum::http::{Request, StatusCode};
 
-    // Fallback to testing without tower::ServiceExt since we removed it
     #[tokio::test]
     async fn test_chatwoot_webhook_dummy() {
         assert_eq!(true, true);
