@@ -45,6 +45,8 @@ rust_library(
         "agent.rs",
         "checkpointer.rs",
         "departments.rs",
+        "error_tracker.rs",
+        "llm_recoverable_tests.rs",
         "guardrails.rs",
         "harness.rs",
         "langgraph.rs",

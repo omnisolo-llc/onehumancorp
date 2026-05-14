@@ -39,3 +39,7 @@ pub mod langgraph;
 pub mod masking_tests;
 pub mod codex_runner;
 pub mod consolidation_worker;
+
+pub mod error_tracker;
+
+pub mod llm_recoverable_tests;

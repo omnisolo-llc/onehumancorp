@@ -589,7 +589,8 @@ impl Agent {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
 
-                let mut error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
+                let error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
+                let mut tracker = crate::error_tracker::ErrorTracker { counts: error_counts.into_iter().map(|(k, v)| (k, v.as_u64().unwrap())).collect(), max_retries: cfg_max_retries as u64 };
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
 
@@ -657,7 +658,7 @@ impl Agent {
                     match final_res {
                         Ok(res) => {
                             let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            error_counts.insert(tool_name, serde_json::json!(0));
+                            tracker.record_success(&tool_name);
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": res,
@@ -666,9 +667,7 @@ impl Agent {
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                             let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
-                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
-                            if count > cfg_max_retries as u64 {
+                            if tracker.record_error(&tool_name) {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
                             }
                             tool_results_json[idx] = serde_json::json!({
@@ -733,7 +732,7 @@ impl Agent {
 
                         match final_res {
                             Ok(res) => {
-                                error_counts.insert(name.to_string(), serde_json::json!(0));
+                                tracker.record_success(name);
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": res,
@@ -741,9 +740,7 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
-                                error_counts.insert(name.to_string(), serde_json::json!(count));
-                                if count > cfg_max_retries as u64 {
+                                if tracker.record_error(name) {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
                                 }
                                 tool_results_json[idx] = serde_json::json!({
@@ -779,7 +776,7 @@ impl Agent {
 
                 Ok(serde_json::json!({
                     "has_tool_calls": false, // Clear flag
-                    "error_counts": error_counts,
+                    "error_counts": tracker.counts.into_iter().map(|(k, v)| (k, serde_json::json!(v))).collect::<serde_json::Map<String, serde_json::Value>>(),
                     "messages": [{
                         "role": "tool",
                         "content": "",
@@ -1223,7 +1220,7 @@ impl Agent {
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
-        let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut tracker = crate::error_tracker::ErrorTracker::new(final_cfg.max_retries as u64);
         let mut malformed_retries = 0;
         let max_malformed_retries = 3;
 
@@ -1733,7 +1730,7 @@ impl Agent {
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 match res {
                     Ok(r) => {
-                        tool_error_counts.remove(&tc.name);
+                        tracker.record_success(&tc.name);
                         self.progress.record_tool_use();
                         self.observation_store.insert(tc.id.clone(), r.clone());
                         on_event(AgentEvent::ToolCall {
@@ -1763,9 +1760,7 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
-                        let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
-                        *count += 1;
-                        if *count > final_cfg.max_retries {
+                        if tracker.record_error(&tc.name) {
                             if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                 rewind_attempts_remaining -= 1;
                                 let _ = checkpoint_history.pop();
@@ -1813,7 +1808,7 @@ impl Agent {
                                             checkpoint_id: prev_id,
                                             reason: format!("Tool '{}' failed 3 times", tc.name),
                                         });
-                                        tool_error_counts.remove(&tc.name);
+                                        tracker.record_success(&tc.name);
                                         continue;
                                     }
                                 }
@@ -1906,7 +1901,7 @@ impl Agent {
                 loop {
                     match self.execute_tool(&tc, &session_tools, &messages).await {
                         Ok(r) => {
-                            tool_error_counts.remove(&tc.name);
+                            tracker.record_success(&tc.name);
                             self.progress.record_tool_use();
                             self.observation_store.insert(tc.id.clone(), r.clone());
                             on_event(AgentEvent::ToolCall {
@@ -1937,9 +1932,7 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
-                            let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
-                            *count += 1;
-                            if *count > final_cfg.max_retries {
+                            if tracker.record_error(&tc.name) {
                                 if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                     rewind_attempts_remaining -= 1;
                                     let _ = checkpoint_history.pop();
@@ -1987,7 +1980,7 @@ impl Agent {
                                                 checkpoint_id: prev_id,
                                                 reason: format!("Tool '{}' failed 3 times", tc.name),
                                             });
-                                            tool_error_counts.remove(&tc.name);
+                                            tracker.record_success(&tc.name);
                                             continue;
                                         }
                                     }
