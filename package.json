@@ -12,7 +12,7 @@
     "zod": "^3.23.0"
   },
   "scripts": {
-    "postinstall": "go install github.com/bazelbuild/bazelisk@latest"
+    "postinstall": "go install github.com/bazelbuild/bazelisk@latest && ([ -z \"$GITHUB_PATH\" ] || echo \"$(go env GOPATH)/bin\" >> \"$GITHUB_PATH\")"
   },
   "devDependencies": {
     "@playwright/test": "1.50.1",
