@@ -18,10 +18,12 @@ rust_library(
     crate_name = "ohc_builtin_agent_core",
     edition = "2024",
     proc_macro_deps = [
+        "//src/server/pricing:server_pricing",
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/pricing:server_pricing",
         "@crates//:chrono",
         "@crates//:hmac",
         "@crates//:once_cell",
@@ -66,11 +68,13 @@ rust_library(
     crate_name = "ohc_builtin_agent",
     edition = "2024",
     proc_macro_deps = [
+        "//src/server/pricing:server_pricing",
         "@crates//:async-recursion",
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/pricing:server_pricing",
         "@crates//:temp-env",
         ":core",
         "//src/proto:agent_service_tonic",
@@ -121,11 +125,13 @@ rust_binary(
     srcs = ["main.rs"],
     edition = "2024",
     proc_macro_deps = [
+        "//src/server/pricing:server_pricing",
         "@crates//:async-recursion",
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/pricing:server_pricing",
         ":core",
         ":ohc_builtin_agent_lib",
     ] + [
