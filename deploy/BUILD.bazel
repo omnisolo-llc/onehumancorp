@@ -155,10 +155,6 @@ sh_test(
         "helm/ohc/**",
         "docker-compose.yml",
     ]) + ["BUILD.bazel"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 # End-to-end smoke test against a real Kind cluster.
