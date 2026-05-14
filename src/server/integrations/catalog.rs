@@ -42,5 +42,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
+    let cal_com_provider = crate::integrations::cal_com::provider::CalComProvider::new();
+    catalog.push(cal_com_provider.into_integration_provider());
+
     catalog
 }

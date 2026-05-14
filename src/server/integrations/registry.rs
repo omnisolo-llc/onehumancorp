@@ -17,6 +17,7 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
 }
 
@@ -41,6 +42,7 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
