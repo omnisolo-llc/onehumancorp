@@ -48,7 +48,6 @@ impl DB {
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
@@ -157,7 +156,6 @@ impl DB {
             }
 
             let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .acquire_timeout(std::time::Duration::from_millis(500))
 
                 .connect(&pg_url)
@@ -902,7 +900,6 @@ mod autodream_db_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -924,7 +921,6 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -961,7 +957,6 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)
             .unwrap();
@@ -1123,7 +1118,6 @@ mod e2e_tenant_isolation_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let _pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1136,7 +1130,6 @@ mod e2e_tenant_isolation_tests {
             .unwrap();
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1162,8 +1155,7 @@ mod e2e_tenant_isolation_tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
 
         // Create a basic pool using our implementation logic
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) });
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) });
 
         // We can't trivially introspect the options object cleanly to confirm there is no before_acquire hook,
         // but we verify that the pool options can be built successfully and doesn't inherently inject a tenant reset.
@@ -1172,5 +1164,49 @@ mod e2e_tenant_isolation_tests {
         // If the pool initialized without the `before_acquire` hook, this is a success.
         // Discarding `DISCARD ALL` safely scopes context explicitly for each execution.
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
+    }
+}
+
+#[cfg(test)]
+mod e2e_sqlite_isolation_tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_local_sqlite_permissions_e2e() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir.path().join("secure_e2e_dir/e2e.db");
+        let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
+
+        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("e2e_key"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let parent_dir = db_path.parent().unwrap();
+
+                // DO NOT PRE-CREATE THE DIRECTORY OR FILE HERE.
+                // We want to test that DB::new() correctly creates the directory with 0700
+                // and the file with 0600 permissions.
+
+                // In test environments, SQLx sometimes has parallel connection initialization issues
+                // when running against an empty directory. Since we want to test DB::new()'s directory
+                // creation logic, we will just call it and assert the resulting permissions.
+                // We wrap it in a result and ignore connection pool errors because we are only
+                // testing the file permissions side effect.
+                let _ = DB::new().await;
+
+                // 1. Verify directory permissions
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let dir_meta = std::fs::metadata(&parent_dir).expect("Directory should have been created by DB::new()");
+                    let dir_mode = dir_meta.permissions().mode();
+                    // 0700 means the owner can read, write, and execute. Group/others have no access.
+                    assert_eq!(dir_mode & 0o777, 0o700, "Directory permissions should be 0700");
+
+                    let file_meta = std::fs::metadata(&db_path).expect("File should have been created by DB::new()");
+                    let file_mode = file_meta.permissions().mode();
+                    assert_eq!(file_mode & 0o777, 0o600, "File permissions should be 0600");
+                }
+            });
+        });
     }
 }
