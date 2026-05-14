@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "harness",
     srcs = [
+        "agent_harness.go",
         "macos_sandbox.go",
         "assistant_sandbox.go",
         "bwrap_sandbox.go",
@@ -11,12 +12,14 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/telemetry",
+        "//srcs/server/api/harness",
     ],
 )
 
 go_test(
     name = "harness_test",
     srcs = [
+        "agent_harness_test.go",
         "macos_sandbox_test.go",
         "assistant_sandbox_test.go",
         "bwrap_sandbox_test.go",

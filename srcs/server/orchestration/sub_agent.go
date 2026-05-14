@@ -3,7 +3,6 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
-	"gopkg.in/yaml.v3"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -11,6 +10,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 var ErrTokenBudgetExceeded = errors.New("token budget exceeded")
@@ -72,6 +73,7 @@ type DefaultSubAgentSpawner struct {
 	isSQLite  bool
 	semaphore chan struct{}
 	cb        *CircuitBreaker
+	resolver  *HarnessResolver
 }
 
 // NewDefaultSubAgentSpawner creates a new instance of DefaultSubAgentSpawner.
@@ -88,6 +90,7 @@ func NewDefaultSubAgentSpawner(mesh MeshTransport, isSQLite bool, maxConcurrency
 		isSQLite:  isSQLite,
 		semaphore: sem,
 		cb:        NewCircuitBreaker(3, 30*time.Second), // 3 failures, 30s timeout
+		resolver:  NewHarnessResolver(),
 	}
 }
 
@@ -149,20 +152,24 @@ func (s *DefaultSubAgentSpawner) runSubAgent(ctx context.Context, task *SharedTa
 }
 
 func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTask) error {
-	resolver := NewHarnessResolver()
-
-	harness, err := resolver.Resolve("test-agent")
-
+	// Resolve harness instead of direct execution logic
+	harness, err := s.resolver.Resolve("default-agent")
 	if err != nil {
-
 		return err
-
 	}
 
-	_, _ = harness.RunAttempt("ls")
 	// Check token budget BEFORE executing
 	if err := checkTokenBudget(task.OrganizationID); err != nil {
 		return err
+	}
+
+	// Simulated harness execution
+	res, err := harness.RunAttempt("simulated-task-command")
+	if err != nil {
+		return err
+	}
+	if res.ExitCode != 0 {
+		return fmt.Errorf("task failed with exit code %d", res.ExitCode)
 	}
 
 	// Write heartbeat to .agent-task/status/

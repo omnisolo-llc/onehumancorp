@@ -4,6 +4,7 @@ go_library(
     name = "orchestration",
     srcs = [
         "autodream.go",
+        "harness_resolver.go",
         "mesh.go",
         "tasks_db.go",
         "state_machine.go",
@@ -19,6 +20,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/pb:pb",
+        "//srcs/server/api/harness",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
@@ -29,6 +31,7 @@ go_test(
     name = "orchestration_test",
     srcs = [
         "autodream_test.go",
+        "harness_resolver_test.go",
         "mesh_test.go",
         "mesh_system_test.go",
         "tasks_db_test.go",

@@ -25,7 +25,6 @@ func (m *mockMeshTransport) Publish(ctx context.Context, channel string, data []
 	return nil
 }
 
-
 func (m *mockMeshTransport) AdvertiseCapabilities(ctx context.Context, agent pb.Agent) error {
     return nil
 }
@@ -232,6 +231,7 @@ func TestSubAgentSpawner_CircuitBreaker(t *testing.T) {
 	}
 	assert.True(t, foundPaused)
 }
+
 func TestSubAgentSpawner_Monitor(t *testing.T) {
 	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, false, 0)
 	err := spawner.Monitor(context.Background())
@@ -312,4 +312,28 @@ func TestTaskOrchestrator_PollTasks_Error(t *testing.T) {
 
 	err := orchestrator.PollTasks(context.Background())
 	assert.Error(t, err)
+}
+
+func TestSubAgentSpawner_ExecuteTask_HarnessDelegation(t *testing.T) {
+	mesh := &mockMeshTransport{}
+	spawner := NewDefaultSubAgentSpawner(mesh, false, 0)
+
+	// Ensure we explicitly register and use a tracked mock harness
+	mock := &MockHarness{}
+	spawner.resolver.Register("default-agent", mock)
+
+	task := &SharedTask{
+		ID:             "test-harness-delegation",
+		OrganizationID: "org-1",
+	}
+
+	// Because of random transient failure we will execute 10 times to ensure
+	// mock harness is reliably called regardless of subsequent failure.
+	for i := 0; i < 10; i++ {
+		spawner.executeTask(context.Background(), task)
+		if mock.Called {
+			break
+		}
+	}
+	assert.True(t, mock.Called, "Mock harness should have been called via resolver")
 }

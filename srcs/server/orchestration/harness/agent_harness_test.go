@@ -3,12 +3,14 @@ package harness
 import (
 	"strings"
 	"testing"
+
+	apiharness "onehumancorp/srcs/server/api/harness"
 )
 
 type MockHarness struct{}
 
-func (m *MockHarness) RunAttempt(cmd string) (*AttemptResult, error) {
-	return &AttemptResult{
+func (m *MockHarness) RunAttempt(cmd string) (*apiharness.AttemptResult, error) {
+	return &apiharness.AttemptResult{
 		Stdout:   "mock stdout",
 		ExitCode: 0,
 	}, nil
@@ -23,7 +25,7 @@ func (m *MockHarness) Reset() error {
 }
 
 func TestMockHarness(t *testing.T) {
-	var harness AgentHarness = &MockHarness{}
+	var harness apiharness.AgentHarness = &MockHarness{}
 	res, err := harness.RunAttempt("ls")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)

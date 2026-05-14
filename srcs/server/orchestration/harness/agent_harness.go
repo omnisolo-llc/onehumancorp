@@ -3,26 +3,15 @@ package harness
 import (
 	"bytes"
 	"os/exec"
+
+	apiharness "onehumancorp/srcs/server/api/harness"
 )
-
-type AttemptResult struct {
-	Stdout    string
-	Stderr    string
-	ExitCode  int
-	Compacted bool
-}
-
-type AgentHarness interface {
-	RunAttempt(cmd string) (*AttemptResult, error)
-	Compact() error
-	Reset() error
-}
 
 type AssistantAgentHarness struct {
 	manager *AssistantSandboxManager
 }
 
-func NewAssistantAgentHarness(policyJSON string) (AgentHarness, error) {
+func NewAssistantAgentHarness(policyJSON string) (apiharness.AgentHarness, error) {
 	manager := NewAssistantSandboxManager()
 	if policyJSON != "" {
 		if err := manager.UpdateConfig(policyJSON); err != nil {
@@ -32,7 +21,7 @@ func NewAssistantAgentHarness(policyJSON string) (AgentHarness, error) {
 	return &AssistantAgentHarness{manager: manager}, nil
 }
 
-func (h *AssistantAgentHarness) RunAttempt(cmd string) (*AttemptResult, error) {
+func (h *AssistantAgentHarness) RunAttempt(cmd string) (*apiharness.AttemptResult, error) {
 	wrappedCmd, err := h.manager.WrapCommand(cmd)
 	if err != nil {
 		return nil, err
@@ -54,7 +43,7 @@ func (h *AssistantAgentHarness) RunAttempt(cmd string) (*AttemptResult, error) {
 		}
 	}
 
-	return &AttemptResult{
+	return &apiharness.AttemptResult{
 		Stdout:   out.String(),
 		Stderr:   stderr.String(),
 		ExitCode: exitCode,
