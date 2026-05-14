@@ -102,10 +102,20 @@ impl SharedTaskOrchestrator {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
+                // KAIROS: Horizontal Pod Concurrency using FOR UPDATE SKIP LOCKED
                 let row = sqlx::query(
                     r#"
                     SELECT * FROM shared_tasks_v4
                     WHERE status = 'PENDING' AND organization_id = $1
+                    ORDER BY
+                      CASE priority
+                        WHEN 'CRITICAL' THEN 1
+                        WHEN 'HIGH' THEN 2
+                        WHEN 'MEDIUM' THEN 3
+                        WHEN 'LOW' THEN 4
+                        ELSE 5
+                      END ASC,
+                      created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                     "#
@@ -154,6 +164,7 @@ impl SharedTaskOrchestrator {
                 }
             }
             DbStore::Sqlite(sqlite_pool) => {
+                // KAIROS: Application-level Mutex Fallback for Standalone Mode
                 let _lock = self.sqlite_mutex.lock().await;
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -161,6 +172,15 @@ impl SharedTaskOrchestrator {
                     r#"
                     SELECT * FROM shared_tasks_v4
                     WHERE status = 'PENDING' AND organization_id = ?
+                    ORDER BY
+                      CASE priority
+                        WHEN 'CRITICAL' THEN 1
+                        WHEN 'HIGH' THEN 2
+                        WHEN 'MEDIUM' THEN 3
+                        WHEN 'LOW' THEN 4
+                        ELSE 5
+                      END ASC,
+                      created_at ASC
                     LIMIT 1
                     "#
                 )
