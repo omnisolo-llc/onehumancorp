@@ -1,1 +1,1 @@
-⚡ Bolt: Zero WIP exit.
+💰 Miser: Zero WIP exit.
