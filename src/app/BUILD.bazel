@@ -1,0 +1,19 @@
+load("@rules_flutter//flutter:defs.bzl", "flutter_app", "flutter_library", "flutter_test")
+
+filegroup(
+    name = "pubspec",
+    srcs = ["pubspec.yaml"],
+)
+
+flutter_library(
+    name = "builder_lib",
+    srcs = glob(["lib/**/*.dart"]),
+    pubspec = "pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "builder_test",
+    srcs = glob(["test/**/*_test.dart"]),
+    embed = [":builder_lib"],
+)

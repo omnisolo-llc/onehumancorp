@@ -1,0 +1,16 @@
+name: ohc_app
+description: OHC App
+version: 1.0.0
+publish_to: "none"
+resolution: workspace
+
+environment:
+  sdk: "^3.7.2"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
