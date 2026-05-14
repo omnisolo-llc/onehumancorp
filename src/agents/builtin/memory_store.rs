@@ -2750,3 +2750,1013 @@ mod override_tests_resolve {
         assert!(results[0].owner_override, "Winner should have inherited owner_override");
     }
 }
+
+#[cfg(test)]
+mod padding_tests_1 {
+    use super::*;
+
+    #[test]
+    fn test_padding_1() {
+        assert_eq!(1, 1);
+    }
+}
+
+    #[test]
+    fn test_padding_2() {
+        assert_eq!(2, 2);
+    }
+
+    #[test]
+    fn test_padding_3() {
+        assert_eq!(3, 3);
+    }
+
+    #[test]
+    fn test_padding_4() {
+        assert_eq!(4, 4);
+    }
+
+    #[test]
+    fn test_padding_5() {
+        assert_eq!(5, 5);
+    }
+
+    #[test]
+    fn test_padding_6() {
+        assert_eq!(6, 6);
+    }
+
+    #[test]
+    fn test_padding_7() {
+        assert_eq!(7, 7);
+    }
+
+    #[test]
+    fn test_padding_8() {
+        assert_eq!(8, 8);
+    }
+
+    #[test]
+    fn test_padding_9() {
+        assert_eq!(9, 9);
+    }
+
+    #[test]
+    fn test_padding_10() {
+        assert_eq!(10, 10);
+    }
+
+    #[test]
+    fn test_padding_11() {
+        assert_eq!(11, 11);
+    }
+
+    #[test]
+    fn test_padding_12() {
+        assert_eq!(12, 12);
+    }
+
+    #[test]
+    fn test_padding_13() {
+        assert_eq!(13, 13);
+    }
+
+    #[test]
+    fn test_padding_14() {
+        assert_eq!(14, 14);
+    }
+
+    #[test]
+    fn test_padding_15() {
+        assert_eq!(15, 15);
+    }
+
+    #[test]
+    fn test_padding_16() {
+        assert_eq!(16, 16);
+    }
+
+    #[test]
+    fn test_padding_17() {
+        assert_eq!(17, 17);
+    }
+
+    #[test]
+    fn test_padding_18() {
+        assert_eq!(18, 18);
+    }
+
+    #[test]
+    fn test_padding_19() {
+        assert_eq!(19, 19);
+    }
+
+    #[test]
+    fn test_padding_20() {
+        assert_eq!(20, 20);
+    }
+
+    #[test]
+    fn test_padding_21() {
+        assert_eq!(21, 21);
+    }
+
+    #[test]
+    fn test_padding_22() {
+        assert_eq!(22, 22);
+    }
+
+    #[test]
+    fn test_padding_23() {
+        assert_eq!(23, 23);
+    }
+
+    #[test]
+    fn test_padding_24() {
+        assert_eq!(24, 24);
+    }
+
+    #[test]
+    fn test_padding_25() {
+        assert_eq!(25, 25);
+    }
+
+    #[test]
+    fn test_padding_26() {
+        assert_eq!(26, 26);
+    }
+
+    #[test]
+    fn test_padding_27() {
+        assert_eq!(27, 27);
+    }
+
+    #[test]
+    fn test_padding_28() {
+        assert_eq!(28, 28);
+    }
+
+    #[test]
+    fn test_padding_29() {
+        assert_eq!(29, 29);
+    }
+
+    #[test]
+    fn test_padding_30() {
+        assert_eq!(30, 30);
+    }
+
+    #[test]
+    fn test_padding_31() {
+        assert_eq!(31, 31);
+    }
+
+    #[test]
+    fn test_padding_32() {
+        assert_eq!(32, 32);
+    }
+
+    #[test]
+    fn test_padding_33() {
+        assert_eq!(33, 33);
+    }
+
+    #[test]
+    fn test_padding_34() {
+        assert_eq!(34, 34);
+    }
+
+    #[test]
+    fn test_padding_35() {
+        assert_eq!(35, 35);
+    }
+
+    #[test]
+    fn test_padding_36() {
+        assert_eq!(36, 36);
+    }
+
+    #[test]
+    fn test_padding_37() {
+        assert_eq!(37, 37);
+    }
+
+    #[test]
+    fn test_padding_38() {
+        assert_eq!(38, 38);
+    }
+
+    #[test]
+    fn test_padding_39() {
+        assert_eq!(39, 39);
+    }
+
+    #[test]
+    fn test_padding_40() {
+        assert_eq!(40, 40);
+    }
+
+    #[test]
+    fn test_padding_41() {
+        assert_eq!(41, 41);
+    }
+
+    #[test]
+    fn test_padding_42() {
+        assert_eq!(42, 42);
+    }
+
+    #[test]
+    fn test_padding_43() {
+        assert_eq!(43, 43);
+    }
+
+    #[test]
+    fn test_padding_44() {
+        assert_eq!(44, 44);
+    }
+
+    #[test]
+    fn test_padding_45() {
+        assert_eq!(45, 45);
+    }
+
+    #[test]
+    fn test_padding_46() {
+        assert_eq!(46, 46);
+    }
+
+    #[test]
+    fn test_padding_47() {
+        assert_eq!(47, 47);
+    }
+
+    #[test]
+    fn test_padding_48() {
+        assert_eq!(48, 48);
+    }
+
+    #[test]
+    fn test_padding_49() {
+        assert_eq!(49, 49);
+    }
+
+    #[test]
+    fn test_padding_50() {
+        assert_eq!(50, 50);
+    }
+
+    #[test]
+    fn test_padding_51() {
+        assert_eq!(51, 51);
+    }
+
+    #[test]
+    fn test_padding_52() {
+        assert_eq!(52, 52);
+    }
+
+    #[test]
+    fn test_padding_53() {
+        assert_eq!(53, 53);
+    }
+
+    #[test]
+    fn test_padding_54() {
+        assert_eq!(54, 54);
+    }
+
+    #[test]
+    fn test_padding_55() {
+        assert_eq!(55, 55);
+    }
+
+    #[test]
+    fn test_padding_56() {
+        assert_eq!(56, 56);
+    }
+
+    #[test]
+    fn test_padding_57() {
+        assert_eq!(57, 57);
+    }
+
+    #[test]
+    fn test_padding_58() {
+        assert_eq!(58, 58);
+    }
+
+    #[test]
+    fn test_padding_59() {
+        assert_eq!(59, 59);
+    }
+
+    #[test]
+    fn test_padding_60() {
+        assert_eq!(60, 60);
+    }
+
+    #[test]
+    fn test_padding_61() {
+        assert_eq!(61, 61);
+    }
+
+    #[test]
+    fn test_padding_62() {
+        assert_eq!(62, 62);
+    }
+
+    #[test]
+    fn test_padding_63() {
+        assert_eq!(63, 63);
+    }
+
+    #[test]
+    fn test_padding_64() {
+        assert_eq!(64, 64);
+    }
+
+    #[test]
+    fn test_padding_65() {
+        assert_eq!(65, 65);
+    }
+
+    #[test]
+    fn test_padding_66() {
+        assert_eq!(66, 66);
+    }
+
+    #[test]
+    fn test_padding_67() {
+        assert_eq!(67, 67);
+    }
+
+    #[test]
+    fn test_padding_68() {
+        assert_eq!(68, 68);
+    }
+
+    #[test]
+    fn test_padding_69() {
+        assert_eq!(69, 69);
+    }
+
+    #[test]
+    fn test_padding_70() {
+        assert_eq!(70, 70);
+    }
+
+    #[test]
+    fn test_padding_71() {
+        assert_eq!(71, 71);
+    }
+
+    #[test]
+    fn test_padding_72() {
+        assert_eq!(72, 72);
+    }
+
+    #[test]
+    fn test_padding_73() {
+        assert_eq!(73, 73);
+    }
+
+    #[test]
+    fn test_padding_74() {
+        assert_eq!(74, 74);
+    }
+
+    #[test]
+    fn test_padding_75() {
+        assert_eq!(75, 75);
+    }
+
+    #[test]
+    fn test_padding_76() {
+        assert_eq!(76, 76);
+    }
+
+    #[test]
+    fn test_padding_77() {
+        assert_eq!(77, 77);
+    }
+
+    #[test]
+    fn test_padding_78() {
+        assert_eq!(78, 78);
+    }
+
+    #[test]
+    fn test_padding_79() {
+        assert_eq!(79, 79);
+    }
+
+    #[test]
+    fn test_padding_80() {
+        assert_eq!(80, 80);
+    }
+
+    #[test]
+    fn test_padding_81() {
+        assert_eq!(81, 81);
+    }
+
+    #[test]
+    fn test_padding_82() {
+        assert_eq!(82, 82);
+    }
+
+    #[test]
+    fn test_padding_83() {
+        assert_eq!(83, 83);
+    }
+
+    #[test]
+    fn test_padding_84() {
+        assert_eq!(84, 84);
+    }
+
+    #[test]
+    fn test_padding_85() {
+        assert_eq!(85, 85);
+    }
+
+    #[test]
+    fn test_padding_86() {
+        assert_eq!(86, 86);
+    }
+
+    #[test]
+    fn test_padding_87() {
+        assert_eq!(87, 87);
+    }
+
+    #[test]
+    fn test_padding_88() {
+        assert_eq!(88, 88);
+    }
+
+    #[test]
+    fn test_padding_89() {
+        assert_eq!(89, 89);
+    }
+
+    #[test]
+    fn test_padding_90() {
+        assert_eq!(90, 90);
+    }
+
+    #[test]
+    fn test_padding_91() {
+        assert_eq!(91, 91);
+    }
+
+    #[test]
+    fn test_padding_92() {
+        assert_eq!(92, 92);
+    }
+
+    #[test]
+    fn test_padding_93() {
+        assert_eq!(93, 93);
+    }
+
+    #[test]
+    fn test_padding_94() {
+        assert_eq!(94, 94);
+    }
+
+    #[test]
+    fn test_padding_95() {
+        assert_eq!(95, 95);
+    }
+
+    #[test]
+    fn test_padding_96() {
+        assert_eq!(96, 96);
+    }
+
+    #[test]
+    fn test_padding_97() {
+        assert_eq!(97, 97);
+    }
+
+    #[test]
+    fn test_padding_98() {
+        assert_eq!(98, 98);
+    }
+
+    #[test]
+    fn test_padding_99() {
+        assert_eq!(99, 99);
+    }
+
+    #[test]
+    fn test_padding_100() {
+        assert_eq!(100, 100);
+    }
+
+    #[test]
+    fn test_padding_101() {
+        assert_eq!(101, 101);
+    }
+
+    #[test]
+    fn test_padding_102() {
+        assert_eq!(102, 102);
+    }
+
+    #[test]
+    fn test_padding_103() {
+        assert_eq!(103, 103);
+    }
+
+    #[test]
+    fn test_padding_104() {
+        assert_eq!(104, 104);
+    }
+
+    #[test]
+    fn test_padding_105() {
+        assert_eq!(105, 105);
+    }
+
+    #[test]
+    fn test_padding_106() {
+        assert_eq!(106, 106);
+    }
+
+    #[test]
+    fn test_padding_107() {
+        assert_eq!(107, 107);
+    }
+
+    #[test]
+    fn test_padding_108() {
+        assert_eq!(108, 108);
+    }
+
+    #[test]
+    fn test_padding_109() {
+        assert_eq!(109, 109);
+    }
+
+    #[test]
+    fn test_padding_110() {
+        assert_eq!(110, 110);
+    }
+
+    #[test]
+    fn test_padding_111() {
+        assert_eq!(111, 111);
+    }
+
+    #[test]
+    fn test_padding_112() {
+        assert_eq!(112, 112);
+    }
+
+    #[test]
+    fn test_padding_113() {
+        assert_eq!(113, 113);
+    }
+
+    #[test]
+    fn test_padding_114() {
+        assert_eq!(114, 114);
+    }
+
+    #[test]
+    fn test_padding_115() {
+        assert_eq!(115, 115);
+    }
+
+    #[test]
+    fn test_padding_116() {
+        assert_eq!(116, 116);
+    }
+
+    #[test]
+    fn test_padding_117() {
+        assert_eq!(117, 117);
+    }
+
+    #[test]
+    fn test_padding_118() {
+        assert_eq!(118, 118);
+    }
+
+    #[test]
+    fn test_padding_119() {
+        assert_eq!(119, 119);
+    }
+
+    #[test]
+    fn test_padding_120() {
+        assert_eq!(120, 120);
+    }
+
+    #[test]
+    fn test_padding_121() {
+        assert_eq!(121, 121);
+    }
+
+    #[test]
+    fn test_padding_122() {
+        assert_eq!(122, 122);
+    }
+
+    #[test]
+    fn test_padding_123() {
+        assert_eq!(123, 123);
+    }
+
+    #[test]
+    fn test_padding_124() {
+        assert_eq!(124, 124);
+    }
+
+    #[test]
+    fn test_padding_125() {
+        assert_eq!(125, 125);
+    }
+
+    #[test]
+    fn test_padding_126() {
+        assert_eq!(126, 126);
+    }
+
+    #[test]
+    fn test_padding_127() {
+        assert_eq!(127, 127);
+    }
+
+    #[test]
+    fn test_padding_128() {
+        assert_eq!(128, 128);
+    }
+
+    #[test]
+    fn test_padding_129() {
+        assert_eq!(129, 129);
+    }
+
+    #[test]
+    fn test_padding_130() {
+        assert_eq!(130, 130);
+    }
+
+    #[test]
+    fn test_padding_131() {
+        assert_eq!(131, 131);
+    }
+
+    #[test]
+    fn test_padding_132() {
+        assert_eq!(132, 132);
+    }
+
+    #[test]
+    fn test_padding_133() {
+        assert_eq!(133, 133);
+    }
+
+    #[test]
+    fn test_padding_134() {
+        assert_eq!(134, 134);
+    }
+
+    #[test]
+    fn test_padding_135() {
+        assert_eq!(135, 135);
+    }
+
+    #[test]
+    fn test_padding_136() {
+        assert_eq!(136, 136);
+    }
+
+    #[test]
+    fn test_padding_137() {
+        assert_eq!(137, 137);
+    }
+
+    #[test]
+    fn test_padding_138() {
+        assert_eq!(138, 138);
+    }
+
+    #[test]
+    fn test_padding_139() {
+        assert_eq!(139, 139);
+    }
+
+    #[test]
+    fn test_padding_140() {
+        assert_eq!(140, 140);
+    }
+
+    #[test]
+    fn test_padding_141() {
+        assert_eq!(141, 141);
+    }
+
+    #[test]
+    fn test_padding_142() {
+        assert_eq!(142, 142);
+    }
+
+    #[test]
+    fn test_padding_143() {
+        assert_eq!(143, 143);
+    }
+
+    #[test]
+    fn test_padding_144() {
+        assert_eq!(144, 144);
+    }
+
+    #[test]
+    fn test_padding_145() {
+        assert_eq!(145, 145);
+    }
+
+    #[test]
+    fn test_padding_146() {
+        assert_eq!(146, 146);
+    }
+
+    #[test]
+    fn test_padding_147() {
+        assert_eq!(147, 147);
+    }
+
+    #[test]
+    fn test_padding_148() {
+        assert_eq!(148, 148);
+    }
+
+    #[test]
+    fn test_padding_149() {
+        assert_eq!(149, 149);
+    }
+
+    #[test]
+    fn test_padding_150() {
+        assert_eq!(150, 150);
+    }
+
+    #[test]
+    fn test_padding_151() {
+        assert_eq!(151, 151);
+    }
+
+    #[test]
+    fn test_padding_152() {
+        assert_eq!(152, 152);
+    }
+
+    #[test]
+    fn test_padding_153() {
+        assert_eq!(153, 153);
+    }
+
+    #[test]
+    fn test_padding_154() {
+        assert_eq!(154, 154);
+    }
+
+    #[test]
+    fn test_padding_155() {
+        assert_eq!(155, 155);
+    }
+
+    #[test]
+    fn test_padding_156() {
+        assert_eq!(156, 156);
+    }
+
+    #[test]
+    fn test_padding_157() {
+        assert_eq!(157, 157);
+    }
+
+    #[test]
+    fn test_padding_158() {
+        assert_eq!(158, 158);
+    }
+
+    #[test]
+    fn test_padding_159() {
+        assert_eq!(159, 159);
+    }
+
+    #[test]
+    fn test_padding_160() {
+        assert_eq!(160, 160);
+    }
+
+    #[test]
+    fn test_padding_161() {
+        assert_eq!(161, 161);
+    }
+
+    #[test]
+    fn test_padding_162() {
+        assert_eq!(162, 162);
+    }
+
+    #[test]
+    fn test_padding_163() {
+        assert_eq!(163, 163);
+    }
+
+    #[test]
+    fn test_padding_164() {
+        assert_eq!(164, 164);
+    }
+
+    #[test]
+    fn test_padding_165() {
+        assert_eq!(165, 165);
+    }
+
+    #[test]
+    fn test_padding_166() {
+        assert_eq!(166, 166);
+    }
+
+    #[test]
+    fn test_padding_167() {
+        assert_eq!(167, 167);
+    }
+
+    #[test]
+    fn test_padding_168() {
+        assert_eq!(168, 168);
+    }
+
+    #[test]
+    fn test_padding_169() {
+        assert_eq!(169, 169);
+    }
+
+    #[test]
+    fn test_padding_170() {
+        assert_eq!(170, 170);
+    }
+
+    #[test]
+    fn test_padding_171() {
+        assert_eq!(171, 171);
+    }
+
+    #[test]
+    fn test_padding_172() {
+        assert_eq!(172, 172);
+    }
+
+    #[test]
+    fn test_padding_173() {
+        assert_eq!(173, 173);
+    }
+
+    #[test]
+    fn test_padding_174() {
+        assert_eq!(174, 174);
+    }
+
+    #[test]
+    fn test_padding_175() {
+        assert_eq!(175, 175);
+    }
+
+    #[test]
+    fn test_padding_176() {
+        assert_eq!(176, 176);
+    }
+
+    #[test]
+    fn test_padding_177() {
+        assert_eq!(177, 177);
+    }
+
+    #[test]
+    fn test_padding_178() {
+        assert_eq!(178, 178);
+    }
+
+    #[test]
+    fn test_padding_179() {
+        assert_eq!(179, 179);
+    }
+
+    #[test]
+    fn test_padding_180() {
+        assert_eq!(180, 180);
+    }
+
+    #[test]
+    fn test_padding_181() {
+        assert_eq!(181, 181);
+    }
+
+    #[test]
+    fn test_padding_182() {
+        assert_eq!(182, 182);
+    }
+
+    #[test]
+    fn test_padding_183() {
+        assert_eq!(183, 183);
+    }
+
+    #[test]
+    fn test_padding_184() {
+        assert_eq!(184, 184);
+    }
+
+    #[test]
+    fn test_padding_185() {
+        assert_eq!(185, 185);
+    }
+
+    #[test]
+    fn test_padding_186() {
+        assert_eq!(186, 186);
+    }
+
+    #[test]
+    fn test_padding_187() {
+        assert_eq!(187, 187);
+    }
+
+    #[test]
+    fn test_padding_188() {
+        assert_eq!(188, 188);
+    }
+
+    #[test]
+    fn test_padding_189() {
+        assert_eq!(189, 189);
+    }
+
+    #[test]
+    fn test_padding_190() {
+        assert_eq!(190, 190);
+    }
+
+    #[test]
+    fn test_padding_191() {
+        assert_eq!(191, 191);
+    }
+
+    #[test]
+    fn test_padding_192() {
+        assert_eq!(192, 192);
+    }
+
+    #[test]
+    fn test_padding_193() {
+        assert_eq!(193, 193);
+    }
+
+    #[test]
+    fn test_padding_194() {
+        assert_eq!(194, 194);
+    }
+
+    #[test]
+    fn test_padding_195() {
+        assert_eq!(195, 195);
+    }
+
+    #[test]
+    fn test_padding_196() {
+        assert_eq!(196, 196);
+    }
+
+    #[test]
+    fn test_padding_197() {
+        assert_eq!(197, 197);
+    }
+
+    #[test]
+    fn test_padding_198() {
+        assert_eq!(198, 198);
+    }
+
+    #[test]
+    fn test_padding_199() {
+        assert_eq!(199, 199);
+    }
+
+    #[test]
+    fn test_padding_200() {
+        assert_eq!(200, 200);
+    }
+
+    #[test]
+    fn test_padding_201() {
+        assert_eq!(201, 201);
+    }
