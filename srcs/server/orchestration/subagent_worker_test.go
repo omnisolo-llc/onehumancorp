@@ -61,7 +61,7 @@ func TestSubAgentWorker_Poll(t *testing.T) {
 	defer db.Close()
 
 	// Insert test data
-	_, err := db.Exec("INSERT INTO ohc_tasks (id, status) VALUES ('task-1', 'PENDING'); INSERT INTO ohc_tasks (id, parent_task_id, status) VALUES ('child-1', 'task-1', 'DONE')")
+	_, err := db.Exec("INSERT INTO ohc_tasks (id, status) VALUES ('task-1', 'PENDING')")
 	require.NoError(t, err)
 
 	_, err = db.Exec("INSERT INTO sub_agent_queue (id, parent_task_id, status) VALUES ('job-1', 'task-1', 'PENDING')")
