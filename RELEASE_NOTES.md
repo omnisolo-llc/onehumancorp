@@ -1,3 +1,8 @@
+
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+- Scaling (Cloud): Disable BuildBuddy configuration in CI workflow to improve reliability.
+- Privacy/Offline (Standalone): Continue maintaining standalone build artifact promotion structure without BuildBuddy.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
