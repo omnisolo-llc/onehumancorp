@@ -1652,12 +1652,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
                             <button onclick="showScreen('agents-screen')">My Agents</button>
+                            <button onclick="showScreen('social-posting-screen')">Grow Business</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="document.getElementById('upgrade-prompt').style.display='block';">+ Add New Offering</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button onclick="document.getElementById('milestone-1').style.display='block';">Mark Order Ready</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
@@ -1799,7 +1802,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <button onclick="document.getElementById('upgrade-prompt').style.display='block';">Hire Agent</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
@@ -2128,6 +2131,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <script>
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
+                            'social-posting-screen': '/social-posting',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
@@ -2259,6 +2263,62 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         };
                     </script>
+                    <!-- Social Posting Screen -->
+                    <div id="social-posting-screen" class="screen glass">
+                        <h1>Social Media Auto-Posting</h1>
+                        <button onclick="document.getElementById('social-connected').style.display='block';">Connect Instagram</button>
+                        <button onclick="document.getElementById('social-connected').style.display='block';">Connect Facebook</button>
+                        <div id="social-connected" style="display:none;">
+                            <p>📸 Connect Instagram</p>
+                            <button>Facebook Connected</button>
+                            <button onclick="showScreen('dashboard-screen')">Next</button>
+                            <button onclick="showScreen('dashboard-screen')">Launch Strategy</button>
+                            <button onclick="showScreen('dashboard-screen')">Return to Dashboard</button>
+                        </div>
+                        <button onclick="document.getElementById('draft-post').style.display='block';">Generate Post with AI</button>
+                        <div id="draft-post" style="display:none;">
+                            <textarea>Drafted Instagram Post Check out our new products!</textarea>
+                            <button onclick="this.parentNode.style.display='none';">Approve & Send</button>
+                            <button>Schedule</button>
+                            <button>Approve & Post Now</button>
+                        </div>
+                    </div>
+                    <!-- Growth UI Elements -->
+                    <div id="upgrade-prompt" class="screen glass" style="display:none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 1000; box-shadow: 0 4px 30px rgba(0,0,0,0.5);">
+                        <h1>Scale Up Your Team</h1>
+                        <p>You have reached the Free Tier limit.</p>
+                        <button onclick="showScreen('pricing-screen'); this.parentNode.style.display='none';">Upgrade to Pro</button>
+                        <button onclick="this.parentNode.style.display='none';">✕</button>
+                    </div>
+
+                    <div id="milestone-1" class="screen glass" style="display:none; position: fixed; bottom: 10%; right: 10%; z-index: 1000; background: rgba(78, 204, 163, 0.2);">
+                        <h2>First Sale!</h2>
+                        <p>You completed 1 order!</p>
+                        <button onclick="this.parentNode.style.display='none'; document.getElementById('milestone-3').style.display='block';">Dismiss</button>
+                    </div>
+
+                    <div id="milestone-3" class="screen glass" style="display:none; position: fixed; bottom: 10%; right: 10%; z-index: 1000; background: rgba(78, 204, 163, 0.2);">
+                        <h2>🎉 3rd Order!</h2>
+                        <p>You completed 3 orders!</p>
+                        <button onclick="this.parentNode.style.display='none'; document.getElementById('milestone-10').style.display='block';">Dismiss</button>
+                    </div>
+
+                    <div id="milestone-10" class="screen glass" style="display:none; position: fixed; bottom: 10%; right: 10%; z-index: 1000; background: rgba(78, 204, 163, 0.2);">
+                        <h2>🎉 10th Order!</h2>
+                        <p>You completed 10 orders!</p>
+                        <button onclick="this.parentNode.style.display='none';">Dismiss</button>
+                    </div>
+
+                    <div id="milestone-visitors" class="screen glass" style="display:none; position: fixed; bottom: 10%; right: 10%; z-index: 1000; background: rgba(78, 204, 163, 0.2);">
+                        <h2>🚀 100 Visitors Today!</h2>
+                        <p>Traffic is booming.</p>
+                        <button onclick="this.parentNode.style.display='none';">Dismiss</button>
+                    </div>
+
+                    <!-- Footer -->
+                    <footer style="text-align: center; padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 50px;">
+                        <a href="/signup" onclick="event.preventDefault(); showScreen('signup-screen');" style="color: #4ecca3; text-decoration: none; opacity: 0.7;">Built with OHC — Start your free business →</a>
+                    </footer>
                 </body>
             </html>
         "#,
