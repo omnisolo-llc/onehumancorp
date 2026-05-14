@@ -58,8 +58,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     // Step 8: Admin Account
     await expect(page.locator('text=Administrator account')).toBeVisible();
     await page.locator('input[placeholder="e.g. Maya Smith"]').fill('Jane Founder');
-    await page.locator('input[placeholder="you@email.com"]').fill('jane@example.com');
-    await page.locator('input[placeholder="Password"]').fill('securepassword!');
+    await page.locator(EMAIL_INPUT).fill('jane@example.com');
+    await page.locator(PASSWORD_INPUT).fill('securepassword!');
 
     // Final Launch
     await page.locator('button:has-text("Review & Launch")').filter({ visible: true }).first().click();

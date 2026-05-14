@@ -44,7 +44,7 @@ test('lens audit: fully verify login input states', async ({ page }) => {
     await page.goto('/');
 
     await page.fill('input[placeholder="Email or Username"]', 'hello@test.com');
-    await page.fill('input[placeholder="Password"]', 'secretpassword');
+    await page.fill(PASSWORD_INPUT, 'secretpassword');
 
     // Submit
     await page.click('button:has-text("Sign In")');
@@ -57,7 +57,7 @@ test('lens audit: fully verify sign up mode', async ({ page }) => {
     await page.click('button:has-text("New here? Create an account")');
 
     await page.fill('input[placeholder="Email or Username"]', 'newuser@test.com');
-    await page.fill('input[placeholder="Password"]', 'newpassword');
+    await page.fill(PASSWORD_INPUT, 'newpassword');
 
     // Submit
     await page.click('button:has-text("Sign Up")');

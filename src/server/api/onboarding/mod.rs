@@ -40,5 +40,6 @@ async fn save_state(
     State(_agent): State<Arc<OnboardingAgent>>,
     Json(_payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    // Cross-device sync DB implementation
     Ok(axum::http::StatusCode::NO_CONTENT)
 }

@@ -1,11 +1,24 @@
 import { test, expect } from '@playwright/test';
 
+const PHYSICAL_PRODUCTS_BTN = 'text=📦 Physical products';
+const ONLINE_ONLY_BTN = 'text=🌐 Online only';
+const MODERN_THEME_BTN = 'text=✨ Modern';
+
+const EMAIL_INPUT = 'input[placeholder="you@email.com"]';
+const PASSWORD_INPUT = 'input[placeholder="Password"]';
+
+const START_BUSINESS_BTN = 'text=🚀 Start My Business';
+const ONLINE_STORE_BTN = 'text=🛒 Online Store';
+const NEXT_BTN = 'text=Next →';
+
+
+
 test.describe('Business Setup Wizard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
     await page.click('button:has-text("Don\'t have an account? Sign Up")');
     await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.fill(PASSWORD_INPUT, 'password123');
     await page.click('button:has-text("Sign Up")');
   });
 
@@ -16,7 +29,7 @@ test.describe('Business Setup Wizard', () => {
   test('should display the Setup Wizard hero animation elements', async ({ page }) => {
     await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
+    await expect(page.locator(START_BUSINESS_BTN)).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
   });
 
@@ -25,11 +38,11 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show next button on welcome step', async ({ page }) => {
-    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
+    await expect(page.locator(START_BUSINESS_BTN)).toBeVisible();
   });
 
   test('should navigate to business type step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await expect(page.locator('text=/What kind of business are you building/i')).toBeVisible();
   });
 
@@ -49,48 +62,48 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show business type options', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await expect(page.locator('text=Online Store')).toBeVisible();
     await expect(page.locator('text=Service Business')).toBeVisible();
     await expect(page.locator('text=Restaurant / Food')).toBeVisible();
   });
 
   test('should select online store option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await page.locator('text=Online Store').click();
     await expect(page.locator('text=Give your business a name')).toBeVisible();
   });
 
   test('should select service business option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await page.locator('text=Service Business').click();
   });
 
   test('should select restaurant option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await page.locator('text=Restaurant / Food').click();
   });
 
   test('should select creative portfolio option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await page.locator('text=Creative').click();
   });
 
   test('should select local business option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await page.locator('text=Local Business').click();
   });
 
   test('should navigate through wizard steps', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=What do you sell')).toBeVisible();
   });
 
   test('should allow going back', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     const backButton = page.locator('button:has-text("Back")');
     await expect(backButton).toBeVisible();
     await backButton.click();
@@ -98,168 +111,104 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('should show company name input', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await expect(page.locator('input[placeholder="e.g. Maya\'s Cakes"]').filter({ visible: true }).first()).toBeVisible();
   });
 
   test('should show what you sell step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=/what do you sell/i')).toBeVisible();
   });
 
   test('should show physical products option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=Physical')).toBeVisible();
   });
 
   test('should show digital products option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=Digital')).toBeVisible();
   });
 
   test('should show services option', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=Services')).toBeVisible();
   });
 
   test('should show payments step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
+    await page.click(PHYSICAL_PRODUCTS_BTN);
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=/payment/i')).toBeVisible();
   });
 
   test('should show admin account step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
+    await page.click(PHYSICAL_PRODUCTS_BTN);
+    await page.click(NEXT_BTN);
+    await page.click(ONLINE_ONLY_BTN);
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=/admin|account|Create your account/i')).toBeVisible();
   });
 
   test('should show template selection step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
+    await page.click(PHYSICAL_PRODUCTS_BTN);
+    await page.click(NEXT_BTN);
+    await page.click(ONLINE_ONLY_BTN);
+    await page.click(NEXT_BTN);
     await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
-    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('text=Next →');
+    await page.fill(EMAIL_INPUT, 'maya@example.com');
+    await page.fill(PASSWORD_INPUT, 'password123');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=/Select a Template/i')).toBeVisible();
   });
 
   test('should show domain step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
-    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
-    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('text=Next →');
-    await page.click('text=✨ Modern');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
-    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
-    await page.click('text=Next →');
+    await performStandardSetup(page);
     await expect(page.locator('text=/Choose your domain/i')).toBeVisible();
   });
 
   test('should show review and launch step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
-    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
-    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('text=Next →');
-    await page.click('text=✨ Modern');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
-    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
-    await page.click('text=Next →');
+    await performStandardSetup(page);
     await page.click('text=🌐 Free OHC Domain');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=/review|launch|Ready to launch!/i')).toBeVisible();
   });
 
   test('should show launch button on final step', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
-    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
-    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('text=Next →');
-    await page.click('text=✨ Modern');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
-    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
-    await page.click('text=Next →');
+    await performStandardSetup(page);
     await page.click('text=🌐 Free OHC Domain');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text="Publish my business →"')).toBeVisible();
   });
 
   test('should show welcome checklist after successful launch', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
-    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
-    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('text=Next →');
-    await page.click('text=✨ Modern');
-    await page.click('text=Next →');
-    await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
-    await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
-    await page.click('text=Next →');
+    await performStandardSetup(page);
     await page.click('text=🌐 Free OHC Domain');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
 
     // Launch the business
     await page.click('text="Publish my business →"');
@@ -294,40 +243,40 @@ test.describe('Business Setup Wizard', () => {
   test('should display the Setup Wizard hero animation elements and complete full setup flow', async ({ page }) => {
     await expect(page.locator('text=Your business, live in minutes.')).toBeVisible();
     await expect(page.locator('text=Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await expect(page.locator('text=🚀 Start My Business')).toBeVisible();
+    await expect(page.locator(START_BUSINESS_BTN)).toBeVisible();
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
 
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
-    await page.click('text=🛒 Online Store');
-    await page.click('text=Next →');
+    await page.click(ONLINE_STORE_BTN);
+    await page.click(NEXT_BTN);
 
     await expect(page.locator('text=Give your business a name')).toBeVisible();
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company Hero');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
 
     await expect(page.locator('text=What do you sell?')).toBeVisible();
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
+    await page.click(PHYSICAL_PRODUCTS_BTN);
+    await page.click(NEXT_BTN);
 
     await expect(page.locator('text=How do you want to receive payments?')).toBeVisible();
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
+    await page.click(ONLINE_ONLY_BTN);
+    await page.click(NEXT_BTN);
 
     await expect(page.locator('text=Create your account')).toBeVisible();
     await page.fill('input[placeholder="e.g. Maya Smith"]', 'Maya Smith');
-    await page.fill('input[placeholder="you@email.com"]', 'maya@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('text=Next →');
+    await page.fill(EMAIL_INPUT, 'maya@example.com');
+    await page.fill(PASSWORD_INPUT, 'password123');
+    await page.click(NEXT_BTN);
 
     await expect(page.locator('text=Choose a Template')).toBeVisible();
-    await page.click('text=✨ Modern');
-    await page.click('text=Next →');
+    await page.click(MODERN_THEME_BTN);
+    await page.click(NEXT_BTN);
 
     await expect(page.locator('text=Add your first product or service')).toBeVisible();
     await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Test Cake');
     await page.fill('input[placeholder="e.g. 50.00"]', '50.00');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
 
     await expect(page.locator('text=Choose a Domain')).toBeVisible();
   });
@@ -338,13 +287,13 @@ test.describe('Business Setup Wizard Validation', () => {
     await page.goto('/login');
     await page.click('button:has-text("Don\'t have an account? Sign Up")');
     await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.fill(PASSWORD_INPUT, 'password123');
     await page.click('button:has-text("Sign Up")');
   });
 
   test('should require business type selection', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    const nextBtn = page.locator('text=Next →');
+    await page.click(START_BUSINESS_BTN);
+    const nextBtn = page.locator(NEXT_BTN);
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
       await expect(page.locator('text=/select.*type|choose.*type/i')).toBeVisible({ timeout: 3000 });
@@ -352,38 +301,38 @@ test.describe('Business Setup Wizard Validation', () => {
   });
 
   test('should require company name', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
+    await page.click(START_BUSINESS_BTN);
     await page.locator('text=Online Store').click();
-    await page.click('text=Next →'); // To step 3
+    await page.click(NEXT_BTN); // To step 3
     await expect(page.locator('text=/required|name.*required/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should validate email format', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
+    await page.click(PHYSICAL_PRODUCTS_BTN);
+    await page.click(NEXT_BTN);
+    await page.click(ONLINE_ONLY_BTN);
+    await page.click(NEXT_BTN);
 
-    await page.fill('input[placeholder="you@email.com"]', 'invalidemail');
-    await page.click('text=Next →');
+    await page.fill(EMAIL_INPUT, 'invalidemail');
+    await page.click(NEXT_BTN);
     await expect(page.locator('text=/invalid.*email|email.*invalid/i')).toBeVisible({ timeout: 3000 });
   });
 
   test('should validate password strength', async ({ page }) => {
-    await page.click('text=🚀 Start My Business');
-    await page.click('text=🛒 Online Store');
+    await page.click(START_BUSINESS_BTN);
+    await page.click(ONLINE_STORE_BTN);
     await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Company');
-    await page.click('text=Next →');
-    await page.click('text=📦 Physical products');
-    await page.click('text=Next →');
-    await page.click('text=🌐 Online only');
-    await page.click('text=Next →');
+    await page.click(NEXT_BTN);
+    await page.click(PHYSICAL_PRODUCTS_BTN);
+    await page.click(NEXT_BTN);
+    await page.click(ONLINE_ONLY_BTN);
+    await page.click(NEXT_BTN);
 
-    await page.fill('input[placeholder="Password"]', 'weak');
+    await page.fill(PASSWORD_INPUT, 'weak');
     await expect(page.locator('text=Strength: Weak')).toBeVisible({ timeout: 3000 });
   });
 });

@@ -5,7 +5,7 @@ test.describe('Website Builder Full E2E', () => {
     test('Flow 1: Modern Template with Subdomain', async ({ page }) => {
         await page.goto('/');
         await page.fill('input[placeholder="Email"]', 'test@example.com');
-        await page.fill('input[placeholder="Password"]', 'password123');
+        await page.fill(PASSWORD_INPUT, 'password123');
         await page.click('text="Log In"');
         await page.click('text="Build Website"');
         await expect(page.locator('text="Choose a template"')).toBeVisible();
@@ -26,7 +26,7 @@ test.describe('Website Builder Full E2E', () => {
     test('Flow 2: Classic Template with Custom Domain', async ({ page }) => {
         await page.goto('/');
         await page.fill('input[placeholder="Email"]', 'test@example.com');
-        await page.fill('input[placeholder="Password"]', 'password123');
+        await page.fill(PASSWORD_INPUT, 'password123');
         await page.click('text="Log In"');
         await page.click('text="Build Website"');
         await page.locator('text="🏛️ Classic"').locator('..').locator('text="Use this template →"').click();
@@ -45,7 +45,7 @@ test.describe('Website Builder Full E2E', () => {
     test('Flow 3: Bold Template with Domain Purchase', async ({ page }) => {
         await page.goto('/');
         await page.fill('input[placeholder="Email"]', 'test@example.com');
-        await page.fill('input[placeholder="Password"]', 'password123');
+        await page.fill(PASSWORD_INPUT, 'password123');
         await page.click('text="Log In"');
         await page.click('text="Build Website"');
         await page.locator('text="🔥 Bold"').locator('..').locator('text="Use this template →"').click();
@@ -63,7 +63,7 @@ test.describe('Website Builder Full E2E', () => {
     test('Flow 4: Navigation Back and Forth', async ({ page }) => {
         await page.goto('/');
         await page.fill('input[placeholder="Email"]', 'test@example.com');
-        await page.fill('input[placeholder="Password"]', 'password123');
+        await page.fill(PASSWORD_INPUT, 'password123');
         await page.click('text="Log In"');
         await page.click('text="Build Website"');
         await page.click('text="Next →"'); // step 1
@@ -81,7 +81,7 @@ test.describe('Website Builder Full E2E', () => {
     test('Flow 5: Advanced Mode Toggling and Raw Export Visibility', async ({ page }) => {
         await page.goto('/');
         await page.fill('input[placeholder="Email"]', 'test@example.com');
-        await page.fill('input[placeholder="Password"]', 'password123');
+        await page.fill(PASSWORD_INPUT, 'password123');
         await page.click('text="Log In"');
         await page.click('text="Build Website"');
         // Toggle advanced mode on

@@ -7,7 +7,7 @@ test.describe('Onboarding Guide E2E Journey', () => {
     // Sign Up Flow
     await page.click('button:has-text("Don\'t have an account? Sign Up")');
     await page.fill('input[placeholder="Email or Username"]', 'journey@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
+    await page.fill(PASSWORD_INPUT, 'password123');
     await page.click('button:has-text("Sign Up")');
 
     // Wait for the Setup Wizard Welcome step

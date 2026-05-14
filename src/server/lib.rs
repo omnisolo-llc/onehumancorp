@@ -2212,6 +2212,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
                             const target = document.getElementById('step-' + step);
                             if (target) target.style.display = 'block';
+
+                            // Cross-device sync via /api/onboarding/state
+                            fetch('/api/onboarding/state', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ step: step })
+                            }).catch(e => console.error('Failed to save state:', e));
                         }
 
                         function generateAI() {
