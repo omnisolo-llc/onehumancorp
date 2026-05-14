@@ -5,15 +5,17 @@ use std::time::Duration;
 use chrono::Utc;
 
 pub struct ConsolidationWorker {
+    pub tenant_id: String,
     pub repository: Arc<VectorRepository>,
     pub poll_interval: Duration,
     pub pruning_threshold_days: i64,
 }
 
 impl ConsolidationWorker {
-    pub fn new(repository: Arc<VectorRepository>, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
+    pub fn new(repository: Arc<VectorRepository>, tenant_id: String, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
         Self {
             repository,
+            tenant_id,
             poll_interval,
             pruning_threshold_days,
         }
@@ -75,7 +77,7 @@ mod tests {
     #[tokio::test]
     async fn test_consolidation_worker_run_once() {
         let repo = setup_sqlite_repo().await;
-        let worker = ConsolidationWorker::new(repo.clone(), Duration::from_secs(1), 180);
+        let worker = ConsolidationWorker::new(repo.clone(), "org_maya".to_string(), Duration::from_secs(1), 180);
 
         // Insert a stale record that should be pruned
         let mut v1 = vec![0.0; 10];
@@ -113,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn test_consolidation_worker_spawn() {
         let repo = setup_sqlite_repo().await;
-        let worker = Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_millis(50), 180));
+        let worker = Arc::new(ConsolidationWorker::new(repo.clone(), "org_maya".to_string(), Duration::from_millis(50), 180));
 
         let handle = worker.spawn_background_task();
 

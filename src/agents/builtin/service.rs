@@ -179,7 +179,7 @@ impl AgentServiceImpl {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
                         let repo = Arc::new(VectorRepository::new_sqlite(pool));
-                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), "system".to_string(), Duration::from_secs(3600), 180)).spawn_background_task());
                         self.memory = Some(repo);
                     }
                     Err(e) => {
@@ -190,7 +190,7 @@ impl AgentServiceImpl {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
                         let repo = Arc::new(VectorRepository::new(pool));
-                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), "system".to_string(), Duration::from_secs(3600), 180)).spawn_background_task());
                         self.memory = Some(repo);
                     }
                     Err(e) => {

@@ -28,11 +28,33 @@ impl MemoryConsolidationWorker {
             loop {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
-                if let Err(e) = repository.prune_stale(older_than).await {
-                    tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
-                }
-                if let Err(e) = repository.auto_resolve_conflicts().await {
-                    tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
+                let tenants_query = "SELECT DISTINCT tenant_id FROM consolidated_memory";
+                let tenants_result = match &repository.get_store() {
+                    ohc_builtin_agent::memory_store::VectorMemoryStore::Postgres(pool) => {
+                        sqlx::query(tenants_query).fetch_all(pool).await
+                    }
+                    ohc_builtin_agent::memory_store::VectorMemoryStore::Sqlite(pool) => {
+                        sqlx::query(tenants_query).fetch_all(pool).await
+                    }
+                };
+
+                match tenants_result {
+                    Ok(rows) => {
+                        for row in rows {
+                            use sqlx::Row;
+                            if let Ok(tenant_id) = row.try_get::<String, _>("tenant_id") {
+                                if let Err(e) = repository.prune_stale(&tenant_id, older_than).await {
+                                    tracing::error!("Consolidation Worker: Failed to prune stale context for {}: {}", tenant_id, e);
+                                }
+                                if let Err(e) = repository.auto_resolve_conflicts(&tenant_id).await {
+                                    tracing::error!("Consolidation Worker: Failed to resolve memory conflicts for {}: {}", tenant_id, e);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Consolidation Worker: Failed to fetch tenants: {}", e);
+                    }
                 }
             }
         });
