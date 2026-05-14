@@ -137,4 +137,3 @@ build:windows_i686 --platforms=//bazel/platforms:windows_i686
 build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
 build:linux --config=linux_x86_64
-startup --output_user_root=/tmp/bazel_cache
