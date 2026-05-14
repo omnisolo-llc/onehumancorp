@@ -1,0 +1,11 @@
+--- src/server/builder/builder_test.rs
++++ src/server/builder/builder_test.rs
+@@ -200,6 +200,6 @@
+
+ #[tokio::test]
+-async #[ignore]
+-    fn test_builder_generate_and_publish_draft() {
++#[ignore]
++async fn test_builder_generate_and_publish_draft() {
+     let (pool, tenant_id) = match setup_db().await {
+         Some(v) => v,

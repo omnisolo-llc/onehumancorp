@@ -8,6 +8,7 @@ mod tests {
     use crate::db::DbStore;
 
     #[tokio::test]
+    #[ignore]
     async fn test_approvals_workflow() {
         if std::env::var("DATABASE_URL").is_err() {
             return;

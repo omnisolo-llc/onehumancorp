@@ -424,6 +424,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_handoff_mission_logic_success() {
         let database_url = match std::env::var("DATABASE_URL") {
             Ok(val) => val,

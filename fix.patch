@@ -1,0 +1,12 @@
+--- src/server/autodream_pipeline/pipeline.rs
++++ src/server/autodream_pipeline/pipeline.rs
+@@ -158,9 +158,8 @@
+     }
+
+     #[tokio::test]
+     #[ignore]
+-    async #[ignore]
+-    fn test_process_closed_tasks() {
++    async fn test_process_closed_tasks() {
+         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+         if database_url == "dummy" {

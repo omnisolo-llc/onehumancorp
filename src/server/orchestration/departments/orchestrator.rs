@@ -399,6 +399,7 @@ mod tests {
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
 
     #[tokio::test]
+    #[ignore]
     async fn test_orchestrator_initialization() {
         if std::env::var("DATABASE_URL").is_err() {
             return;

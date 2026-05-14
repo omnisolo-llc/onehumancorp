@@ -159,7 +159,8 @@ mod tests {
 
     #[tokio::test]
     #[ignore]
-    async fn test_process_closed_tasks() {
+    async #[ignore]
+    fn test_process_closed_tasks() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
         if database_url == "dummy" {
             return;
