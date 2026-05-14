@@ -21,7 +21,5 @@ if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
     done
 fi
 
-# Create publication for PowerSync
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    CREATE PUBLICATION powersync FOR ALL TABLES;
 EOSQL
