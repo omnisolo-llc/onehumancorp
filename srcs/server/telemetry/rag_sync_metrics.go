@@ -34,6 +34,9 @@ func init() {
 
 // RecordRAGRecordsSynced increments the counter for RAG records synced.
 func RecordRAGRecordsSynced(ctx context.Context, count int, status string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
 	if ragRecordsSyncedTotalCounter != nil {
 		opts := metric.WithAttributes(
 			attribute.String("status", status),
@@ -52,6 +55,9 @@ func RecordRAGRecordsSynced(ctx context.Context, count int, status string) error
 
 // RecordRAGSyncError increments the counter for RAG sync errors.
 func RecordRAGSyncError(ctx context.Context, errorType string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
 	if ragSyncErrorsTotalCounter != nil {
 		opts := metric.WithAttributes(
 			attribute.String("error_type", errorType),
