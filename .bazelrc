@@ -1,3 +1,4 @@
+startup --output_user_root=/home/runner/.cache/bazel-output-root
 # Bazel configuration for MCP Any
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
