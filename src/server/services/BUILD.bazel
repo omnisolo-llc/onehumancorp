@@ -3,6 +3,8 @@ filegroup(
     srcs = [
         "booking.rs",
         "mod.rs",
+        "wizard_ui/mod.rs",
+        "wizard_ui/bench.rs",
         "wizard.rs",
         "//src/server/services/agent:srcs",
         "//src/server/services/autodream:srcs",
