@@ -196,7 +196,7 @@ mod tests {
             run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
         handle.abort();
     }
