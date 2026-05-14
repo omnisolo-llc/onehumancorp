@@ -645,6 +645,47 @@ mod tests {
         assert!(received.load(Ordering::SeqCst));
         cancel();
     }
+
+    #[tokio::test]
+    async fn test_health_monitor_ping() {
+        let bus = std::sync::Arc::new(MemoryBus::new());
+        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+        let monitor = HealthMonitor::new(bus.clone(), transport);
+
+        let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let bus_clone = bus.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:health_ping" {
+                received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+
+                use prost::Message as ProstMessage;
+                if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+                    let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
+                    let bus_inner = bus_clone.clone();
+                    tokio::spawn(async move {
+                        let _ = bus_inner.publish(Message {
+                            topic: ack_topic,
+                            payload: vec![],
+                        }).await;
+                    });
+                }
+            }
+        });
+
+        let cancel = bus.subscribe("system:health_ping".to_string(), handler).await.unwrap();
+
+        monitor.ping().await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        assert!(received.load(std::sync::atomic::Ordering::SeqCst));
+        cancel();
+    }
+
+
     #[tokio::test]
     async fn test_memory_bus_distributed_lock() {
         let bus = MemoryBus::new();
