@@ -38,9 +38,15 @@ impl AgentMemoryPipeline {
     }
 
     pub async fn process_session_data(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
-            .fetch_all(&self.db.pool)
-            .await?;
+        let rows = {
+            let mut tx = self.db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+            let r = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
+                .fetch_all(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            r
+        };
 
         for row in rows {
             use sqlx::Row;
@@ -71,6 +77,8 @@ impl AgentMemoryPipeline {
                         .await?;
                 }
                 DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
                     sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                         .bind(mem_id)
                         .bind("system")
@@ -78,15 +86,29 @@ impl AgentMemoryPipeline {
                         .bind("SESSION_DATA")
                         .bind(&context_data)
                         .bind(&emb_str)
-                        .execute(&self.db.pool)
+                        .execute(&mut *tx)
                         .await?;
+                    tx.commit().await?;
                 }
             }
 
-            sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
-                .bind(&session_id)
-                .execute(&self.db.pool)
-                .await?;
+            match &self.db.store {
+                DbStore::Sqlite(_) => {
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                        .bind(&session_id)
+                        .execute(&self.db.pool)
+                        .await?;
+                }
+                DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                        .bind(&session_id)
+                        .execute(&mut *tx)
+                        .await?;
+                    tx.commit().await?;
+                }
+            }
         }
 
         Ok(())
@@ -124,6 +146,8 @@ impl AgentMemoryPipeline {
                                     .await?;
                             }
                             DbStore::Postgres => {
+                                let mut tx = self.db.pool.begin().await?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
                                 sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                                     .bind(mem_id)
                                     .bind("system")
@@ -131,8 +155,9 @@ impl AgentMemoryPipeline {
                                     .bind("FS_MEMORY")
                                     .bind(&content)
                                     .bind(&emb_str)
-                                    .execute(&self.db.pool)
+                                    .execute(&mut *tx)
                                     .await?;
+                                tx.commit().await?;
                             }
                         }
 
