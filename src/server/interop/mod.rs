@@ -7,3 +7,5 @@ pub mod routing;
 pub mod auth;
 pub mod partition_healer;
 pub mod diagnostics;
+pub mod compression;
+pub mod token_budgeting;

@@ -11,6 +11,8 @@ filegroup(
         "auth.rs",
         "partition_healer.rs",
         "diagnostics.rs",
+        "compression.rs",
+        "token_budgeting.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
