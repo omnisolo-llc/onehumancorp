@@ -377,6 +377,140 @@ mod tests {
     }
 
     #[tokio::test]
+
+    #[tokio::test]
+    async fn test_storage_quota_matrix() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let test_cases = vec![
+                    // (tier, current_used, delta, expect_allowed, expect_soft_limit)
+                    (PlanTier::Free, 0, 104857600),
+                    (PlanTier::Starter, 1048576, 104857600),
+                    (PlanTier::Pro, 2097152, 104857600),
+                    (PlanTier::Business, 3145728, 104857600),
+                    (PlanTier::Free, 4194304, 104857600),
+                    (PlanTier::Starter, 5242880, 104857600),
+                    (PlanTier::Pro, 6291456, 104857600),
+                    (PlanTier::Business, 7340032, 104857600),
+                    (PlanTier::Free, 8388608, 104857600),
+                    (PlanTier::Starter, 9437184, 104857600),
+                    (PlanTier::Pro, 10485760, 104857600),
+                    (PlanTier::Business, 11534336, 104857600),
+                    (PlanTier::Free, 12582912, 104857600),
+                    (PlanTier::Starter, 13631488, 104857600),
+                    (PlanTier::Pro, 14680064, 104857600),
+                    (PlanTier::Business, 15728640, 104857600),
+                    (PlanTier::Free, 16777216, 104857600),
+                    (PlanTier::Starter, 17825792, 104857600),
+                    (PlanTier::Pro, 18874368, 104857600),
+                    (PlanTier::Business, 19922944, 104857600),
+                    (PlanTier::Free, 20971520, 104857600),
+                    (PlanTier::Starter, 22020096, 104857600),
+                    (PlanTier::Pro, 23068672, 104857600),
+                    (PlanTier::Business, 24117248, 104857600),
+                    (PlanTier::Free, 25165824, 104857600),
+                    (PlanTier::Starter, 26214400, 104857600),
+                    (PlanTier::Pro, 27262976, 104857600),
+                    (PlanTier::Business, 28311552, 104857600),
+                    (PlanTier::Free, 29360128, 104857600),
+                    (PlanTier::Starter, 30408704, 104857600),
+                    (PlanTier::Pro, 31457280, 104857600),
+                    (PlanTier::Business, 32505856, 104857600),
+                    (PlanTier::Free, 33554432, 104857600),
+                    (PlanTier::Starter, 34603008, 104857600),
+                    (PlanTier::Pro, 35651584, 104857600),
+                    (PlanTier::Business, 36700160, 104857600),
+                    (PlanTier::Free, 37748736, 104857600),
+                    (PlanTier::Starter, 38797312, 104857600),
+                    (PlanTier::Pro, 39845888, 104857600),
+                    (PlanTier::Business, 40894464, 104857600),
+                    (PlanTier::Free, 41943040, 104857600),
+                    (PlanTier::Starter, 42991616, 104857600),
+                    (PlanTier::Pro, 44040192, 104857600),
+                    (PlanTier::Business, 45088768, 104857600),
+                    (PlanTier::Free, 46137344, 104857600),
+                    (PlanTier::Starter, 47185920, 104857600),
+                    (PlanTier::Pro, 48234496, 104857600),
+                    (PlanTier::Business, 49283072, 104857600),
+                    (PlanTier::Free, 50331648, 104857600),
+                    (PlanTier::Starter, 51380224, 104857600),
+                    (PlanTier::Pro, 52428800, 104857600),
+                    (PlanTier::Business, 53477376, 104857600),
+                    (PlanTier::Free, 54525952, 104857600),
+                    (PlanTier::Starter, 55574528, 104857600),
+                    (PlanTier::Pro, 56623104, 104857600),
+                    (PlanTier::Business, 57671680, 104857600),
+                    (PlanTier::Free, 58720256, 104857600),
+                    (PlanTier::Starter, 59768832, 104857600),
+                    (PlanTier::Pro, 60817408, 104857600),
+                    (PlanTier::Business, 61865984, 104857600),
+                    (PlanTier::Free, 62914560, 104857600),
+                    (PlanTier::Starter, 63963136, 104857600),
+                    (PlanTier::Pro, 65011712, 104857600),
+                    (PlanTier::Business, 66060288, 104857600),
+                    (PlanTier::Free, 67108864, 104857600),
+                    (PlanTier::Starter, 68157440, 104857600),
+                    (PlanTier::Pro, 69206016, 104857600),
+                    (PlanTier::Business, 70254592, 104857600),
+                    (PlanTier::Free, 71303168, 104857600),
+                    (PlanTier::Starter, 72351744, 104857600),
+                    (PlanTier::Pro, 73400320, 104857600),
+                    (PlanTier::Business, 74448896, 104857600),
+                    (PlanTier::Free, 75497472, 104857600),
+                    (PlanTier::Starter, 76546048, 104857600),
+                    (PlanTier::Pro, 77594624, 104857600),
+                    (PlanTier::Business, 78643200, 104857600),
+                    (PlanTier::Free, 79691776, 104857600),
+                    (PlanTier::Starter, 80740352, 104857600),
+                    (PlanTier::Pro, 81788928, 104857600),
+                    (PlanTier::Business, 82837504, 104857600),
+                    (PlanTier::Free, 83886080, 104857600),
+                    (PlanTier::Starter, 84934656, 104857600),
+                    (PlanTier::Pro, 85983232, 104857600),
+                    (PlanTier::Business, 87031808, 104857600),
+                    (PlanTier::Free, 88080384, 104857600),
+                    (PlanTier::Starter, 89128960, 104857600),
+                    (PlanTier::Pro, 90177536, 104857600),
+                    (PlanTier::Business, 91226112, 104857600),
+                    (PlanTier::Free, 92274688, 104857600),
+                    (PlanTier::Starter, 93323264, 104857600),
+                    (PlanTier::Pro, 94371840, 104857600),
+                    (PlanTier::Business, 95420416, 104857600),
+                    (PlanTier::Free, 96468992, 104857600),
+                    (PlanTier::Starter, 97517568, 104857600),
+                    (PlanTier::Pro, 98566144, 104857600),
+                    (PlanTier::Business, 99614720, 104857600),
+                    (PlanTier::Free, 100663296, 104857600),
+                    (PlanTier::Starter, 101711872, 104857600),
+                    (PlanTier::Pro, 102760448, 104857600),
+                    (PlanTier::Business, 103809024, 104857600),
+                ];
+
+                for (i, (tier, used, delta)) in test_cases.into_iter().enumerate() {
+                    let tenant_id = format!("test-matrix-{}", i);
+                    let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                    let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+                    let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
+
+                    limiter.set_tenant_tier(&tenant_id, tier.clone()).await.unwrap();
+                    if used > 0 {
+                        let _ : () = redis::AsyncCommands::set(&mut conn, &storage_key, used).await.unwrap_or(());
+                    }
+
+                    let status = limiter.check_storage_quota(&tenant_id, delta).await.unwrap();
+
+                    let limit_bytes = tier.storage_limit_mb().map(|mb| (mb as i64) * 1024 * 1024);
+                    let expect_soft_limit = limit_bytes.map_or(false, |l| used + delta > l);
+
+                    assert!(status.is_allowed);
+                    assert_eq!(status.soft_limit_reached, expect_soft_limit);
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn test_check_storage_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
