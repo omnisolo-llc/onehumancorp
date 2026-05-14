@@ -318,8 +318,8 @@ mod tests {
                         let lower_line = line.to_lowercase();
 
                         if !in_log_block {
-                            if lower_line.contains("tracing::info!") ||
-                               lower_line.contains("etracing::info!") ||
+                            if lower_line.contains("println!") ||
+                               lower_line.contains("eprintln!") ||
                                lower_line.contains("info!") ||
                                lower_line.contains("error!") ||
                                lower_line.contains("warn!") ||
