@@ -12,8 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  env:
-    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   contents: read
 
 defaults:
@@ -90,7 +88,7 @@ jobs:
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            //... -- -//src/e2e/...
+            //... -//src/e2e/...
 
   bazel-build:
     runs-on: oci-runner
