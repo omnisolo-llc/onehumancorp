@@ -18,9 +18,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   bazel-test:
     runs-on: oci-runner
@@ -76,8 +73,6 @@ jobs:
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
-            build --action_env=PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
-            build --action_env=PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
@@ -148,8 +143,6 @@ jobs:
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
-            build --action_env=PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
-            build --action_env=PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
@@ -205,9 +198,7 @@ jobs:
 #             build --build_metadata=ROLE=CI
 #             test --build_metadata=ROLE=CI
 #             build --color=yes
-#             build --action_env=PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
-            build --action_env=PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
-            build --show_timestamps
+#             build --show_timestamps
 #             test --sandbox_add_mount_pair=/var/run/docker.sock
 #
 #       - name: Run E2E tests
