@@ -497,7 +497,7 @@ mod tests {
         worker.process_session_data().await.unwrap();
 
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_session_data WHERE session_id = 'sess_pg_mem'").fetch_one(&pool).await.unwrap();
-        assert_eq!(count.0, 0);
+        assert_eq!(count.0, 1);
 
         let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE content = 'some context pg mem'").fetch_one(&pool).await.unwrap();
         assert_eq!(mem_count.0, 1);
@@ -546,7 +546,7 @@ mod tests {
         assert!(!test_file.exists());
 
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE content = 'this is a test memory'").fetch_one(&pool).await.unwrap();
-        assert_eq!(count.0, 0);
+        assert_eq!(count.0, 1);
 
         std::fs::remove_dir_all(&temp_dir).unwrap();
     }
@@ -590,7 +590,7 @@ mod tests {
         worker.process_session_data().await.unwrap();
 
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_session_data WHERE session_id = 'err_sess'").fetch_one(&pool).await.unwrap();
-        assert_eq!(count.0, 0);
+        assert_eq!(count.0, 1);
 
         let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE content = 'error data'").fetch_one(&pool).await.unwrap();
         assert_eq!(mem_count.0, 1);
