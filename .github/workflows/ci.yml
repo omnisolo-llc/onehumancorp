@@ -18,8 +18,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
   bazel-test:
     runs-on: ubuntu-latest
@@ -55,10 +53,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -90,11 +88,11 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Build release artifacts
-        run: ~/go/bin/~/go/bin/bazelisk build //release:all_release_artifacts --config=linux
+        run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
-          ~/go/bin/~/go/bin/bazelisk test \
+          bazelisk test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
@@ -132,10 +130,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -160,9 +158,9 @@ jobs:
 
       - name: Build all artifacts
         run: |
-          ~/go/bin/~/go/bin/bazelisk build //... --config=linux
-          ~/go/bin/~/go/bin/bazelisk build //... --config=windows || echo "Warning: Windows build failed"
-          ~/go/bin/~/go/bin/bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
+          bazelisk build //... --config=linux
+          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
   # playwright-e2e:
   #   runs-on: ubuntu-latest
@@ -195,10 +193,10 @@ jobs:
   #     - name: Install dependencies
   #       run: npm ci
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+  #     - name: Install Bazelisk
+  #       run: |
+  #         go install github.com/bazelbuild/bazelisk@latest
+  #         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
   #     - name: Set up Bazel
   #       uses: bazel-contrib/setup-bazel@0.19.0
@@ -219,7 +217,7 @@ jobs:
   #           test --sandbox_add_mount_pair=/var/run/docker.sock
 
   #     - name: Build server
-  #       run: ~/go/bin/~/go/bin/bazelisk build //src/server:server --config=linux
+  #       run: bazelisk build //src/server:server --config=linux
 
   #     - name: Run E2E tests
   #       run: |
