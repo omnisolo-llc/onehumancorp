@@ -155,141 +155,101 @@ test.describe('Onboarding Wizard', () => {
 
   test('Persona: Maya - The Home Baker (Physical Products)', async ({ page }) => {
     // 1. Click 'Get Started'
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🚀 Start My Business' }).click();
 
     // 2. Choose 'Restaurant / Food'
-    await page.mouse.click(640, 360);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🍕 Restaurant / Food' }).click();
 
     // 3. Name: Maya's Bakes
-    await page.mouse.click(640, 420);
-    await page.keyboard.type("Maya's Bakes");
-    await page.waitForTimeout(1000);
+    await page.getByPlaceholder('What is your business called?').fill("Maya's Bakes");
 
     // 4. Click Next
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // 5. Goals/Products: Food
-    await page.mouse.click(640, 300);
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByText('Physical Products').click();
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // 6. Payments
-    await page.mouse.click(640, 300);
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: 'Online', exact: true }).click();
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // 7. Admin
-    await page.mouse.click(640, 300);
-    await page.keyboard.type("Maya");
-    await page.mouse.click(640, 350);
-    await page.keyboard.type("maya@example.com");
-    await page.mouse.click(640, 400);
-    await page.keyboard.type("securepassword");
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByPlaceholder('e.g. Maya Smith').fill("Maya");
+    await page.getByPlaceholder('you@email.com').fill("maya@example.com");
+    await page.getByPlaceholder('Password').fill("securepassword");
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // 8. Template
-    await page.mouse.click(640, 300);
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: 'Modern' }).click();
 
     // 9. First Product
-    await page.mouse.click(640, 250);
-    await page.keyboard.type("Custom Birthday Cake");
-    await page.mouse.click(640, 300); // AI gen
-    await page.waitForTimeout(500);
-    await page.mouse.click(640, 350); // Price
-    await page.keyboard.type("120.00");
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByPlaceholder('What is the name of this product?').fill("Custom Birthday Cake");
+    await page.getByRole('button', { name: 'Generate AI Description' }).click();
+    await page.getByPlaceholder('0.00').fill("120.00");
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // 10. Domain
-    await page.mouse.click(640, 300);
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🌐 Free OHC Domain' }).click();
 
     // 11. Launch
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(4000);
+    await page.getByRole('button', { name: 'Publish my business →' }).click();
+    await expect(page.locator('text="Your business is now live!"')).toBeVisible({ timeout: 10000 });
 
     // Screenshot
     await page.screenshot({ path: 'test-results/maya_final.png' });
-    expect(true).toBe(true);
   });
 
   test('Persona: Carlos - The Freelance Handyman (Services)', async ({ page }) => {
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🚀 Start My Business' }).click();
 
     // Services
-    await page.mouse.click(640, 320);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🛠️ Service Business' }).click();
 
-    await page.mouse.click(640, 420);
-    await page.keyboard.type("Carlos Repairs");
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByPlaceholder('What is your business called?').fill("Carlos Repairs");
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // Verify it proceeds
     await page.screenshot({ path: 'test-results/carlos_final.png' });
-    expect(true).toBe(true);
   });
 
   test('Persona: Priya - The Boutique Owner (Omnichannel)', async ({ page }) => {
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🚀 Start My Business' }).click();
 
     // Online Store
-    await page.mouse.click(640, 280);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🛒 Online Store' }).click();
 
-    await page.mouse.click(640, 420);
-    await page.keyboard.type("Priya Boutique");
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByPlaceholder('What is your business called?').fill("Priya Boutique");
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // Verify it proceeds
     await page.screenshot({ path: 'test-results/priya_final.png' });
-    expect(true).toBe(true);
   });
 
   test('Persona: Leo - The Music Tutor (Subscriptions)', async ({ page }) => {
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🚀 Start My Business' }).click();
 
     // Services
-    await page.mouse.click(640, 320);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🛠️ Service Business' }).click();
 
-    await page.mouse.click(640, 420);
-    await page.keyboard.type("Leo Music");
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByPlaceholder('What is your business called?').fill("Leo Music");
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // Verify it proceeds
     await page.screenshot({ path: 'test-results/leo_final.png' });
-    expect(true).toBe(true);
   });
 
   test('Persona: Fatima - The Food Cart (Pre-orders)', async ({ page }) => {
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🚀 Start My Business' }).click();
 
     // Food
-    await page.mouse.click(640, 360);
-    await page.waitForTimeout(1000);
+    await page.getByRole('button', { name: '🍕 Restaurant / Food' }).click();
 
-    await page.mouse.click(640, 420);
-    await page.keyboard.type("Fatima Cart");
-    await page.mouse.click(640, 500);
-    await page.waitForTimeout(1000);
+    await page.getByPlaceholder('What is your business called?').fill("Fatima Cart");
+    await page.getByRole('button', { name: 'Next →' }).click();
 
     // Verify it proceeds
     await page.screenshot({ path: 'test-results/fatima_final.png' });
-    expect(true).toBe(true);
   });
 
 });
