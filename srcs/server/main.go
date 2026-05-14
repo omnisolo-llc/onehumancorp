@@ -135,7 +135,7 @@ func main() {
 
 	tierSvc := tiers.NewTierService(db)
 	tierAPI := tiers.NewAPIHandler(tierSvc)
-	mux.HandleFunc("/api/tiers/check", tierAPI.HandleCheckLimit)
+	mux.HandleFunc("/api/tiers/check", onboarding.TenantAuthMiddleware(tierAPI.HandleCheckLimit))
 
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
 
