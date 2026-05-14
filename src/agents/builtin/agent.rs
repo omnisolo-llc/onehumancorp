@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_mut, unused_imports)]
 
 pub enum ExecutionOutcome {
     Success(Vec<crate::types::ToolResult>),
@@ -344,7 +345,7 @@ impl Agent {
             // Component: Tools (Read-only concurrent, mutating serial)
             let mut error_counts: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
             let execution_outcome = self.execute_tool_calls_concurrently(&msg.tool_calls, session_tools, &messages, &cfg, on_event, i as i32, &mut error_counts).await?;
-            let mut tool_results = match execution_outcome {
+            let tool_results = match execution_outcome {
                 ExecutionOutcome::Success(results) => results,
                 ExecutionOutcome::StructuredOutput(content) => return Ok(content),
                 ExecutionOutcome::Handoff(target) => return Ok(format!("Handoff requested to {}", target)),

@@ -1,4 +1,6 @@
-use crate::agent::{Agent, AgentRunConfig, ExecutionOutcome};
+#![allow(dead_code, unused_variables, unused_mut, unused_imports)]
+#[allow(dead_code)]
+use crate::agent::{Agent, AgentRunConfig};
 use crate::llm::LlmClient;
 use crate::tools::{Tool, ToolExecutor};
 use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
@@ -679,20 +681,19 @@ mod tests {
 
 pub mod telemetry {
     use std::time::Instant;
-    use std::collections::HashMap;
-    use tokio::sync::Mutex;
+        use tokio::sync::Mutex;
     use std::sync::Arc;
 
     /// High-resolution telemetry for concurrent tool execution
     pub struct ExecutionTelemetry {
-        pub tool_latencies: Mutex<HashMap<String, u128>>,
+        pub tool_latencies: Mutex<std::collections::HashMap<String, u128>>,
         pub start_time: Instant,
     }
 
     impl ExecutionTelemetry {
         pub fn new() -> Arc<Self> {
             Arc::new(Self {
-                tool_latencies: Mutex::new(HashMap::new()),
+                tool_latencies: Mutex::new(std::collections::HashMap::new()),
                 start_time: Instant::now(),
             })
         }
@@ -776,11 +777,11 @@ pub mod parsing_utils {
 
 
 
+#[allow(dead_code)]
 pub mod circuit_breaker {
     use std::time::{Duration, Instant};
     use tokio::sync::Mutex;
     use std::sync::Arc;
-    use std::collections::HashMap;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum BreakerState {
@@ -813,7 +814,7 @@ pub mod circuit_breaker {
             match *state {
                 BreakerState::Closed => Ok(()),
                 BreakerState::Open => {
-                    let mut last_time = self.last_failure_time.lock().await;
+                    let last_time = self.last_failure_time.lock().await;
                     if let Some(time) = *last_time {
                         if time.elapsed() >= self.recovery_timeout {
                             *state = BreakerState::HalfOpen;
@@ -893,10 +894,10 @@ pub mod circuit_breaker {
     }
 }
 
+#[allow(dead_code)]
 pub mod execution_orchestrator {
     use std::future::Future;
     use futures::StreamExt;
-    use tokio::task::JoinHandle;
 
     pub struct TaskOrchestrator {
         max_concurrency: usize,
@@ -933,6 +934,7 @@ pub mod execution_orchestrator {
     }
 }
 
+#[allow(dead_code)]
 pub mod tool_dependency_graph {
     use std::collections::{HashMap, HashSet};
 

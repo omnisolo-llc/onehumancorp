@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_mut, unused_imports)]
 use crate::agent::{Agent, AgentRunConfig};
 use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
@@ -254,7 +255,7 @@ impl MagenticManager {
         let mut transcript = Vec::new();
         transcript.push(Message::user(initial_task.to_string()));
 
-        for round in 0..self.max_rounds {
+        for _round in 0..self.max_rounds {
             let mut current_cfg = self.manager_agent.run_config.clone();
             let mut allowed_tools = current_cfg.allowed_tools.unwrap_or_default();
             allowed_tools.push("magentic".to_string());
@@ -391,7 +392,7 @@ Provide your response.",
         let results = futures::future::join_all(futures).await;
         let mut combined_responses = String::new();
 
-        for (i, res) in results.into_iter().enumerate() {
+        for (_i, res) in results.into_iter().enumerate() {
             let text = res?;
             combined_responses.push_str(&text);
             combined_responses.push_str("\n\n");
@@ -435,6 +436,7 @@ Please synthesize these outputs into a final cohesive response.",
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[tokio::test]
     async fn test_autogen_sequential_chat() {
@@ -483,7 +485,7 @@ mod tests {
             .contains("Agent2: I am Agent2. I received the output and did Output 2"));
     }
 
-    use super::*;
+
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
 
     struct AutoGenMockLlmClient {
