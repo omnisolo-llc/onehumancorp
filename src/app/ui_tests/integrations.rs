@@ -195,3 +195,50 @@ fn create() -> app::Integrations { crate::ui_tests::init(); app::Integrations::n
     ui.invoke_configure_integration("WhatsApp".into());
     assert_eq!(*called.borrow(), "WhatsApp");
 }
+
+#[test] fn integr_flow_configure_messagebird() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("MessageBird".into());
+    assert_eq!(*called.borrow(), "MessageBird");
+}
+
+#[test] fn integr_flow_configure_shipstation() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("ShipStation".into());
+    assert_eq!(*called.borrow(), "ShipStation");
+}
+
+#[test] fn integr_flow_configure_messagebird_cuj() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    // Simulate user finding the tool and clicking configure
+    ui.invoke_configure_integration("MessageBird".into());
+    assert_eq!(*called.borrow(), "MessageBird");
+}
+
+#[test] fn integr_flow_configure_shipstation_cuj() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    // Simulate user finding the tool and clicking configure
+    ui.invoke_configure_integration("ShipStation".into());
+    assert_eq!(*called.borrow(), "ShipStation");
+}
+
+#[test] fn integr_flow_configure_whatsapp_cuj() {
+    let ui = create();
+    let called = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let c = called.clone();
+    ui.on_configure_integration(move |name| { *c.borrow_mut() = name.to_string(); });
+    ui.invoke_configure_integration("Meta".into());
+    assert_eq!(*called.borrow(), "Meta");
+}

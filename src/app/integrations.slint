@@ -164,37 +164,14 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "💬 Twilio"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Send SMS alerts to customers"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "💬 MessageBird"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Reliable global SMS notifications"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
-                        clicked => { configure_integration("Twilio"); }
+                        clicked => { configure_integration("MessageBird"); }
                     }
                 }
             }
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📅 Cal.com"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Automated appointment booking"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Cal.com"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
 
             Rectangle {
                 background: white;
@@ -214,6 +191,12 @@ export component Integrations inherits Window {
                     }
                 }
             }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+
 
             Rectangle {
                 background: white;
@@ -306,29 +289,6 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "📧 Listmonk"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Embedded No-Jargon Email Campaigns"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Listmonk"); }
-                    }
-                }
-            }
-        }
-
-        HorizontalBox {
-            spacing: 16px;
-
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
                     Text { text: "📧 Mailchimp"; font-weight: 700; color: #1e293b; }
                     Text { text: "Customer Re-engagement"; color: #64748b; wrap: word-wrap; }
                     Button {
@@ -337,6 +297,14 @@ export component Integrations inherits Window {
                     }
                 }
             }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+
+
+
+
 
             Rectangle {
                 background: white;
@@ -348,33 +316,16 @@ export component Integrations inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 8px;
-                    Text { text: "📦 Shippo"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Shipping Rate & Label Generation"; color: #64748b; wrap: word-wrap; }
+                    Text { text: "📦 ShipStation"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Automated tracking & label mgmt"; color: #64748b; wrap: word-wrap; }
                     Button {
                         text: "Configure";
-                        clicked => { configure_integration("Shippo"); }
+                        clicked => { configure_integration("ShipStation"); }
                     }
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
 
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📦 EasyPost"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Painless Shipping Labels & Tracking"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("EasyPost"); }
-                    }
-                }
-            }
         }
 
         HorizontalBox {
@@ -441,24 +392,7 @@ export component Integrations inherits Window {
                 }
             }
 
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
 
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    Text { text: "📹 Jitsi Meet"; font-weight: 700; color: #1e293b; }
-                    Text { text: "Zero-Setup Online Lessons"; color: #64748b; wrap: word-wrap; }
-                    Button {
-                        text: "Configure";
-                        clicked => { configure_integration("Jitsi"); }
-                    }
-                }
-            }
         }
 
         Text { text: "Connect Custom Software"; font-size: 20px; font-weight: 700; color: #1e293b; }

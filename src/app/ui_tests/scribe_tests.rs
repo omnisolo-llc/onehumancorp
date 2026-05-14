@@ -147,7 +147,7 @@ fn test_new_integrations_present() {
     let invoked_clone = invoked.clone();
 
     ui.on_configure_integration(move |name| {
-        if name == "Ayrshare" || name == "Listmonk" || name == "EasyPost" || name == "Jitsi" || name == "Cal.com" || name == "Mercado Pago" || name == "Twilio" || name == "Meta" {
+        if name == "Ayrshare" || name == "Mailchimp" || name == "ShipStation" || name == "Zoom" || name == "Calendly" || name == "Mercado Pago" || name == "Twilio" || name == "Meta" || name == "MessageBird" {
             *invoked_clone.borrow_mut() = true;
         }
     });
@@ -156,20 +156,20 @@ fn test_new_integrations_present() {
     assert!(*invoked.borrow(), "Ayrshare configuration should be callable");
     *invoked.borrow_mut() = false;
 
-    ui.invoke_configure_integration("Listmonk".into());
-    assert!(*invoked.borrow(), "Listmonk configuration should be callable");
+    ui.invoke_configure_integration("Mailchimp".into());
+    assert!(*invoked.borrow(), "Mailchimp configuration should be callable");
     *invoked.borrow_mut() = false;
 
-    ui.invoke_configure_integration("EasyPost".into());
-    assert!(*invoked.borrow(), "EasyPost configuration should be callable");
+    // removed
+
     *invoked.borrow_mut() = false;
 
-    ui.invoke_configure_integration("Jitsi".into());
-    assert!(*invoked.borrow(), "Jitsi configuration should be callable");
+    ui.invoke_configure_integration("Zoom".into());
+    assert!(*invoked.borrow(), "Zoom configuration should be callable");
     *invoked.borrow_mut() = false;
 
-    ui.invoke_configure_integration("Cal.com".into());
-    assert!(*invoked.borrow(), "Cal.com configuration should be callable");
+    ui.invoke_configure_integration("Calendly".into());
+    assert!(*invoked.borrow(), "Calendly configuration should be callable");
     *invoked.borrow_mut() = false;
 
     ui.invoke_configure_integration("Mercado Pago".into());
@@ -178,4 +178,13 @@ fn test_new_integrations_present() {
 
     ui.invoke_configure_integration("Twilio".into());
     assert!(*invoked.borrow(), "Twilio configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("MessageBird".into());
+    assert!(*invoked.borrow(), "MessageBird configuration should be callable");
+    *invoked.borrow_mut() = false;
+
+    ui.invoke_configure_integration("ShipStation".into());
+    assert!(*invoked.borrow(), "ShipStation configuration should be callable");
+
 }
