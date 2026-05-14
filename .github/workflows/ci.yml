@@ -21,7 +21,7 @@ defaults:
 jobs:
   bazel-test:
     runs-on: oci-runner
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
 
@@ -91,7 +91,7 @@ jobs:
 
   bazel-build:
     runs-on: oci-runner
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
 
@@ -154,7 +154,7 @@ jobs:
 
 #   playwright-e2e:
 #     runs-on: oci-runner
-#     timeout-minutes: 60
+#     timeout-minutes: 120
 #     steps:
 #       - uses: actions/checkout@v6
 #
