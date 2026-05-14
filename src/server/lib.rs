@@ -1622,17 +1622,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --sidebar-bg: #ffffff;
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
                         }
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: 'Outfit', sans-serif;
+                        }
                         .glass { 
-                            background: var(--card-bg); 
+                            background: rgba(255, 255, 255, 0.7);
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -1652,7 +1657,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-weight: 500; 
                             cursor: pointer; 
                             font-size: 14px;
-                            transition: color 0.2s;
+                            transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         nav a:hover {
                             color: var(--primary);
@@ -1685,6 +1690,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         button { 
                             padding: 10px 20px; 
+                            min-height: 44px;
+                            min-width: 44px;
                             background: var(--primary); 
                             border: none; 
                             border-radius: 6px; 
@@ -1694,7 +1701,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-right: 8px; 
                             margin-bottom: 8px; 
                             font-size: 14px;
-                            transition: background 0.2s;
+                            transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
