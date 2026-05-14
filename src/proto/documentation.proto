@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package ohc.documentation.tooltips;
+
+message TooltipEntry {
+  string key = 1;
+  string plain_language_text = 2;
+  string help_article_url = 3;
+  repeated Platform target_platforms = 4;
+}
+
+enum Platform {
+  PLATFORM_UNKNOWN = 0;
+  PLATFORM_DESKTOP_WEB = 1;
+  PLATFORM_MOBILE_WEB = 2;
+  PLATFORM_IOS = 3;
+  PLATFORM_ANDROID = 4;
+  PLATFORM_STANDALONE_DESKTOP = 5;
+}
+
+message TooltipRegistry {
+  string version_hash = 1;
+  map<string, TooltipEntry> entries = 2;
+}
+
+message WalkthroughStep {
+  int32 step_index = 1;
+  string target_selector = 2;
+  SpeechBubble speech_bubble = 3;
+  string advance_trigger = 4;
+}
+
+message SpeechBubble {
+  string title = 1;
+  string content = 2;
+  string position = 3;
+}
+
+message WalkthroughDefinition {
+  string walkthrough_id = 1;
+  string title = 2;
+  string target_audience = 3;
+  repeated WalkthroughStep steps = 4;
+}

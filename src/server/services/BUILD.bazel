@@ -2,6 +2,7 @@ filegroup(
     name = "srcs",
     srcs = [
         "booking.rs",
+        "//src/server/services/documentation:srcs",
         "mod.rs",
         "wizard.rs",
         "//src/server/services/agent:srcs",

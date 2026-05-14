@@ -43,6 +43,7 @@ nav:
       - Hybrid Health Check: ui/guide_proactive_onboarding_health_check.md
   - API:
       - api/index.md
+      - "OpenAPI Reference": api/openapi_reference.md
       - "Interactive Api Playbook": api/playbook.md
   - Features:
       - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
@@ -90,3 +91,26 @@ nav:
   - Archive:
       - archive/index.md
       - Legacy Design: archive/design/KAIROS_AI_OS_HYBRID_ARCHITECTURE.md
+  - Help Center:
+      - Getting Started: business/public/app/help_center/getting_started.md
+      - Managing Your Store: business/public/app/help_center/my_store.md
+      - Payments & Payouts: business/public/app/help_center/payments.md
+      - AI Support Agents: business/public/app/help_center/ai_agents.md
+      - Marketing & Growth: business/public/app/help_center/marketing.md
+      - Account & Billing: business/public/app/help_center/account_billing.md
+      - Video Tutorials: business/public/app/help_center/video_tutorials.md
+      - What's New: business/public/app/help_center/release_notes.md
+  - Advanced Guides:
+      - Advanced Shipping: business/public/app/help_center/guides/advanced_shipping.md
+      - Team Collaboration: business/public/app/help_center/guides/team_collaboration.md
+      - Managing Taxes: business/public/app/help_center/guides/taxes.md
+      - Custom Domains: business/public/app/help_center/guides/custom_domain.md
+      - Marketing Integrations: business/public/app/help_center/guides/marketing_integrations.md
+      - SEO Basics: business/public/app/help_center/guides/seo_basics.md
+      - Point of Sale: business/public/app/help_center/guides/pos_system.md
+      - Advanced Inventory: business/public/app/help_center/advanced/inventory_management.md
+  - Documentation Architecture:
+      - Help Center Architecture: technical/features/documentation/help_center_architecture.md
+      - Tooltip Registry Design: technical/features/documentation/tooltip_registry_design.md
+      - Interactive Walkthrough System: technical/features/documentation/interactive_walkthrough_system.md
+      - AI Help Chat Routing: technical/features/documentation/ai_help_chat_routing.md

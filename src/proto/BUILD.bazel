@@ -199,3 +199,15 @@ proto_rust_library(
     proto = ":interop_proto",
     visibility = ["//visibility:public"],
 )
+
+proto_library(
+    name = "documentation_proto",
+    srcs = ["documentation.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "documentation",
+    proto = ":documentation_proto",
+    visibility = ["//visibility:public"],
+)

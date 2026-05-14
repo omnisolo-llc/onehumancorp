@@ -1,0 +1,11 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "chat.rs",
+        "mod.rs",
+        "registry.rs",
+        "walkthrough.rs",
+        "guides.rs",
+    ],
+    visibility = ["//src/server/services:__pkg__"],
+)
