@@ -130,3 +130,105 @@ fn test_referrals_dashboard_lens_audit() {
     ui.invoke_generate_new_link();
     assert!(*generate_new_link_called.borrow(), "Generate new link callback must be triggered");
 }
+#[test]
+fn test_agent_config_cuj_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::AgentConfig::new().unwrap();
+    assert_eq!(ui.get_step(), 0);
+    assert_eq!(ui.get_is_advanced(), false);
+    let next_step_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let next_step_clone = next_step_called.clone();
+    ui.on_next_step(move || {
+        *next_step_clone.borrow_mut() = true;
+    });
+    ui.invoke_next_step();
+    assert!(*next_step_called.borrow(), "Next step callback must be triggered");
+    let save_state_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let save_state_clone = save_state_called.clone();
+    ui.on_save_state(move || {
+        *save_state_clone.borrow_mut() = true;
+    });
+    ui.invoke_save_state();
+    assert!(*save_state_called.borrow(), "Save state callback must be triggered");
+    ui.set_is_advanced(true);
+    assert_eq!(ui.get_is_advanced(), true);
+    ui.set_api_scope_override("test_scope".into());
+    assert_eq!(ui.get_api_scope_override(), slint::SharedString::from("test_scope"));
+    ui.set_cron_override("0 0 * * *".into());
+    assert_eq!(ui.get_cron_override(), slint::SharedString::from("0 0 * * *"));
+}
+
+#[test]
+fn test_agent_config_toggles_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::AgentConfig::new().unwrap();
+
+    // Test initial states
+    assert_eq!(ui.get_can_reply(), false);
+    assert_eq!(ui.get_can_social(), false);
+    assert_eq!(ui.get_can_write_descriptions(), false);
+    assert_eq!(ui.get_can_send_updates(), false);
+
+    // Toggle and verify
+    ui.set_can_reply(true);
+    assert_eq!(ui.get_can_reply(), true);
+    ui.set_can_social(true);
+    assert_eq!(ui.get_can_social(), true);
+    ui.set_can_write_descriptions(true);
+    assert_eq!(ui.get_can_write_descriptions(), true);
+    ui.set_can_send_updates(true);
+    assert_eq!(ui.get_can_send_updates(), true);
+}
+
+#[test]
+fn test_agent_config_frequency_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::AgentConfig::new().unwrap();
+
+    // Test initial frequency
+    assert_eq!(ui.get_frequency_value(), 2.0);
+
+    // Change frequency and verify
+    ui.set_frequency_value(0.0);
+    assert_eq!(ui.get_frequency_value(), 0.0);
+
+    ui.set_frequency_value(3.0);
+    assert_eq!(ui.get_frequency_value(), 3.0);
+}
+
+#[test]
+fn test_agent_config_selection_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::AgentConfig::new().unwrap();
+
+    // Test initial selection
+    assert_eq!(ui.get_selected_agent(), slint::SharedString::from(""));
+    assert_eq!(ui.get_selected_agent_display(), slint::SharedString::from(""));
+
+    // Select an agent and verify
+    ui.set_selected_agent("Customer Support".into());
+    assert_eq!(ui.get_selected_agent(), slint::SharedString::from("Customer Support"));
+    ui.set_selected_agent_display("Customer Support".into());
+    assert_eq!(ui.get_selected_agent_display(), slint::SharedString::from("Customer Support"));
+}
+
+#[test]
+fn test_agent_config_activate_lens_audit() {
+    crate::ui_tests::init();
+    if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+    let ui = app::AgentConfig::new().unwrap();
+
+    let activate_called = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let activate_clone = activate_called.clone();
+    ui.on_activate_agent(move |_, _, _, _, _, _, _, _, _| {
+        *activate_clone.borrow_mut() = true;
+    });
+
+    // Simulate clicking activate agent (which triggers the callback with all parameters)
+    ui.invoke_activate_agent("".into(), false, false, false, false, "".into(), "".into(), "".into(), "".into());
+    assert!(*activate_called.borrow(), "Activate agent callback must be triggered");
+}
