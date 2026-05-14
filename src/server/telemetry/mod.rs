@@ -106,6 +106,14 @@ pub async fn record_agent_cost(pool: &PgPool, agent_id: &str, organization_id: &
     .await
 }
 
+pub async fn record_cache_hit(pool: &sqlx::PgPool, cache_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_cache_hits_total", "counter", 1.0, serde_json::json!({ "cache": cache_name })).await
+}
+
+pub async fn record_cache_miss(pool: &sqlx::PgPool, cache_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_cache_misses_total", "counter", 1.0, serde_json::json!({ "cache": cache_name })).await
+}
+
 pub async fn record_api_call_cost(pool: &PgPool, organization_id: &str, entity: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(
         pool,

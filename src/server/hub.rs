@@ -293,9 +293,14 @@ impl Hub {
                     
                     tokio::spawn(async move {
                         let client = crate::minimax::MinimaxClient::new(api_key);
+
+                        // Use ContextManager for pruning before summarization
+                        let cm = ::server_pricing::context_manager::ContextManager::new(4000);
+                        let pruned_transcript = cm.prune_messages(transcript);
+
                         let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
                         
-                        for m in &transcript {
+                        for m in &pruned_transcript {
                             prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
                         }
                         

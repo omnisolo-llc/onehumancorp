@@ -62,7 +62,7 @@ pub async fn bench_db_query_time() {
 }
 
 pub async fn bench_api_response_time() {
-    tracing::info!("Benchmarking API Response Time...");
+    tracing::info!("Benchmarking API Response Time (High Fidelity p99)...");
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
     if database_url == "postgres://localhost/dummy" {
@@ -116,6 +116,26 @@ pub async fn bench_api_response_time() {
     }
     standalone_times.sort();
     println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
+}
+
+pub async fn bench_cache_latency() {
+    println!("Benchmarking HybridCache Latency...");
+    let cache = crate::utils::cache::HybridCache::<String>::new("bench", None);
+    let key = "test_key";
+    let val = "test_value".to_string();
+
+    // Warm up
+    cache.set(key, val.clone(), std::time::Duration::from_secs(60)).await;
+
+    let iterations = 1000;
+    let mut times = Vec::new();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _ = cache.get(key).await;
+        times.push(start.elapsed().as_nanos());
+    }
+    times.sort();
+    println!("HybridCache Get (Hit): p50: {} ns, p95: {} ns, p99: {} ns", times[iterations / 2], times[(iterations as f32 * 0.95) as usize], times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {

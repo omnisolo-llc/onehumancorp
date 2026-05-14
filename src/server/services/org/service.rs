@@ -13,13 +13,15 @@ pub struct MyOrgService {
 impl MyOrgService {
     pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
         let redis_client = hub.redis_client.clone();
+        let mut analytics_cache = ::server_utils::cache::HybridCache::new("org_analytics", redis_client);
+        analytics_cache.set_pool(hub.pool.clone());
         MyOrgService {
             hub,
             settings: RwLock::new(SettingsResponse {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
-            analytics_cache: ::server_utils::cache::HybridCache::new(redis_client),
+            analytics_cache,
         }
     }
 }

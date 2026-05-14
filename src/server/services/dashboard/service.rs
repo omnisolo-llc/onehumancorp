@@ -16,6 +16,22 @@ pub struct MyDashboardService {
 
 impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
+        let pool = hub.pool.clone();
+        PRODUCTS_CACHE.get_or_init(|| {
+            let mut c = HybridCache::new("dashboard_products", hub.redis_client.clone());
+            c.set_pool(pool.clone());
+            c
+        });
+        ORDERS_CACHE.get_or_init(|| {
+            let mut c = HybridCache::new("dashboard_orders", hub.redis_client.clone());
+            c.set_pool(pool.clone());
+            c
+        });
+        ORG_CACHE.get_or_init(|| {
+            let mut c = HybridCache::new("dashboard_org", hub.redis_client.clone());
+            c.set_pool(pool.clone());
+            c
+        });
         Self { db, hub }
     }
 }
@@ -81,7 +97,7 @@ impl DashboardService for MyDashboardService {
             async {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}", org_id);
-                let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
+                let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new("dashboard_products", hub_prod.redis_client.clone()));
 
                 if let Some(products) = cache.get(&cache_key).await {
                     return Ok::<_, String>(products);
@@ -137,7 +153,7 @@ impl DashboardService for MyDashboardService {
             async {
                 let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}", org_id);
-                let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
+                let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new("dashboard_orders", hub_orders.redis_client.clone()));
 
                 if let Some(orders) = cache.get(&cache_key).await {
                     return Ok::<_, String>(orders);
@@ -187,7 +203,7 @@ impl DashboardService for MyDashboardService {
             async {
                 let org_id = org_id3;
                 let cache_key = format!("hub:org:{}", org_id);
-                let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
+                let cache = ORG_CACHE.get_or_init(|| HybridCache::new("dashboard_org", hub_org.redis_client.clone()));
 
                 if let Some(org) = cache.get(&cache_key).await {
                     return Ok::<_, String>(org);
@@ -253,12 +269,10 @@ impl DashboardService for MyDashboardService {
         let products = if req.mobile_optimized {
             products
                 .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
+                .map(|p| {
+                    let mut val = serde_json::to_value(&p).unwrap_or(serde_json::json!({}));
+                    val = ::server_utils::json_minify::shape_response(val, &["description", "metadata_json", "fulfillment_strategy", "currency"]);
+                    serde_json::from_value(val).unwrap_or(p)
                 })
                 .collect()
         } else {
@@ -268,11 +282,10 @@ impl DashboardService for MyDashboardService {
         let orders = if req.mobile_optimized {
             orders
                 .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
+                .map(|o| {
+                    let mut val = serde_json::to_value(&o).unwrap_or(serde_json::json!({}));
+                    val = ::server_utils::json_minify::shape_response(val, &["product_id", "status", "organization_id"]);
+                    serde_json::from_value(val).unwrap_or(o)
                 })
                 .collect()
         } else {
@@ -406,14 +419,18 @@ impl DashboardService for MyDashboardService {
         let mut final_agents = _filtered_agents
             .into_iter()
             .map(|a| {
-                let compressed_name = a.name
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+                let compressed_name = if !req.mobile_optimized {
+                    a.name
+                        .split_whitespace()
+                        .filter(|word| {
+                            let clean_word = word.to_lowercase();
+                            !stop_words.contains(clean_word.as_str())
+                        })
+                        .collect::<Vec<&str>>()
+                        .join(" ")
+                } else {
+                    String::new()
+                };
 
                 ::server_ohc::agent::Agent {
                     id: a.id,
@@ -424,12 +441,6 @@ impl DashboardService for MyDashboardService {
                 }
             })
             .collect::<Vec<_>>();
-
-        if req.mobile_optimized {
-            for agent in final_agents.iter_mut() {
-                agent.name = String::new();
-            }
-        }
 
         let org = if req.mobile_optimized {
             org.map(|mut o| {

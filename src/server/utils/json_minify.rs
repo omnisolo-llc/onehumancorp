@@ -21,6 +21,22 @@ pub fn minify_json_string(input: &str) -> String {
     }
 }
 
+pub fn shape_response(mut val: Value, fields_to_remove: &[&str]) -> Value {
+    if let Some(obj) = val.as_object_mut() {
+        for field in fields_to_remove {
+            obj.remove(*field);
+        }
+        for (_, v) in obj.iter_mut() {
+            *v = shape_response(v.take(), fields_to_remove);
+        }
+    } else if let Some(arr) = val.as_array_mut() {
+        for v in arr {
+            *v = shape_response(v.take(), fields_to_remove);
+        }
+    }
+    val
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -15,11 +15,13 @@ pub struct MyAgentManagerService {
 impl MyAgentManagerService {
     pub fn new(hub: Arc<Hub>) -> Self {
         let redis_client = hub.redis_client.clone();
+        let mut snapshot_cache = ::server_utils::cache::HybridCache::new("agent_dashboard", redis_client);
+        snapshot_cache.set_pool(hub.pool.clone());
         MyAgentManagerService {
             hub,
             skills: RwLock::new(Vec::new()),
             snapshots: RwLock::new(Vec::new()),
-            snapshot_cache: ::server_utils::cache::HybridCache::new(redis_client),
+            snapshot_cache,
         }
     }
 
@@ -239,9 +241,11 @@ impl AgentManagerService for MyAgentManagerService {
         let req = request.into_inner();
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
-        let (agents_res, meetings_res) = tokio::join!(
+        let hub3 = self.hub.clone();
+        let (agents_res, meetings_res, _cost_summary) = tokio::join!(
             tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+            tokio::task::spawn_blocking(move || hub2.get_meetings()),
+            tokio::task::spawn_blocking(move || hub3.get_cost_auditor().get_agent_costs_snapshot())
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;

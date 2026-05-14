@@ -18,10 +18,12 @@ rust_library(
     deps = [
         "//src/server/config:server_config",
         "//src/server/auth:server_auth",
+        "//src/server/telemetry:server_telemetry",
         "//src/server/pricing:server_pricing",
         "@crates//:axum",
         "@crates//:base64",
         "@crates//:chrono",
+        "@crates//:dashmap",
         "@crates//:flate2",
         "@crates//:futures",
         "@crates//:rand",
