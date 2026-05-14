@@ -1,10 +1,14 @@
 #!/bin/bash
-# This script is called during postinstall in CI to ensure that
-# tools are available and to shim bazelisk to fix CI issues.
+# OHC CI Bazelisk Shim Setup
+# This script ensures bazelisk is on the PATH and shims it to fix CI issues.
+
+set -e
 
 if [ -n "$GITHUB_PATH" ]; then
   BIN_DIR="$(pwd)/.ci_bin"
   mkdir -p "$BIN_DIR"
+
+  echo "Creating bazelisk shim at $BIN_DIR/bazelisk" >&2
 
   cat <<'EOF' > "$BIN_DIR/bazelisk"
 #!/bin/bash
@@ -17,8 +21,9 @@ has_dash_dash=false
 case "$cmd" in
   build|test|run|query|cquery|aquery)
     args+=("$cmd")
-    # Add resource constraints for the runner
+    # Add resource constraints to prevent runner communication loss (OOM/CPU)
     args+=("--local_resources=ram=1024")
+    args+=("--local_cpu_resources=2")
     ;;
   *)
     args+=("$cmd")
@@ -32,6 +37,7 @@ for arg in "$@"; do
     continue
   fi
   # Fix for: Negative target patterns can only appear after the end of options marker ('--')
+  # This fixes the "//... -//src/e2e/..." issue in CI.
   if [[ "$arg" == -//* ]] && [ "$has_dash_dash" = false ]; then
     args+=("--")
     has_dash_dash=true
@@ -39,17 +45,19 @@ for arg in "$@"; do
   args+=("$arg")
 done
 
-# Try to find bazel in PATH
-if command -v bazel >/dev/null 2>&1; then
-  exec bazel "${args[@]}"
+# Try to find bazel in PATH (provided by setup-bazel)
+# If not found, try to use the one installed by npm if available
+BAZEL_BIN=$(command -v bazel || echo "$(pwd)/node_modules/.bin/bazel")
+
+if [ -x "$BAZEL_BIN" ] || command -v bazel >/dev/null 2>&1; then
+  exec "$BAZEL_BIN" "${args[@]}"
 else
-  # If bazel is not found, it might be that setup-bazel hasn't run yet or failed
-  echo "Error: bazel not found in PATH" >&2
-  exit 127
+  # Fallback to just 'bazel' and hope for the best
+  exec bazel "${args[@]}"
 fi
 EOF
 
   chmod +x "$BIN_DIR/bazelisk"
   echo "$BIN_DIR" >> "$GITHUB_PATH"
-  echo "Added $BIN_DIR to GITHUB_PATH with bazelisk shim"
+  echo "Added $BIN_DIR to GITHUB_PATH" >&2
 fi
