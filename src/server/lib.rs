@@ -284,7 +284,7 @@ impl HubService for MyHubService {
         let url = if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
-            client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
+            client.create_checkout_session(&req.plan_id, &tenant_id, amount, None).await
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
@@ -303,7 +303,7 @@ impl HubService for MyHubService {
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
-        client.cancel_subscription(&req.plan_id).await
+        client.cancel_subscription(&req.plan_id, None).await
             .map_err(|e| tonic::Status::internal(e))?;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::CancelSubscriptionResponse {

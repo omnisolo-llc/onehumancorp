@@ -53,6 +53,8 @@ impl Tracker {
                 Err(e) => {
                     tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
                     Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                         is_allowed: true,
                         soft_limit_reached: false,
                         user_message: None,
@@ -61,6 +63,8 @@ impl Tracker {
             }
         } else {
             Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                 is_allowed: true,
                 soft_limit_reached: false,
                 user_message: None,
@@ -75,6 +79,8 @@ impl Tracker {
                 Err(e) => {
                     tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
                     Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                         is_allowed: true,
                         soft_limit_reached: false,
                         user_message: None,
@@ -83,6 +89,8 @@ impl Tracker {
             }
         } else {
             Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                 is_allowed: true,
                 soft_limit_reached: false,
                 user_message: None,
@@ -111,6 +119,8 @@ impl Tracker {
                 Err(e) => {
                     tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
                     Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                         is_allowed: true,
                         soft_limit_reached: false,
                         user_message: None,
@@ -119,6 +129,8 @@ impl Tracker {
             }
         } else {
             Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                 is_allowed: true,
                 soft_limit_reached: false,
                 user_message: None,
@@ -133,6 +145,8 @@ impl Tracker {
                 Err(e) => {
                     tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
                     Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                         is_allowed: true,
                         soft_limit_reached: false,
                         user_message: None,
@@ -141,6 +155,8 @@ impl Tracker {
             }
         } else {
             Ok(RateLimitStatus {
+                        limit_type: None,
+                        upgrade_url: None,
                 is_allowed: true,
                 soft_limit_reached: false,
                 user_message: None,

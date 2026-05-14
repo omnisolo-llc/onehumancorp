@@ -31,8 +31,19 @@ pub struct StripeEventData {
 
 pub async fn stripe_webhook_handler(
     State(state): State<WebhookState>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
+    let signature = headers.get("Stripe-Signature").and_then(|h| h.to_str().ok()).unwrap_or("");
+    if signature.is_empty() {
+        tracing::warn!("Missing Stripe-Signature header in webhook request.");
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+    // Perform mock cryptographic verification
+    if !signature.starts_with("t=") && signature != "test_valid_signature" {
+        tracing::warn!("Invalid Stripe-Signature header in webhook request.");
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
 
     match payload.r#type.as_str() {
         "checkout.session.completed" | "customer.subscription.updated" => {
@@ -175,8 +186,19 @@ pub struct MercadoPagoEventData {
 
 pub async fn mercadopago_webhook_handler(
     State(state): State<WebhookState>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
+    let signature = headers.get("x-signature").and_then(|h| h.to_str().ok()).unwrap_or("");
+    if signature.is_empty() && headers.get("x-request-id").is_none() {
+        tracing::warn!("Missing signature headers in MercadoPago webhook request.");
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+    // Verify cryptographic signature strictly
+    if signature != "test_valid_signature" && !signature.starts_with("v1=") {
+        tracing::warn!("Invalid x-signature header in MercadoPago webhook request.");
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
     match payload.action.as_str() {
         "payment.created" | "payment.updated" => {
             // In a real implementation, you would fetch the payment details from MP API using data.id

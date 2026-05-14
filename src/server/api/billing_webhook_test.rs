@@ -64,7 +64,7 @@ async fn test_stripe_webhook_handler_completed() {
     });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).header("Stripe-Signature", "test_valid_signature").json(&payload).send().await.unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -135,7 +135,7 @@ async fn test_stripe_webhook_handler_deleted() {
     });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).header("Stripe-Signature", "test_valid_signature").json(&payload).send().await.unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -197,6 +197,6 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         },
     };
 
-    let response = mercadopago_webhook_handler(State(state), Json(event)).await.into_response();
+    let response = mercadopago_webhook_handler(State(state), { let mut h = axum::http::HeaderMap::new(); h.insert("x-signature", axum::http::HeaderValue::from_static("test_valid_signature")); h }, Json(event)).await.into_response();
     assert_eq!(response.status(), StatusCode::OK);
 }

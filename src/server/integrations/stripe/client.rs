@@ -30,13 +30,17 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64, idempotency_key: Option<&str>) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
             "stripe_checkout_session",
             0.10 // mock cost for api orchestration
         ).await;
+        // Mock usage of idempotency key for safe API request formatting
+        if let Some(key) = idempotency_key {
+            tracing::debug!("Using Stripe Idempotency-Key: {}", key);
+        }
 
         // Use PaymentRouter to optimize method
         let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
@@ -76,7 +80,10 @@ impl StripeClient {
         ])
     }
 
-    pub async fn cancel_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn cancel_subscription(&self, _subscription_id: &str, idempotency_key: Option<&str>) -> Result<StripeSubscription, String> {
+        if let Some(key) = idempotency_key {
+            tracing::debug!("Canceling with Stripe Idempotency-Key: {}", key);
+        }
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
             status: "canceled".to_string(),

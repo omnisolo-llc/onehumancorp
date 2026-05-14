@@ -42,6 +42,29 @@ impl DB {
         }
     }
 
+    /// Executes a closure within a multi-tenant-safe PostgreSQL transaction.
+    /// This ensures `app.current_tenant` is always set before the closure executes,
+    /// preventing cross-tenant data leaks at the RLS layer.
+    pub async fn execute_tenant_query<F, Fut, R, E>(&self, tenant_id: &str, query_fn: F) -> Result<R, E>
+    where
+        for<'a> F: FnOnce(&'a mut sqlx::Transaction<'_, sqlx::Postgres>) -> Fut,
+        Fut: std::future::Future<Output = Result<R, E>> + Send,
+        E: From<sqlx::Error>,
+    {
+        if self.is_sqlite() {
+            // SQLite is only used locally, RLS bypass
+            return Err(sqlx::Error::Configuration("Tenant queries require PostgreSQL".into()).into());
+        }
+
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+
+        let result = query_fn(&mut tx).await?;
+
+        tx.commit().await?;
+        Ok(result)
+    }
+
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
