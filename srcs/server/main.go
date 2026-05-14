@@ -20,13 +20,7 @@ import (
 	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
-// MockLLMClient implements memory.LLMClient for demonstration purposes
-type MockLLMClient struct{}
 
-// GenerateEmbedding returns a mock embedding
-func (m *MockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
-	return []float32{0.1, 0.2, 0.3}, nil
-}
 
 func main() {
 	log.Println("Starting OHC Server...")
@@ -35,7 +29,6 @@ func main() {
 	dbPath := ":memory:"
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		dbPath = "ohc_standalone.db"
-	}
 
     // Pass key via DSN query parameter for sqlcipher
     dsn := dbPath
@@ -45,24 +38,19 @@ func main() {
         f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_RDWR, 0600)
         if err != nil {
             log.Fatalf("Failed to create secure db file: %v", err)
-        }
         f.Close()
 
         if err := os.Chmod(dbPath, 0600); err != nil {
             log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
-        }
 
         dbKey := os.Getenv("OHC_LOCAL_DB_KEY")
         if dbKey == "" {
             log.Fatalf("OHC_LOCAL_DB_KEY environment variable is required for local standalone mode encryption")
-        }
         dsn = dbPath + "?_pragma_key=" + dbKey + "&_pragma_cipher=sqlcipher"
-    }
 
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
-	}
 	defer db.Close()
 
 	// Create memory_embeddings table
@@ -75,10 +63,9 @@ func main() {
 	`)
 	if err != nil {
 		log.Fatalf("Failed to create memory_embeddings table: %v", err)
-	}
 
-	// Initialize the mock LLM client
-	llmClient := &MockLLMClient{}
+	// Initialize the local LLM client
+	llmClient := local.NewLocalLLMClient()
 
 	// Initialize AutoDream daemon
 	daemon, err := memory.NewAutoDreamDaemon(
@@ -90,7 +77,6 @@ func main() {
 	)
 	if err != nil {
 		log.Fatalf("Failed to initialize AutoDream daemon: %v", err)
-	}
 
 	// Run AutoDream daemon in background
 	ctx, cancel := context.WithCancel(context.Background())
@@ -122,12 +108,8 @@ func main() {
 	mux.HandleFunc("/api/onboarding/state", onboarding.TenantAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			onboardingAPI.HandleSaveState(w, r)
-		} else if r.Method == http.MethodGet {
 			onboardingAPI.HandleGetState(w, r)
-		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))
 
 	growthSvc := growth.NewGrowthService(db)
 	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
@@ -152,8 +134,4 @@ func main() {
 		log.Println("Listening on :8080...")
 		if err := http.ListenAndServe(":8080", mux); err != nil {
 			log.Fatalf("Server failed: %v", err)
-		}
-	}()
 
-	select {}
-}

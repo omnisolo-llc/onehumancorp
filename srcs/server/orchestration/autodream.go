@@ -130,18 +130,7 @@ func (w *AutoDreamWorker) ScanAndProcessMemories(ctx context.Context, memoryDir 
 			agentID = nil
 		}
 
-		var query string
-		if dbWrapper.GlobalProvider.IsSQLite() {
-			query = `
-				INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, agent_id)
-				VALUES (?, ?, ?, ?, ?, ?, ?)
-			`
-		} else {
-			query = `
-				INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, agent_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)
-			`
-		}
+		query := dbWrapper.GlobalProvider.AutoDreamInsertQuery()
 
 		_, err = w.db.ExecContext(ctx, query, id, mem.OrganizationID, taskID, mem.Content, vecStr, sourceType, agentID)
 		if err != nil {

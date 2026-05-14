@@ -23,7 +23,7 @@ func TestProvider_CreateTask_Postgres(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	provider := &Provider{DB: db}
+	provider := &CloudProvider{DB: db}
 
 	task := &Task{
 		ID:     "task-1",
@@ -57,7 +57,7 @@ func TestProvider_CreateTask_SQLite(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	provider := &Provider{DB: db}
+	provider := &StandaloneProvider{DB: db}
 
 	task := &Task{
 		ID:     "task-1",
@@ -89,7 +89,7 @@ func TestProvider_ClaimTask_Postgres(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	provider := &Provider{DB: db, RedisClient: rdb}
+	provider := &CloudProvider{DB: db, RedisClient: rdb}
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
@@ -119,7 +119,7 @@ func TestProvider_ClaimTask_SQLite(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	provider := &Provider{DB: db}
+	provider := &StandaloneProvider{DB: db}
 
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
 		WithArgs("task-1").
@@ -157,7 +157,7 @@ func TestProvider_ClaimTask_Postgres_Errors(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	provider := &Provider{DB: db, RedisClient: rdb}
+	provider := &CloudProvider{DB: db, RedisClient: rdb}
 
 	// Test BeginTx error
 	mock.ExpectBegin().WillReturnError(errors.New("begin tx error"))
@@ -166,7 +166,7 @@ func TestProvider_ClaimTask_Postgres_Errors(t *testing.T) {
 
 	// Test query error
 	db2, mock2, _ := sqlmock.New()
-	provider2 := &Provider{DB: db2, RedisClient: rdb}
+	provider2 := &CloudProvider{DB: db2, RedisClient: rdb}
 	mock2.ExpectBegin()
 	mock2.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
 		WithArgs("task-q").WillReturnError(errors.New("query err"))
@@ -175,7 +175,7 @@ func TestProvider_ClaimTask_Postgres_Errors(t *testing.T) {
 
 	// Test task not found
 	db3, mock3, _ := sqlmock.New()
-	provider3 := &Provider{DB: db3, RedisClient: rdb}
+	provider3 := &CloudProvider{DB: db3, RedisClient: rdb}
 	mock3.ExpectBegin()
 	mock3.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
 		WithArgs("task-miss").WillReturnError(sql.ErrNoRows)
@@ -185,7 +185,7 @@ func TestProvider_ClaimTask_Postgres_Errors(t *testing.T) {
 
 	// Test already claimed
 	db4, mock4, _ := sqlmock.New()
-	provider4 := &Provider{DB: db4, RedisClient: rdb}
+	provider4 := &CloudProvider{DB: db4, RedisClient: rdb}
 	mock4.ExpectBegin()
 	mock4.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
 		WithArgs("task-claimed").WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow("COMPLETED"))
@@ -201,7 +201,7 @@ func TestProvider_ClaimTask_SQLite_Errors(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	provider := &Provider{DB: db}
+	provider := &StandaloneProvider{DB: db}
 
 	// query error
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).WillReturnError(errors.New("db error"))
@@ -228,7 +228,7 @@ func TestProvider_CreateTask_Postgres_Errors(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	provider := &Provider{DB: db}
+	provider := &CloudProvider{DB: db}
 
 	task := &Task{ID: "task-err", Status: "PENDING"}
 
@@ -247,7 +247,7 @@ func TestProvider_CreateTask_SQLite_Errors(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	provider := &Provider{DB: db}
+	provider := &StandaloneProvider{DB: db}
 
 	task := &Task{ID: "task-err", Status: "PENDING"}
 
@@ -271,7 +271,7 @@ func TestProvider_ClaimTask_Postgres_ExecError(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	provider := &Provider{DB: db, RedisClient: rdb}
+	provider := &CloudProvider{DB: db, RedisClient: rdb}
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \$1 FOR UPDATE SKIP LOCKED`).
@@ -295,7 +295,7 @@ func TestProvider_ClaimTask_Postgres_RedisError(t *testing.T) {
 	db, _, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
-	provider := &Provider{DB: db, RedisClient: rdb}
+	provider := &CloudProvider{DB: db, RedisClient: rdb}
 
 	err = provider.ClaimTask(context.Background(), "task-1")
 	assert.Error(t, err)
@@ -309,7 +309,7 @@ func TestProvider_ClaimTask_SQLite_RowsAffectedError(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	provider := &Provider{DB: db}
+	provider := &StandaloneProvider{DB: db}
 
 	mock.ExpectQuery(`SELECT status FROM tasks WHERE id = \?`).
 		WithArgs("task-1").
@@ -323,14 +323,14 @@ func TestProvider_ClaimTask_SQLite_RowsAffectedError(t *testing.T) {
 }
 
 func TestProvider_CreateTask_NilDB(t *testing.T) {
-    provider := &Provider{}
+    provider := &CloudProvider{}
     err := provider.CreateTask(context.Background(), &Task{})
     assert.Error(t, err)
     assert.Contains(t, err.Error(), "nil")
 }
 
 func TestProvider_ClaimTask_NilDB(t *testing.T) {
-    provider := &Provider{}
+    provider := &CloudProvider{}
     err := provider.ClaimTask(context.Background(), "task-1")
     assert.Error(t, err)
     assert.Contains(t, err.Error(), "nil")
