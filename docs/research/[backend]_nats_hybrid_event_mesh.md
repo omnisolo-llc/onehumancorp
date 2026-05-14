@@ -1,39 +1,65 @@
-# NATS: Hybrid Event Mesh
+# Scout: Tool Integration Research Q4
 
-## Title
-NATS 🚀 (Hybrid Event Mesh Integration)
+## 1. Title
+NATS as the Backbone for the Hybrid Event Mesh
 
-## Problem Statement
-The OHC Hybrid Architecture requires a robust and high-performance eventing system to handle real-time communication between Cloud-Native and Standalone Desktop nodes. Currently, there is a gap in achieving low-latency, scalable, and decentralized event routing that works seamlessly across multi-tenant cloud environments (K8s) and local desktop instances (SQLite-backed). We need an event mesh capable of bridging these distinct environments without heavy dependencies on centralized brokers in offline-first scenarios.
+## 2. Problem Statement
+The OHC hybrid architecture requires reliable, low-latency communication between the cloud orchestrator, various internal microservices, and thousands of distributed standalone retail instances. Current ad-hoc REST and WebSocket connections are difficult to scale, monitor, and route dynamically. We need a unified event mesh.
 
-## Research Report
-- **Goal**: Integrate NATS (and JetStream) as the primary Hybrid Event Mesh to facilitate real-time messaging, KV storage, and event streaming across the OHC ecosystem.
-- **Capabilities**:
-  - **Decentralized Pub/Sub**: High-throughput message routing with support for dynamic topologies (leaf nodes for desktop clients).
-  - **JetStream Persistence**: Durable message queues for reliable delivery, enabling offline-first operations where events are cached locally and synchronized upon reconnection.
-  - **Multi-Tenant Support**: Strong isolation using NATS accounts for Cloud-Native deployments.
-  - **Low Footprint**: Extremely lightweight binary, suitable for embedding within the Standalone Desktop Mode.
-- **Architecture Validation**:
-  - Existing infrastructure uses tools like Redis and PostgreSQL, which are excellent for state but lack the ultra-low latency and dynamic routing of a dedicated event mesh.
-  - NATS leaf nodes can run alongside the Standalone SQLite instance, forwarding events to the Cloud cluster transparently when network connectivity is available.
+## 3. Research Report
+### 3.1 The Small Business Owner Lens
+(Internal Infrastructure Focus - User impact is indirect via speed and reliability). "The system just feels faster and more stable, even when my internet is spotty."
 
-## Design Doc
-1. **Architecture Update**: Introduce a `NatsProvider` within the `src/server/integrations/` directory, conforming to the integration blueprints.
-2. **Component Integration**:
-   - Cloud: NATS cluster with JetStream enabled for global event distribution.
-   - Standalone: Embedded NATS server acting as a leaf node to the cloud cluster.
-3. **Data Schema (KV/Object Store)**:
-   - Define buckets for transient state synchronization and agent presence metrics.
-4. **API Contracts**:
-   - `Publish(subject string, data []byte)`
-   - `Subscribe(subject string, handler func(msg))`
-5. **UI Wireframes**: "Event Mesh Status" indicator visualizing active connections and message throughput in the admin dashboard.
+### 3.2 Evidence & Metrics
+*   **Connection Overhead**: Managing raw WebSocket connections for 10,000+ standalone clients introduces significant memory and CPU overhead on load balancers and application servers.
+*   **Routing Complexity**: Routing an MCP request from a Cloud AI Agent to a specific Standalone instance currently requires complex, custom database lookups and state management.
 
-## Implementation Prompt
-"Implement the NATS Event Mesh module in `src/server/integrations/nats/`. The module must provide a `NatsIntegration` struct conforming to the `Integration` interface in `catalog.go`. It should support connecting to a remote cluster via credentials and configuring a local embedded instance as a fallback/leaf node. Ensure OpenTelemetry metrics (`ohc.nats.messages_published`, `ohc.nats.messages_received`) are instrumented. Write comprehensive E2E tests validating event propagation between a mock Cloud node and a Standalone instance."
+### 3.3 Persona Specific Pain Points
+*   **The OHC DevOps Engineer**: Struggles to trace events across the boundary between cloud microservices and standalone clients. Debugging "lost" messages is highly manual.
 
-## Priority
-P1
+### 3.4 Actionable Recommendations
+1.  **Adopt NATS**: Implement NATS (specifically JetStream for persistence where needed) as the core message bus for the entire OHC ecosystem.
+2.  **Unified Addressing**: Use NATS subject-based routing to seamlessly route messages. e.g., `mcp.req.<tenant_id>.<agent_id>` can transparently route to a cloud service or a connected standalone client without the sender needing to know where the receiver is located.
+3.  **Leaf Nodes**: Deploy NATS Leaf Nodes inside the Standalone binaries to handle local message routing and provide robust offline buffering before syncing with the Cloud cluster.
 
-## Estimated Scope
-Large
+## 4. Design Doc
+
+### 4.1 UI/UX Flow
+No direct UI changes. System reliability and responsiveness improve globally.
+
+### 4.2 Architecture (Mermaid)
+```mermaid
+graph TD
+    subgraph OHC Cloud
+        NATS_Cluster[(NATS JetStream Cluster)]
+        CloudAPI[OHC Cloud API]
+        CloudAI[OHC AI Agent]
+
+        CloudAPI <-->|Pub/Sub| NATS_Cluster
+        CloudAI <-->|Req/Reply| NATS_Cluster
+    end
+
+    subgraph Standalone Retail Store
+        LeafNode[NATS Leaf Node]
+        LocalApp[Local UI / Logic]
+        LocalTools[Local Hardware/DB]
+
+        LocalApp <-->|Pub/Sub| LeafNode
+        LocalTools <-->|Req/Reply| LeafNode
+    end
+
+    LeafNode <-->|Secure Leaf Connection| NATS_Cluster
+```
+
+## 5. Implementation Prompt
+**Context**: Implement the NATS Leaf Node integration in the Standalone binary.
+**Requirements**:
+*   Embed a NATS server configured as a Leaf Node within the Rust Standalone binary.
+*   Configure the Leaf Node to automatically establish a secure, authenticated connection to the OHC Cloud NATS cluster upon startup.
+*   Refactor the local MCP server to listen on local NATS subjects instead of raw TCP/WebSockets, allowing the Cloud to reach it via the established NATS mesh.
+
+## 6. Priority
+High (Architectural). This is a foundational change required to safely scale the hybrid model to tens of thousands of users.
+
+## 7. Estimated Scope
+10-12 weeks. Significant refactoring of existing transport layers across the stack. Requires careful migration strategy to avoid downtime.
