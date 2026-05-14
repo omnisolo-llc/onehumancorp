@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize agent mesh concurrency for multi-tenant K8s environments.
+
+### Privacy/Offline Improvements
+- Enable local SQLite encryption for standalone RAG cache.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
