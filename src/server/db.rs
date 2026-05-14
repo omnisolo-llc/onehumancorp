@@ -48,7 +48,6 @@ impl DB {
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
@@ -130,7 +129,7 @@ impl DB {
                 panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
             }
 
-            conn_opts = conn_opts.pragma("key", key);
+            conn_opts = conn_opts.pragma("key", key.clone());
             // Force full encryption of the database
             conn_opts = conn_opts.pragma("cipher", "sqlcipher");
 
@@ -160,7 +159,6 @@ impl DB {
             let max_attempts = 30;
             let pool = loop {
                 match sqlx::postgres::PgPoolOptions::new()
-                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                     .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                     .acquire_timeout(std::time::Duration::from_millis(2000))
                     .connect(&pg_url)
@@ -917,7 +915,6 @@ mod autodream_db_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -939,7 +936,6 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
 
             .connect_lazy(database_url)
@@ -976,7 +972,6 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)
             .unwrap();
@@ -1131,6 +1126,42 @@ mod security_tests_final {
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
     #[tokio::test]
+    async fn test_tenant_data_isolation_regression() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS test_isolation_regression (id TEXT, org_id TEXT, data TEXT);")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO test_isolation_regression VALUES ('1', 'tenant_a', 'data_a');")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO test_isolation_regression VALUES ('2', 'tenant_b', 'data_b');")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let target_tenant = "tenant_a";
+        let rows = sqlx::query("SELECT data FROM test_isolation_regression WHERE org_id = ?")
+            .bind(target_tenant)
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(rows.len(), 1);
+        use sqlx::Row;
+        let data: String = rows[0].get("data");
+        assert_eq!(data, "data_a");
+    }
+
+    #[tokio::test]
     async fn test_tenant_data_isolation() {
         if std::env::var("DATABASE_URL").is_err() {
             return;
@@ -1138,7 +1169,6 @@ mod e2e_tenant_isolation_tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let _pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1151,7 +1181,6 @@ mod e2e_tenant_isolation_tests {
             .unwrap();
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1177,8 +1206,7 @@ mod e2e_tenant_isolation_tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
 
         // Create a basic pool using our implementation logic
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) });
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) });
 
         // We can't trivially introspect the options object cleanly to confirm there is no before_acquire hook,
         // but we verify that the pool options can be built successfully and doesn't inherently inject a tenant reset.
