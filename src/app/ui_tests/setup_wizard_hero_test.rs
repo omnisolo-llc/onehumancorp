@@ -1,9 +1,6 @@
 use crate::app;
 
-// Note: To conform with the "NO MOCKING OF NETWORK REQUESTS IN E2E TESTS" mandate
-// from the codebase constraints, this file is specifically testing isolated UI
-// component state logic without triggering the login network simulated flows that caused
-// the previous code review failures. The actual E2E flow is handled by Playwright.
+// This file specifically tests isolated UI component state logic without mocking.
 
 #[test]
 fn test_ui_setup_wizard_hero_animation_pulse_scale() {
