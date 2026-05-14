@@ -38,6 +38,9 @@ pub struct AgentRunConfig {
     pub temperature: f32,
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
+    pub max_tokens_budget: i64,
+    pub enable_orchestration_loop_tao: bool,
+    pub enable_safety_refusal_tripwire: bool,
     pub confidence_threshold: f32,
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
@@ -87,6 +90,9 @@ impl Default for AgentRunConfig {
             temperature: 0.0,
             max_iterations: 100,
             max_task_tokens: 100_000,
+            max_tokens_budget: 1_000_000,
+            enable_orchestration_loop_tao: true,
+            enable_safety_refusal_tripwire: true,
             confidence_threshold: 0.0,
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
@@ -1005,7 +1011,7 @@ impl Agent {
             return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
         }
 
-        // OpenAI Mechanic: Input Guardrails
+        // OpenAI Mechanic: Input Guardrails (Termination Condition 4: Guardrail tripwire fires)
         if let Some(guard_cfg) = &final_cfg.guardrails {
             if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
                 on_event(AgentEvent::TaskError { error: e.clone() });
@@ -1110,9 +1116,27 @@ impl Agent {
         }
 
         let mut turn_count = 0;
+        // The Orchestration Loop: Executing the TAO (Thought-Action-Observation) cycle
+        // Mechanically, it is a loop executing: Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
         while turn_count < max_iterations {
             let iteration = turn_count;
             turn_count += 1;
+
+            if final_cfg.enable_orchestration_loop_tao {
+                // Termination Condition 2: Max turn limit exceeded
+                if turn_count > final_cfg.max_iterations {
+                    let err = "Max turn limit exceeded.".to_string();
+                    on_event(AgentEvent::TaskError { error: err.clone() });
+                    return Err(err.into());
+                }
+
+                // Termination Condition 3: Token budget exhausted
+                if self_with_memory.progress.token_count() > final_cfg.max_tokens_budget as i64 {
+                    let err = "Token budget exhausted.".to_string();
+                    on_event(AgentEvent::TaskError { error: err.clone() });
+                    return Err(err.into());
+                }
+            }
 
             on_event(AgentEvent::IterationStarted {
                 iteration,
@@ -1328,7 +1352,17 @@ impl Agent {
                 ]);
             }
 
-            // Terminal condition: no tool calls.
+            if final_cfg.enable_safety_refusal_tripwire {
+                // Termination Condition 5: Safety refusal
+                let content_lower = last_assistant_content.to_lowercase();
+                if content_lower.contains("i cannot fulfill this request") || content_lower.contains("i am sorry, but i cannot") {
+                    let err = "Safety refusal triggered.".to_string();
+                    on_event(AgentEvent::TaskError { error: err.clone() });
+                    return Err(err.into());
+                }
+            }
+
+            // Termination Condition 1: Model returns text with no tool calls.
             if tool_calls.is_empty() {
                 // Computational/Guides (feedforward verification)
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
@@ -1425,7 +1459,7 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
-                // OpenAI Mechanic: Output Guardrails
+                // OpenAI Mechanic: Output Guardrails (Termination Condition 4: Guardrail tripwire fires)
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
@@ -1463,7 +1497,7 @@ impl Agent {
 
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
-                // OpenAI Mechanic: Tool Guardrails
+                // OpenAI Mechanic: Tool Guardrails (Termination Condition 4: Guardrail tripwire fires)
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
@@ -1638,7 +1672,7 @@ impl Agent {
 
             // Execute mutating calls sequentially to prevent race conditions
             for tc in &mutating_calls {
-                // OpenAI Mechanic: Tool Guardrails
+                // OpenAI Mechanic: Tool Guardrails (Termination Condition 4: Guardrail tripwire fires)
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
