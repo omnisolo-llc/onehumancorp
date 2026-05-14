@@ -49,7 +49,7 @@ jobs:
 
       - name: Build ironclaw archives (all platforms)
         run: |
-          ~/go/bin/bazelisk build \
+          bazelisk build \
             //release:ironclaw-x86_64-unknown-linux-gnu \
             //release:ironclaw-aarch64-unknown-linux-gnu \
             //release:ironclaw-x86_64-apple-darwin \
@@ -66,7 +66,7 @@ jobs:
             ironclaw-x86_64-apple-darwin \
             ironclaw-aarch64-apple-darwin \
             ironclaw-x86_64-pc-windows-msvc; do
-            src=$(~/go/bin/bazelisk cquery --output=files //release:${target} 2>/dev/null | head -1)
+            src=$(bazelisk cquery --output=files //release:${target} 2>/dev/null | head -1)
             if [ -n "$src" ] && [ -f "$src" ]; then
               cp "$src" "dist/${target}.tar.gz"
             fi
@@ -120,10 +120,10 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Build Android APK
-        run: ~/go/bin/bazelisk run //release:flutter-build-android-apk
+        run: bazelisk run //release:flutter-build-android-apk
 
       - name: Build Android App Bundle
-        run: ~/go/bin/bazelisk run //release:flutter-build-android-aab
+        run: bazelisk run //release:flutter-build-android-aab
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
@@ -163,7 +163,7 @@ jobs:
             build --show_timestamps
 
       - name: Build iOS (no code sign)
-        run: ~/go/bin/bazelisk run //release:flutter-build-ios
+        run: bazelisk run //release:flutter-build-ios
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
@@ -201,7 +201,7 @@ jobs:
             build --show_timestamps
 
       - name: Build macOS app
-        run: ~/go/bin/bazelisk run //release:flutter-build-macos
+        run: bazelisk run //release:flutter-build-macos
 
       - name: Archive macOS .app
         run: |
@@ -250,7 +250,7 @@ jobs:
             build --show_timestamps
 
       - name: Build Windows app
-        run: ~/go/bin/bazelisk run //release:flutter-build-windows
+        run: bazelisk run //release:flutter-build-windows
 
       - name: Archive Windows build
         run: |
@@ -303,7 +303,7 @@ jobs:
             libgtk-3-dev liblzma-dev libstdc++-12-dev
 
       - name: Build Linux app
-        run: ~/go/bin/bazelisk run //release:flutter-build-linux
+        run: bazelisk run //release:flutter-build-linux
 
       - name: Archive Linux build
         run: |
@@ -347,7 +347,7 @@ jobs:
             build --show_timestamps
 
       - name: Build Web app
-        run: ~/go/bin/bazelisk run //release:flutter-build-web
+        run: bazelisk run //release:flutter-build-web
 
       - name: Archive Web build
         run: |
@@ -485,19 +485,19 @@ jobs:
 
       - name: Push server image
         run: |
-          ~/go/bin/bazelisk run //deploy:server_push_ghcr \
+          bazelisk run //deploy:server_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          ~/go/bin/bazelisk run //deploy:server_push_dockerhub \
+          bazelisk run //deploy:server_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
 
       - name: Push agent image
         run: |
-          ~/go/bin/bazelisk run //deploy:agent_push_ghcr \
+          bazelisk run //deploy:agent_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          ~/go/bin/bazelisk run //deploy:agent_push_dockerhub \
+          bazelisk run //deploy:agent_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
 
       - name: Push UI image
         run: |
-          ~/go/bin/bazelisk run //deploy:ui_push \
+          bazelisk run //deploy:ui_push \
             -- --tag "${{ github.ref_name }}"

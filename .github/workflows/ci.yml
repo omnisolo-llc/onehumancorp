@@ -40,14 +40,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache-dependency-path: src/server/orchestration/sync_daemon/go.sum
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
-          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -55,10 +53,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -90,11 +88,11 @@ jobs:
             ${{ runner.os }}-playwright-
 
       - name: Build release artifacts
-        run: ~/go/bin/bazelisk build //release:all_release_artifacts --config=linux
+        run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
-          ~/go/bin/bazelisk test \
+          bazelisk test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
@@ -122,22 +120,20 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-          cache-dependency-path: src/server/orchestration/sync_daemon/go.sum
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
-          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -162,9 +158,9 @@ jobs:
 
       - name: Build all artifacts
         run: |
-          ~/go/bin/bazelisk build //... --config=linux
-          ~/go/bin/bazelisk build //... --config=windows || echo "Warning: Windows build failed"
-          ~/go/bin/bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
+          bazelisk build //... --config=linux
+          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
   # playwright-e2e:
   #   runs-on: ubuntu-latest
@@ -187,14 +183,12 @@ jobs:
   #       uses: actions/setup-go@v5
   #       with:
   #         go-version: "1.24"
-  #         cache-dependency-path: src/server/orchestration/sync_daemon/go.sum
 
   #     - name: Set up Node
   #       uses: actions/setup-node@v4
   #       with:
-  #         node-version: "20"
+  #         node-version: "24"
   #         cache: "npm"
-  #         cache-dependency-path: package-lock.json
 
   #     - name: Install dependencies
   #       run: npm ci
@@ -223,10 +217,10 @@ jobs:
   #           test --sandbox_add_mount_pair=/var/run/docker.sock
 
   #     - name: Build server
-  #       run: ~/go/bin/bazelisk build //src/server:server --config=linux
+  #       run: bazelisk build //src/server:server --config=linux
 
   #     - name: Run E2E tests
   #       run: |
-  #         ~/go/bin/bazelisk test //src/e2e:playwright \
+  #         bazelisk test //src/e2e:playwright \
   #           --test_output=streamed \
   #           --test_timeout=300,600,900,1800

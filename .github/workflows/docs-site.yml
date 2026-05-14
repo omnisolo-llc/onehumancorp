@@ -31,11 +31,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -57,7 +52,7 @@ jobs:
             build --show_timestamps
 
       - name: Build docs site
-        run: ~/go/bin/bazelisk run //:docs_build
+        run: bazelisk run //:docs_build
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
