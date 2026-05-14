@@ -12,7 +12,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:18789',
     trace: 'on-first-retry',
-    screenshot: 'always',
+    screenshot: 'on',
     video: 'on',
   },
   projects: [
