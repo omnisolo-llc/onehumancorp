@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Viral Referral Loop', () => {
-  test('should navigate to user management and interact with the viral referral loop widget', async ({ page }) => {
+test.describe('Referral Program', () => {
+  test('should navigate to user management and interact with the referral program widget', async ({ page }) => {
     // 1. start from the home page after user login with no pre-authenticated shortcuts
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').first().fill('test@example.com');

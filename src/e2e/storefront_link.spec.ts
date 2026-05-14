@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Viral Storefront E2E', () => {
-  test('user can click viral storefront footer to open signup page', async ({ page, context }) => {
+test.describe('Community Storefront E2E', () => {
+  test('user can click community storefront footer to open signup page', async ({ page, context }) => {
     await page.goto('/');
 
     const loginEmailInput = page.getByPlaceholder(/email/i).first();
@@ -37,7 +37,7 @@ test.describe('Viral Storefront E2E', () => {
     await expect(newPage).toHaveURL(/onehumancorp\.com/i);
   });
 
-  test('should assert viral footer exists on desktop storefront', async ({ page }) => {
+  test('should assert community footer exists on desktop storefront', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
     await page.locator('input[type="password"]').first().first().fill('password123');
@@ -57,7 +57,7 @@ test.describe('Viral Storefront E2E', () => {
     await expect(footerLink).toBeVisible();
   });
 
-  test('should assert viral footer exists on mobile storefront', async ({ page }) => {
+  test('should assert community footer exists on mobile storefront', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
@@ -78,7 +78,7 @@ test.describe('Viral Storefront E2E', () => {
     await expect(footerLink).toBeVisible();
   });
 
-  test('should verify viral footer text matches precise marketing copy', async ({ page }) => {
+  test('should verify community footer text matches precise marketing copy', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
     await page.locator('input[type="password"]').first().first().fill('password123');
@@ -98,7 +98,7 @@ test.describe('Viral Storefront E2E', () => {
     await expect(footerLink).toBeVisible();
   });
 
-  test('should verify clicking viral footer initiates redirect workflow', async ({ page, context }) => {
+  test('should verify clicking community footer initiates redirect workflow', async ({ page, context }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').first().fill('test@example.com');
     await page.locator('input[type="password"]').first().first().fill('password123');
