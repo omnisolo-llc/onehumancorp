@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
 import '../main.dart'; // For GlassContainer
@@ -39,8 +41,9 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Load saved state if any, in real app this would use the real logged in tenant ID
-      ref.read(wizardProvider.notifier).setTenantId('tenant-mock-local');
-      ref.read(wizardProvider.notifier).loadState('tenant-mock-local');
+      final sessionTenant = "tenant-mock-local-123";
+      ref.read(wizardProvider.notifier).setTenantId(sessionTenant);
+      ref.read(wizardProvider.notifier).loadState(sessionTenant);
     });
     _heroAnimationController = AnimationController(
       vsync: this,
@@ -793,13 +796,20 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    final name = ref.read(wizardProvider).productName;
+                    if (name.isNotEmpty) {
+                      ref.read(wizardProvider.notifier).updateProductDetails(
+                        description: "A premium ${name}."
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white.withOpacity(0.1),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Center(child: Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))),
+                  child: const Center(child: Text('Generate AI Description', style: TextStyle(color: Colors.white))),
                 ),
                 const SizedBox(height: 15),
                 const Text('Price', style: TextStyle(color: Colors.white70, fontSize: 14)),
@@ -810,13 +820,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     initialValue: state.productPrice,
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: '0.00',
-                      prefixText: '\$ ',
-                      prefixStyle: TextStyle(color: Colors.white),
-                      hintStyle: TextStyle(color: Colors.white24),
+                      prefixText: '${NumberFormat.simpleCurrency(locale: Localizations.localeOf(context).toString()).currencySymbol} ',
+                      prefixStyle: const TextStyle(color: Colors.white),
+                      hintStyle: const TextStyle(color: Colors.white24),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
+                      contentPadding: const EdgeInsets.all(15),
                     ),
                     onChanged: (value) {
                       ref.read(wizardProvider.notifier).updateProductDetails(price: value);
@@ -824,21 +834,41 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   ),
                 ),
                 const SizedBox(height: 20),
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, color: Colors.white54, size: 40),
-                        SizedBox(height: 10),
-                        Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
-                      ],
+                GestureDetector(
+                  onTap: () {
+                    // Simulate photo trigger and cropping
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: const Color(0xFF1A1A33),
+                        title: const Text('✂️ Crop Photo', style: TextStyle(color: Colors.white)),
+                        content: const Text('Pinch and drag to crop your photo.', style: TextStyle(color: Colors.white70)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Done', style: TextStyle(color: Color(0xFFA855F7))),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.camera_alt, color: Colors.white54, size: 40),
+                          SizedBox(height: 10),
+                          Text('📷 Upload Photo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          Text('Tap to select an image', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -974,6 +1004,24 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 child: ElevatedButton(
                   onPressed: () async {
                     await ref.read(wizardProvider.notifier).submitWizard();
+                    showDialog(
+                      context: context,
+                      builder: (context) => const AlertDialog(
+                        backgroundColor: Colors.transparent,
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('🎉', style: TextStyle(fontSize: 100)),
+                            SizedBox(height: 20),
+                            Text('CONFETTI Success', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    );
+                    Future.delayed(const Duration(seconds: 2), () {
+                      Navigator.pop(context);
+                      ref.read(wizardProvider.notifier).nextStep();
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
@@ -982,7 +1030,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  key: const Key('launchAIBtn'), child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  key: const Key('launchAIBtn'), child: const Text('Publish my business', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
@@ -997,7 +1045,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'You\'re set up!',
+          'Welcome Checklist',
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 28,
@@ -1007,7 +1055,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         ),
         const SizedBox(height: 10),
         const Text(
-          'Here\'s what to do next:',
+          'You\'re set up! Here\'s what to do next:',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
         const SizedBox(height: 20),
@@ -1038,7 +1086,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               borderRadius: BorderRadius.circular(15),
             ),
           ),
-          child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+          child: const Text('View Welcome Checklist →', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
     );

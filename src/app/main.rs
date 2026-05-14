@@ -303,11 +303,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Locale-based currency detection
     let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
+        "£"
     } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
+        "€"
     } else {
-        "USD"
+        "$"
     };
     setup_wizard_ui.set_product_currency(detected_currency.into());
 
@@ -3718,11 +3718,11 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
 
     // Locale-based currency detection
     let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-        "GBP"
+        "£"
     } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-        "EUR"
+        "€"
     } else {
-        "USD"
+        "$"
     };
     setup_wizard_ui.set_product_currency(detected_currency.into());
 
@@ -3814,11 +3814,11 @@ mod growth_e2e_tests {
         let setup_wizard_ui = app::SetupWizard::new().unwrap();
 
         let detected_currency = if std::env::var("LANG").unwrap_or_default().starts_with("en_GB") {
-            "GBP"
+            "£"
         } else if std::env::var("LANG").unwrap_or_default().starts_with("de") {
-            "EUR"
+            "€"
         } else {
-            "USD"
+            "$"
         };
         setup_wizard_ui.set_product_currency(detected_currency.into());
 

@@ -277,7 +277,7 @@ export component SetupWizard inherits Window {
                     enabled: !is_generating_company_description;
                 }
                 Button {
-                    text: is_generating_company_description ? "Generating..." : "✨ Auto-suggest Description";
+                    text: is_generating_company_description ? "Generating..." : "Generate Description";
                     height: 44px;
                     enabled: !is_generating_company_description && company_name != "";
                     clicked => {
@@ -491,7 +491,7 @@ export component SetupWizard inherits Window {
                     enabled: !is_generating_product_description;
                 }
                 Button {
-                    text: is_generating_product_description ? "Generating..." : "✨ Auto-generate description";
+                    text: is_generating_product_description ? "Generating..." : "Generate AI Description";
                     height: 44px;
                     enabled: !is_generating_product_description && product_name != "";
                     clicked => {
@@ -764,7 +764,7 @@ export component SetupWizard inherits Window {
                                 alignment: center;
 
                                 Text { text: product_name != "" ? product_name : "Your Product"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; horizontal-alignment: center; }
-                                Text { text: product_price != "" ? "$" + product_price : "Price not set"; font-size: 16px; font-family: "Inter"; color: #10b981; horizontal-alignment: center; }
+                                Text { text: product_price != "" ? product_currency + product_price : "Price not set"; font-size: 16px; font-family: "Inter"; color: #10b981; horizontal-alignment: center; }
 
                                 Button {
                                     text: "Buy Now";
@@ -806,7 +806,7 @@ export component SetupWizard inherits Window {
                 opacity: pulse_scale;
                 animate opacity { duration: 500ms; easing: ease-in-out; }
 
-                VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "Publish my business"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => {
                     launching = true; copy_link(shareable_link);
                     launch(business_type, company_name, company_description, payment_pref, admin_email, website_template, product_name, product_price, domain_choice, admin_name, admin_password, price_type);
@@ -816,7 +816,7 @@ export component SetupWizard inherits Window {
             if (step == 9 && launch_success) : GlassCard {
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
-                VerticalBox { alignment: center; Text { text: "Go to Dashboard →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                VerticalBox { alignment: center; Text { text: "View Welcome Checklist →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
                 TouchArea { clicked => { root.go_to_dashboard(); } }
             }
 
