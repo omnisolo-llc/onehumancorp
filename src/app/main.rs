@@ -1674,6 +1674,74 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+
+    let bm_handle_submit = business_manager_ui.as_weak();
+    let pending_product_type = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let pending_product_name = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let pending_product_desc = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let pending_product_price = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+
+    let pending_type_clone = pending_product_type.clone();
+    let pending_name_clone = pending_product_name.clone();
+    let pending_desc_clone = pending_product_desc.clone();
+    let pending_price_clone = pending_product_price.clone();
+
+    business_manager_ui.on_submit(move |type_, name, desc, price, _dur, _sch| {
+        if let Some(ui) = bm_handle_submit.upgrade() {
+            let products = ui.get_products();
+            let is_free_tier = ui.get_is_free_tier();
+
+            if is_free_tier && products.row_count() >= 10 {
+                *pending_type_clone.borrow_mut() = type_.to_string();
+                *pending_name_clone.borrow_mut() = name.to_string();
+                *pending_desc_clone.borrow_mut() = desc.to_string();
+                *pending_price_clone.borrow_mut() = price.to_string();
+
+                ui.set_upgrade_prompt_message("You've reached your 10-product limit on the Free plan. Upgrade to the Starter plan to add up to 100 products and unlock more AI power.".into());
+                ui.set_show_upgrade_prompt(true);
+            } else {
+                let mut current = Vec::new();
+                for i in 0..products.row_count() {
+                    if let Some(p) = products.row_data(i) {
+                        current.push(p);
+                    }
+                }
+                current.push(app::UiProduct {
+                    id: format!("prod-{}", current.len()).into(),
+                    name: name.into(),
+                    type_label: type_.into(),
+                    price: price.into(),
+                    inventory_count: 10,
+                    is_out_of_stock: false,
+                });
+                ui.set_products(slint::ModelRc::new(slint::VecModel::from(current)));
+                ui.set_current_view("list".into());
+            }
+        }
+    });
+
+    let bm_handle_upgrade = business_manager_ui.as_weak();
+    let pending_type_upg = pending_product_type.clone();
+    let pending_name_upg = pending_product_name.clone();
+    let pending_desc_upg = pending_product_desc.clone();
+    let pending_price_upg = pending_product_price.clone();
+
+    business_manager_ui.on_action_upgrade(move || {
+        if let Some(ui) = bm_handle_upgrade.upgrade() {
+            ui.set_is_free_tier(false);
+            ui.set_show_upgrade_prompt(false);
+
+            let t = pending_type_upg.borrow().clone();
+            let n = pending_name_upg.borrow().clone();
+            let d = pending_desc_upg.borrow().clone();
+            let p = pending_price_upg.borrow().clone();
+
+            if !n.is_empty() {
+                ui.invoke_submit(t.into(), n.into(), d.into(), p.into(), "".into(), "".into());
+            }
+        }
+    });
+
     business_manager_ui.on_action_edit({
         move |_id| {
 

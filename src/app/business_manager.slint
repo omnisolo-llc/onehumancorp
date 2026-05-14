@@ -1,5 +1,6 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView, ComboBox } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
+import { UpgradePrompt } from "upgrade_prompt.slint";
 
 export struct UiProduct {
     id: string,
@@ -17,6 +18,10 @@ export component BusinessManager inherits Window {
     out property <string> test_title: root.title;
     // "list" | "add"
     in-out property <string> current_view: "list";
+    in-out property <bool> show_upgrade_prompt: false;
+    in-out property <string> upgrade_prompt_message: "";
+    callback action_upgrade();
+    in-out property <bool> is_free_tier: true;
 
     in property <[UiProduct]> products;
 
@@ -42,6 +47,12 @@ export component BusinessManager inherits Window {
     callback action_add_new();
     callback action_edit(string);
     callback action_archive(string);
+
+    if (show_upgrade_prompt) : UpgradePrompt {
+        message: root.upgrade_prompt_message;
+        action_dismiss => { root.show_upgrade_prompt = false; }
+        action_upgrade => { root.action_upgrade(); }
+    }
 
     next_step => { step = step + 1; }
     prev_step => { step = step - 1; }

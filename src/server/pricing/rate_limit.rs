@@ -139,6 +139,9 @@ impl RedisRateLimiter {
         let _ : () = conn.expire(&agent_key, 60 * 60 * 24 * 60).await.unwrap_or(());
 
         if let Some(limit) = tier.monthly_action_limit() {
+            if tenant_used == (limit as f32 * 0.8) as u32 {
+                tracing::info!("Advisory: Hey Maya! Your AI agents have been working hard this month answering DMs and are close to their limit. Just a heads up!");
+            }
             if tenant_used >= limit {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit - allow but warn
