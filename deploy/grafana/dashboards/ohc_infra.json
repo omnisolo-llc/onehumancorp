@@ -44,7 +44,7 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 2,
@@ -59,7 +59,7 @@
       "transparent": true
     },
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
@@ -91,7 +91,7 @@
       },
       "pluginVersion": "10.0.0",
       "transparent": true,
-      "type": "text"
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"}
     },
     {
       "datasource": {

@@ -26,7 +26,7 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "OHC Aesthetics",
       "id": 4,
       "gridPos": {
@@ -125,7 +125,7 @@
       "type": "timeseries"
     },
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "",
       "gridPos": {
         "x": 0,

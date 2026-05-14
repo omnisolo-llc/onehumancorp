@@ -109,7 +109,7 @@
       "type": "timeseries"
     },
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "",
       "gridPos": {
         "x": 0,

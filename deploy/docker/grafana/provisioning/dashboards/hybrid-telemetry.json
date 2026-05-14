@@ -23,7 +23,7 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
@@ -52,7 +52,7 @@
       },
       "title": "Aesthetic Mandate Injector",
       "transparent": true,
-      "type": "text"
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"}
     },
     {
       "id": 51,

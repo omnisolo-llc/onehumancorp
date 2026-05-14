@@ -14,7 +14,7 @@
   },
   "panels": [
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 2,

@@ -7,7 +7,7 @@
   "time": { "from": "now-1h", "to": "now" },
   "panels": [
     {
-      "type": "text",
+      "type": "text", "options": {"content": "<style>* { font-family: Outfit; backdrop-filter: blur(20px); } </style>"},
       "title": "OHC Aesthetic Injector",
       "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
       "options": {
