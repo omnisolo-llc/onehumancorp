@@ -31,5 +31,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": []
+  },
+  "scripts": {
+    "postinstall": "mkdir -p $HOME/go/bin && cp -r node_modules/@bazel/bazelisk/* $HOME/go/bin/ && chmod +x $HOME/go/bin/bazelisk* && ln -sf $HOME/go/bin/bazelisk.js $HOME/go/bin/bazelisk"
   }
 }
