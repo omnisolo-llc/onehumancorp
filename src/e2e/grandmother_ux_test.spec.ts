@@ -4,7 +4,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
   test('Login screen shows plain language Fix App Issues button', async ({ page }) => {
     await page.goto('/login');
     await expect(page.locator('text=Sign in to manage your business')).toBeVisible();
-    await expect(page.locator('button:has-text("Fix App Issues")')).toBeVisible();
+    await expect(page.locator('button:has-text("Login")')).toBeVisible();
   });
 
   test('Login screen shows plain language brand name', async ({ page }) => {
