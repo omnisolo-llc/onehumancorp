@@ -36,7 +36,7 @@ pub async fn bench_db_query_time() {
     let iterations = 1000;
 
     // Cloud Mode (Postgres)
-    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+    let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await.unwrap();
     let mut pg_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
@@ -70,7 +70,7 @@ pub async fn bench_api_response_time() {
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     // Cloud setup
-    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+    let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await.unwrap();
     let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
     let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
     let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
@@ -134,7 +134,7 @@ pub async fn bench_dashboard_snapshot() {
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await.unwrap();
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }

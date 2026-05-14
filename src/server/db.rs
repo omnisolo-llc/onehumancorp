@@ -14,7 +14,7 @@ static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        sqlx::postgres::PgPoolOptions::new()
+        sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
@@ -124,11 +124,11 @@ impl DB {
                 let key = if let Some(k) = database_url.split("key=").nth(1) {
                     k.split('&').next().unwrap_or("").to_string()
                 } else {
-                    std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                    std::env::var("OHC_LOCAL_DB_KEY").expect("CRITICAL SECURITY ERROR: OHC_LOCAL_DB_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
                 };
 
                 if key.is_empty() {
-                    panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
+                    panic!("CRITICAL SECURITY ERROR: OHC_LOCAL_DB_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
                 }
 
                 conn_opts = conn_opts.pragma("key", key);
@@ -1005,7 +1005,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_local_sqlite_encryption_hardening_mock() {
-        // We verify that `DB::new()` parses OHC_SQLITE_KEY and cipher directives
+        // We verify that `DB::new()` parses OHC_LOCAL_DB_KEY and cipher directives
         // without causing thread safety or panic issues in parsing logic
         // We bypass full sqlcipher linkage issues by just simulating the connect string
         // via standard sqlx SqliteConnectOptions to ensure it doesn't crash on invalid pragma
@@ -1051,7 +1051,7 @@ mod security_tests_final {
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
         let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("dummy_key"))], || {
+        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_LOCAL_DB_KEY", Some("dummy_key"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.

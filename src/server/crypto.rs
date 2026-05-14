@@ -7,7 +7,7 @@ use sha2::{Sha256, Digest};
 use base64::{Engine as _, engine::general_purpose};
 
 fn get_crypto_key() -> [u8; 32] {
-    let key = std::env::var("OHC_SQLITE_KEY")
+    let key = std::env::var("OHC_LOCAL_DB_KEY")
         .unwrap_or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY").unwrap_or_else(|_| {
             if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
                 "standalone_ephemeral_key".to_string()
@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_deterministic_encryption() {
-        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+        temp_env::with_vars(vec![("OHC_LOCAL_DB_KEY", Some("test_key"))], || {
             let plaintext = "hello world";
             let ciphertext1 = encrypt_deterministic(plaintext);
             let ciphertext2 = encrypt_deterministic(plaintext);

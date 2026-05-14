@@ -403,6 +403,14 @@ service AuthService {
   rpc DeleteUser(DeleteUserRequest) returns (EmptyResponse);
   rpc ListRoles(EmptyRequest) returns (ListRolesResponse);
   rpc CreateRole(CreateRoleRequest) returns (RoleProto);
+  rpc OAuthLogin(OAuthLoginRequest) returns (LoginResponse);
+}
+
+message OAuthLoginRequest {
+    string provider = 1;
+    string token = 2; // The raw oauth token from the IDP
+    string oidc_subject = 3; // The subject ID from the IDP
+    string email = 4;
 }
 
 message WizardField {

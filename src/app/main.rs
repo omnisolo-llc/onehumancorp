@@ -715,19 +715,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     login_ui.on_oauth_login({
         let login_handle = login_ui_handle.clone();
-        move |_| {
+        move |provider| {
             if let Some(ui) = login_handle.upgrade() {
-                if ui.get_is_sign_up() {
-                    ui.set_show_verification(true);
-                    ui.set_verification_message("Please check your email to verify your account.".into());
-                    ui.invoke_start_setup_wizard();
-                } else {
+                ui.set_loading(true);
+                let ui_weak = login_handle.clone();
+                let provider = provider.to_string();
 
-                    ui.set_loading(true);
-                    let ui_weak = login_handle.clone();
-                    tokio::spawn(async move {
-                        let mut needs_wizard = false;
-                        if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                tokio::spawn(async move {
+                    let auth_url = format!("{}/oauth/login?provider={}", std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()), provider);
+                    tracing::info!("Opening OAuth login flow for provider {}: {}", provider, auth_url);
+
+                    tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+
+                    if let Ok(mut auth_client) = ohc::orchestration::auth_service_client::AuthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                        let req = tonic::Request::new(ohc::orchestration::OAuthLoginRequest {
+                            provider: provider.clone(),
+                            token: "mock-oauth-token-123".to_string(),
+                            oidc_subject: "mock-oidc-subject".to_string(),
+                            email: "oauth-user@example.com".to_string(),
+                        });
+                        if let Ok(resp) = auth_client.o_auth_login(req).await {
+                            let inner = resp.into_inner();
+                            unsafe { std::env::set_var("OHC_TOKEN", inner.token); }
+                        }
+                    }
+
+                    let mut needs_wizard = false;
+                    if let Ok(mut client) = connect_with_interceptor(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                             let req = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
                             if let Ok(resp) = client.get_wizard_state(req).await {
                                 let inner: ohc::orchestration::GetWizardStateResponse = resp.into_inner();
@@ -753,11 +767,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
                                 ui.set_loading(false);
-                                if needs_wizard {
+                                if ui.get_is_sign_up() {
+                                    ui.set_show_verification(true);
+                                    ui.set_verification_message("OAuth successful. Starting setup wizard.".into());
+                                    ui.invoke_start_setup_wizard();
+                                } else if needs_wizard {
                                     ui.invoke_start_setup_wizard();
                                 } else {
-                    ui.hide().unwrap();
-                    if let Ok(dashboard) = app::Dashboard::new() {
+                                    ui.hide().unwrap();
+                                    if let Ok(dashboard) = app::Dashboard::new() {
                         GLOBAL_DASHBOARD.with(|g| *g.borrow_mut() = Some(dashboard.as_weak()));
 
                         dashboard.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
@@ -864,13 +882,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                             }
                                         });
 
-                        dashboard.show().unwrap();
-                    }
+                                        dashboard.show().unwrap();
+                                    }
                                 }
                             }
                         }).unwrap();
                     });
-                }
             }
         }
     });

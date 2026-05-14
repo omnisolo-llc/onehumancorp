@@ -298,7 +298,7 @@ mod tests {
     async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("DATABASE_URL").ok()?;
         unsafe {
-            std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
+            std::env::set_var("OHC_LOCAL_DB_KEY", "test-fallback-key");
         }
         let db = Arc::new(DB::new().await.ok()?);
         Some(db)

@@ -114,8 +114,8 @@ impl Store {
                     }
                 }
 
-                let new_secret = if let Ok(sqlite_key) = std::env::var("OHC_SQLITE_KEY") {
-                    tracing::warn!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
+                let new_secret = if let Ok(sqlite_key) = std::env::var("OHC_LOCAL_DB_KEY") {
+                    tracing::warn!("falling back to generated JWT secret; deriving from OHC_LOCAL_DB_KEY for determinism; writing to .ohc_jwt_secret for persistence");
                     use hmac::{Hmac, Mac};
                     use sha2::Sha256;
                     let mut mac = Hmac::<Sha256>::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
@@ -123,7 +123,7 @@ impl Store {
                     mac.finalize().into_bytes().to_vec()
                 } else {
                     tracing::warn!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
-                    panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                    panic!("OHC_LOCAL_DB_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
                 };
 
                 #[cfg(unix)]
@@ -502,6 +502,35 @@ impl AuthService for AuthServiceServerImpl {
         }
     }
 
+    async fn o_auth_login(&self, request: Request<OAuthLoginRequest>) -> Result<Response<LoginResponse>, Status> {
+        let req = request.into_inner();
+
+        let users = self.store.users.read().unwrap();
+        let user_opt = users.values().find(|u| u.oidc_subject.as_deref() == Some(&req.oidc_subject)).cloned();
+        drop(users);
+
+        let user = match user_opt {
+            Some(u) => u,
+            None => {
+                // Auto-register
+                let roles = vec![ROLE_VIEWER.to_string()]; // Default to lowest priv
+                match self.store.create_user(req.email.clone(), req.email.clone(), "oauth-placeholder-password".to_string(), roles, "system".to_string()) {
+                    Ok(mut u) => {
+                        u.oidc_subject = Some(req.oidc_subject.clone());
+                        let _ = self.store.update_user(&u.id, Some(u.email.clone()), Some(u.roles.clone()), Some(u.active), &u.organization_id.clone().unwrap_or_default());
+                        u
+                    },
+                    Err(e) => return Err(Status::internal(e)),
+                }
+            }
+        };
+
+        match self.store.issue_token(&user) {
+            Ok(token) => Ok(Response::new(LoginResponse { token, expires_at: (Utc::now() + chrono::Duration::hours(24)).timestamp() })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
     async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
 
@@ -713,7 +742,7 @@ mod tests {
             std::env::set_var("ADMIN_EMAIL", "testadmin@test.com");
         }
         
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         let users = s.list_users("");
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "testadmin");
@@ -721,7 +750,7 @@ mod tests {
 
     #[test]
     fn test_store_create_and_authenticate() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("alice".to_string(), "alice@test.com".to_string(), "hunter2!".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let got = s.authenticate("alice", "hunter2!", "").unwrap();
@@ -733,20 +762,20 @@ mod tests {
 
     #[test]
     fn test_store_duplicate_username() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         s.create_user("bob".to_string(), "bob@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         assert!(s.create_user("bob".to_string(), "bob2@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_short_password_rejected() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         assert!(s.create_user("short".to_string(), "short@test.com".to_string(), "abc".to_string(), vec![], "".to_string()).is_err());
     }
 
     #[test]
     fn test_store_update_and_delete_user() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("charlie".to_string(), "c@test.com".to_string(), "p@ssw0rd".to_string(), vec![ROLE_VIEWER.to_string()], "".to_string()).unwrap();
         
         let new_email = "charlie2@test.com".to_string();
@@ -762,7 +791,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_round_trip() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("jwt-user".to_string(), "jwt@test.com".to_string(), "jwtpass1".to_string(), vec![ROLE_OPERATOR.to_string()], "".to_string()).unwrap();
         
         let token = s.issue_token(&u).unwrap();
@@ -775,7 +804,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_jwt_empty_sub_jti() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("empty-claims".to_string(), "empty@test.com".to_string(), "pass123".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
 
@@ -819,16 +848,16 @@ mod tests {
     #[test]
     fn test_local_sqlite_encryption_hardening() {
         // Verify Store::new safely derives JWT secret deterministically
-        // when OHC_SQLITE_KEY is present without altering environment variables dynamically
+        // when OHC_LOCAL_DB_KEY is present without altering environment variables dynamically
         // Note: setting environment variables in unit tests is unsafe in Rust
         // For regression testing we just check that the Store initialized with some secret
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         assert!(!s.secret.is_empty(), "Store secret should be initialized (either randomly or from env/file)");
     }
 
     #[tokio::test]
     async fn test_jwt_revoked_token() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         let u = s.create_user("revoke-me".to_string(), "revoke@test.com".to_string(), "revpass1".to_string(), vec![], "".to_string()).unwrap();
         let token = s.issue_token(&u).unwrap();
         
@@ -981,7 +1010,7 @@ mod isolation_tests {
 
     #[test]
     fn test_auth_tenant_isolation_sys_org() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "dummy"); } let s = Store::new();
+        unsafe { std::env::set_var("OHC_LOCAL_DB_KEY", "dummy"); } let s = Store::new();
         // Create user in a specific organization
         let org_user = s.create_user(
             "tenant_user".to_string(),
