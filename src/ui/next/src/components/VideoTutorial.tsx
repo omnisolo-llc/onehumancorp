@@ -1,0 +1,1 @@
+import React from 'react';\n\nexport function VideoTutorial({ title, url }: { title: string, url: string }) {\n  return (\n    <div className="video-tutorial">\n      <h3>{title}</h3>\n      <div className="player-wrapper">\n        <video controls src={url} width="100%" />\n      </div>\n    </div>\n  );\n}

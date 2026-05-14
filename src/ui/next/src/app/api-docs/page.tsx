@@ -1,0 +1,1 @@
+import React from 'react';\n\nexport default function ApiDocs() {\n  return (\n    <div className="api-docs">\n      <h1>API Reference</h1>\n      <p>For advanced users: Connect directly to the OneHumanCorp APIs.</p>\n      <div className="endpoint">\n        <h3>GET /api/v1/orders</h3>\n        <p>Retrieve a list of your recent orders.</p>\n      </div>\n    </div>\n  );\n}

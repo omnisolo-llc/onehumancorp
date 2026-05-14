@@ -1,0 +1,1 @@
+import React from 'react';\n\nexport default function Changelog() {\n  return (\n    <div className="changelog">\n      <h1>What's New</h1>\n      <div className="release">\n        <h2>Version 1.2.0</h2>\n        <p>Added the new Help Center and Interactive Walkthroughs!</p>\n      </div>\n    </div>\n  );\n}
