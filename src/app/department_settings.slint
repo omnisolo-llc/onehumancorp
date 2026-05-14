@@ -1,0 +1,111 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component DepartmentSettings inherits Window {
+    width: 375px;
+    height: 800px;
+    title: "Department Settings";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    in property <string> department_name: "The Ambassador";
+    in-out property <bool> is_active: false;
+    in-out property <string> mandate: "Politely answer questions based on my catalog. If you don't know, tell them I'll reply soon.";
+    in-out property <bool> draft_for_review: true;
+
+    callback close_settings();
+    callback save_settings();
+
+    VerticalBox {
+        spacing: 16px;
+        padding: 24px;
+
+        HorizontalBox {
+            alignment: start;
+            Text { text: "←"; font-size: 24px; color: white; vertical-alignment: center; }
+            TouchArea { width: 30px; clicked => { close_settings(); } }
+            Rectangle { width: 10px; }
+            Text { text: department_name; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
+        }
+
+        GlassCard {
+            VerticalBox {
+                padding: 16px;
+                spacing: 16px;
+
+                HorizontalBox {
+                    Text { text: "Status: " + (is_active ? "Active" : "Inactive"); color: white; font-family: "Inter"; font-weight: 700; vertical-alignment: center; }
+                    Rectangle {}
+                    CheckBox {
+                        checked <=> is_active;
+                        text: "";
+                    }
+                }
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "How should " + department_name + " handle things?"; color: #cbd5e1; font-family: "Inter"; font-size: 14px; }
+                    LineEdit {
+                        text <=> mandate;
+                        placeholder-text: "Type your plain text mandate here...";
+                        height: 100px;
+                    }
+                }
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Action Approval"; color: #cbd5e1; font-family: "Inter"; font-size: 14px; }
+                    HorizontalBox {
+                        spacing: 8px;
+                        GlassCard {
+                            background: draft_for_review ? @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%) : rgba(168, 85, 247, 0.4);
+                            height: 44px;
+                            VerticalBox { alignment: center; Text { text: "Auto-execute"; color: white; font-family: "Inter"; horizontal-alignment: center; } }
+                            TouchArea { clicked => { draft_for_review = false; } }
+                        }
+                        GlassCard {
+                            background: draft_for_review ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                            height: 44px;
+                            VerticalBox { alignment: center; Text { text: "Draft for review"; color: white; font-family: "Inter"; horizontal-alignment: center; } }
+                            TouchArea { clicked => { draft_for_review = true; } }
+                        }
+                    }
+                }
+            }
+        }
+
+        Text { text: "Activity Feed"; font-size: 18px; font-family: "Outfit"; font-weight: 700; color: white; }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 10px;
+
+                GlassCard {
+                    padding: 12px;
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: "Replied to @maya_fan on IG"; color: white; font-family: "Inter"; font-size: 14px; }
+                        Text { text: "2 hours ago"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    }
+                }
+
+                GlassCard {
+                    padding: 12px;
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: "Sent thank you email to John"; color: white; font-family: "Inter"; font-size: 14px; }
+                        Text { text: "Yesterday"; color: #94a3b8; font-family: "Inter"; font-size: 12px; }
+                    }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        Button {
+            text: "Save Settings";
+            height: 44px;
+            clicked => { save_settings(); }
+        }
+    }
+}

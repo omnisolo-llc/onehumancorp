@@ -1,103 +1,60 @@
-import { AdvancedToggle } from "advanced_toggle.slint";
-import { TooltipElement } from "tooltip_element.slint";
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 import { GlassCard } from "glass_card.slint";
-import { UpgradePrompt } from "./upgrade_prompt.slint";
 
-export struct UiAgent {
+export struct UiDepartment {
     id: string,
     name: string,
-    role: string,
-    status: string,
-    is_running: bool,
-    svid_verified: bool,
-    is_new: bool,
+    description: string,
+    is_active: bool,
+    icon: string,
 }
 
 export component Agents inherits Window {
-    width: 500px;
-    height: 600px;
-    title: "Helpers";
+    width: 375px;
+    height: 800px;
+    title: "Your Team";
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    in property <[UiAgent]> agents;
+    in property <[UiDepartment]> departments;
 
-    in-out property <bool> show_upgrade_prompt: false;
-    in-out property <string> upgrade_prompt_message: "";
-
-    in-out property <bool> show_agent_hint: false;
-
-    in-out property <bool> is_advanced: false;
-    callback toggle_advanced();
-    toggle_advanced => { is_advanced = !is_advanced; }
-
-    callback hire_agent();
-    callback fix_agent(string);
-    callback tune_agent(string);
-
-    if (show_upgrade_prompt) : UpgradePrompt {
-        message: root.upgrade_prompt_message;
-        action_dismiss => { root.show_upgrade_prompt = false; }
-    }
+    callback open_department(string);
+    callback close_team();
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Helpers"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; }
-            TooltipElement { tooltip_id: "agent_hint"; Button { text: "?"; width: 44px; height: 44px; clicked => { show_agent_hint = !show_agent_hint; } } }
+            alignment: start;
+            Text { text: "Your Team"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; vertical-alignment: center; }
             Rectangle {}
-            AdvancedToggle {
-                is_advanced <=> root.is_advanced;
-                toggled => { toggle_advanced(); }
-            }
-            Button { text: "Hire Agent"; clicked => { hire_agent(); } }
+            Button { text: "Close"; clicked => { close_team(); } }
         }
-        if (show_agent_hint) : Text { text: "Your AI team members run tasks automatically. You can hire more or tune their skills here."; color: #cbd5e1; font-size: 14px; wrap: word-wrap; }
 
-        VerticalBox {
-            spacing: 10px;
-            
-            for agent in agents : GlassCard {
-                if (is_advanced) : VerticalBox {
-                    padding: 8px;
-                    Text { text: "Raw Configuration JSON"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                    Text { text: "{ \"id\": \"" + agent.id + "\", \"role\": \"" + agent.role + "\" }"; font-family: "Inter"; font-size: 12px; color: #10b981; }
-                }
-                if (agent.is_new) : Rectangle {
-                    background: transparent;
-                    border-radius: 12px;
-                    border-width: 2px;
-                    border-color: #10b981;
-                    property <bool> is_bright: true;
-                    opacity: is_bright ? 1.0 : 0.2;
-                    animate opacity { duration: 1000ms; easing: ease-in-out; }
-                    Timer {
-                        interval: 1000ms;
-                        running: true;
-                        triggered => { is_bright = !is_bright; }
-                    }
-                }
-                HorizontalBox {
-                    padding: 16px;
-                    Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
+        Text { text: "Tap a department to configure your AI helpers."; color: #cbd5e1; font-family: "Inter"; font-size: 14px; wrap: word-wrap; }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                for dept in departments : GlassCard {
                     VerticalBox {
-                        Text { text: agent.name; font-family: "Inter"; font-weight: 700; color: white; }
-                        Text { text: agent.role; font-family: "Inter"; color: #94a3b8; }
-                    }
-                    Rectangle {} 
-                    VerticalBox {
-                        Text { 
-                            text: agent.status; 
-                            font-family: "Inter";
-                            color: agent.is_running ? #10b981 : #ef4444; 
-                            horizontal-alignment: center; 
+                        padding: 16px;
+                        spacing: 12px;
+
+                        HorizontalBox {
+                            Text { text: dept.icon; font-size: 32px; vertical-alignment: center; }
+                            Rectangle { width: 12px; }
+                            VerticalBox {
+                                Text { text: dept.name; font-family: "Outfit"; font-weight: 700; font-size: 18px; color: white; }
+                                Text { text: "Status: " + (dept.is_active ? "Active" : "Inactive"); font-family: "Inter"; font-size: 12px; color: dept.is_active ? #10b981 : #94a3b8; }
+                            }
                         }
-                        if (!agent.is_running) : Button { text: "Help me fix this"; clicked => { fix_agent(agent.id); } }
-                        Button { text: "Tune this agent"; clicked => { tune_agent(agent.id); } }
+
+                        Text { text: dept.description; font-family: "Inter"; font-size: 14px; color: #cbd5e1; wrap: word-wrap; }
                     }
+                    TouchArea { clicked => { open_department(dept.id); } }
                 }
             }
         }
