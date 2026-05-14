@@ -80,7 +80,7 @@ pkg_rpm(
 pkg_zip(
     name = "app_windows_zip",
     srcs = [":app_files"],
-    package_file_name = "ohc-app-windows-0.4.42+1.zip",
+    package_file_name = "ohc-app-windows-0.4.41+1.zip",
     visibility = ["//visibility:public"],
 )
 
