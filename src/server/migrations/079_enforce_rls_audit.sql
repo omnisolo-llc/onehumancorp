@@ -1,0 +1,12 @@
+-- ${NEXT_NUM}_enforce_rls_audit.sql
+-- Enforce RLS on any remaining tables that contain tenant_id or organization_id but do not have RLS enabled.
+
+ALTER TABLE IF EXISTS shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS state_machine_transitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS mcp_audit_sync_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ohc_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS autodream_memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS mcp_servers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_dependencies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_missions ENABLE ROW LEVEL SECURITY;
