@@ -156,6 +156,11 @@ jobs:
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
+      - name: Install Bazelisk via Go
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
       - name: Build all artifacts
         run: |
           bazelisk build //... --config=linux
