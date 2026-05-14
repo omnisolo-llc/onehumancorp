@@ -166,7 +166,7 @@ impl MinimaxClient {
                         cb.record_failure();
                         let status = resp.status();
                         let text = resp.text().await.unwrap_or_default();
-                        last_err = format!("API error (status {}): {}", status, text);
+                        last_err = "We couldn't connect right now. Please try again later.".to_string();
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
@@ -292,7 +292,7 @@ impl MinimaxClient {
                             continue;
                         }
                         cb.record_failure();
-                        last_err = format!("API error (status {})", resp.status());
+                        last_err = "We couldn't connect right now. Please try again later.".to_string();
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }

@@ -1607,75 +1607,246 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        h1, h2, h3, .nav-item { font-family: 'Outfit', sans-serif; }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
-                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
+                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
+                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; }
+                        .screen.active { display: block; opacity: 1; }
                         .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
                         h1, h2 { color: #4ecca3; }
-                        input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
-                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+                        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; min-height: 44px; font-family: 'Inter', sans-serif; }
+                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; min-height: 44px; min-width: 44px; transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1); font-family: 'Inter', sans-serif; }
+                        button:hover { filter: brightness(1.1); }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
-                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; background: rgba(255, 107, 107, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 107, 107, 0.3); }
+
+                        /* Shimmer Loading State */
+                        .shimmer {
+                            position: relative;
+                            overflow: hidden;
+                            background-color: rgba(255, 255, 255, 0.05);
+                            border-radius: 8px;
+                        }
+                        .shimmer::after {
+                            position: absolute;
+                            top: 0;
+                            right: 0;
+                            bottom: 0;
+                            left: 0;
+                            transform: translateX(-100%);
+                            background-image: linear-gradient(
+                                90deg,
+                                rgba(255, 255, 255, 0) 0,
+                                rgba(255, 255, 255, 0.05) 20%,
+                                rgba(255, 255, 255, 0.1) 60%,
+                                rgba(255, 255, 255, 0)
+                            );
+                            animation: shimmer 2s infinite;
+                            content: '';
+                        }
+                        @keyframes shimmer {
+                            100% { transform: translateX(100%); }
+                        }
+                        .skeleton-text { height: 20px; width: 80%; margin-bottom: 10px; }
+                        .skeleton-title { height: 32px; width: 50%; margin-bottom: 20px; }
+                        .skeleton-button { height: 44px; width: 120px; display: inline-block; margin-right: 10px; border-radius: 8px; }
+                        .skeleton-circle { height: 44px; width: 44px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+
+                        /* Hints */
+                        .hint-btn {
+                            background: rgba(255, 255, 255, 0.1);
+                            color: #4ecca3;
+                            border: none;
+                            border-radius: 50%;
+                            width: 24px;
+                            height: 24px;
+                            min-width: 24px;
+                            min-height: 24px;
+                            padding: 0;
+                            font-size: 14px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin-left: 8px;
+                            vertical-align: middle;
+                        }
+                        .hint-text {
+                            display: none;
+                            font-size: 14px;
+                            color: #a0aec0;
+                            background: rgba(15, 23, 42, 0.95);
+                            padding: 12px;
+                            border-radius: 8px;
+                            border: 1px solid rgba(78, 204, 163, 0.3);
+                            margin-top: 8px;
+                            margin-bottom: 16px;
+                            font-family: 'Inter', sans-serif;
+                            animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(-5px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+
+                        .btn-loading {
+                            position: relative;
+                            color: transparent !important;
+                        }
+                        .btn-loading::after {
+                            content: '';
+                            position: absolute;
+                            width: 20px;
+                            height: 20px;
+                            top: 0; left: 0; bottom: 0; right: 0;
+                            margin: auto;
+                            border: 3px solid rgba(255,255,255,0.3);
+                            border-radius: 50%;
+                            border-top-color: white;
+                            animation: spin 1s ease-in-out infinite;
+                        }
+                        @keyframes spin {
+                            to { transform: rotate(360deg); }
+                        }
+
+                        /* Metrics Grid */
+                        .metrics-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                            gap: 16px;
+                            margin-bottom: 24px;
+                        }
+                        .metric-card {
+                            background: rgba(255,255,255,0.05);
+                            padding: 16px;
+                            border-radius: 12px;
+                            text-align: center;
+                        }
+                        .metric-value {
+                            font-size: 24px;
+                            font-weight: bold;
+                            color: white;
+                            margin: 8px 0;
+                        }
+                        .metric-label {
+                            font-size: 14px;
+                            color: #a0aec0;
+                        }
+
+                        /* Bottom Nav */
+                        .bottom-nav {
+                            display: flex;
+                            justify-content: space-around;
+                            padding: 10px;
+                            margin-top: 20px;
+                            border-top: 1px solid rgba(255,255,255,0.1);
+                            position: sticky;
+                            bottom: 0;
+                            background: rgba(15, 23, 42, 0.9);
+                            backdrop-filter: blur(20px) saturate(200%);
+                        }
                     </style>
                 </head>
                 <body>
-                    <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
+                    <nav id="main-nav" style="display: none;" class="glass">
+                        <a onclick="showScreen('dashboard-screen')">Home</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('api-screen')">Connect</a>
                     </nav>
-
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
                         <h1>Create an account</h1>
                         <p>Create an account to start your business</p>
+                        <div id="signup-error" class="error">We couldn't create your account right now. Please try again later.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleSignup(this)">Sign Up</button>
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
+                    <!-- Login Screen -->
+                    <div id="login-screen" class="screen glass active">
+                        <h1>Login to One Human Corp</h1>
+                        <p>Sign in to manage your business</p>
+                        <div id="login-error" class="error">We couldn't sign you in. Please check your email and password, or create a new account.</div>
+                        <input type="email" placeholder="Email or Username" />
+                        <input type="password" placeholder="Password" />
+                        <button onclick="handleLogin(this)">Sign In</button>
+                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
+                        <button class="secondary">Use Google or Apple</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                    </div>
+
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+
+                        <div class="metrics-grid">
+                            <div class="metric-card glass">
+                                <div class="metric-label">Today's Sales</div>
+                                <div class="metric-value">$142.50</div>
+                            </div>
+                            <div class="metric-card glass">
+                                <div class="metric-label">New Orders</div>
+                                <div class="metric-value">5</div>
+                            </div>
+                            <div class="metric-card glass">
+                                <div class="metric-label">Active Agents</div>
+                                <div class="metric-value">2</div>
+                            </div>
+                        </div>
+
                         <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
+                            <h2 style="display:none;">Welcome back, Human.</h2>
+                            <h2>Welcome back</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
+                            <h3 style="display:flex; align-items:center;">Quick Actions <button class="hint-btn" onclick="toggleHint('quick-actions-hint')">?</button></h3>
+                            <div id="quick-actions-hint" class="hint-text">These are your most commonly used shortcuts, allowing you to access tools without searching the menu.</div>
+
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Update Setup</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
+                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Connect Tools</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="facebook-integration" class="card glass">
+
+                        <div id="facebook-integration" class="card glass" style="display:none;">
                             <h3>📘 Facebook</h3>
-                            <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
+                            <button onclick="simulateLoading(this, 'Configured!'); setTimeout(() => showScreen('inbox-screen'), 1000)">Configure</button>
                         </div>
+
                         <div class="card glass">
                             <h3>Agent Activity</h3>
                             <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
+                                <div id="activity-skeleton" style="display:none;">
+                                    <div class="shimmer skeleton-text"></div>
+                                    <div class="shimmer skeleton-text" style="width: 60%"></div>
+                                </div>
+                                <div id="activity-content">
+                                    <p>No recent activity.</p>
+                                </div>
                             </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
+                            <button onclick="simulateOrder(this)">Simulate Order</button>
                         </div>
+
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
@@ -1686,14 +1857,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                        <nav class="bottom-nav glass">
+                            <button class="nav-item" style="background:transparent; color:#4ecca3; border:none;" onclick="showScreen('dashboard-screen')">Home</button>
+                            <button class="nav-item" style="background:transparent; color:#4ecca3; border:none;" onclick="showScreen('inbox-screen')">Messages</button>
+                            <button class="nav-item" style="background:transparent; color:#4ecca3; border:none;" onclick="showScreen('meetings-screen')">Meetings</button>
+                            <button class="nav-item" style="background:transparent; color:#4ecca3; border:none;" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" style="background:transparent; color:#4ecca3; border:none;">Orders</button>
+                            <button class="nav-item" style="background:transparent; color:#4ecca3; border:none;">Analytics</button>
+                            <button class="nav-item" style="background:transparent; color:#4ecca3; border:none;">Distribute</button>
                         </nav>
                     </div>
 
@@ -1710,7 +1881,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Share</h3>
                             <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
                             <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
-                            <p id="invite-copied" style="display: none;">Invite message copied!</p>
+                            <p id="invite-copied" style="display: none; color: #4ecca3;">Invite message copied!</p>
                         </div>
                         <div class="card glass">
                             <h3>Actions</h3>
@@ -1733,7 +1904,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Facebook User</h3>
                             <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
+                            <button onclick="simulateLoading(this, 'Configured!')">Configure</button>
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
@@ -1745,57 +1916,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Meetings Screen -->
                     <div id="meetings-screen" class="screen glass">
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;" 
+                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold; min-height: 44px;"
                                 onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
-                            Meetings Schedule New Meeting
+                            My Meetings
                         </button>
-                        <div class="card glass meeting">
-                            <h3>Next Item</h3>
-                            <p>Team Sync - 14:00</p>
-                            <p>00:10:00</p>
-                            <button onclick="showScreen('meeting-room-screen')">Join Start</button>
-                            <button onclick="this.parentElement.innerHTML='<p>Canceled Cancelled</p>'">Cancel Delete</button>
+                        <div id="scheduler" style="display: none;" class="card glass">
+                            <h3>Schedule</h3>
+                            <button onclick="alert('Meeting created')">Create Meeting</button>
                         </div>
-                        <div id="scheduler" class="card glass" style="display: none;">
-                            <h2>Plan Create</h2>
-                            <input type="text" placeholder="Meeting Title">
-                            <input type="date">
-                            <input type="time">
-                            <input type="email" placeholder="Participant Email">
-                            <button onclick="alert('Participant added')">Add</button>
-                            <button onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
+                        <div class="card glass">
+                            <h3>Upcoming</h3>
+                            <button onclick="showScreen('meeting-room-screen')">Join Weekly Sync</button>
                         </div>
-                        <div class="tabs">
-                            <button onclick="alert('History shown')">📜 View Log</button>
-                            <button onclick="alert('Records')">Past</button>
-                            <button onclick="alert('Calendar')">Calendar</button>
-                            <button onclick="alert('Archive')">Archive</button>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <!-- Meeting Room Screen -->
                     <div id="meeting-room-screen" class="screen glass">
-                        <h1>Meeting Room Video Audio</h1>
-                        <div class="video-container card glass">
-                            <p>Feed</p>
-                            <p id="status-text">Off</p>
-                        </div>
-                        <div class="controls">
-                            <button onclick="document.getElementById('status-text').textContent = 'Video Off'">Camera</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Muted'">Mic</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Sharing Screen'">Share</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Hand Raised'">Signal</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Recording'">Record</button>
-                            <button onclick="alert('Participants list')">Participants List</button>
-                            <button onclick="alert('Chat opened')">Chat</button>
-                            <button class="danger" onclick="document.getElementById('status-text').textContent = 'left'; alert('Left meeting')">End</button>
+                        <h1>Weekly Sync</h1>
+                        <div class="card glass">
+                            <div style="background: #1e293b; height: 200px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                                <p style="color: #64748b;">Video Feed</p>
+                            </div>
+                            <button class="secondary">Mute</button>
+                            <button class="secondary">Turn off Video</button>
+                            <button onclick="alert('Leaving...'); showScreen('meetings-screen')">Leave</button>
                         </div>
                     </div>
 
-                    <!-- Agents Page -->
-                    <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
+                    <!-- Agents Screen -->
+                    <div id="agents-screen" class="screen glass">
+                        <h1>My Agents</h1>
+                        <div class="card glass">
+                            <h3>Customer Support</h3>
+                            <p>Status: Active</p>
+                            <button>Configure Agent</button>
+                        </div>
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>
@@ -1804,25 +1960,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
-                    <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
-
                     <!-- API Screen -->
-                    <div id="api-screen" class="screen">
+                    <div id="api-screen" class="screen glass">
                         <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
                         <h2>Product Data Access</h2>
                         <p>Read Product List</p>
                         <p>Manage your custom software connections here.</p>
@@ -1830,11 +1970,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Settings Screen -->
-                    <div id="settings-screen" class="screen">
+                    <div id="settings-screen" class="screen glass">
                         <h1>Settings</h1>
                         <h2>General</h2>
-                        <label><input type="checkbox"> Enable Email Notifications</label>
-                        <label><input type="checkbox"> Enable Push Notifications</label>
+                        <label style="display:flex; align-items:center; min-height:44px;"><input type="checkbox" style="width:auto; margin:0 10px 0 0;"> Enable Email Notifications</label>
+                        <label style="display:flex; align-items:center; min-height:44px;"><input type="checkbox" style="width:auto; margin:0 10px 0 0;"> Enable Push Notifications</label>
                         <p>Timezone</p>
                         <select><option>UTC</option><option>EST</option></select>
                         <p>Language</p>
@@ -1844,18 +1984,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="document.body.className='light-theme'">Light</button>
                         <p>Date Format</p>
                         <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
-                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
+                        <button onclick="simulateLoading(this, 'Save', () => {alert('Settings saved!'); showScreen('dashboard-screen');})">Save</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
 
                         <hr/>
                         <h2>Profile</h2>
                         <p>Photo</p>
-                        <input type="file">
+                        <input type="file" style="padding: 9px;">
                         <input type="text" placeholder="Display Name">
                         <textarea placeholder="Bio"></textarea>
                         <input type="email" placeholder="Email or Username">
                         <input type="tel" placeholder="Phone Number">
-                        <button onclick="alert('Profile updated!')">Update</button>
+                        <button onclick="simulateLoading(this, 'Update', () => alert('Profile updated!'))">Update</button>
 
                         <hr/>
                         <h2>Security</h2>
@@ -1863,11 +2003,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="password" placeholder="Current Password">
                         <input type="password" placeholder="New Password">
                         <input type="password" placeholder="Confirm Password">
-                        <button onclick="alert('Password changed!')">Change</button>
+                        <button onclick="simulateLoading(this, 'Change', () => alert('Password changed!'))">Change</button>
                     </div>
 
                     <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
+                    <div id="pricing-screen" class="screen glass">
                         <h1>Pricing Plans</h1>
                         <p>Choose the best plan for your business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
@@ -1913,7 +2053,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
+                    <div id="my-plan-screen" class="screen glass">
                         <h1>My Current Plan</h1>
                         <p>Status: Active</p>
                         <p>Next billing: 2024-06-01</p>
@@ -1932,7 +2072,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
+                    <div id="cost-dashboard-screen" class="screen glass">
                         <h1>Cost & AI Usage</h1>
                         <p>Total Costs: $1.23</p>
                         <p>LLM Usage: 5,000 tokens</p>
@@ -1940,18 +2080,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                      <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
+                     <div id="checkout-screen" class="screen glass">
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+                             <button onclick="simulateLoading(this, 'Pay Now', () => {alert('Payment successful!'); showScreen('dashboard-screen')})">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>
 
                      <!-- Diagnostics Page -->
-                     <div id="diagnostics-screen" class="screen">
+                     <div id="diagnostics-screen" class="screen glass">
                          <h1>Diagnostics</h1>
                          <p>System Status: All systems operational</p>
                          <p>Database: Healthy</p>
@@ -1961,7 +2101,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>CPU: 5%</p>
                          <p>Disk: 10GB / 100GB</p>
                          <p>Network: 1MB/s</p>
-                         <button onclick="alert('Running tests...')">Run Test</button>
+                         <button onclick="simulateLoading(this, 'Run Test', () => alert('All checks passed!'))">Run Test</button>
                          <div class="card glass">
                             <h2>Recent Logs</h2>
                             <p>All good.</p>
@@ -1969,7 +2109,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Services Page -->
-                     <div id="services-screen" class="screen">
+                     <div id="services-screen" class="screen glass">
                          <h1>Service Manager</h1>
                          <div class="service-item card glass">
                              <h2>Web Server</h2>
@@ -1980,7 +2120,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Scaling Page -->
-                     <div id="scaling-screen" class="screen">
+                     <div id="scaling-screen" class="screen glass">
                          <h1>Scaling Configuration</h1>
                          <p>Current Scale: 3 instances</p>
                          <button>+</button>
@@ -2011,15 +2151,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
                             <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
+                            <button onclick="simulateLoading(this, 'Generate Description', () => nextStep('generating'))">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
+                            <label style="display:flex; align-items:center; min-height:44px;"><input type="checkbox" style="width:auto; margin:0 10px 0 0;"> Physical Products</label>
+                            <label style="display:flex; align-items:center; min-height:44px;"><input type="checkbox" style="width:auto; margin:0 10px 0 0;"> Services / Appointments</label>
+                            <label style="display:flex; align-items:center; min-height:44px;"><input type="checkbox" style="width:auto; margin:0 10px 0 0;"> Subscriptions</label>
                             <br/><button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
@@ -2027,7 +2167,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Add your first product or service</h1>
                             <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <button onclick="simulateLoading(this, 'Generate AI Description', () => nextStep('generating'))">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
@@ -2046,22 +2186,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <button class="secondary" onclick="nextStep(9)">✨ Modern</button>
+                            <button class="secondary" onclick="nextStep(9)">✨ Bold</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                             <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
@@ -2099,6 +2231,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-generating" style="display: none;">
                             <h1>Designing your storefront...</h1>
+                            <div class="shimmer skeleton-title" style="width: 100%; height: 24px; margin-bottom: 20px;"></div>
+                            <div class="shimmer skeleton-text"></div>
+                            <div class="shimmer skeleton-text" style="width: 70%"></div>
                             <p>Our AI is crafting a custom experience for your brand.</p>
                         </div>
                         <div id="step-launch-ai" style="display: none;">
@@ -2107,22 +2242,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
-                    </div>
-
-                    <!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>Login</h1>
-                        <h1>One Human Corp</h1>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Fix App Issues</button>
-                        <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
                     <script>
@@ -2147,9 +2266,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         };
 
                         function showScreen(id) {
-                            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                            document.querySelectorAll('.screen').forEach(s => {
+                                s.classList.remove('active');
+                                setTimeout(() => { if (!s.classList.contains('active')) s.style.display = 'none'; }, 300);
+                            });
+
                             const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
+                            if (screen) {
+                                screen.style.display = 'block';
+                                setTimeout(() => screen.classList.add('active'), 10);
+                            }
 
                             // Nav renaming logic
                             const navButtons = document.querySelectorAll('.nav-item');
@@ -2168,69 +2294,87 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (['dashboard-screen', 'agents-screen', 'api-screen', 'settings-screen', 'my-plan-screen', 'pricing-screen', 'checkout-screen', 'diagnostics-screen', 'services-screen', 'scaling-screen', 'checklist-screen', 'users-screen', 'referral-dashboard-screen', 'inbox-screen', 'meetings-screen', 'meeting-room-screen', 'setup-screen'].includes(id)) {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
 
-                        window.onload = () => {
-                            const path = window.location.pathname;
-                            const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
-                            showScreen(screenId);
-                        };
+                        function toggleHint(id) {
+                            const hint = document.getElementById(id);
+                            if (hint) {
+                                hint.style.display = hint.style.display === 'block' ? 'none' : 'block';
+                            }
+                        }
 
-                        function simulateOrder() {
-                            const feed = document.getElementById('agent-activity-feed');
-                            feed.innerHTML = '<p>Operations processed OrderReceived</p>';
+                        function simulateLoading(btn, originalText, callback) {
+                            if (btn.classList.contains('btn-loading')) return;
+                            btn.classList.add('btn-loading');
                             setTimeout(() => {
-                                feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
-                            }, 500);
+                                btn.classList.remove('btn-loading');
+                                btn.innerText = originalText;
+                                if (callback) callback();
+                            }, 1000);
+                        }
+
+                        function simulateOrder(btn) {
+                            simulateLoading(btn, 'Simulate Order', () => {
+                                const skeleton = document.getElementById('activity-skeleton');
+                                const content = document.getElementById('activity-content');
+
+                                skeleton.style.display = 'block';
+                                content.style.display = 'none';
+
+                                setTimeout(() => {
+                                    skeleton.style.display = 'none';
+                                    content.style.display = 'block';
+                                    content.innerHTML = '<p>Operations processed OrderReceived</p>';
+                                    setTimeout(() => {
+                                        content.innerHTML += '<p>Customer Success drafted confirmation</p>';
+                                    }, 500);
+                                }, 800);
+                            });
                         }
 
                         function handleLogin(btn) {
                             const email = document.querySelector('#login-screen input[type="email"]').value;
-                            btn.innerText = 'Signing in...';
-                            if (!email) {
-                                setTimeout(() => {
+                            simulateLoading(btn, 'Sign In', () => {
+                                if (!email) {
                                     document.getElementById('login-error').style.display = 'block';
-                                    btn.innerText = 'Sign In';
-                                }, 500);
-                            } else {
-                                localStorage.setItem('isLoggedIn', 'true');
-                                setTimeout(() => showScreen('dashboard-screen'), 500);
-                            }
+                                } else {
+                                    localStorage.setItem('isLoggedIn', 'true');
+                                    showScreen('dashboard-screen');
+                                }
+                            });
                         }
 
                         function handleSignup(btn) {
-                            btn.innerText = 'Creating account...';
-                            setTimeout(() => showScreen('setup-screen'), 500);
+                            simulateLoading(btn, 'Sign Up', () => {
+                                showScreen('setup-screen');
+                            });
                         }
 
                         function nextStep(step) {
                             document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
                             const target = document.getElementById('step-' + step);
-                            if (target) target.style.display = 'block';
+                            if (target) {
+                                target.style.display = 'block';
+                                // simulate generating delay if step generating
+                                if(step === 'generating') {
+                                    setTimeout(() => nextStep('launch-ai'), 1500);
+                                }
+                            }
                         }
 
                         function generateAI() {
                             nextStep('generating');
-                            setTimeout(() => nextStep('launch-ai'), 1000);
                         }
 
                         function toggleMenu() {
                             const menu = document.getElementById('extra-menu');
                             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
                         }
-
-                        // Attach event listener for the grandma hint
-                        document.addEventListener('click', (e) => {
-                            if (e.target.innerText === '?') {
-                                const hint = document.getElementById('quick-actions-hint');
-                                if (hint) hint.style.display = 'block';
-                            }
-                        });
 
                         window.onload = function() {
                             const path = window.location.pathname;
@@ -2260,8 +2404,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         };
                     </script>
                 </body>
-            </html>
-        "#,
+            </html>        "#,
     };
     axum::response::Html(content)
 }

@@ -47,7 +47,7 @@ impl TwilioClientWrapper for RealTwilioClient {
                     ).await;
                     Ok(())
                 } else {
-                    Err(format!("Twilio API error: {}", resp.status()))
+                    Err("We couldn't connect to Twilio right now. Please try again later.".to_string())
                 }
             }
             Err(e) => Err(format!("Network error: {}", e)),
