@@ -11,6 +11,9 @@
     "ts-proto": "^2.11.6",
     "zod": "^3.23.0"
   },
+  "scripts": {
+    "postinstall": "go install github.com/bazelbuild/bazelisk@latest"
+  },
   "devDependencies": {
     "@playwright/test": "1.50.1",
     "@testing-library/react": "^16.3.2",
