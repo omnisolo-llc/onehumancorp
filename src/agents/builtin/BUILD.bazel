@@ -79,6 +79,7 @@ rust_library(
         "//src/proto:interop_prost",
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
+        "//src/server/pricing:server_pricing",
     ] + [
         "@crates//:tempfile",
         "@crates//:base64",

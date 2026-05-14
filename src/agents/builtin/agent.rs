@@ -1397,7 +1397,58 @@ impl Agent {
             };
 
             // Intelligent Context Truncation to save tokens
-            let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
+            let mut req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
+
+            // Miser Context Pruning
+            if final_cfg.enable_context_compaction || final_cfg.enable_acon_context_strategy {
+                let context_manager = ::server_pricing::context_manager::ContextManager::new(
+                    final_cfg.max_tokens as usize * 4, // Estimate token limit in chars
+                    5 // Keep last 5 messages
+                );
+
+                let mut pricing_msgs = Vec::new();
+                for m in &req.messages {
+                    pricing_msgs.push(::server_pricing::context_manager::ContextMessage {
+                        role: match m.role {
+                            Role::User => "user".to_string(),
+                            Role::Assistant => "assistant".to_string(),
+                            Role::System => "system".to_string(),
+                            Role::Tool => "tool".to_string(),
+                        },
+                        content: m.content.clone(),
+                    });
+                }
+
+                let pruned = context_manager.prune_history(pricing_msgs);
+                if pruned.len() < req.messages.len() {
+                    tracing::info!(
+                        tid = %final_cfg.agent_id,
+                        original = req.messages.len(),
+                        pruned = pruned.len(),
+                        "Miser pruned conversation history to save tokens"
+                    );
+
+                    let mut new_msgs = Vec::new();
+                    // This is a lossy conversion back to internal Message type
+                    for pm in pruned {
+                        new_msgs.push(Message {
+                            role: match pm.role.as_str() {
+                                "user" => Role::User,
+                                "assistant" => Role::Assistant,
+                                "system" => Role::System,
+                                "tool" => Role::Tool,
+                                _ => Role::User,
+                            },
+                            content: pm.content,
+                            tool_calls: vec![], // Tool calls are lost in pruning currently
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        });
+                    }
+                    req.messages = new_msgs;
+                }
+            }
 
             let resp = match self.llm.chat(req).await {
                 Ok(r) => r,

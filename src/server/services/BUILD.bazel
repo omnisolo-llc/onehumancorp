@@ -12,6 +12,7 @@ filegroup(
         "//src/server/services/dashboard:srcs",
         "//src/server/services/growth:srcs",
         "//src/server/services/integration:srcs",
+        "//src/server/services/miser:srcs",
         "//src/server/services/mcp:srcs",
         "//src/server/services/onboarding:srcs",
         "//src/server/services/ops:srcs",
