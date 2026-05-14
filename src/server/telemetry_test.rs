@@ -397,7 +397,7 @@ mod tests {
             // No files found to check - likely running in an environment where source files
             // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
             println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
-            return;
+            // return;
         }
         assert!(
             violations.is_empty(),

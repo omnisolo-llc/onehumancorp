@@ -897,7 +897,7 @@ mod autodream_db_tests {
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
@@ -920,7 +920,7 @@ mod autodream_db_tests {
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -957,7 +957,7 @@ mod autodream_db_tests {
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -1118,7 +1118,7 @@ mod e2e_tenant_isolation_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
@@ -1157,7 +1157,7 @@ mod e2e_tenant_isolation_tests {
         // Security Regression Test: Ensure PgPoolOptions are created
         // without a global before_acquire that sets app.current_tenant to ''
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
 

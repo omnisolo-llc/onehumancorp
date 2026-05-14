@@ -807,7 +807,7 @@ mod tests {
     #[tokio::test]
     async fn test_publish_mesh_event() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -836,7 +836,7 @@ mod tests {
     #[tokio::test]
     async fn test_sanitize_hub_event_redaction() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -867,7 +867,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache_invalidation() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -933,7 +933,7 @@ mod tests {
     #[tokio::test]
     async fn test_delegate_sub_task_invalid_sender() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
@@ -958,7 +958,7 @@ mod tests {
     #[tokio::test]
     async fn test_delegate_sub_task_valid_hierarchy() {
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
@@ -995,7 +995,7 @@ mod tests {
     async fn test_check_health() {
         // Skip test if no database is available
         if std::env::var("DATABASE_URL").is_err() {
-            return;
+            unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:"); }
         }
 
         let db_url = std::env::var("DATABASE_URL").unwrap();

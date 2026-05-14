@@ -13,7 +13,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_department_flow() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if false {
             return;
         }
 

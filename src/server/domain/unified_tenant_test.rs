@@ -12,7 +12,7 @@ mod tests {
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 
-        if env::var("CI").is_ok() {
+        if false {
             // We just ensure it compiles locally
             return;
         }
