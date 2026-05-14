@@ -9,6 +9,7 @@ import (
 	"testing"
 	"onehumancorp/srcs/server/orchestration"
 	"onehumancorp/srcs/server/repository"
+	"onehumancorp/srcs/server/onboarding"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,6 +44,8 @@ func (m *mockTaskStore) UpdateTaskStatus(ctx context.Context, id string, status 
 func TestHandleSyncMissions(t *testing.T) {
 	store := &mockTaskStore{}
 	handler := NewSyncHandler(store)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/sync/missions", onboarding.TenantAuthMiddleware(handler.HandleSyncMissions))
 
 	task := orchestration.SharedTask{
 		ID:             "mission-1",
@@ -56,10 +59,11 @@ func TestHandleSyncMissions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set context to simulate authentication middleware
-	ctx := context.WithValue(req.Context(), repository.OrgIDKey, "org-authenticated")
+	ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "org-authenticated")
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
+	// Skip middleware manually since we just injected into context for unit testing, wait, if we call mux.ServeHTTP we need the JWT. Let's just call handler with context
 	handler.HandleSyncMissions(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -92,6 +96,31 @@ func TestHandleSyncMissions_Unauthorized(t *testing.T) {
 	assert.Len(t, store.tasks, 0)
 }
 
+func TestHandleSyncMissions_MiddlewareUnauthorized(t *testing.T) {
+	store := &mockTaskStore{}
+	handler := NewSyncHandler(store)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/sync/missions", onboarding.TenantAuthMiddleware(handler.HandleSyncMissions))
+
+	task := orchestration.SharedTask{
+		ID:             "mission-unauth",
+		Status:         "PENDING",
+		OrganizationID: "org-malicious",
+	}
+	body, err := json.Marshal(task)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest("POST", "/api/sync/missions", bytes.NewBuffer(body))
+	assert.NoError(t, err)
+
+	// Route through the actual middleware without auth header
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	assert.Len(t, store.tasks, 0)
+}
+
 func TestHandleSyncMissions_CrossTenantAccess(t *testing.T) {
 	store := &mockTaskStore{}
 	handler := NewSyncHandler(store)
@@ -108,7 +137,7 @@ func TestHandleSyncMissions_CrossTenantAccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set context to simulate authentication middleware for a different tenant
-	ctx := context.WithValue(req.Context(), repository.OrgIDKey, "org-authenticated")
+	ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "org-authenticated")
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()

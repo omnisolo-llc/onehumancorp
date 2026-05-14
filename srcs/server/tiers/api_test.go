@@ -109,6 +109,16 @@ func TestAPIHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code for missing tenant ctx: got %v want %v", status, http.StatusUnauthorized)
 	}
 
+	// Test middleware rejection for unauthorized request
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/tiers/check", onboarding.TenantAuthMiddleware(handler.HandleCheckLimit))
+	reqMiddleware, _ := http.NewRequest("GET", "/api/tiers/check?metric=products", nil)
+	rrMiddleware := httptest.NewRecorder()
+	mux.ServeHTTP(rrMiddleware, reqMiddleware)
+	if status := rrMiddleware.Code; status != http.StatusUnauthorized {
+		t.Errorf("middleware returned wrong status code: got %v want %v", status, http.StatusUnauthorized)
+	}
+
 	// Test missing parameter metric
 	req4, _ := http.NewRequest("GET", "/api/tiers/check", nil)
 	ctx4 := context.WithValue(req4.Context(), onboarding.TenantContextKey, tenantID)

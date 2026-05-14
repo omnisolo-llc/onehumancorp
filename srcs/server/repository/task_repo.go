@@ -25,6 +25,15 @@ func OrganizationIDFromContext(ctx context.Context) string {
 	if val, ok := ctx.Value("organization_id").(string); ok {
 		return val
 	}
+	// Check context key from onboarding tenant auth
+	if val, ok := ctx.Value("tenant_id").(string); ok {
+		return val
+	}
+	// Also handle string typed tenant_id key for safety
+	type contextKeyString string
+	if val, ok := ctx.Value(contextKeyString("tenant_id")).(string); ok {
+		return val
+	}
 	return ""
 }
 

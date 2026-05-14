@@ -52,9 +52,9 @@ func main() {
             log.Printf("Warning: Failed to set secure permissions on %s: %v", dbPath, err)
         }
 
-        dbKey := os.Getenv("OHC_LOCAL_DB_KEY")
+        dbKey := os.Getenv("OHC_SQLITE_KEY")
         if dbKey == "" {
-            log.Fatalf("OHC_LOCAL_DB_KEY environment variable is required for local standalone mode encryption")
+            log.Fatalf("OHC_SQLITE_KEY environment variable is required for local standalone mode encryption")
         }
         dsn = dbPath + "?_pragma_key=" + dbKey
     }
@@ -130,23 +130,23 @@ func main() {
 	}))
 
 	growthSvc := growth.NewGrowthService(db)
-	mux.HandleFunc("/api/growth/referrals/click", growthSvc.HandleReferralClick)
-	mux.HandleFunc("/api/growth/referrals/convert", growthSvc.HandleReferralConvert)
-	mux.HandleFunc("/api/growth/team-invites/accept", growthSvc.HandleTeamInviteAccept)
+	mux.HandleFunc("/api/growth/referrals/click", onboarding.TenantAuthMiddleware(growthSvc.HandleReferralClick))
+	mux.HandleFunc("/api/growth/referrals/convert", onboarding.TenantAuthMiddleware(growthSvc.HandleReferralConvert))
+	mux.HandleFunc("/api/growth/team-invites/accept", onboarding.TenantAuthMiddleware(growthSvc.HandleTeamInviteAccept))
 
 	tierSvc := tiers.NewTierService(db)
 	tierAPI := tiers.NewAPIHandler(tierSvc)
-	mux.HandleFunc("/api/tiers/check", tierAPI.HandleCheckLimit)
+	mux.HandleFunc("/api/tiers/check", onboarding.TenantAuthMiddleware(tierAPI.HandleCheckLimit))
 
-	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
-	mux.HandleFunc("/api/dashboard/growth/viral-coefficient", dashboard.HandleViralCoefficient)
+	mux.HandleFunc("/api/dashboard/onboarding/metrics", onboarding.TenantAuthMiddleware(dashboard.HandleOnboardingMetrics))
+	mux.HandleFunc("/api/dashboard/growth/viral-coefficient", onboarding.TenantAuthMiddleware(dashboard.HandleViralCoefficient))
 
-	mux.HandleFunc("/api/v1/stream", dashboard.HandleStream)
-	mux.HandleFunc("/api/v1/autodream/sync", dashboard.HandleAutoDreamSync)
-	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
-	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
+	mux.HandleFunc("/api/v1/stream", onboarding.TenantAuthMiddleware(dashboard.HandleStream))
+	mux.HandleFunc("/api/v1/autodream/sync", onboarding.TenantAuthMiddleware(dashboard.HandleAutoDreamSync))
+	mux.HandleFunc("/api/v1/autodream/query", onboarding.TenantAuthMiddleware(dashboard.HandleAutoDreamQuery))
+	mux.HandleFunc("/api/mesh/broadcast", onboarding.TenantAuthMiddleware(dashboard.HandleMeshBroadcast))
 	syncHandler := sync.NewSyncHandler(taskStore)
-	mux.HandleFunc("/api/sync/missions", syncHandler.HandleSyncMissions)
+	mux.HandleFunc("/api/sync/missions", onboarding.TenantAuthMiddleware(syncHandler.HandleSyncMissions))
 
 	go func() {
 		log.Println("Listening on :8080...")

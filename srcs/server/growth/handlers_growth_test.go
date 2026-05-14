@@ -2,11 +2,14 @@ package growth
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"onehumancorp/srcs/server/onboarding"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -31,20 +34,44 @@ func TestGrowthService_ReferralFlow(t *testing.T) {
 	t.Run("HandleReferralClick", func(t *testing.T) {
 		body := `{"id": "ref1"}`
 		req := httptest.NewRequest(http.MethodPost, "/click", bytes.NewBufferString(body))
+		ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "test-tenant")
+		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 		svc.HandleReferralClick(w, req)
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected 200, got %d", w.Code)
+		}
+
+		// Test middleware rejection
+		mux := http.NewServeMux()
+		mux.HandleFunc("/click", onboarding.TenantAuthMiddleware(svc.HandleReferralClick))
+		reqMiddleware := httptest.NewRequest(http.MethodPost, "/click", bytes.NewBufferString(body))
+		wMiddleware := httptest.NewRecorder()
+		mux.ServeHTTP(wMiddleware, reqMiddleware)
+		if wMiddleware.Code != http.StatusUnauthorized {
+			t.Errorf("Middleware Expected 401, got %d", wMiddleware.Code)
 		}
 	})
 
 	t.Run("HandleReferralConvert", func(t *testing.T) {
 		body := `{"id": "ref1", "invitee_id": "invitee1"}`
 		req := httptest.NewRequest(http.MethodPost, "/convert", bytes.NewBufferString(body))
+		ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "test-tenant")
+		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 		svc.HandleReferralConvert(w, req)
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected 200, got %d", w.Code)
+		}
+
+		// Test middleware rejection
+		mux := http.NewServeMux()
+		mux.HandleFunc("/convert", onboarding.TenantAuthMiddleware(svc.HandleReferralConvert))
+		reqMiddleware := httptest.NewRequest(http.MethodPost, "/convert", bytes.NewBufferString(body))
+		wMiddleware := httptest.NewRecorder()
+		mux.ServeHTTP(wMiddleware, reqMiddleware)
+		if wMiddleware.Code != http.StatusUnauthorized {
+			t.Errorf("Middleware Expected 401, got %d", wMiddleware.Code)
 		}
 
 		var inviterPlan, inviteePlan string
@@ -68,10 +95,22 @@ func TestGrowthService_ReferralFlow(t *testing.T) {
 	t.Run("HandleTeamInviteAccept", func(t *testing.T) {
 		body := `{"id": "inv1"}`
 		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewBufferString(body))
+		ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "test-tenant")
+		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 		svc.HandleTeamInviteAccept(w, req)
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected 200, got %d", w.Code)
+		}
+
+		// Test middleware rejection
+		mux := http.NewServeMux()
+		mux.HandleFunc("/accept", onboarding.TenantAuthMiddleware(svc.HandleTeamInviteAccept))
+		reqMiddleware := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewBufferString(body))
+		wMiddleware := httptest.NewRecorder()
+		mux.ServeHTTP(wMiddleware, reqMiddleware)
+		if wMiddleware.Code != http.StatusUnauthorized {
+			t.Errorf("Middleware Expected 401, got %d", wMiddleware.Code)
 		}
 	})
 }
