@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
-use crate::pricing::calculator::{self, CostConfig};
+use ::server_pricing::calculator::{self, CostConfig};
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use opentelemetry::KeyValue;
@@ -285,7 +285,7 @@ impl CostAuditor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pricing::calculator::CostConfig;
+    use ::server_pricing::calculator::CostConfig;
 
     #[test]
     fn test_cost_auditor() {
