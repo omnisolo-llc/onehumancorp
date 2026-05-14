@@ -9,4 +9,6 @@ bazel-mono
 bazel-bin
 bazel-out
 bazel-testlogs
+.bazel-output-root
+%workspace%
 srcs
