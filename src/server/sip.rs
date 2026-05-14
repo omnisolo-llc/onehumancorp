@@ -27,6 +27,75 @@ impl SipDB {
         }
     }
 
+    pub async fn claim_next_mission(&self, agent_id: &str) -> Result<Option<crate::orchestration::mission_worker::Mission>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+
+        // Try to claim a pending mission using row-level locking
+        let dialect_query = if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+            "UPDATE agent_missions
+             SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP
+             WHERE id = (
+                 SELECT id FROM agent_missions
+                 WHERE status = 'PENDING' AND tenant_id = $1
+                 ORDER BY created_at ASC
+                 FOR UPDATE SKIP LOCKED
+                 LIMIT 1
+             )
+             RETURNING id, status, payload, tenant_id"
+        } else {
+            // SQLite fallback: first find one, then update
+            "UPDATE agent_missions
+             SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP
+             WHERE id = (
+                 SELECT id FROM agent_missions
+                 WHERE status = 'PENDING' AND tenant_id = $1
+                 ORDER BY created_at ASC
+                 LIMIT 1
+             )
+             RETURNING id, status, payload, tenant_id"
+        };
+
+        let result = sqlx::query(dialect_query)
+            .bind(&self.org_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+
+        if let Some(row) = result {
+            Ok(Some(crate::orchestration::mission_worker::Mission {
+                id: row.get("id"),
+                status: row.get("status"),
+                payload: row.get("payload"),
+                tenant_id: row.get("tenant_id"),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn mark_mission_completed(&self, mission_id: &str, result_log: &str) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+
+        sqlx::query(
+            "UPDATE agent_missions
+             SET status = 'COMPLETED',
+                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2 AND tenant_id = $3"
+        )
+        .bind(result_log)
+        .bind(mission_id)
+        .bind(&self.org_id)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
@@ -406,6 +475,129 @@ mod tests {
         assert_eq!(enriched, payload, "Payload should be unmodified when neither file is present");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_claim_next_mission_success() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            ).execute(&pool).await;
+
+            // Clear old tests
+            let _ = sqlx::query("DELETE FROM agent_missions WHERE id = 'claim_test_1'").execute(&pool).await;
+
+            // Insert initial record
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4)")
+                .bind("claim_test_1")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Call claim_next_mission
+            let res = sip_db.claim_next_mission("test_agent").await;
+            assert!(res.is_ok());
+            let mission = res.unwrap();
+            assert!(mission.is_some());
+            assert_eq!(mission.unwrap().id, "claim_test_1");
+
+            // Verify status was updated
+            let row = sqlx::query("SELECT status FROM agent_missions WHERE id = 'claim_test_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = row.get("status");
+            assert_eq!(status, "RUNNING");
+
+            // Clean up
+            let _ = sqlx::query("DELETE FROM agent_missions WHERE id = 'claim_test_1'").execute(&pool).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mark_mission_completed() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            ).execute(&pool).await;
+
+            // Clear old tests
+            let _ = sqlx::query("DELETE FROM agent_missions WHERE id = 'complete_test_1'").execute(&pool).await;
+
+            // Insert initial record
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4)")
+                .bind("complete_test_1")
+                .bind("RUNNING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Call mark_mission_completed
+            let res = sip_db.mark_mission_completed("complete_test_1", "Done success").await;
+            assert!(res.is_ok());
+
+            // Verify status was updated
+            let row = sqlx::query("SELECT status, mission_log FROM agent_missions WHERE id = 'complete_test_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            let status: String = row.get("status");
+            let log: String = row.get("mission_log");
+            assert_eq!(status, "COMPLETED");
+            assert_eq!(log, "Done success");
+
+            // Clean up
+            let _ = sqlx::query("DELETE FROM agent_missions WHERE id = 'complete_test_1'").execute(&pool).await;
+        }
     }
 
     #[tokio::test]

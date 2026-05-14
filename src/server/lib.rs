@@ -1383,6 +1383,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ).await;
     });
 
+    // Start Mission Queue Drainer
+    let drainer_hub = hub.clone();
+    let bootstrap_org_id = std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "acme".to_string());
+    let drainer_sip = std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), bootstrap_org_id.clone()));
+    let mission_drainer = std::sync::Arc::new(crate::orchestration::mission_worker::MissionQueueDrainer::new(
+        drainer_hub,
+        drainer_sip,
+        std::time::Duration::from_secs(5)
+    ));
+    mission_drainer.start().await;
+
     // Start Builtin Agent
     let builtin_transport = mesh_transport.clone();
     let builtin_mesh = handoff_mesh.clone();
@@ -1455,6 +1466,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
+    let bootstrap_org_id = std::env::var("OHC_BOOTSTRAP_ORG_ID").unwrap_or_else(|_| "acme".to_string());
+    let handler_sip_db = std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), bootstrap_org_id.clone()));
+    let mission_state = api::mission_handler::MissionHandlerState {
+        hub: hub.clone(),
+        sip_db: handler_sip_db,
+    };
+    let mission_router = axum::Router::new()
+        .route("/api/v1/missions", axum::routing::get(api::mission_handler::list_missions))
+        .with_state(mission_state);
+
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
@@ -1475,6 +1496,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(mesh_transport)
         .merge(webhook_router)
         .merge(health_router)
+        .merge(mission_router)
         .fallback(ui_handler);
 
     let mesh_addr: std::net::SocketAddr = "0.0.0.0:18789".parse().unwrap();
