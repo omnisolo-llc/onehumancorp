@@ -30,5 +30,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": []
+  },
+  "scripts": {
+    "postinstall": "npm install -g @bazel/bazelisk"
   }
 }
