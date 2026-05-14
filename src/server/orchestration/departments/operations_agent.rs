@@ -19,10 +19,57 @@ impl Department for OperationsAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.accepted".to_string()]
+        vec!["tenant.quote.accepted".to_string(), "OrderPlaced".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "OrderPlaced" {
+            let db = self.orchestrator.db();
+            let mut processed = false;
+            if let Some(items) = event.payload.get("items").and_then(|i| i.as_array()) {
+                for item in items {
+                    if let (Some(product_id), Some(quantity)) = (item.get("product_id").and_then(|p| p.as_str()), item.get("quantity").and_then(|q| q.as_i64())) {
+                        if quantity > 0 {
+                            processed = true;
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND organization_id = $3")
+                                        .bind(quantity as i32)
+                                        .bind(product_id)
+                                        .bind(&event.tenant_id)
+                                        .execute(&db.pool)
+                                        .await.map_err(|e| e.to_string())?;
+                                }
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND organization_id = ?")
+                                        .bind(quantity as i32)
+                                        .bind(product_id)
+                                        .bind(&event.tenant_id)
+                                        .execute(pool)
+                                        .await.map_err(|e| e.to_string())?;
+                                }
+                            }
+                        }
+                    } else {
+                        opentelemetry::global::meter("ohc.orchestrator").u64_counter("agent.error.malformed_payload").build().add(1, &[opentelemetry::KeyValue::new("tenant_id", event.tenant_id.clone())]);
+                    }
+                }
+            } else {
+                opentelemetry::global::meter("ohc.orchestrator").u64_counter("agent.error.missing_items").build().add(1, &[opentelemetry::KeyValue::new("tenant_id", event.tenant_id.clone())]);
+            }
+
+            if processed {
+                let follow_up = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "tenant.order.fulfillment_ready".to_string(),
+                    payload: event.payload.clone(),
+                };
+                self.orchestrator.dispatch_event(follow_up).await?;
+            }
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

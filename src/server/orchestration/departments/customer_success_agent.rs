@@ -19,13 +19,21 @@ impl Department for CustomerSuccessAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec![
-            "tenant.order.fulfillment_ready".to_string(),
-            "tenant.message.received".to_string(),
-        ]
+        vec!["tenant.order.fulfillment_ready".to_string(), "tenant.message.received".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.order.fulfillment_ready" {
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Draft personalized order confirmation".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                event.payload.clone(),
+            ).await.map(|_| ())?;
+            return Ok(());
+        }
+
         if event.event_type == "tenant.message.received" {
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
