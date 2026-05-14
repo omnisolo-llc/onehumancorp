@@ -21,9 +21,6 @@ defaults:
 jobs:
   bazel-test:
     runs-on: oci-runner
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -56,7 +53,7 @@ jobs:
 
       # - name: Install Bazelisk
       #   run: |
-      #     go install github.com/bazelbuild/bazel@latest
+      #     go install github.com/bazelbuild/bazelisk@latest
       #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
@@ -82,22 +79,19 @@ jobs:
 
 
       - name: Build release artifacts
-        run: bazel build //release:all_release_artifacts --config=linux
+        run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
-          bazel test \
+          bazelisk test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            //... -- -//src/e2e/...
+            //... -//src/e2e/...
 
   bazel-build:
     runs-on: oci-runner
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -129,7 +123,7 @@ jobs:
 
       # - name: Install Bazelisk
       #   run: |
-      #     go install github.com/bazelbuild/bazel@latest
+      #     go install github.com/bazelbuild/bazelisk@latest
       #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
@@ -155,15 +149,12 @@ jobs:
 
       - name: Build all artifacts
         run: |
-          bazel build //... --config=linux
-          bazel build //... --config=windows || echo "Warning: Windows build failed"
-          bazel build //... --config=macos || echo "Warning: MacOS build failed"
+          bazelisk build //... --config=linux
+          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
 #   playwright-e2e:
 #     runs-on: oci-runner
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 #     timeout-minutes: 60
 #     steps:
 #       - uses: actions/checkout@v6
@@ -213,7 +204,7 @@ jobs:
 #
 #       - name: Run E2E tests
 #         run: |
-#           bazel test //src/e2e:playwright \
+#           bazelisk test //src/e2e:playwright \
 #             --config=linux \
 #             --test_output=errors \
 #             --test_summary=terse \
