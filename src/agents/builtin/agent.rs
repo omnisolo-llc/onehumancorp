@@ -27,6 +27,7 @@ pub enum AgentEvent {
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
+    pub verification_loops: std::sync::Arc<crate::verification::VerificationLoops>,
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     pub max_retries: usize,
@@ -121,6 +122,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
+            verification_loops: std::sync::Arc::new(crate::verification::VerificationLoops::new()),
         }
     }
 }
@@ -324,6 +326,22 @@ impl Agent {
             let resp = self.llm.chat(req).await?;
             let msg = resp.message;
             messages.push(msg.clone());
+
+            // ---> INTEGRATION: Verification Loops (Quality x3) - Guide (Feedforward)
+            if !cfg.verification_loops.guides.is_empty() {
+                if let Err(e) = cfg.verification_loops.run_guides(&msg.content).await {
+                    let err_msg = crate::types::Message {
+                        role: crate::types::Role::User,
+                        content: format!("Guide Verification Failed: {}", e),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    };
+                    messages.push(err_msg);
+                    continue;
+                }
+            }
 
             if msg.tool_calls.is_empty() {
                 if *phase == "Verify" {
@@ -2079,10 +2097,27 @@ impl Agent {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results,
+                tool_results: tool_results.clone(),
                 response_id: None,
                 previous_response_id: last_response_id.clone(),
             });
+
+            // ---> INTEGRATION: Verification Loops (Quality x3) - Inferential Sensors (Feedback)
+            if !cfg.verification_loops.inferential_sensors.is_empty() {
+                for tr in &tool_results {
+                    if let Err(e) = cfg.verification_loops.run_inferential_sensors(&tr.content).await {
+                        messages.push(crate::types::Message {
+                            role: crate::types::Role::User,
+                            content: format!("Sensor Verification Failed: {}", e),
+                            tool_calls: vec![],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        });
+                        break;
+                    }
+                }
+            }
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
