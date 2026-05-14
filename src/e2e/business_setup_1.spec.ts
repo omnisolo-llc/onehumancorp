@@ -100,7 +100,7 @@ test.describe('Business Setup Wizard', () => {
   test('should show company name input', async ({ page }) => {
     await page.click('text=🚀 Start My Business');
     await page.click('text=🛒 Online Store');
-    await expect(page.locator('input[placeholder="e.g. Maya\'s Cakes"]').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('input[placeholder="e.g. Maya\'s Cakes"]').first()).toBeVisible();
   });
 
   test('should show what you sell step', async ({ page }) => {
