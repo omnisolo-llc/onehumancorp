@@ -5,9 +5,9 @@ test('Order placement triggers Operations and Customer Success AI agents', async
     await page.goto('/login');
 
     // Login
-    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').first().fill( 'password123');
-    await page.locator('button:has-text("Login")').first().click();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
