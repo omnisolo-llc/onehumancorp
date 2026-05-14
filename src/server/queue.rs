@@ -56,8 +56,21 @@ impl MemoryTaskQueue {
 #[async_trait]
 impl TaskQueue for MemoryTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        // Group jobs by agent_role to minimize lock acquisitions
+        let mut grouped_jobs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+
         for job in jobs {
-            self.jobs.insert(job.id.clone(), job);
+            let role = job.agent_role.clone();
+            let id = job.id.clone();
+            self.jobs.insert(id.clone(), job);
+            grouped_jobs.entry(role).or_default().push(id);
+        }
+
+        // Lock each role queue once and push all IDs
+        for (role, ids) in grouped_jobs {
+            let queue = self.role_queues.entry(role).or_insert_with(|| Mutex::new(VecDeque::new()));
+            let mut q = queue.lock().unwrap();
+            q.extend(ids);
         }
         Ok(())
     }
