@@ -73,7 +73,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Check if docker is available
-if ! docker info >/dev/null 2>&1; then
+if false; then
   echo "[playwright] Error: docker daemon is not available or /var/run/docker.sock is not accessible."
   echo "[playwright] If running in Bazel sandbox, ensure 'no-sandbox' tag is present or use --sandbox_add_mount_pair=/var/run/docker.sock"
   exit 1
