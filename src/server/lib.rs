@@ -2218,6 +2218,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
+
                     <script>
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
@@ -2268,12 +2269,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        function nextStep(step) {
+                            if (step === 'generating') {
+                                document.querySelectorAll('#setup-screen > div').forEach(s => s.style.display = 'none');
+                                document.getElementById('step-generating').style.display = 'block';
+                                setTimeout(() => {
+                                    document.getElementById('step-generating').style.display = 'none';
+                                    document.getElementById('step-launch-ai').style.display = 'block';
+                                }, 1500);
+                            } else {
+                                document.querySelectorAll('#setup-screen > div').forEach(s => s.style.display = 'none');
+                                const target = document.getElementById('step-' + step);
+                                if (target) {
+                                    target.style.display = 'block';
+                                }
+                            }
+                        }
+
+                        function generateAI() {
+                            nextStep('generating');
+                        }
+
+                        function handleLogin(btn) {
+                            showScreen('dashboard-screen');
+                        }
+
+                        function handleSignup(btn) {
+                            showScreen('dashboard-screen');
+                        }
+
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
                     </script>
+
                 </body>
             </html>
         "#,
