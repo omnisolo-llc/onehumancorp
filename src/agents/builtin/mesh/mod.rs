@@ -23,6 +23,11 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String>;
+    async fn subscribe_job_status(&self, job_id: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn listen_for_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 pub struct TeammateMeshClient {
@@ -77,6 +82,99 @@ impl TeammateMesh for TeammateMeshClient {
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe("system:state_handoff", handler).await
+    }
+
+    async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let update = crate::proto::interop::JobStatusUpdate {
+            job_id: job_id.to_string(),
+            tenant_id: tenant_id.to_string(),
+            status: status.to_string(),
+            details_payload: details,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        update.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let topic = format!("system:job_status:{}", job_id);
+
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        loop {
+            let msg = Message {
+                agent_id: "agent".to_string(),
+                action: topic.clone(),
+                status: "ok".to_string(),
+                payload: buf.clone(),
+                msg_id: uuid::Uuid::new_v4().to_string(),
+            };
+
+            match self.transport.publish(&topic, msg).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if retries >= 5 {
+                        return Err(format!("Failed to publish job status update after retries: {}", e));
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        }
+    }
+
+    async fn subscribe_job_status(&self, job_id: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let topic = format!("system:job_status:{}", job_id);
+        self.transport.subscribe(&topic, handler).await
+    }
+
+    async fn listen_for_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let topic = format!("system:job_dispatch:{}", tenant_id);
+        let transport_clone = self.transport.clone();
+
+        let wrapped_handler = Box::new(move |msg: Message| {
+            use prost::Message as ProstMessage;
+            if let Ok(dispatch) = crate::proto::interop::JobDispatch::decode(&msg.payload[..]) {
+                // Acknowledge the job dispatch
+                let ack_topic = format!("system:job_ack:{}", dispatch.job_id);
+                let ack = crate::proto::interop::JobAck {
+                    job_id: dispatch.job_id.clone(),
+                    node_id: "agent".to_string(),
+                    timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                };
+
+                let mut buf = Vec::new();
+                if ack.encode(&mut buf).is_ok() {
+                    let t = transport_clone.clone();
+                    tokio::spawn(async move {
+                        let mut retries = 0;
+                        let mut delay_ms = 50;
+                        let ack_msg = Message {
+                            agent_id: "agent".to_string(),
+                            action: ack_topic.clone(),
+                            status: "ok".to_string(),
+                            payload: buf,
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        };
+
+                        while retries < 5 {
+                            if t.publish(&ack_topic, ack_msg.clone()).await.is_ok() {
+                                break;
+                            }
+                            retries += 1;
+                            tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                            delay_ms *= 2;
+                        }
+                    });
+                }
+
+                // Call the original handler
+                handler(msg);
+            }
+        });
+
+        self.transport.subscribe(&topic, wrapped_handler).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -323,6 +421,53 @@ mod tests {
         assert_eq!(agents.len(), 2);
         assert_eq!(agents[0], ("agent_1".to_string(), "online".to_string()));
         assert_eq!(agents[1], ("agent_2".to_string(), "busy".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_mesh_listen_for_jobs() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let mesh = TeammateMeshClient::new(transport.clone());
+
+        let received = Arc::new(AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let _cancel = mesh.listen_for_jobs("tenant_x", Box::new(move |_msg| {
+            received_clone.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        // Subscribe to the ACK to verify it's sent
+        let ack_received = Arc::new(AtomicBool::new(false));
+        let ack_received_clone = ack_received.clone();
+
+        let _cancel_ack = transport.subscribe("system:job_ack:job_xyz", Box::new(move |_msg| {
+            ack_received_clone.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        // Simulate a job dispatch
+        use prost::Message as ProstMessage;
+        let dispatch = crate::proto::interop::JobDispatch {
+            job_id: "job_xyz".to_string(),
+            tenant_id: "tenant_x".to_string(),
+            action_name: "test_action".to_string(),
+            payload: b"payload".to_vec(),
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).unwrap();
+
+        transport.publish("system:job_dispatch:tenant_x", Message {
+            agent_id: "server".to_string(),
+            action: "system:job_dispatch:tenant_x".to_string(),
+            status: "ok".to_string(),
+            payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        }).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(received.load(Ordering::SeqCst), "Should receive the job dispatch message");
+        assert!(ack_received.load(Ordering::SeqCst), "Should send the job ack message");
     }
 
     #[tokio::test]
