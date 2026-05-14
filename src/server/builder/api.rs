@@ -44,7 +44,7 @@ pub struct GenerateStorefrontRequest {
 }
 
 #[derive(Deserialize)]
-pub struct PublishDraftRequest {
+pub struct PublishSiteRequest {
     pub domain: Option<String>,
     pub draft: SiteDraft,
 }
@@ -302,88 +302,16 @@ async fn generate_storefront(
 ) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
     let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    // Mock Agent generation based on description keywords
-    let desc = payload.description.to_lowercase();
-    let mut pages = Vec::new();
+    let context = advisor_extract_context(&payload.description);
+    let draft = promoter_generate_content(&context);
 
-    if desc.contains("baker") || desc.contains("cake") {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Freshly Baked", "subtitle": "Delicious Cakes"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "ProductGridBlock".to_string(),
-                    content: serde_json::json!({"items": ["Custom Cake", "Cupcakes"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "Bakery",
-                "name": "Custom Bakery"
-            }),
-        });
-    } else if desc.contains("handyman") {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Expert Handyman", "subtitle": "Reliable Service"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "ServiceBookingBlock".to_string(),
-                    content: serde_json::json!({"services": ["Plumbing", "Electrical"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "HomeAndConstructionBusiness",
-                "name": "Handyman Services"
-            }),
-        });
-    } else {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Welcome", "subtitle": "Our Services"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "TestimonialBlock".to_string(),
-                    content: serde_json::json!({"testimonials": ["Great service!"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "LocalBusiness",
-                "name": "Local Business"
-            }),
-        });
-    }
-
-    Ok(Json(SiteDraft {
-        domain: None,
-        pages,
-    }))
+    Ok(Json(draft))
 }
 
 async fn publish_draft(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
-    Json(payload): Json<PublishDraftRequest>,
+    Json(payload): Json<PublishSiteRequest>,
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 

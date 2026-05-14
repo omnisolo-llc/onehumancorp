@@ -242,7 +242,7 @@ async fn test_builder_generate_and_publish_draft() {
     let client = reqwest::Client::new();
     let base_url = format!("http://127.0.0.1:{}", port);
 
-    // 1. Generate Storefront
+    // 1. Generate Storefront (Handyman)
     let res = match client.post(&format!("{}/builder/generate", base_url))
         .json(&serde_json::json!({"description": "I am a handyman"}))
         .send().await {
@@ -250,14 +250,35 @@ async fn test_builder_generate_and_publish_draft() {
             Err(_) => return,
         };
 
-
-
     assert_eq!(res.status(), 200);
     let draft: super::api::SiteDraft = res.json().await.unwrap();
     assert_eq!(draft.pages.len(), 1);
     assert_eq!(draft.pages[0].blocks.len(), 2);
     assert_eq!(draft.pages[0].blocks[0].block_type, "HeroBlock");
     assert_eq!(draft.pages[0].blocks[1].block_type, "ServiceBookingBlock");
+    assert_eq!(draft.pages[0].seo_metadata["@type"], "HomeAndConstructionBusiness");
+    assert_eq!(draft.pages[0].seo_metadata["name"], "Handyman Services");
+
+    // Test Baker scenario to cover multiple AI paths
+    let res_baker = client.post(&format!("{}/builder/generate", base_url))
+        .json(&serde_json::json!({"description": "I make vegan cake and pastries"}))
+        .send().await.unwrap();
+
+    assert_eq!(res_baker.status(), 200);
+    let draft_baker: super::api::SiteDraft = res_baker.json().await.unwrap();
+    assert_eq!(draft_baker.pages[0].blocks[1].block_type, "ProductGridBlock");
+    assert_eq!(draft_baker.pages[0].seo_metadata["@type"], "Bakery");
+
+    // Test Generic fallback scenario
+    let res_generic = client.post(&format!("{}/builder/generate", base_url))
+        .json(&serde_json::json!({"description": "I am a tutor"}))
+        .send().await.unwrap();
+
+    assert_eq!(res_generic.status(), 200);
+    let draft_generic: super::api::SiteDraft = res_generic.json().await.unwrap();
+    assert_eq!(draft_generic.pages[0].blocks[1].block_type, "TestimonialBlock");
+    assert_eq!(draft_generic.pages[0].seo_metadata["@type"], "LocalBusiness");
+
 
     // 2. Publish Draft
     let res = client.post(&format!("{}/builder/publish_draft", base_url))
