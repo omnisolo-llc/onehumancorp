@@ -2,12 +2,12 @@ use super::client::{DailyCoClientWrapper, RealDailyCoClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-pub struct DailyCoProvider {
+pub struct DailyCoClientProvider {
     client: Arc<dyn DailyCoClientWrapper>,
     metadata: ProviderMetadata,
 }
 
-impl DailyCoProvider {
+impl DailyCoClientProvider {
     pub fn new(api_key: String, base_url: String) -> Self {
         let client = RealDailyCoClient::new(api_key, base_url);
 

@@ -41,12 +41,20 @@ pub async fn handle_mercadopago_webhook(State(_state): State<Arc<IntegrationStat
     Json(WebhookResponse { status: "received".to_string() })
 }
 
+pub async fn handle_shippo_webhook(State(_state): State<Arc<IntegrationState>>, Json(payload): Json<WebhookPayload>) -> Json<WebhookResponse> {
+    if payload.event == "transaction.created" {
+        let _tracking_number = payload.data.get("tracking_number");
+    }
+    Json(WebhookResponse { status: "received".to_string() })
+}
+
 pub fn tool_integration_routes(registry: Arc<IntegrationsRegistry>) -> Router {
     let state = Arc::new(IntegrationState { registry });
     Router::new()
         .route("/webhooks/chatwoot", post(handle_chatwoot_webhook))
         .route("/webhooks/calcom", post(handle_calcom_webhook))
         .route("/webhooks/mercadopago", post(handle_mercadopago_webhook))
+        .route("/webhooks/shippo", post(handle_shippo_webhook))
         .with_state(state)
 }
 

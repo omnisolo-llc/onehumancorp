@@ -2,12 +2,12 @@ use super::client::{ChatwootClientWrapper, RealChatwootClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-pub struct ChatwootProvider {
+pub struct ChatwootClientProvider {
     client: Arc<dyn ChatwootClientWrapper>,
     metadata: ProviderMetadata,
 }
 
-impl ChatwootProvider {
+impl ChatwootClientProvider {
     pub fn new(api_key: String, base_url: String) -> Self {
         let client = RealChatwootClient::new(api_key, base_url);
 
