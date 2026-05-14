@@ -103,7 +103,7 @@ impl MinimaxClient {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let Some(cached) = self.cache.get(prompt) {
+        if let Some(cached) = self.cache.get("system", prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -149,7 +149,7 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            self.cache.set("system", prompt, &content, prompt.len() / 4); // rough token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();

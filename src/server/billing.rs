@@ -55,6 +55,8 @@ impl Tracker {
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
+                        requires_upgrade: false,
+                        friendly_message: None,
                         user_message: None,
                     })
                 }
@@ -63,6 +65,8 @@ impl Tracker {
             Ok(RateLimitStatus {
                 is_allowed: true,
                 soft_limit_reached: false,
+                requires_upgrade: false,
+                friendly_message: None,
                 user_message: None,
             })
         }
@@ -77,6 +81,8 @@ impl Tracker {
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
+                        requires_upgrade: false,
+                        friendly_message: None,
                         user_message: None,
                     })
                 }
@@ -85,6 +91,8 @@ impl Tracker {
             Ok(RateLimitStatus {
                 is_allowed: true,
                 soft_limit_reached: false,
+                requires_upgrade: false,
+                friendly_message: None,
                 user_message: None,
             })
         }
@@ -113,6 +121,8 @@ impl Tracker {
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
+                        requires_upgrade: false,
+                        friendly_message: None,
                         user_message: None,
                     })
                 }
@@ -121,6 +131,8 @@ impl Tracker {
             Ok(RateLimitStatus {
                 is_allowed: true,
                 soft_limit_reached: false,
+                requires_upgrade: false,
+                friendly_message: None,
                 user_message: None,
             })
         }
@@ -135,6 +147,8 @@ impl Tracker {
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
+                        requires_upgrade: false,
+                        friendly_message: None,
                         user_message: None,
                     })
                 }
@@ -143,6 +157,8 @@ impl Tracker {
             Ok(RateLimitStatus {
                 is_allowed: true,
                 soft_limit_reached: false,
+                requires_upgrade: false,
+                friendly_message: None,
                 user_message: None,
             })
         }

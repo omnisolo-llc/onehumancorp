@@ -57,6 +57,8 @@ impl PlanTier {
 pub struct RateLimitStatus {
     pub is_allowed: bool,
     pub soft_limit_reached: bool,
+    pub requires_upgrade: bool,
+    pub friendly_message: Option<String>,
     pub user_message: Option<String>,
 }
 
@@ -144,6 +146,8 @@ impl RedisRateLimiter {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
+                    requires_upgrade: true,
+                    friendly_message: Some("Soft limit reached. Upgrade to unlock full performance".to_string()),
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
                         match tier {
@@ -162,6 +166,8 @@ impl RedisRateLimiter {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit
                     soft_limit_reached: true,
+                    requires_upgrade: true,
+                    friendly_message: Some("Soft limit reached. Upgrade to unlock full performance".to_string()),
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
                         match tier {
@@ -178,6 +184,8 @@ impl RedisRateLimiter {
         Ok(RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
+            requires_upgrade: false,
+            friendly_message: None,
             user_message: None,
         })
     }
@@ -195,6 +203,8 @@ impl RedisRateLimiter {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
+                    requires_upgrade: true,
+                    friendly_message: Some("Soft limit reached. Upgrade to unlock full performance".to_string()),
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
                         match tier {
@@ -211,6 +221,8 @@ impl RedisRateLimiter {
         Ok(RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
+            requires_upgrade: false,
+            friendly_message: None,
             user_message: None,
         })
     }
@@ -235,6 +247,8 @@ impl RedisRateLimiter {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
+                    requires_upgrade: true,
+                    friendly_message: Some("Soft limit reached. Upgrade to unlock full performance".to_string()),
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
                         match tier {
@@ -251,6 +265,8 @@ impl RedisRateLimiter {
         Ok(RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
+            requires_upgrade: false,
+            friendly_message: None,
             user_message: None,
         })
     }
@@ -286,6 +302,8 @@ impl RedisRateLimiter {
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
+                    requires_upgrade: true,
+                    friendly_message: Some("Soft limit reached. Upgrade to unlock full performance".to_string()),
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
                         match tier {
@@ -303,6 +321,8 @@ impl RedisRateLimiter {
         Ok(RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
+            requires_upgrade: false,
+            friendly_message: None,
             user_message: None,
         })
     }

@@ -124,6 +124,8 @@ impl OrgService for MyOrgService {
         let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
+            requires_upgrade: false,
+            friendly_message: None,
             user_message: None,
         });
 

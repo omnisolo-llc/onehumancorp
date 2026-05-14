@@ -53,6 +53,22 @@ impl BudgetManager {
         Ok(true)
     }
 
+
+    pub fn record_storage_spend(&self, amount: f64) -> Result<bool, String> {
+        self.record_spend(amount)
+        // Future: could add specific telemetry counter for storage
+    }
+
+    pub fn record_api_spend(&self, amount: f64) -> Result<bool, String> {
+        self.record_spend(amount)
+        // Future: could add specific telemetry counter for API calls
+    }
+
+    pub fn record_email_spend(&self, amount: f64) -> Result<bool, String> {
+        self.record_spend(amount)
+        // Future: could add specific telemetry counter for emails
+    }
+
     pub fn get_remaining(&self) -> f64 {
         let current = self.current.lock().unwrap();
         self.total_limit - *current
