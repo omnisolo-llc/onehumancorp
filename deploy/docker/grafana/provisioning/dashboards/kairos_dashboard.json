@@ -48,7 +48,8 @@
     "KAIROS",
     "OHC",
     "Hybrid",
-    "Observability"
+    "Observability",
+    "glassmorphism"
   ],
   "templating": {
     "list": []

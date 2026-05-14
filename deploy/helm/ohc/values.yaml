@@ -10,9 +10,9 @@ backend:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 3
+    minReplicas: 2
     maxReplicas: 50
-    targetCPUUtilizationPercentage: 70
+    targetCPUUtilizationPercentage: 60
     targetMemoryUtilizationPercentage: 85
   resources:
     requests:
@@ -32,12 +32,12 @@ backend:
 resourceQuota:
   enabled: true
   requests:
-    cpu: "20"
-    memory: "20Gi"
+    cpu: "10"
+    memory: "10Gi"
     ephemeralStorage: "50Gi"
   limits:
-    cpu: "40"
-    memory: "80Gi"
+    cpu: "20"
+    memory: "40Gi"
     ephemeralStorage: "100Gi"
     pods: "50"
 
@@ -55,9 +55,9 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 3
+    minReplicas: 2
     maxReplicas: 50
-    targetCPUUtilizationPercentage: 70
+    targetCPUUtilizationPercentage: 60
     targetMemoryUtilizationPercentage: 85
   resources:
     requests:
@@ -100,8 +100,8 @@ chatwoot:
   autoscaling:
     enabled: true
     minReplicas: 1
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 70
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
     targetMemoryUtilizationPercentage: 85
   resources:
     requests:
@@ -143,8 +143,8 @@ powersync:
   autoscaling:
     enabled: true
     minReplicas: 1
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 70
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
     targetMemoryUtilizationPercentage: 85
   resources:
     requests:

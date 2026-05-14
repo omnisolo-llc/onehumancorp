@@ -267,7 +267,8 @@
   "tags": [
     "ohc",
     "infra",
-    "observability"
+    "observability",
+    "glassmorphism"
   ],
   "templating": {
     "list": []
