@@ -1,18 +1,24 @@
-filegroup(
-    name = "srcs",
-    srcs = [
-        "chaos_test.rs",
-        "handoff.rs",
-        "health.rs",
-        "hierarchical.rs",
-        "hub.rs",
-        "mesh.rs",
-        "mod.rs",
-        "orchestration_test.rs",
-        "shared_tasks.rs",
-        "shared_tasks_test.rs",
-        "tasks.rs",
-        "//src/server/orchestration/departments:srcs",        "//src/server/orchestration/queue:srcs",        "//src/server/orchestration/state:srcs",
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = ["hub.go", "sync_daemon.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/orchestration",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+        "@com_github_redis_rueidis//:rueidis",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
     ],
-    visibility = ["//src/server:__pkg__"],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["hub_test.go", "sync_daemon_test.go"],
+    embed = [":orchestration"],
+    deps = [
+        "//src/proto",
+    ],
 )

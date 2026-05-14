@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use crate::orchestration::mesh::TeammateMesh;
 use std::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
@@ -93,39 +92,20 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
-    pub(crate) mesh: RwLock<Option<Arc<dyn TeammateMesh>>>,
 }
 
 impl TaskManager {
-
-    fn broadcast_event(&self, topic: &str, task: &SharedTask) {
-        if let Some(mesh) = self.mesh.read().unwrap().clone() {
-            if let Ok(payload) = serde_json::to_vec(task) {
-                let topic = topic.to_string();
-                tokio::spawn(async move {
-                    let _ = mesh.publish(&topic, payload).await;
-                });
-            }
-        }
-    }
     pub fn new() -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
-            mesh: RwLock::new(None),
         }
-    }
-
-    pub fn with_mesh(self, mesh: Arc<dyn TeammateMesh>) -> Self {
-        *self.mesh.write().unwrap() = Some(mesh);
-        self
     }
 
     pub fn with_db(db: Arc<DB>) -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
-            mesh: RwLock::new(None),
         }
     }
 
@@ -175,15 +155,13 @@ impl TaskManager {
         
         let mut tasks = self.tasks.write().unwrap();
         tasks.insert(id, task.clone());
-        self.broadcast_event("task.created", &task);
         
         Ok(task)
     }
 
     pub fn insert_task(&self, task: SharedTask) {
         let mut tasks = self.tasks.write().unwrap();
-        tasks.insert(task.id.clone(), task.clone());
-        self.broadcast_event("task.created", &task);
+        tasks.insert(task.id.clone(), task);
     }
 
     pub fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
@@ -196,7 +174,6 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
-            self.broadcast_event("task.updated", task);
             Ok(())
         } else {
             Err("task not found".to_string())
@@ -210,7 +187,6 @@ impl TaskManager {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
-                self.broadcast_event("task.claimed", task);
                 return Ok(Some(task.clone()));
             }
         }
@@ -223,7 +199,6 @@ impl TaskManager {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
-                self.broadcast_event("task.review", task);
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -237,7 +212,6 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "COMPLETED".to_string();
-                self.broadcast_event("task.completed", task);
                 
                 let mut payload_map: serde_json::Value = if task.payload.is_empty() {
                     serde_json::json!({})
@@ -267,7 +241,6 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "FAILED".to_string();
-                self.broadcast_event("task.failed", task);
 
                 let mut payload_map: serde_json::Value = if task.payload.is_empty() {
                     serde_json::json!({})
