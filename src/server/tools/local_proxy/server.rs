@@ -1,4 +1,4 @@
-use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
+use ::server_ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use tracing::Instrument;
 
 pub struct LocalProxyServer {
@@ -31,7 +31,7 @@ impl LocalProxyServer {
                 let context_id = params["context_id"].as_str().ok_or_else(|| tonic::Status::invalid_argument("context_id is required"))?;
 
                 async {
-                    tracing::info!("proxying command '{}' to context '{}'", command, context_id);
+
                     let resp = serde_json::json!({
                         "status": "success",
                         "command": command,

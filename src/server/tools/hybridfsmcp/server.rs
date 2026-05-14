@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
+use ::server_ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use super::provider::FileSystemProvider;
 use tracing::Instrument;
 
@@ -32,6 +32,13 @@ impl HybridFSMcpServer {
                 id: "fs_list_dir".to_string(),
                 name: "List Directory".to_string(),
                 description: "List contents of a directory. Input schema: {\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}}}".to_string(),
+                category: "filesystem".to_string(),
+                status: "active".to_string(),
+            },
+            McpToolProto {
+                id: "fs_search_files".to_string(),
+                name: "Search Files".to_string(),
+                description: "Search for files in a directory. Input schema: {\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"query\":{\"type\":\"string\"}}}".to_string(),
                 category: "filesystem".to_string(),
                 status: "active".to_string(),
             },
@@ -92,6 +99,18 @@ impl HybridFSMcpServer {
                     Err(e) => Err(tonic::Status::internal(format!("failed to list dir: {}", e))),
                 }
             }
+            "fs_search_files" => {
+                let path = params["path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("path is required"))?;
+                let query = params["query"].as_str().ok_or_else(|| tonic::Status::invalid_argument("query is required"))?;
+
+                match self.provider.search_files(path, query).await {
+                    Ok(entries) => {
+                        let resp = serde_json::json!({"entries": entries});
+                        Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    }
+                    Err(e) => Err(tonic::Status::internal(format!("failed to search files: {}", e))),
+                }
+            }
             "fs_hybrid_sync" => {
                 let local_path = params["local_path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("local_path is required"))?;
                 let cloud_path = params["cloud_path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("cloud_path is required"))?;
@@ -100,7 +119,7 @@ impl HybridFSMcpServer {
                 async {
                     let id = uuid::Uuid::new_v4().to_string();
                     let spiffe_id_str = &req.spiffe_id;
-                    let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+                    let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
                     let mut tenant_id = parsed.0;
                     if tenant_id.is_empty() {
                         tenant_id = "system".to_string();

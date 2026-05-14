@@ -31,22 +31,23 @@ impl PlanTier {
             PlanTier::Free => Some(500),
             PlanTier::Starter => Some(5000), // 5GB
             PlanTier::Pro => Some(50000),    // 50GB
-            PlanTier::Business => None,      // Custom/Unlimited
+            PlanTier::Business => Some(512000),      // 500GB
         }
     }
 
     pub fn max_agents(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(1),
-            PlanTier::Starter => Some(5),
-            PlanTier::Pro | PlanTier::Business => None,
+            PlanTier::Starter => Some(3),
+            PlanTier::Pro => Some(10),
+            PlanTier::Business => None,
         }
     }
 
     pub fn max_products(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(10),
-            PlanTier::Starter => Some(50),
+            PlanTier::Starter => Some(100),
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
@@ -62,7 +63,7 @@ pub struct RateLimitStatus {
 pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
-    pub telemetry_store: Option<std::sync::Arc<crate::harness::telemetry::ViolationStore>>,
+    pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
 }
 
 impl RedisRateLimiter {
@@ -70,7 +71,7 @@ impl RedisRateLimiter {
         Self { client, connection: OnceCell::new(), telemetry_store: None }
     }
 
-    pub fn with_telemetry(mut self, store: std::sync::Arc<crate::harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
         self.telemetry_store = Some(store);
         self
     }
@@ -144,7 +145,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You have reached your {} tier limit of {} AI actions this month. Consider upgrading to keep your business running smoothly!",
+                        "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -162,8 +163,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "Agent {} has reached its {} tier limit of {} actions this month. Upgrade to unlock more power.",
-                        agent_id,
+                        "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -196,7 +196,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've reached your {} tier limit of {} products. Upgrade to add more!",
+                        "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -287,7 +287,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit - allow but warn
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You have reached your {} tier limit of {}MB storage. Consider upgrading to keep your business running smoothly!",
+                        "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
@@ -325,15 +325,15 @@ mod tests {
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
-        assert_eq!(PlanTier::Business.storage_limit_mb(), None);
+        assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 
         assert_eq!(PlanTier::Free.max_agents(), Some(1));
-        assert_eq!(PlanTier::Starter.max_agents(), Some(5));
-        assert_eq!(PlanTier::Pro.max_agents(), None);
+        assert_eq!(PlanTier::Starter.max_agents(), Some(3));
+        assert_eq!(PlanTier::Pro.max_agents(), Some(10));
         assert_eq!(PlanTier::Business.max_agents(), None);
 
         assert_eq!(PlanTier::Free.max_products(), Some(10));
-        assert_eq!(PlanTier::Starter.max_products(), Some(50));
+        assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
     }

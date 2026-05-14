@@ -10,7 +10,7 @@ pub async fn bench_queue_latency() {
     tracing::info!("--- Cloud Mode (Postgres) ---");
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
 
-    if database_url != "postgres://localhost/dummy" {
+    if database_url != "postgres://localhost/dummy" && database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await;
 
@@ -36,15 +36,18 @@ pub async fn bench_db_query_time() {
     let iterations = 1000;
 
     // Cloud Mode (Postgres)
-    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-    let mut pg_times = Vec::new();
-    for _ in 0..iterations {
-        let start = Instant::now();
-        let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
-        pg_times.push(start.elapsed().as_micros());
+    // Only run if the database URL actually points to postgres, otherwise skip
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let mut pg_times = Vec::new();
+        for _ in 0..iterations {
+            let start = Instant::now();
+            let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
+            pg_times.push(start.elapsed().as_micros());
+        }
+        pg_times.sort();
+        println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
     }
-    pg_times.sort();
-    println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
 
     // Standalone Mode (SQLite)
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
@@ -70,23 +73,25 @@ pub async fn bench_api_response_time() {
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     // Cloud setup
-    let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-    let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
-    let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-    let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
+        let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
+        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
-    let mut cloud_times = Vec::new();
-    for _ in 0..iterations {
-        let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-        let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-        let start = Instant::now();
-        use crate::ohc::app::dashboard_service_server::DashboardService;
-        let _ = dashboard_service_cloud.get_dashboard(request).await;
-        cloud_times.push(start.elapsed().as_micros());
+        let mut cloud_times = Vec::new();
+        for _ in 0..iterations {
+            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+            let mut request = tonic::Request::new(req);
+            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+            let start = Instant::now();
+            use ::server_ohc::app::dashboard_service_server::DashboardService;
+            let _ = dashboard_service_cloud.get_dashboard(request).await;
+            cloud_times.push(start.elapsed().as_micros());
+        }
+        cloud_times.sort();
+        println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
     }
-    cloud_times.sort();
-    println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
 
     // Standalone setup
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
@@ -94,17 +99,18 @@ pub async fn bench_api_response_time() {
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
-    let db_standalone = crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
     let mut standalone_times = Vec::new();
     for _ in 0..iterations {
-        let req = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
-        use crate::ohc::app::dashboard_service_server::DashboardService;
+        use ::server_ohc::app::dashboard_service_server::DashboardService;
         let _ = dashboard_service_standalone.get_dashboard(request).await;
         standalone_times.push(start.elapsed().as_micros());
     }
@@ -148,7 +154,7 @@ pub async fn bench_dashboard_snapshot() {
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
     hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
     for i in 0..50 {
-        let msg = crate::ohc::orchestration::Message {
+        let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
             from_agent: "test_agent".to_string(),
             to_agent: "all".to_string(),
@@ -157,7 +163,7 @@ pub async fn bench_dashboard_snapshot() {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
         };
-        let _ = hub.clone().publish(crate::ohc::orchestration::Message {
+        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
             id: msg.id,
             from_agent: msg.from_agent,
             to_agent: msg.to_agent,
@@ -169,7 +175,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for i in 0..50 {
-        hub.register_agent(crate::ohc::orchestration::Agent {
+        hub.register_agent(::server_ohc::orchestration::Agent {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
@@ -186,12 +192,12 @@ pub async fn bench_dashboard_snapshot() {
         let hub2 = hub.clone();
         let hub3 = hub.clone();
 
-        let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-        use crate::ohc::app::dashboard_service_server::DashboardService;
+        let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        use ::server_ohc::app::dashboard_service_server::DashboardService;
         let db_arc = std::sync::Arc::new(db.clone());
         let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
         let mut request = tonic::Request::new(req_desktop);
-        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
             org_id: "system".to_string(),
             agent_id: "test".to_string(),
@@ -204,21 +210,21 @@ pub async fn bench_dashboard_snapshot() {
     fetch_times.sort();
     println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 
-    let req_mobile = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
-    let req_desktop = crate::ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+    let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+    let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
-    use crate::ohc::app::dashboard_service_server::DashboardService;
+    use ::server_ohc::app::dashboard_service_server::DashboardService;
     let db_arc = std::sync::Arc::new(db.clone());
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
-    req_mobile_t.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+    req_mobile_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
         spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
         org_id: "system".to_string(),
         agent_id: "test".to_string(),
     });
     let mut req_desktop_t = tonic::Request::new(req_desktop);
-    req_desktop_t.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+    req_desktop_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
         spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
         org_id: "system".to_string(),
         agent_id: "test".to_string(),
@@ -338,7 +344,7 @@ mod tests {
         bench_queue("Memory_Stress", mem_queue).await;
 
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        if database_url != "postgres://localhost/dummy" {
+        if database_url != "postgres://localhost/dummy" && database_url.starts_with("postgres") {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;
