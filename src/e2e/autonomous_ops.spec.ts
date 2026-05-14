@@ -42,7 +42,7 @@ test.describe('Autonomous Operations CUJ', () => {
     await expect(page.locator('text=E2E Test Message')).toBeVisible();
 
     // 5. Approve the task with 1-tap
-    const approveBtn = page.locator('button:has-text("Approve & Send")').first();
+    const approveBtn = page.locator('button:has-text("Approve & Send")').filter({ visible: true }).first();
     await approveBtn.click();
 
     // 6. Verify the task is removed from UI
@@ -76,7 +76,7 @@ test.describe('Autonomous Operations CUJ', () => {
      await expect(page.locator('text=The Manager')).toBeVisible();
 
      // Approve
-     await page.locator('button:has-text("Approve & Send")').first().click();
+     await page.locator('button:has-text("Approve & Send")').filter({ visible: true }).first().click();
      await expect(page.locator('text=Restock Item: e2e-prod-low')).not.toBeVisible();
   });
 
