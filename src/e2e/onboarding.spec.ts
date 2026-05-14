@@ -30,7 +30,13 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
+
+
     await page.click('button:has-text("Generate Description")');
+    await page.waitForTimeout(1000);
+
+await page.waitForTimeout(1000);
+
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
@@ -59,7 +65,13 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'AI Desc Store');
+
+
     await page.click('button:has-text("Generate Description")');
+    await page.waitForTimeout(1000);
+
+await page.waitForTimeout(1000);
+
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
@@ -118,7 +130,13 @@ test.describe('Onboarding Wizard', () => {
     await page.click('button:has-text("Next")');
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
+
+
     await page.click('button:has-text("Generate Description")');
+    await page.waitForTimeout(1000);
+
+await page.waitForTimeout(1000);
+
     await page.waitForTimeout(1000);
     await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4

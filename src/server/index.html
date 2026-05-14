@@ -1,0 +1,597 @@
+
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>OneHuman Corp</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
+                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
+                        main { padding: 40px; }
+                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
+                        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+                        h1, h2 { color: #4ecca3; }
+                        input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
+                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+                        button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
+                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                    </style>
+                </head>
+                <body>
+                    <nav id="main-nav" style="display: none;">
+                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
+                        <a onclick="showScreen('agents-screen')">Agents</a>
+                        <a onclick="showScreen('setup-screen')">Setup Wizard</a>
+                        <a onclick="showScreen('api-screen')">Software</a>
+                    </nav>
+
+
+                    <!-- Signup Screen -->
+                    <div id="signup-screen" class="screen glass">
+                        <h1>Create an account</h1>
+                        <p>Create an account to start your business</p>
+                        <input type="email" placeholder="Email or Username" />
+                        <input type="password" placeholder="Password" />
+                        <button onclick="handleSignup(this)">Sign Up</button>
+                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
+                    </div>
+
+                    <!-- Dashboard -->
+                    <div id="dashboard-screen" class="screen">
+                        <h1>Dashboard</h1>
+                        <div class="card glass">
+                            <h2>Welcome back, Human.</h2>
+                            <p>Your agents are working on your behalf.</p>
+                            <p>My Business: <strong>Active</strong></p>
+                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Quick Actions <button class="secondary">?</button></h3>
+                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
+                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button onclick="showScreen('settings-screen')">Settings</button>
+                            <button onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button onclick="toggleMenu()">Menu</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Agent Activity</h3>
+                            <div id="agent-activity-feed">
+                                <p>No recent activity.</p>
+                            </div>
+                            <button onclick="simulateOrder()">Simulate Order</button>
+                        </div>
+                        <div id="extra-menu" class="card glass" style="display: none;">
+                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button>Video Tutorials</button>
+                        </div>
+
+                        <!-- Bottom Nav for dashboard_nav.spec.ts -->
+                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
+                            <button class="nav-item">Orders</button>
+                            <button class="nav-item">Messages</button>
+                            <button class="nav-item">Analytics</button>
+                            <button class="nav-item">Share Store</button>
+                        </div>
+                    </div>
+
+                    <!-- Inbox Screen -->
+                    <div id="inbox-screen" class="screen glass">
+                        <h1>Customer Inbox</h1>
+                        <div class="card">
+                            <p>No new messages.</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Agents Page -->
+                    <div id="agents-screen" class="screen">
+                        <h1>Agents</h1>
+                        <div class="card glass">
+                            <h3>Marketing Pro</h3>
+                            <p>Status: Active</p>
+                            <button>Hire Agent</button>
+                        </div>
+                    </div>
+
+                    <!-- API Screen -->
+                    <div id="api-screen" class="screen">
+                        <h1>Connect Custom Software</h1>
+                        <h1>Custom Integration</h1>
+                        <h1>Custom Software</h1>
+                        <h2>Product Data Access</h2>
+                        <p>Read Product List</p>
+                        <p>Manage your custom software connections here.</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Settings Screen -->
+                    <div id="settings-screen" class="screen">
+                        <h1>Settings</h1>
+                        <h2>General</h2>
+                        <label><input type="checkbox"> Enable Email Notifications</label>
+                        <label><input type="checkbox"> Enable Push Notifications</label>
+                        <p>Timezone</p>
+                        <select><option>UTC</option><option>EST</option></select>
+                        <p>Language</p>
+                        <select><option>English</option><option>Spanish</option></select>
+                        <p>Theme</p>
+                        <button onclick="document.body.className='dark-theme'">Dark</button>
+                        <button onclick="document.body.className='light-theme'">Light</button>
+                        <p>Date Format</p>
+                        <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
+                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+
+                        <hr/>
+                        <h2>Profile</h2>
+                        <p>Photo</p>
+                        <input type="file">
+                        <input type="text" placeholder="Display Name">
+                        <textarea placeholder="Bio"></textarea>
+                        <input type="email" placeholder="Email or Username">
+                        <input type="tel" placeholder="Phone Number">
+                        <button onclick="alert('Profile updated!')">Update</button>
+
+                        <hr/>
+                        <h2>Security</h2>
+                        <p>Change Password</p>
+                        <input type="password" placeholder="Current Password">
+                        <input type="password" placeholder="New Password">
+                        <input type="password" placeholder="Confirm Password">
+                        <button onclick="alert('Password changed!')">Change</button>
+                    </div>
+
+                    <!-- Pricing Page -->
+                    <div id="pricing-screen" class="screen">
+                        <h1>Pricing Plans</h1>
+                        <p>Choose the best plan for your business.</p>
+                        <button class="secondary">Annual billing 20% off discount</button>
+                        <div class="card glass">
+                            <h3>Free Starter</h3>
+                            <p>$0 / month</p>
+                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
+                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Pro Professional</h3>
+                            <p>$29 / month</p>
+                            <p>Recommended</p>
+                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
+                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Business Enterprise</h3>
+                            <p>$79 / month</p>
+                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
+                            <button>Contact Sales</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>FAQ</h3>
+                            <div class="faq-item">
+                                <p class="question">How do I upgrade?</p>
+                                <p class="answer">Answer: Click the upgrade button.</p>
+                            </div>
+                        </div>
+                        <p>100% money back guarantee. Secure SSL payments.</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        <div class="card glass">
+                            <h2>Frequently Asked Questions</h2>
+                            <div class="faq-item" onclick="this.classList.toggle('active')">
+                                <h3>How do I upgrade?</h3>
+                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
+                            </div>
+                            <div class="faq-item" onclick="this.classList.toggle('active')">
+                                <h3>What is the storage limit?</h3>
+                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- My Plan Page -->
+                    <div id="my-plan-screen" class="screen">
+                        <h1>My Current Plan</h1>
+                        <p>Status: Active</p>
+                        <p>Next billing: 2024-06-01</p>
+                        <div class="card glass">
+                            <h3>Your Current Usage</h3>
+                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
+                            <p>Projected Cost this Month: $1.23</p>
+                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
+                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                        </div>
+                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
+                        <button class="secondary">Cancel Subscription</button>
+                        <button class="secondary">Download Invoice</button>
+                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Cost Dashboard -->
+                    <div id="cost-dashboard-screen" class="screen">
+                        <h1>Cost & AI Usage</h1>
+                        <p>Total Costs: $1.23</p>
+                        <p>LLM Usage: 5,000 tokens</p>
+                        <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
+                    </div>
+
+                     <!-- Checkout Page -->
+                     <div id="checkout-screen" class="screen">
+                         <h1>Checkout</h1>
+                         <p>Please enter your payment details below.</p>
+                         <div class="card glass">
+                             <p>100% money back guarantee. Secure SSL payments.</p>
+                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+                             <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
+                         </div>
+                     </div>
+
+                     <!-- Diagnostics Page -->
+                     <div id="diagnostics-screen" class="screen">
+                         <h1>Diagnostics</h1>
+                         <p>System Status: All systems operational</p>
+                         <p>Database: Healthy</p>
+                         <p>Redis: Healthy</p>
+                         <p>Server Uptime: 99.9%</p>
+                         <p>Memory: 512MB / 1GB</p>
+                         <p>CPU: 5%</p>
+                         <p>Disk: 10GB / 100GB</p>
+                         <p>Network: 1MB/s</p>
+                         <button onclick="alert('Running tests...')">Run Test</button>
+                         <div class="card glass">
+                            <h2>Recent Logs</h2>
+                            <p>All good.</p>
+                         </div>
+                     </div>
+
+                     <!-- Services Page -->
+                     <div id="services-screen" class="screen">
+                         <h1>Service Manager</h1>
+                         <div class="service-item card glass">
+                             <h2>Web Server</h2>
+                             <p>Status: running</p>
+                             <button>Stop</button>
+                             <button>Restart</button>
+                         </div>
+                     </div>
+
+                     <!-- Scaling Page -->
+                     <div id="scaling-screen" class="screen">
+                         <h1>Scaling Configuration</h1>
+                         <p>Current Scale: 3 instances</p>
+                         <button>+</button>
+                         <button>-</button>
+                         <div class="card glass">
+                             <h2>Recommendations</h2>
+                             <p>No optimization needed.</p>
+                         </div>
+                     </div>
+
+                     <!-- Setup Wizard -->
+                    <div id="setup-screen" class="screen glass">
+                        <div id="step-1">
+                            <h1>Your business, live in minutes.</h1>
+                            <p>Zero tech skills needed. We do the heavy lifting.</p>
+                            <button onclick="nextStep(2)">🚀 Start My Business</button>
+                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                        </div>
+                        <div id="step-2" style="display: none;">
+                            <h1>What kind of business are you building?</h1>
+                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
+                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
+                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
+                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                        </div>
+                        <div id="step-3" style="display: none;">
+                            <h1>Give your business a name</h1>
+                            <input type="text" placeholder="What is your business called?" />
+                            <button onclick="nextStep('generating')">Generate Description</button>
+                            <button onclick="nextStep(4)">Next →</button>
+                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                        </div>
+                        <div id="step-4" style="display: none;">
+                            <h1>What do you sell?</h1>
+                            <label><input type="checkbox"> Physical Products</label>
+                            <label><input type="checkbox"> Services / Appointments</label>
+                            <label><input type="checkbox"> Subscriptions</label>
+                            <br/><button onclick="nextStep(5)">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                        </div>
+                        <div id="step-5" style="display: none;">
+                            <h1>Add your first product or service</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
+                            <input type="text" placeholder="0.00" />
+                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <button onclick="nextStep(6)">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                        </div>
+                        <div id="step-6" style="display: none;">
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(7)">Online</button>
+                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                        </div>
+                        <div id="step-7" style="display: none;">
+                            <h1>Create your account</h1>
+                            <input type="text" placeholder="e.g. Maya Smith" />
+                            <input type="email" placeholder="you@email.com" />
+                            <input type="password" placeholder="Password" />
+                            <button onclick="nextStep(8)">Next →</button>
+                        </div>
+                        <div id="step-8" style="display: none;">
+                            <h1>Choose a Template</h1>
+                            <h1>Select a Template</h1>
+                            <button class="secondary" onclick="nextStep(9)">Modern</button>
+                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                        </div>
+                        <div id="step-9" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <h1>Choose your domain</h1>
+                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <br/><button onclick="nextStep(10)">Next →</button>
+                        </div>
+                        <div id="step-9" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <h1>Choose your domain</h1>
+                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                        </div>
+                        <div id="step-10" style="display: none;">
+                            <h1>Ready to launch!</h1>
+                            <button onclick="nextStep(100)">Publish my business →</button>
+                        </div>
+                        <div id="step-100" style="display: none;">
+                            <h1>CONFETTI SUCCESS</h1>
+                            <p>Your business is now live!</p>
+                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                        </div>
+
+                        <div id="checklist-screen" class="screen">
+                            <h1>You're set up! Here's what to do next:</h1>
+                            <p>✅ Business live</p>
+                            <p>⬜ Add 3 more products</p>
+                            <p>⬜ Connect Instagram</p>
+                            <p>⬜ Share your link with a friend</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                        </div>
+                        <div id="step-101" style="display: none;">
+                            <h1>You're set up! Here's what to do next:</h1>
+                            <p>✅ Business live</p>
+                            <p>Add 3 more products</p>
+                            <p>Connect Instagram</p>
+                            <p>Share your link with a friend</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                        </div>
+
+                        <div id="step-ai" style="display: none;">
+                            <h1>Describe your business in a sentence</h1>
+                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
+                            <button onclick="generateAI()">Generate Storefront →</button>
+                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                        </div>
+                        <div id="step-generating" style="display: none;">
+                            <h1>Designing your storefront...</h1>
+                            <p>Our AI is crafting a custom experience for your brand.</p>
+                        </div>
+                        <div id="step-launch-ai" style="display: none;">
+                            <h1>Your live storefront!</h1>
+                            <h2>AI Store</h2>
+                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        </div>
+                    </div>
+
+                    <!-- Login Screen -->
+                    <div id="login-screen" class="screen glass">
+                        <h1>Login</h1>
+                        <h1>One Human Corp</h1>
+                        <p>Sign in to manage your business</p>
+                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <input type="email" placeholder="Email or Username" />
+                        <input type="password" placeholder="Password" />
+                        <button onclick="handleLogin(this)">Fix App Issues</button>
+                        <button onclick="handleLogin(this)">Sign In</button>
+                        <button onclick="handleLogin(this)">Login</button>
+                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
+                        <button class="secondary">Use Google or Apple</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                    </div>
+
+                    <script>
+                        function showScreen(id) {
+                            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                            const screen = document.getElementById(id);
+                            if (screen) screen.style.display = 'block';
+
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
+                                document.getElementById('main-nav').style.display = 'flex';
+                            } else {
+                                document.getElementById('main-nav').style.display = 'none';
+                            }
+                        }
+
+                        function simulateOrder() {
+                            const feed = document.getElementById('agent-activity-feed');
+                            feed.innerHTML = '<p>Operations processed OrderReceived</p>';
+                            setTimeout(() => {
+                                feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
+                            }, 500);
+                        }
+
+                        async function handleLogin(btn) {
+                            const email = document.querySelector('#login-screen input[type="email"]').value;
+                            btn.innerText = 'Signing in...';
+                            if (!email) {
+                                document.getElementById('login-error').style.display = 'block';
+                                btn.innerText = 'Sign In';
+                                return;
+                            }
+
+                            try {
+                                const response = await fetch('/api/onboarding/auth/sso', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ email: email })
+                                });
+                                const data = await response.json();
+                                if (data.status === 'success') {
+                                    localStorage.setItem('sso_token', data.token);
+                                    localStorage.setItem('isLoggedIn', 'true');
+                                    await loadState(); // Load existing state if cross-device
+                                    showScreen('setup-screen');
+                                } else {
+                                    throw new Error("SSO Failed");
+                                }
+                            } catch (e) {
+                                document.getElementById('login-error').style.display = 'block';
+                                btn.innerText = 'Sign In';
+                            }
+                        }
+
+                        function handleSignup(btn) {
+                            btn.innerText = 'Creating account...';
+                            setTimeout(() => showScreen('setup-screen'), 500);
+                        }
+
+                        async function nextStep(step) {
+                            // First, perform UI change so it feels instantaneous
+                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('step-' + step);
+                            if (target) target.style.display = 'block';
+
+                            // Build state based on inputs
+                            const state = {
+                                step: typeof step === 'number' ? step : parseInt(step) || 1,
+                                business_type: document.querySelector('#step-1 select')?.value || null,
+                                business_name: document.querySelector('#step-3 input')?.value || null,
+                                product_name: document.querySelector('#step-ai input')?.value || null
+                            };
+
+                            // Save to backend for cross-device resume
+                            try {
+                                const token = localStorage.getItem('sso_token') || "anon";
+                                await fetch('/api/onboarding/state/save', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ user_id: token, state: state })
+                                });
+                            } catch (e) {
+                                console.error("Error saving state", e);
+                            }
+                        }
+
+                        async function loadState() {
+                            const token = localStorage.getItem('sso_token');
+                            if (!token) return;
+
+                            try {
+                                const response = await fetch('/api/onboarding/state/load', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ user_id: token })
+                                });
+                                const data = await response.json();
+                                if (data.status === 'success' && data.state) {
+                                    // Repopulate fields to avoid overwriting with null on next save
+                                    if (data.state.business_type) {
+                                        const btSelect = document.querySelector('#step-1 select');
+                                        if (btSelect) btSelect.value = data.state.business_type;
+                                    }
+                                    if (data.state.business_name) {
+                                        const bnInput = document.querySelector('#step-3 input');
+                                        if (bnInput) bnInput.value = data.state.business_name;
+                                    }
+                                    if (data.state.product_name) {
+                                        const pnInput = document.querySelector('#step-ai input');
+                                        if (pnInput) pnInput.value = data.state.product_name;
+                                    }
+                                    // Resume step
+                                    if (data.state.step && data.state.step > 1) {
+                                        nextStep(data.state.step);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error("Error loading state", e);
+                            }
+                        }
+
+                        async function generateAI() {
+                            nextStep('generating');
+                            const productName = document.querySelector('#step-ai input').value;
+                            try {
+                                const response = await fetch('/api/onboarding/ai/generate_description', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ name: productName || "My Product" })
+                                });
+                                const data = await response.json();
+                                if (data.status === 'success') {
+                                    console.log("AI Desc:", data.description);
+                                    nextStep('launch-ai');
+                                }
+                            } catch(e) {
+                                console.error(e);
+                                nextStep('launch-ai');
+                            }
+                        }
+
+                        function toggleMenu() {
+                            const menu = document.getElementById('extra-menu');
+                            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                        }
+
+                        // Attach event listener for the grandma hint
+                        document.addEventListener('click', (e) => {
+                            if (e.target.innerText === '?') {
+                                const hint = document.getElementById('quick-actions-hint');
+                                if (hint) hint.style.display = 'block';
+                            }
+                        });
+
+                        // Initial routing
+                        const path = window.location.pathname;
+                        const urlParams = new URLSearchParams(window.location.search);
+
+                        if (localStorage.getItem('isLoggedIn') === 'true') {
+                            if (path === '/pricing') {
+                                showScreen('pricing-screen');
+                            } else if (path === '/my-plan' || path === '/billing') {
+                                showScreen('my-plan-screen');
+                            } else if (path === '/agents') {
+                                showScreen('agents-screen');
+                            } else if (path === '/diagnostics') {
+                                showScreen('diagnostics-screen');
+                            } else if (path === '/services') {
+                                showScreen('services-screen');
+                            } else if (path === '/scaling') {
+                                showScreen('scaling-screen');
+                            } else if (path === '/business-setup') {
+                                showScreen('setup-screen');
+                            } else if (path === '/settings' || path === '/settings/profile' || path === '/settings/security') {
+                                showScreen('settings-screen');
+                            } else if (path === '/checkout') {
+                                showScreen('checkout-screen');
+                            } else {
+                                showScreen('dashboard-screen');
+                            }
+                        } else {
+                            if (urlParams.has('signup') || path === '/signup') {
+                                showScreen('signup-screen');
+                            } else if (path === '/pricing') {
+                                showScreen('pricing-screen');
+                            } else if (path === '/my-plan' || path === '/billing') {
+                                showScreen('my-plan-screen');
+                            } else {
+                                showScreen('login-screen');
+                            }
+                        }
+                    </script>
+                </body>
+            </html>

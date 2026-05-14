@@ -8,6 +8,13 @@ pub struct OnboardingAgent {
 }
 
 impl OnboardingAgent {
+    pub fn get_pool(&self) -> sqlx::PgPool {
+        self.db.pool.clone()
+    }
+    pub fn get_hub(&self) -> std::sync::Arc<crate::hub::Hub> {
+        self.hub.clone()
+    }
+
     pub fn new(db: std::sync::Arc<crate::db::DB>, hub: std::sync::Arc<crate::hub::Hub>) -> Self {
         OnboardingAgent { db, hub }
     }
