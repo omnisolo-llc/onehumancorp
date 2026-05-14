@@ -1,1 +1,1 @@
-👂 Echo: [fix description]
+Maintainer: Zero WIP exit
