@@ -109,6 +109,7 @@ rust_library(
         "@crates//:tree-sitter-bash",
         "@crates//:walkdir",
         "@crates//:temp-env",
+        "@crates//:url",
     ],
 )
 

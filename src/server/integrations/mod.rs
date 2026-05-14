@@ -1,3 +1,4 @@
+pub mod ssrf;
 pub mod catalog;
 pub mod registry;
 pub mod chat;

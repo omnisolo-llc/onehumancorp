@@ -14,10 +14,11 @@ pub struct RealTwilioClient {
 
 impl RealTwilioClient {
     pub fn new(account_sid: String, auth_token: String) -> Self {
+        let http_client = crate::integrations::ssrf::build_safe_client().expect("Failed to build safe Twilio client");
         Self {
             account_sid,
             auth_token,
-            http_client: Client::new(),
+            http_client,
         }
     }
 }

@@ -46,9 +46,12 @@ impl IntegrationsRegistry {
     }
 
     // Chat methods
-    pub fn test_connection(&self, integration_id: &str, _creds: ChatTestRequest) -> Result<(), String> {
+    pub fn test_connection(&self, integration_id: &str, creds: ChatTestRequest) -> Result<(), String> {
         if integration_id.is_empty() {
             return Err("integrationId is required".to_string());
+        }
+        if !creds.webhook_url.is_empty() {
+            crate::integrations::ssrf::validate_url(&creds.webhook_url)?;
         }
         Ok(())
     }
@@ -123,6 +126,10 @@ impl IntegrationsRegistry {
     }
 
     pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
+        if !base_url.is_empty() {
+            crate::integrations::ssrf::validate_url(base_url)?;
+        }
+
         let mut insts = self.instances.write().unwrap();
         let inst = IntegrationInstance {
             id: integration_id.to_string(),
@@ -263,7 +270,13 @@ impl IntegrationsRegistry {
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
     let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
-    let client = reqwest::Client::new();
+    let client = match crate::integrations::ssrf::build_safe_client() {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to build safe client for Telegram: {}", e);
+            return;
+        }
+    };
     let res = client.post(&url)
         .json(&serde_json::json!({
             "chat_id": chat_id,
@@ -278,7 +291,13 @@ async fn send_telegram_message(bot_token: String, chat_id: String, text: String)
 }
 
 async fn send_discord_webhook(webhook_url: String, username: String, content: String) {
-    let client = reqwest::Client::new();
+    let client = match crate::integrations::ssrf::build_safe_client() {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to build safe client for Discord: {}", e);
+            return;
+        }
+    };
     let res = client.post(&webhook_url)
         .json(&serde_json::json!({
             "username": username,
