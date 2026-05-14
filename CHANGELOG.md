@@ -5,6 +5,16 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Multi-tenant Kubernetes routing rules.
+- Reduce CloudNative-PG connections.
+
+### Privacy/Offline Improvements
+- Implement offline SQLite transaction batching for Standalone mode.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
