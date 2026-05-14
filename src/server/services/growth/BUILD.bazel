@@ -9,6 +9,9 @@ filegroup(
         "referrals.rs",
         "service.rs",
         "viral_loop.rs",
+        "email_marketing.rs",
+        "social_media.rs",
+        "templates.rs",
     ],
     visibility = ["//src/server/services:__pkg__"],
 )

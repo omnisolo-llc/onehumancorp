@@ -282,6 +282,71 @@ service HubService {
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
+
+  // Social & Email Growth RPCs
+  rpc GetSocialPosts(EmptyRequest) returns (SocialPostsResponse);
+  rpc CreateSocialPost(CreateSocialPostRequest) returns (SocialPost);
+  rpc GetEmailCampaigns(EmptyRequest) returns (EmailCampaignsResponse);
+  rpc CreateEmailCampaign(CreateEmailCampaignRequest) returns (EmailCampaign);
+  rpc GetBusinessMetadata(EmptyRequest) returns (BusinessMetadata);
+  rpc UpdateBusinessMetadata(BusinessMetadata) returns (BusinessMetadata);
+  rpc UpdateSocialPost(UpdateSocialPostRequest) returns (SocialPost);
+  rpc UpdateEmailCampaign(UpdateEmailCampaignRequest) returns (EmailCampaign);
+  rpc GetMilestones(EmptyRequest) returns (GetMilestonesResponse);
+  rpc MarkMilestoneNotified(MarkMilestoneNotifiedRequest) returns (EmptyResponse);
+}
+
+message SocialPost {
+  string id = 1;
+  string platform = 2;
+  string content = 3;
+  repeated string media_urls = 4;
+  string status = 5;
+  int64 scheduled_at_unix = 6;
+  int64 published_at_unix = 7;
+}
+
+message CreateSocialPostRequest {
+  string platform = 1;
+  string content = 2;
+  repeated string media_urls = 3;
+  int64 scheduled_at_unix = 4;
+}
+
+message SocialPostsResponse {
+  repeated SocialPost posts = 1;
+}
+
+message EmailCampaign {
+  string id = 1;
+  string title = 2;
+  string subject = 3;
+  string content_html = 4;
+  string status = 5;
+  int32 total_recipients = 6;
+  int32 open_count = 7;
+  int32 click_count = 8;
+  int64 scheduled_at_unix = 9;
+  int64 sent_at_unix = 10;
+}
+
+message CreateEmailCampaignRequest {
+  string title = 1;
+  string subject = 2;
+  string content_html = 3;
+  int64 scheduled_at_unix = 4;
+}
+
+message EmailCampaignsResponse {
+  repeated EmailCampaign campaigns = 1;
+}
+
+message BusinessMetadata {
+  string tagline = 1;
+  string description = 2;
+  string logo_url = 3;
+  string cover_image_url = 4;
+  string share_url = 5;
 }
 
 message StartOnboardingRequest {
@@ -825,6 +890,43 @@ service GrowthService {
   
   rpc GetWaitlist(EmptyRequest) returns (WaitlistResponse);
   rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
+
+  // Social & Email Growth RPCs
+  rpc GetSocialPosts(EmptyRequest) returns (SocialPostsResponse);
+  rpc CreateSocialPost(CreateSocialPostRequest) returns (SocialPost);
+  rpc GetEmailCampaigns(EmptyRequest) returns (EmailCampaignsResponse);
+  rpc CreateEmailCampaign(CreateEmailCampaignRequest) returns (EmailCampaign);
+  rpc GetBusinessMetadata(EmptyRequest) returns (BusinessMetadata);
+  rpc UpdateBusinessMetadata(BusinessMetadata) returns (BusinessMetadata);
+  rpc UpdateSocialPost(UpdateSocialPostRequest) returns (SocialPost);
+  rpc UpdateEmailCampaign(UpdateEmailCampaignRequest) returns (EmailCampaign);
+  rpc GetMilestones(EmptyRequest) returns (GetMilestonesResponse);
+  rpc MarkMilestoneNotified(MarkMilestoneNotifiedRequest) returns (EmptyResponse);
+}
+
+message UpdateSocialPostRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message UpdateEmailCampaignRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message BusinessMilestone {
+  string id = 1;
+  string milestone_key = 2;
+  int64 achieved_at_unix = 3;
+  bool notified = 4;
+}
+
+message GetMilestonesResponse {
+  repeated BusinessMilestone milestones = 1;
+}
+
+message MarkMilestoneNotifiedRequest {
+  string id = 1;
 }
 
 message ApprovalRequest {

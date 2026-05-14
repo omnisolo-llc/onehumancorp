@@ -304,14 +304,30 @@ impl OperationsWorker {
                         .await
                         .unwrap_or(0);
 
-                    if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_msg = if order_count == 1 {
-                            "Congratulations on your first sale! This is just the beginning of your journey."
-                        } else {
-                            "You've reached 10 orders! Your business is gaining serious momentum."
+                    if order_count == 1 || order_count == 10 || order_count == 100 {
+                        let milestone_title = match order_count {
+                            1 => "🎉 Milestone: First Sale!",
+                            10 => "🎉 Milestone: 10th Order!",
+                            100 => "🚀 Milestone: 100 Orders!",
+                            _ => "🎉 Milestone Reached!"
+                        };
+                        let milestone_msg = match order_count {
+                            1 => "Congratulations on your first sale! This is just the beginning of your journey.",
+                            10 => "You've reached 10 orders! Your business is gaining serious momentum.",
+                            100 => "UNBELIEVABLE! 100 orders! You are officially a growing business.",
+                            _ => "Congratulations on reaching a new milestone!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
+                        let milestone_key = format!("{}_ORDERS", order_count);
+
+                        // Record milestone
+                        let _ = sqlx::query("INSERT INTO business_milestones (id, tenant_id, milestone_key) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .bind(&milestone_key)
+                            .execute(&db.pool)
+                            .await;
+
                         let _ = sqlx::query(
                             r#"
                             INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
@@ -353,14 +369,30 @@ impl OperationsWorker {
                         .await
                         .unwrap_or(0);
 
-                    if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_msg = if order_count == 1 {
-                            "Congratulations on your first sale! This is just the beginning of your journey."
-                        } else {
-                            "You've reached 10 orders! Your business is gaining serious momentum."
+                    if order_count == 1 || order_count == 10 || order_count == 100 {
+                        let milestone_title = match order_count {
+                            1 => "🎉 Milestone: First Sale!",
+                            10 => "🎉 Milestone: 10th Order!",
+                            100 => "🚀 Milestone: 100 Orders!",
+                            _ => "🎉 Milestone Reached!"
+                        };
+                        let milestone_msg = match order_count {
+                            1 => "Congratulations on your first sale! This is just the beginning of your journey.",
+                            10 => "You've reached 10 orders! Your business is gaining serious momentum.",
+                            100 => "UNBELIEVABLE! 100 orders! You are officially a growing business.",
+                            _ => "Congratulations on reaching a new milestone!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
+                        let milestone_key = format!("{}_ORDERS", order_count);
+
+                        // Record milestone
+                        let _ = sqlx::query("INSERT INTO business_milestones (id, tenant_id, milestone_key) VALUES (?, ?, ?) ON CONFLICT DO NOTHING")
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .bind(&milestone_key)
+                            .execute(sqlite_pool)
+                            .await;
+
                         let _ = sqlx::query(
                             r#"
                             INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
@@ -740,7 +772,7 @@ impl PromoterWorker {
         let db_social = db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
-                if event.action == "ProductCreated" {
+                if event.action == "ProductCreated" || event.action == "SaleMilestone" || event.action == "NewsletterDrafted" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");

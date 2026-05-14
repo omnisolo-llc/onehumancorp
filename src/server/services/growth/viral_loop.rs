@@ -47,6 +47,34 @@ impl ViralLoopTracker {
     }
 }
 
+pub struct OpenGraphCard {
+    pub title: String,
+    pub description: String,
+    pub image_url: String,
+    pub site_name: String,
+    pub url: String,
+}
+
+impl OpenGraphCard {
+    pub fn generate_html(&self) -> String {
+        format!(
+            r#"<meta property="og:title" content="{}" />
+<meta property="og:description" content="{}" />
+<meta property="og:image" content="{}" />
+<meta property="og:site_name" content="{}" />
+<meta property="og:url" content="{}" />
+<meta name="twitter:card" content="summary_large_image">"#,
+            self.title, self.description, self.image_url, self.site_name, self.url
+        )
+    }
+}
+
+pub fn get_viral_footer() -> String {
+    r#"<footer style="margin-top: 50px; padding: 20px; text-align: center; border-top: 1px solid #eee; font-size: 14px; color: #666;">
+    Built with <a href="https://ohc.app" style="color: #0055ff; text-decoration: none; font-weight: 600;">OneHumanCorp</a> — Start your free business →
+</footer>"#.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
