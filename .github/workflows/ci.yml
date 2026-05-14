@@ -21,8 +21,6 @@ defaults:
 jobs:
   bazel-test:
     runs-on: oci-runner
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -94,8 +92,6 @@ jobs:
 
   bazel-build:
     runs-on: oci-runner
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -159,8 +155,6 @@ jobs:
 
 #   playwright-e2e:
 #     runs-on: oci-runner
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 #     timeout-minutes: 60
 #     steps:
 #       - uses: actions/checkout@v6
