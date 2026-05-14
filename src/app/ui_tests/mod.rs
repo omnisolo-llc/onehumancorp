@@ -106,3 +106,5 @@ pub mod guide_onboarding_e2e;
 pub mod guide_onboarding_e2e_extended;
 pub mod website_builder_e2e_tests;
 pub mod echo_agents_ux_test;
+
+mod issue_9074_e2e;
