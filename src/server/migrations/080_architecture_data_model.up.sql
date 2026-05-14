@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS products (
 
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_products ON products
-    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 CREATE INDEX idx_products_tenant ON products (tenant_id);
 
 CREATE TABLE IF NOT EXISTS services (
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS services (
 
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_services ON services
-    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 CREATE INDEX idx_services_tenant ON services (tenant_id);
 
 CREATE TABLE IF NOT EXISTS customers (
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS customers (
 
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_customers ON customers
-    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 CREATE INDEX idx_customers_tenant ON customers (tenant_id);
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_orders ON orders
-    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 CREATE INDEX idx_orders_tenant ON orders (tenant_id);
 CREATE INDEX idx_orders_customer ON orders (customer_id);
 CREATE INDEX idx_orders_created_at ON orders (created_at);
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_order_items ON order_items
-    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 CREATE INDEX idx_order_items_tenant ON order_items (tenant_id);
 CREATE INDEX idx_order_items_order ON order_items (order_id);
 CREATE INDEX idx_order_items_product ON order_items (product_id);
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS bookings (
 
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_bookings ON bookings
-    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 CREATE INDEX idx_bookings_tenant ON bookings (tenant_id);
 CREATE INDEX idx_bookings_customer ON bookings (customer_id);
 CREATE INDEX idx_bookings_service ON bookings (service_id);
@@ -130,6 +130,6 @@ CREATE TABLE IF NOT EXISTS agent_memories (
 
 ALTER TABLE agent_memories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_agent_memories ON agent_memories
-    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system');
+    USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 CREATE INDEX idx_agent_memories_tenant ON agent_memories (tenant_id);
 CREATE INDEX idx_agent_memories_created_at ON agent_memories (created_at);
