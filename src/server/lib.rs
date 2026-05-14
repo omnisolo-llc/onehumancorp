@@ -1739,7 +1739,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Dashboard Screen -->
-                    <div id="dashboard-screen" class="screen">
+                    <div id="dashboard-screen" class="screen glass">
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
@@ -1752,12 +1752,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="showScreen(\'agents-screen\')" style="min-width: 44px; min-height: 44px; padding: 12px; margin: 8px;">View Helpers</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <button onclick="showScreen(\'referral-dashboard-screen\')" style="min-width: 44px; min-height: 44px; padding: 12px; margin: 8px;">Get Rewards</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
