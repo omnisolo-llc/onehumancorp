@@ -107,7 +107,7 @@ fn init_articles() -> Vec<HelpArticle> {
     articles
 }
 
-pub fn help_routes() -> Router {
+pub fn help_routes<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/api/help/articles", get(get_articles))
         .route("/api/help/tooltips", get(get_tooltips))
