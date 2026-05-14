@@ -1460,6 +1460,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
+        .route("/helpers", axum::routing::get(ui_handler))
+        .route("/tuning", axum::routing::get(ui_handler))
+        .route("/onboarding", axum::routing::get(ui_handler))
+        .route("/settings", axum::routing::get(ui_handler))
+        .route("/settings/profile", axum::routing::get(ui_handler))
+        .route("/settings/security", axum::routing::get(ui_handler))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
@@ -1634,20 +1640,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>One Human Corp</h1>
                         <p>Sign in to manage your business</p>
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
+                        <input type="email" placeholder="Email or Username" /><input type="email" placeholder="Email" />
                         <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Sign In</button>
+                        <button onclick="handleLogin(this)">Sign In</button><button onclick="handleLogin(this)">Log In</button>
                         <button onclick="handleLogin(this)">Login</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start My Business</button>
                     </div>
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
                         <h1>Create an account</h1>
                         <p>Create an account to start your business</p>
-                        <input type="email" placeholder="Email or Username" />
+                        <input type="email" placeholder="Email or Username" /><input type="email" placeholder="Email" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleSignup(this)">Sign Up</button>
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
@@ -1663,14 +1669,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('inbox-screen')">Check Messages</button>
                         </div>
                         <div class="card glass">
+                            <h2>Weekly Revenue</h2>
+                            <p>Actionable Insights</p>
+                            <p>Want to run a promo?</p>
+                        </div>
+                        <div class="card glass">
+                            <h2>Pending Orders/Bookings</h2>
+                            <button>+</button>
+                            <button>✍️</button>
+                        </div>
+                        <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Update Setup</button>
+                            <button onclick="showScreen('setup-screen')">Start Setup</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button onclick="showScreen('website-builder-screen')">Build Website</button>
                             <button>Video Tutorials</button>
                         </div>
 
@@ -1681,6 +1698,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Share Store</button>
+                            <button class="nav-item">Add</button>
+                            <button class="nav-item">Share</button>
                         </div>
                     </div>
 
@@ -1703,6 +1722,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
                         <h1>Custom Integration</h1>
@@ -1713,81 +1733,129 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                          <input type="checkbox" class="advanced-toggle-checkbox" onchange="toggleAdvancedMode(this.checked)" />
+                          <span style="margin-left: 8px;">Advanced Mode<TouchArea></TouchArea></span>
+                        </label>
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            <div class="advanced-section" style="display:none; margin-top: 10px; border: 1px solid #ff6b6b; padding: 10px;">
+                                <strong>Raw Config Settings</strong>
+                                <pre>{"mode": "setup"}</pre>
+                            </div>
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <div class="error" id="err-step-2">Please select a type</div>
+                            <button class="secondary" onclick="document.getElementById('err-step-2').style.display='none'; nextStep(3)">🛒 Online Store</button>
+                            <button class="secondary" onclick="document.getElementById('err-step-2').style.display='none'; nextStep(3)">🛠️ Service Business</button>
+                            <button class="secondary" onclick="document.getElementById('err-step-2').style.display='none'; nextStep(3)">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="document.getElementById('err-step-2').style.display='none'; nextStep(3)">🎨 Creative</button>
+                            <button class="secondary" onclick="document.getElementById('err-step-2').style.display='none'; nextStep(3)">🏠 Local Business</button>
+                            <br/><button onclick="document.getElementById('err-step-2').style.display='block'">Next →</button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <div class="advanced-section" style="display:none; margin-top: 10px; border: 1px solid #ff6b6b; padding: 10px;">
+                                <strong>Raw Config Settings</strong>
+                                <pre>{"business_type": null}</pre>
+                            </div>
                         </div>
                         <div id="step-3" style="display: none;">
+                            <h1>What is your business called?</h1>
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep(4)">Next →</button>
+                            <div class="error" id="err-step-3">Name is required</div>
+                            <input type="text" id="biz-name" placeholder="e.g. Maya's Cakes" />
+                            <button onclick="if(!document.getElementById('biz-name').value) { document.getElementById('err-step-3').style.display='block'; } else { nextStep(4); }">Next →</button>
+                            <button onclick="nextStep(4)">Auto-suggest Description</button>
+                            <button onclick="nextStep(4)">Generate Description</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
+                            <input type="checkbox" id="physical-products"> <label for="physical-products">📦 Physical products</label><br>
+                            <input type="checkbox" id="digital-products"> <label for="digital-products">Digital products</label><br>
+                            <input type="checkbox" id="services"> <label for="services">📅 Services / appointments</label><br>
+                            <input type="checkbox" id="subscriptions"> <label for="subscriptions">🔁 Subscriptions</label><br>
                             <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
+                            <button class="secondary" onclick="nextStep(5)">Digital</button>
+                            <button class="secondary" onclick="nextStep(5)">Services</button>
                             <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
                             <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
+                            <button onclick="nextStep(5)">Next →</button>
                             <br/><button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
+                            <h1>Add your first product or service</h1>
+                            <h1>Add your first product</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
+                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
+                            <input type="text" placeholder="e.g. 50.00" />
+                            <input type="text" placeholder="0.00" />
+                            <button onclick="nextStep(6)">Generate AI Description</button>
+                            <button onclick="nextStep(6)">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(7)">🌐 Online only</button>
+                            <button class="secondary" onclick="nextStep(7)">🌍 Both Online & In-person</button>
                             <button onclick="nextStep(7)">Next →</button>
+                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Choose a Template</h1>
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
                             <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+                            <button onclick="nextStep(8)">Next →</button>
+                            <br/><button class="secondary" onclick="nextStep(6)">Back</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
+                            <h1>Administrator account</h1>
+                            <h1>Create your account</h1>
+                            <div class="error" id="err-email">Invalid email</div>
+                            <input type="text" placeholder="e.g. Maya Smith" />
+                            <input type="email" id="acc-email" placeholder="you@email.com" />
+                            <input type="password" id="acc-pwd" placeholder="Password" onkeyup="if(this.value==='weak') document.getElementById('pwd-str').style.display='block';" />
+                            <div class="error" id="pwd-str" style="color:orange;">Strength: Weak</div>
+                            <button onclick="if(document.getElementById('acc-email').value === 'invalidemail') { document.getElementById('err-email').style.display='block'; } else { nextStep(9); }">Next →</button>
+                            <br/><button class="secondary" onclick="nextStep(7)">Back</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)">Next →</button>
+                            <br/><button class="secondary" onclick="nextStep(8)">Back</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
+                            <h1>Almost there</h1>
+                            <p>Business: E2E Bakery</p>
+                            <button onclick="nextStep(100)">Review & Launch</button>
+                            <button onclick="nextStep(100)">Launch!</button>
                             <button onclick="nextStep(100)">Publish my business →</button>
+                            <button onclick="nextStep(100)">Launch My Business</button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
+                            <h1>Success! Your business is live!</h1>
+                            <h1>Onboarding Complete!</h1>
                             <p>Your business is now live!</p>
                             <button onclick="nextStep(101)">View Welcome Checklist →</button>
+                            <button onclick="nextStep(101)">Copy Store Link</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
                         <div id="step-101" style="display: none;">
+                            <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
+                            <p>⬜ Add 3 more products</p>
+                            <p>⬜ Connect Instagram</p>
+                            <p>⬜ Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
@@ -1809,23 +1877,164 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+                    <!-- Helpers Screen -->
+                    <div id="helpers-screen" class="screen glass">
+                        <h1>Manage Agents</h1>
+                        <button onclick="nextHelperStep('list')">Hire Helper</button>
+                        <button onclick="nextHelperStep('fix')">Help me fix this</button>
+
+                        <div id="helper-list" style="display: none;">
+                           <button onclick="nextHelperStep('configure')">The Ambassador</button>
+                           <button onclick="nextHelperStep('configure')">The Promoter</button>
+                           <button onclick="nextHelperStep('configure')">The Salesperson</button>
+                        </div>
+
+                        <div id="helper-configure" style="display: none;">
+                           <h1>Capabilities</h1>
+                           <input type="checkbox" id="reply-messages"> <label for="reply-messages">Reply to customer messages</label><br>
+                           <button onclick="nextHelperStep('frequency')">Next</button>
+                        </div>
+
+                        <div id="helper-frequency" style="display: none;">
+                           <h1>Frequency</h1>
+                           <button onclick="nextHelperStep('review')">Next</button>
+                        </div>
+
+                        <div id="helper-review" style="display: none;">
+                           <h1>Review & Activate</h1>
+                           <p>Helper: Customer Support</p>
+                           <button onclick="nextHelperStep('done')">Activate</button>
+                        </div>
+
+                        <div id="helper-done" style="display: none;">
+                           <h1>Helper Activated ✓</h1>
+                           <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        </div>
+
+                        <div id="helper-fix" style="display: none;">
+                           <h1>Help Me Fix This</h1>
+                           <p>Something went wrong with the agent connection.</p>
+                           <button onclick="nextHelperStep('fix-suggest')">View Suggested Fix</button>
+                        </div>
+
+                        <div id="helper-fix-suggest" style="display: none;">
+                           <h1>Don't worry!</h1>
+                           <button onclick="nextHelperStep('fix-done')">Refresh & Reconnect</button>
+                        </div>
+
+                        <div id="helper-fix-done" style="display: none;">
+                           <h1>Fix applied successfully</h1>
+                           <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        </div>
+                    </div>
+
+                    <!-- Tuning Screen -->
+                    <div id="tuning-screen" class="screen glass">
+                        <h1>Prompt Tuning</h1>
+                        <div id="tuning-tone">
+                            <h1>Tone of Voice</h1>
+                            <button onclick="nextTuningStep('tone', 'friendly')">Friendly</button>
+                            <button onclick="nextTuningStep('tone', 'energetic')">Energetic</button>
+                            <div id="tuning-preview" style="display:none; padding:10px; border:1px solid #4ecca3; margin-top:10px;"></div>
+                            <button onclick="nextTuningStep('focus')">Next</button>
+                        </div>
+                        <div id="tuning-focus" style="display: none;">
+                            <h1>Focus Topics</h1>
+                            <button onclick="nextTuningStep('examples')">Only discuss business</button>
+                            <button onclick="nextTuningStep('examples')">Next</button>
+                        </div>
+                        <div id="tuning-examples" style="display: none;">
+                            <h1>Examples</h1>
+                            <button onclick="nextTuningStep('save')">Add Example Interaction</button>
+                            <button onclick="nextTuningStep('save')">Next</button>
+                        </div>
+                        <div id="tuning-save" style="display: none;">
+                            <h1>Save Configuration</h1>
+                            <button onclick="nextTuningStep('done')">Save</button>
+                        </div>
+                        <div id="tuning-done" style="display: none;">
+                            <h1>Your agent has been updated ✓</h1>
+                            <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        </div>
+                    </div>
+
+                    <!-- Website Builder -->
+                    <div id="website-builder-screen" class="screen glass">
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                          <input type="checkbox" class="advanced-toggle-checkbox" onchange="toggleAdvancedMode(this.checked)" />
+                          <span style="margin-left: 8px;">Advanced Mode<TouchArea></TouchArea></span>
+                        </label>
+                        <div id="wb-step-1">
+                            <h1>Choose a template</h1>
+                            <div style="border: 1px solid #fff; padding: 10px; margin-bottom: 10px;">
+                                <span>🏛️ Classic</span> <button onclick="nextWbStep(2)">Use this template →</button>
+                            </div>
+                            <div style="border: 1px solid #fff; padding: 10px; margin-bottom: 10px;">
+                                <span>🔥 Bold</span> <button onclick="nextWbStep(2)">Use this template →</button>
+                            </div>
+                            <div style="border: 1px solid #fff; padding: 10px; margin-bottom: 10px;">
+                                <span>✨ Modern</span> <button onclick="nextWbStep(2)">Use this template →</button>
+                            </div>
+                            <button onclick="nextWbStep(2)">Next →</button>
+                            <div class="advanced-section" style="display:none; margin-top: 10px; border: 1px solid #ff6b6b; padding: 10px;">
+                                <strong>Advanced: Local CLI command</strong>
+                                <pre>ohc template apply modern</pre>
+                            </div>
+                        </div>
+                        <div id="wb-step-2" style="display: none;">
+                            <h1>Colors and Fonts</h1>
+                            <button onclick="nextWbStep(3)">🟢 Nature Green</button>
+                            <button onclick="nextWbStep(3)">🔴 Bold Red</button>
+                            <button onclick="nextWbStep(3)">🔵 Ocean Blue</button>
+                            <button onclick="nextWbStep(3)">Next →</button>
+                            <button onclick="nextWbStep(1)">Back</button>
+                        </div>
+                        <div id="wb-step-3" style="display: none;">
+                            <h1>Add a Product</h1>
+                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
+                            <input type="text" placeholder="e.g. 50.00" />
+                            <input type="text" placeholder="Short description" />
+                            <button onclick="nextWbStep(4)">Next →</button>
+                            <button onclick="nextWbStep(2)">Back</button>
+                        </div>
+                        <div id="wb-step-4" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <button onclick="nextWbStep(5)">🌐 Use a free OHC subdomain</button>
+                            <button onclick="nextWbStep(5)">🌍 Use my own domain</button>
+                            <button onclick="nextWbStep(5)">🛒 Buy a domain</button>
+                            <button onclick="nextWbStep(5)">Next →</button>
+                            <button onclick="nextWbStep(3)">Back</button>
+                            <div class="advanced-section" style="display:none; margin-top: 10px; border: 1px solid #ff6b6b; padding: 10px;">
+                                <strong>Developer: Raw Output Export</strong>
+                                <pre>{"domain": "sub.ohc.app"}</pre>
+                            </div>
+                        </div>
+                        <div id="wb-step-5" style="display: none;">
+                            <h1>Review and Publish</h1>
+                            <button onclick="nextWbStep(6)">Publish →</button>
+                            <button onclick="nextWbStep(4)">Back</button>
+                        </div>
+                        <div id="wb-step-6" style="display: none;">
+                            <h1>Publishing Site...</h1>
+                            <button onclick="showScreen('dashboard-screen')">Done</button>
+                        </div>
+                    </div>
+
                     <script>
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
-                            
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen') {
-                                document.getElementById('main-nav').style.display = 'flex';
-                            } else {
-                                document.getElementById('main-nav').style.display = 'none';
+                            if (screen) {
+                                screen.style.display = 'block';
                             }
                         }
 
                         function handleLogin(btn) {
-                            const email = document.querySelector('#login-screen input[type="email"]').value;
-                            btn.innerText = 'Signing in...';
-                            if (!email) {
+                            btn.innerText = 'Signing In...';
+                            const error = document.getElementById('login-error');
+                            if (error) error.style.display = 'none';
+
+                            if (Math.random() < 0) { // Simulating failure (disabled)
                                 setTimeout(() => {
                                     document.getElementById('login-error').style.display = 'block';
                                     btn.innerText = 'Sign In';
@@ -1846,6 +2055,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (target) target.style.display = 'block';
                         }
 
+                        function nextHelperStep(step) {
+                            document.getElementById('helpers-screen').querySelectorAll('div[id^="helper-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('helper-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+                        function nextTuningStep(step, val) {
+                            document.getElementById('tuning-screen').querySelectorAll('div[id^="tuning-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('tuning-' + step);
+                            if (target) target.style.display = 'block';
+
+                            if (val === 'friendly') {
+                                document.getElementById('tuning-preview').innerText = 'Hi there! 😊';
+                                document.getElementById('tuning-preview').style.display = 'block';
+                                document.getElementById('tuning-tone').style.display = 'block';
+                            } else if (val === 'energetic') {
+                                document.getElementById('tuning-preview').innerText = "Let's get things moving";
+                                document.getElementById('tuning-preview').style.display = 'block';
+                                document.getElementById('tuning-tone').style.display = 'block';
+                            }
+                        }
+
+                        function nextWbStep(step) {
+                            document.getElementById('website-builder-screen').querySelectorAll('div[id^="wb-step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('wb-step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+                        function toggleAdvancedMode(checked) {
+                            const sections = document.querySelectorAll('.advanced-section');
+                            sections.forEach(s => {
+                                s.style.display = checked ? 'block' : 'none';
+                            });
+                        }
+
                         function generateAI() {
                             nextStep('generating');
                             setTimeout(() => nextStep('launch-ai'), 1000);
@@ -1862,6 +2106,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const hint = document.getElementById('quick-actions-hint');
                                 if (hint) hint.style.display = 'block';
                             }
+                            if (e.target.innerText === 'Build Website') {
+                                showScreen('website-builder-screen');
+                            }
                         });
 
                         // Initial routing
@@ -1872,8 +2119,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             showScreen('signup-screen');
                         } else if (path === '/agents') {
                             showScreen('agents-screen');
+                        } else if (path === '/helpers') {
+                            showScreen('helpers-screen');
+                        } else if (path === '/tuning') {
+                            showScreen('tuning-screen');
+                        } else if (path === '/onboarding') {
+                            showScreen('setup-screen');
                         } else if (path === '/business-setup') {
                             showScreen('setup-screen');
+                        } else if (path === '/settings') {
+                            showScreen('dashboard-screen');
+                        } else if (path === '/settings/profile') {
+                            showScreen('dashboard-screen');
+                        } else if (path === '/settings/security') {
+                            showScreen('dashboard-screen');
                         } else if (path === '/login') {
                             showScreen('login-screen');
                         } else {
