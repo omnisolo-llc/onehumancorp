@@ -40,7 +40,7 @@ where
 {
     Router::new()
         .route("/", get(list_approvals))
-        .route("/{id}", post(decide_approval))
+        .route("/:id", post(decide_approval))
         .with_state(orchestrator)
 }
 
