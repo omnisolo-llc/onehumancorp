@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"context"
-	"onehumancorp/srcs/server/onboarding"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -31,8 +29,6 @@ func TestHandleReferralClick(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "test_tenant")
-	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(svc.HandleReferralClick)
@@ -65,8 +61,6 @@ func TestHandleReferralConvert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "test_tenant")
-	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(svc.HandleReferralConvert)
@@ -99,8 +93,6 @@ func TestHandleTeamInviteAccept(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.WithValue(req.Context(), onboarding.TenantContextKey, "test_tenant")
-	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(svc.HandleTeamInviteAccept)

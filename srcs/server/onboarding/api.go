@@ -12,8 +12,8 @@ import (
 )
 
 
-type ContextKey string
-const TenantContextKey ContextKey = "tenant_id"
+type contextKey string
+const tenantContextKey contextKey = "tenant_id"
 
 type APIHandler struct {
 	service *Service
@@ -75,7 +75,7 @@ func (h *APIHandler) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Multi-Tenant Safety Check: Read tenant_id from session/context, not from headers/body/query
-	tenantID, ok := r.Context().Value(TenantContextKey).(string)
+	tenantID, ok := r.Context().Value(tenantContextKey).(string)
 	if !ok || tenantID == "" {
 		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
 		return
@@ -97,7 +97,7 @@ func (h *APIHandler) HandleSaveState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID, ok := r.Context().Value(TenantContextKey).(string)
+	tenantID, ok := r.Context().Value(tenantContextKey).(string)
 	if !ok || tenantID == "" {
 		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
 		return
@@ -123,7 +123,7 @@ func (h *APIHandler) HandleGetState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID, ok := r.Context().Value(TenantContextKey).(string)
+	tenantID, ok := r.Context().Value(tenantContextKey).(string)
 	if !ok || tenantID == "" {
 		http.Error(w, "Unauthorized: missing or invalid tenant session", http.StatusUnauthorized)
 		return
@@ -196,7 +196,7 @@ func TenantAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// Inject into context
-		ctx := context.WithValue(r.Context(), TenantContextKey, tenantID)
+		ctx := context.WithValue(r.Context(), tenantContextKey, tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
