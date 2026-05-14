@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = ["hub.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/proto",
+        "@gazelle__go_deps__github_com_redis_rueidis//:rueidis",
+        "@gazelle__go_deps__go_opentelemetry_io_otel//:otel",
+        "@gazelle__go_deps__go_opentelemetry_io_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["hub_test.go"],
+    embed = [":orchestration"],
+    deps = [
+        "//srcs/proto",
+    ],
+)
