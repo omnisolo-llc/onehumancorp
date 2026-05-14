@@ -9,7 +9,11 @@ use std::cmp::Ordering;
 #[derive(Clone)]
 pub struct QueuedJob {
     pub priority: i32,
-    pub job_id: String, pub timestamp_ms: i64, pub job: proto::JobDispatch,
+    pub job_id: String,
+    pub timestamp_ms: i64,
+    pub job_id: String,
+    pub timestamp_ms: i64,
+    pub job: proto::JobDispatch,
     pub retries: u32,
 }
 
@@ -25,6 +29,14 @@ impl PartialOrd for QueuedJob {
         Some(self.cmp(other))
     }
 }
+
+impl PartialEq for QueuedJob {
+    fn eq(&self, other: &Self) -> bool {
+        self.job_id == other.job_id
+    }
+}
+
+impl Eq for QueuedJob {}
 
 pub struct DistributedJobQueue {
     node_id: String,

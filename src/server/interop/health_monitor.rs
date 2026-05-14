@@ -26,7 +26,6 @@ impl NodeStats {
             self.latencies.pop_front();
         }
         self.latencies.push_back(latency);
-
     }
 
     pub fn average_latency(&self) -> u64 {
@@ -136,7 +135,7 @@ mod tests {
         let protocol = Arc::new(InteropProtocol::new(bus.clone(), lock, "test".to_string()));
         let monitor = ActiveHealthMonitor::new("test".to_string(), bus, protocol);
 
-        let mut ack = proto::HealthAck {
+        let ack = proto::HealthAck {
             source_node_id: "node_dead".to_string(),
             target_node_id: "test".to_string(),
             timestamp_ms: chrono::Utc::now().timestamp_millis() - 10000,
