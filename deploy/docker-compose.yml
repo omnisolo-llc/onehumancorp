@@ -19,7 +19,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.1"
           memory: 64M
         reservations:
           cpus: "0.1"
@@ -50,8 +50,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
-          memory: 128M
+          cpus: "0.1"
+          memory: 64M
         reservations:
           cpus: "0.1"
           memory: 64M
@@ -165,7 +165,7 @@ services:
       resources:
         limits:
           cpus: "0.3"
-          memory: 128M
+          memory: 64M
 
   powersync:
     logging:
@@ -188,8 +188,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
-          memory: 128M
+          cpus: "0.1"
+          memory: 64M
 
   chatwoot-migrate:
     logging:
@@ -238,8 +238,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
-          memory: 128M
+          cpus: "0.1"
+          memory: 64M
 
   chatwoot-worker:
     logging:
@@ -263,8 +263,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
-          memory: 128M
+          cpus: "0.1"
+          memory: 64M
 
   prometheus:
     logging:
@@ -326,7 +326,7 @@ services:
       resources:
         limits:
           cpus: "0.1"
-          memory: 128M
+          memory: 64M
 
   telemetry-mcp-bridge:
     logging:
