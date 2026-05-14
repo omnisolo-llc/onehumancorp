@@ -274,8 +274,18 @@ mod tests {
             let mut p2 = PathBuf::from(runfiles_dir.clone()); p2.push("ohc"); search_dirs.push(p2.clone());
             p2.push("srcs");
             search_dirs.push(p2);
+        } else {
+            // Fallback for Cargo or standalone execution
+            if PathBuf::from("src").exists() {
+                search_dirs.push(PathBuf::from("src"));
+            }
+            if PathBuf::from("../src").exists() {
+                search_dirs.push(PathBuf::from("../src"));
+            }
+            if PathBuf::from("../../src").exists() {
+                search_dirs.push(PathBuf::from("../../src"));
+            }
         }
-
         let mut checked_files = 0;
 
         for dir in search_dirs {
