@@ -13,7 +13,6 @@
 ### Privacy/Offline Improvements
 - Implement offline-first local vector embeddings cache for the OHC Swarm.
 
-
 ## v0.4.39 (Cloud) / v0.4.39+1 (Standalone)
 
 ### Cloud Scaling Improvements
