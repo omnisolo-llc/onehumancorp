@@ -13,3 +13,8 @@ pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
 pub mod chromadb;
+pub mod meta;
+pub mod cal_com;
+pub mod resend;
+pub mod shippo;
+pub mod google_meet;
