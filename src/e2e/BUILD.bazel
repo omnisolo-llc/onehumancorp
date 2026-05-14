@@ -6,7 +6,7 @@ load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 sh_binary(
     name = "run_playwright_e2e",
     srcs = [
-        "//bazel/rules/playwright:run_playwright.sh"],
+        "wizard_rigorous_flow.spec.ts","//bazel/rules/playwright:run_playwright.sh"],
     data = [
         "//scripts:run-playwright.mjs",
         "//deploy:docker-compose.e2e.yml",
