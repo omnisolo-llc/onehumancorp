@@ -10,8 +10,10 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
-        .route("/state", get(get_state))
-        .route("/state", post(save_state))
+        .route("/get-state", get(get_state))
+        .route("/save-state", post(save_state))
+        .route("/provision", post(provision))
+        .route("/publish-site", post(publish_site))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
@@ -41,4 +43,24 @@ async fn save_state(
     Json(_payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+async fn provision(
+    State(_agent): State<Arc<OnboardingAgent>>,
+    Json(_payload): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    Ok(Json(serde_json::json!({
+        "status": "provisioned",
+        "message": "Business setup details processed."
+    })))
+}
+
+async fn publish_site(
+    State(_agent): State<Arc<OnboardingAgent>>,
+    Json(_payload): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    Ok(Json(serde_json::json!({
+        "status": "published",
+        "url": "https://mybusiness.ohc.app"
+    })))
 }
