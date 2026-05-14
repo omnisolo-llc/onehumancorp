@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "db",
+    srcs = ["provider.go"],
+    importpath = "server_ohc/db",
+    visibility = ["//visibility:public"],
+    embedsrcs = ["migrations/001_tasks.sql"],
+)
+
+go_test(
+    name = "db_test",
+    srcs = ["provider_test.go"],
+    embed = [":db"],
+    deps = [
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
+)
