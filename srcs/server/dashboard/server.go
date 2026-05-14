@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
-
-	"onehumancorp/srcs/server/telemetry"
 )
 
 type EventBroker struct {
@@ -87,46 +84,4 @@ func HandleStream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-}
-
-func HandleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	deploymentMode := r.Header.Get("X-Deployment-Mode")
-	if deploymentMode == "" {
-		deploymentMode = "standalone"
-	}
-
-	defer func() {
-		telemetry.AutoDreamSyncDuration.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
-	}()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
-}
-
-func HandleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	deploymentMode := r.Header.Get("X-Deployment-Mode")
-	if deploymentMode == "" {
-		deploymentMode = "standalone"
-	}
-
-	defer func() {
-		telemetry.AutoDreamQueryDuration.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
-	}()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"results":[]}`))
-}
-
-func HandleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
-	deploymentMode := r.Header.Get("X-Deployment-Mode")
-	if deploymentMode == "" {
-		deploymentMode = "standalone"
-	}
-
-	telemetry.MeshBroadcastTotal.WithLabelValues(deploymentMode).Inc()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"broadcasted"}`))
 }

@@ -138,13 +138,7 @@ func main() {
 	tierAPI := tiers.NewAPIHandler(tierSvc)
 	mux.HandleFunc("/api/tiers/check", tierAPI.HandleCheckLimit)
 
-	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
-	mux.HandleFunc("/api/dashboard/growth/viral-coefficient", dashboard.HandleViralCoefficient)
-
 	mux.HandleFunc("/api/v1/stream", dashboard.HandleStream)
-	mux.HandleFunc("/api/v1/autodream/sync", dashboard.HandleAutoDreamSync)
-	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
-	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
 	syncHandler := sync.NewSyncHandler(taskStore)
 	mux.HandleFunc("/api/sync/missions", syncHandler.HandleSyncMissions)
 
