@@ -1092,3 +1092,27 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
     }
+// Validation dummy comment
+
+    #[tokio::test]
+    async fn test_interop_resume_mission_timeout() {
+        let bus = Arc::new(MemoryBus::new());
+        // Use a lock that is always taken
+        struct HeldLock;
+        #[async_trait::async_trait]
+        impl DistributedLock for HeldLock {
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+                Ok(false)
+            }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
+                Ok(())
+            }
+        }
+
+        let protocol = InteropProtocol::new(bus.clone(), Arc::new(HeldLock), "node1".to_string());
+
+        let result = protocol.resume_mission("mission_resume_timeout", "tenant_1", vec![1, 2, 3]).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Timeout waiting for lock"));
+    }
