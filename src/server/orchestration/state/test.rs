@@ -93,7 +93,7 @@ async fn setup_db() -> Arc<DB> {
     ).execute(&sqlite_pool).await.unwrap();
 
     let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test?statement_cache_capacity=0")
         .unwrap();
 
     Arc::new(DB {
@@ -119,7 +119,7 @@ async fn test_single_agent_flow() {
     }
 
     let result = state_manager.transition_state(&task_id, "system", "PENDING", "EXECUTING", Some("agent_1"), None).await;
-    tracing::info!("Result: {:?}", result);
+    println!("Result: {:?}", result);
     assert!(result.is_ok());
 
     if let DbStore::Sqlite(pool) = &db.store {

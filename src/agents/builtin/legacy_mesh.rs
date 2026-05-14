@@ -34,16 +34,19 @@ impl DistributedLock {
                 return Err("timeout acquiring lock".to_string());
             }
 
-            let res: Option<String> = redis::cmd("SET")
+            let res_result: Result<Option<String>, redis::RedisError> = redis::cmd("SET")
                 .arg(&self.key)
                 .arg(&self.value)
                 .arg("NX")
                 .arg("PX")
                 .arg(expiration.as_millis() as u64)
                 .query_async(&mut con)
-                .await
-                .map_err(|e| e.to_string())?;
+                .await;
 
+            let res = match res_result {
+                Ok(v) => v,
+                Err(e) => return Err(e.to_string()),
+            };
             if res.is_some() {
                 return Ok(());
             }
@@ -139,7 +142,7 @@ mod tests {
     #[tokio::test]
     async fn test_claim_mission_no_db() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let res = claim_mission(&pool, "agent-1").await;
         // Should fail because table doesn't exist or connection fails on execution!
         assert!(res.is_err());

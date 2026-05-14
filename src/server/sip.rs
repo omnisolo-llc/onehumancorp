@@ -26,11 +26,11 @@ impl SipDB {
         sqlx::query(
             "UPDATE agent_missions
              SET status = 'blocked',
-                 mission_log = COALESCE(mission_log, '') || $1,
+                 mission_log = COALESCE(mission_log, '') || '\n' || $1,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $2 AND organization_id = $3"
         )
-        .bind(&extract_blockers_message(blockers))
+        .bind(blockers)
         .bind(mission_id)
         .bind(&self.org_id)
         .execute(&mut *tx)
@@ -63,19 +63,19 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("DELETE FROM agent_missions WHERE status = 'STUCK' AND organization_id = $1")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+                // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
+                sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -383,9 +383,4 @@ mod tests {
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res.is_err());
     }
-}
-
-// Additional refactoring: extracted inline functions for clarity.
-pub fn extract_blockers_message(blockers: &str) -> String {
-    format!("\n{}", blockers)
 }
