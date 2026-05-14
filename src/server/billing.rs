@@ -14,6 +14,18 @@ pub struct Tracker {
 }
 
 impl Tracker {
+
+    pub fn record_metric(&self, metric: &str, value: u64, tags: &[opentelemetry::KeyValue]) {
+        if let Some(auditor) = &self.auditor {
+            if let Some(store) = auditor.telemetry_store.as_ref() {
+                if metric == "llm_tokens" {
+                    store.llm_cost_counter.add(value, tags);
+                } else if metric == "storage_bytes" {
+                    store.storage_bytes_counter.add(value, tags);
+                }
+            }
+        }
+    }
     pub fn new() -> Self {
         Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None, auditor: None }
     }
