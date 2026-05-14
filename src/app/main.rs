@@ -2872,6 +2872,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
     });
 
+
+                let dashboard_briefing_fetch_handle = dashboard.as_weak();
+                tokio::spawn(async move {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        // Using reqwest for a quick GET request since it's a simple endpoint
+                        let http_client = reqwest::Client::new();
+                        if let Ok(res) = http_client.get(format!("{}/api/v1/business_briefing", std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string()))).send().await {
+                            if let Ok(data) = res.json::<serde_json::Value>().await {
+                                if let Some(bullets) = data.get("bullets").and_then(|b| b.as_array()) {
+                                    let mut string_bullets = Vec::new();
+                                    for b in bullets {
+                                        if let Some(s) = b.as_str() {
+                                            string_bullets.push(slint::SharedString::from(s));
+                                        }
+                                    }
+                                    slint::invoke_from_event_loop(move || {
+                                        if let Some(ui) = dashboard_briefing_fetch_handle.upgrade() {
+                                            ui.set_daily_briefing_content(slint::ModelRc::new(slint::VecModel::from(string_bullets)));
+                                            ui.set_show_daily_briefing(true);
+                                        }
+                                    }).unwrap();
+                                }
+                            }
+                        }
+                    }
+                });
                 let dashboard_briefing_handle = dashboard.as_weak();
                 dashboard.on_dismiss_daily_briefing(move || {
                     if let Some(ui) = dashboard_briefing_handle.upgrade() {
