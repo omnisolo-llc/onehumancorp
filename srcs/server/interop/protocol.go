@@ -61,7 +61,7 @@ func (p *InteropProtocol) Handoff(ctx context.Context, missionID, tenantID strin
 		MissionId:         missionID,
 		TenantId:          tenantID,
 		TimestampMs:       time.Now().UnixMilli(),
-		StateSnapshotJson: statePayload,
+		StateSnapshot: statePayload,
 	}
 
 	buf, err := proto.Marshal(msgProto)
@@ -212,7 +212,7 @@ func (p *InteropProtocol) DispatchJob(ctx context.Context, jobID, tenantID, acti
 		JobId:       jobID,
 		TenantId:    tenantID,
 		ActionName:  actionName,
-		PayloadJson: payload,
+		Payload: payload,
 		TimestampMs: time.Now().UnixMilli(),
 	}
 
