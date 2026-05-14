@@ -1,5 +1,6 @@
 pub use ::server_harness as harness;
 pub mod api;
+pub mod docs;
 pub mod db;
 pub use ::server_auth as auth;
 pub mod hub;
@@ -1462,6 +1463,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/agents", axum::routing::get(ui_handler))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
+        .nest("/api/v1/help", api::help::router().with_state(mesh_transport.clone()))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -1619,6 +1621,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
                         button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
                         .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+
+                        /* Documentation & Help System CSS */
+                        .tooltip-container { position: relative; display: inline-block; cursor: help; }
+                        .tooltip {
+                            visibility: hidden; background: rgba(15, 23, 42, 0.95);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            border: 1px solid rgba(78, 204, 163, 0.5); color: white;
+                            text-align: left; padding: 12px; border-radius: 8px;
+                            position: absolute; z-index: 1000; bottom: 125%; left: 50%;
+                            transform: translateX(-50%); opacity: 0; transition: opacity 0.3s;
+                            width: max-content; max-width: 250px; font-size: 0.9em;
+                            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                        }
+                        .tooltip-container:hover .tooltip { visibility: visible; opacity: 1; }
+
+                        #help-chat-wrapper { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
+                        #help-chat-btn { background: #4ecca3; color: #0f172a; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(78, 204, 163, 0.4); display: flex; align-items: center; justify-content: center; }
+                        #help-chat-window { display: none; position: absolute; bottom: 80px; right: 0; width: 350px; height: 450px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+
+                        .walkthrough-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 2000; display: none; }
+                        .walkthrough-highlight { position: absolute; z-index: 2001; border: 2px solid #4ecca3; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.7); background: transparent; }
+                        .walkthrough-bubble { position: absolute; z-index: 2002; background: white; color: #0f172a; padding: 20px; border-radius: 12px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+                        .walkthrough-bubble button { margin-top: 15px; width: 100%; }
+
+                        .video-embed { width: 100%; border-radius: 12px; overflow: hidden; margin: 15px 0; border: 1px solid rgba(255,255,255,0.1); }
+                        .help-search { width: 100%; padding: 15px; font-size: 1.1em; background: rgba(255,255,255,0.05); border: 1px solid #4ecca3; border-radius: 8px; color: white; margin-bottom: 25px; }
+                        .help-category { margin-bottom: 30px; }
+                        .help-article { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 15px; cursor: pointer; transition: background 0.2s; }
+                        .help-article:hover { background: rgba(255,255,255,0.05); border-color: rgba(78, 204, 163, 0.5); }
+                        .article-content { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); color: #ccc; line-height: 1.6; }
                     </style>
                 </head>
                 <body>
@@ -1626,7 +1658,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('help-screen')">Help Center</a>
+                        <a onclick="showScreen('changelog-screen')">What's New</a>
+                        <a onclick="showScreen('api-screen')">Advanced Software</a>
                     </nav>
 
 
@@ -1640,6 +1674,71 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
+
+                    <!-- Floating Help Chat -->
+                    <div id="help-chat-wrapper">
+                        <button id="help-chat-btn" onclick="toggleHelpChat()">?</button>
+                        <div id="help-chat-window">
+                            <div style="padding: 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <h3 style="margin: 0; color: #4ecca3;">Ask Anything</h3>
+                                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ccc;">Powered by AI Help Agent</p>
+                            </div>
+                            <div id="help-chat-messages" style="flex: 1; padding: 20px; overflow-y: auto;">
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 12px; margin-bottom: 10px; display: inline-block;">
+                                    Hi! I'm your support agent. How can I help you grow your business today?
+                                </div>
+                            </div>
+                            <div style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <input type="text" id="help-chat-input" placeholder="Type your question..." style="margin-bottom: 0; border: none; background: rgba(255,255,255,0.05);" onkeypress="handleHelpChat(event)" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Walkthrough Overlay -->
+                    <div id="walkthrough-overlay" class="walkthrough-overlay">
+                        <div id="walkthrough-highlight" class="walkthrough-highlight"></div>
+                        <div id="walkthrough-bubble" class="walkthrough-bubble">
+                            <h3 id="wt-title" style="margin-top: 0;">Step</h3>
+                            <p id="wt-text">Description</p>
+                            <button onclick="nextWalkthroughStep()">Next Step</button>
+                            <button class="secondary" onclick="endWalkthrough()" style="margin-top: 5px;">Skip Tour</button>
+                        </div>
+                    </div>
+
+                    <!-- Help Center Screen -->
+                    <div id="help-screen" class="screen">
+                        <h1>Help Center</h1>
+                        <p>Welcome! We are here to help your business succeed.</p>
+
+                        <input type="text" id="help-search-input" class="help-search" placeholder="Search for help (e.g., 'how to get paid')" onkeyup="searchHelp()" />
+
+                        <div id="video-content-container">
+                            <p style="color: #ccc;">Loading latest guides from our servers...</p>
+                        </div>
+                    </div>
+
+                    <!-- Changelog Screen -->
+                    <div id="changelog-screen" class="screen">
+                        <h1>What's New</h1>
+                        <p>We are always improving OneHuman Corp for you. Here are the latest updates.</p>
+
+                        <div class="card glass">
+                            <h2>✨ New Help Center & Tooltips</h2>
+                            <p style="color: #ccc; font-size: 0.9em;">Released Today</p>
+                            <img src="https://onehumancorp.com/assets/help_center_screenshot.png" alt="Help Center Screenshot" style="width: 100%; border-radius: 8px; margin: 10px 0;">
+                            <p>We've added a brand new Help Center, interactive tours, and a floating AI help chat to make running your business even easier! Look for the '?' button.</p>
+                        </div>
+
+                        <div class="card glass">
+                            <h2>🚀 Faster Payments</h2>
+                            <p style="color: #ccc; font-size: 0.9em;">Last Week</p>
+                            <img src="https://onehumancorp.com/assets/payments_screenshot.png" alt="Payments Screenshot" style="width: 100%; border-radius: 8px; margin: 10px 0;">
+                            <p>Your money now reaches your bank account 2x faster. No extra steps required!</p>
+                        </div>
+
+                        <a href="https://onehumancorp.com/changelog" target="_blank" style="color: #4ecca3;">View full history on our website →</a>
+                    </div>
+
                     <!-- Dashboard -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
@@ -1647,7 +1746,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
-                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button id="btn-check-messages" onclick="showScreen('inbox-screen')">Check Messages</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
@@ -1701,16 +1800,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <h1>Advanced Software (API)</h1>
+                        <p><em>Note: This section is for advanced users or software developers who want to connect custom tools to OneHuman Corp. If you are a business owner, you likely don't need this!</em></p>
+                        <div class="card glass">
+                            <h2>Interactive API Reference (Swagger UI)</h2>
+                            <p>Connect your custom checkout, inventory system, or mobile app directly to our platform.</p>
+                            <div id="swagger-ui-container">
+                                <iframe src="/api/v1/help/swagger" width="100%" height="800px" style="border: none; border-radius: 8px; background: white;"></iframe>
+                            </div>
+                        </div>
+                        <p>Need help with APIs? <a onclick="showScreen('help-screen')" style="color: #4ecca3; cursor: pointer;">Visit the Help Center</a>.</p>
                     </div>
-
-                    <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
                         <h1>Settings</h1>
                         <h2>General</h2>
@@ -2012,7 +2112,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
+                            if (id === 'help-screen' || id === 'changelog-screen' || id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -2106,7 +2206,210 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 showScreen('login-screen');
                             }
                         }
-                    </script>
+
+                        // --- Documentation System JS ---
+                        const tooltipRegistry = {
+                            'btn-setup-payments': 'Connect your bank so you can start making money!',
+                            'btn-check-messages': 'View messages from your customers and agents here.',
+                            'main-nav': 'Use this menu to navigate through your business platform.',
+                            'help-chat-wrapper': 'Click here to ask our AI a question 24/7!'
+                        };
+
+                        function applyTooltips() {
+                            for (const [id, text] of Object.entries(tooltipRegistry)) {
+                                const el = document.getElementById(id);
+                                if (el && !el.classList.contains('tooltip-applied')) {
+                                    el.classList.add('tooltip-applied', 'tooltip-container');
+                                    const span = document.createElement('span');
+                                    span.className = 'tooltip';
+                                    span.innerText = text;
+                                    el.appendChild(span);
+                                    let timer;
+                                    el.addEventListener('touchstart', (e) => { timer = setTimeout(() => { span.style.visibility = 'visible'; span.style.opacity = '1'; }, 500); });
+                                    el.addEventListener('touchend', () => { clearTimeout(timer); setTimeout(() => { span.style.visibility = 'hidden'; span.style.opacity = '0'; }, 2000); });
+                                }
+                            }
+                        }
+
+                        document.addEventListener('DOMContentLoaded', applyTooltips);
+                        const originalShowScreen = showScreen;
+                        showScreen = function(id) { originalShowScreen(id); applyTooltips(); };
+
+                        async function loadHelpVideos() {
+                            try {
+                                const response = await fetch('/api/v1/help/videos');
+                                if (response.ok) {
+                                    const videos = await response.json();
+                                    const c = document.getElementById('video-content-container');
+                                    if(c) {
+                                        c.innerHTML = ''; // Clear loading text
+                                        videos.forEach((v) => {
+                                            const categoryDiv = document.createElement('div');
+                                            categoryDiv.className = 'help-category';
+                                            categoryDiv.id = 'cat-' + v.id;
+
+                                            const h2 = document.createElement('h2');
+                                            h2.textContent = v.category;
+                                            categoryDiv.appendChild(h2);
+
+                                            const articleDiv = document.createElement('div');
+                                            articleDiv.className = 'help-article';
+                                            articleDiv.onclick = function() { toggleArticle(this) };
+
+                                            const h3 = document.createElement('h3');
+                                            h3.textContent = v.title;
+                                            articleDiv.appendChild(h3);
+
+                                            const contentDiv = document.createElement('div');
+                                            contentDiv.className = 'article-content';
+
+                                            const p = document.createElement('p');
+                                            p.textContent = v.description;
+                                            contentDiv.appendChild(p);
+
+                                            const videoEmbed = document.createElement('div');
+                                            videoEmbed.className = 'video-embed';
+                                            const videoInner = document.createElement('div');
+                                            videoInner.style.background = '#222';
+                                            videoInner.style.paddingTop = '177%';
+                                            videoInner.style.position = 'relative';
+                                            const video = document.createElement('video');
+                                            video.controls = true;
+                                            video.style.position = 'absolute';
+                                            video.style.top = '0';
+                                            video.style.left = '0';
+                                            video.style.width = '100%';
+                                            video.style.height = '100%';
+                                            const source = document.createElement('source');
+                                            source.src = v.url; // URL is controlled by our backend
+                                            source.type = 'video/mp4';
+                                            video.appendChild(source);
+                                            videoInner.appendChild(video);
+                                            videoEmbed.appendChild(videoInner);
+                                            contentDiv.appendChild(videoEmbed);
+
+                                            if (v.walkthrough_id) {
+                                                const btn = document.createElement('button');
+                                                btn.className = 'secondary';
+                                                btn.textContent = 'Start Interactive Tour';
+                                                btn.onclick = function(e) {
+                                                    e.stopPropagation();
+                                                    startWalkthrough(v.walkthrough_id);
+                                                };
+                                                contentDiv.appendChild(btn);
+                                            }
+
+                                            articleDiv.appendChild(contentDiv);
+                                            categoryDiv.appendChild(articleDiv);
+                                            c.appendChild(categoryDiv);
+                                        });
+                                    }
+                                }
+                            } catch (e) { }
+                        }
+                        document.addEventListener('DOMContentLoaded', loadHelpVideos);
+
+                        function toggleHelpChat() {
+                            const chat = document.getElementById('help-chat-window');
+                            if (chat) chat.style.display = chat.style.display === 'flex' ? 'none' : 'flex';
+                        }
+
+                        async function handleHelpChat(e) {
+                            if (e.key === 'Enter' && e.target.value.trim() !== '') {
+                                const msgContainer = document.getElementById('help-chat-messages');
+                                const question = e.target.value; e.target.value = '';
+                                const userMsg = document.createElement('div');
+                                userMsg.style = 'background: #4ecca3; color: #0f172a; padding: 10px 15px; border-radius: 12px; margin-bottom: 10px; display: inline-block; align-self: flex-end; margin-left: auto;';
+                                userMsg.innerText = question;
+                                const rightAlign = document.createElement('div');
+                                rightAlign.style = 'display: flex; flex-direction: column;'; rightAlign.appendChild(userMsg);
+                                msgContainer.appendChild(rightAlign);
+
+                                try {
+                                    const response = await fetch('/api/agents/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: question, context: 'help_center' }) });
+                                    const botMsg = document.createElement('div');
+                                    botMsg.style = 'background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 12px; margin-bottom: 10px; display: inline-block;';
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        const tNode = document.createTextNode(data.reply);
+                                        botMsg.appendChild(tNode);
+                                        const br = document.createElement('br'); botMsg.appendChild(br);
+                                        const link = document.createElement('a'); link.innerText = "Read article →"; link.style = "color: #4ecca3; cursor: pointer;"; link.onclick = () => showScreen('help-screen');
+                                        botMsg.appendChild(link);
+                                    } else {
+                                        botMsg.innerText = "Support AI offline.";
+                                    }
+                                    msgContainer.appendChild(botMsg);
+                                } catch (err) {
+                                    const botMsg = document.createElement('div');
+                                    botMsg.style = 'background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 12px; margin-bottom: 10px; display: inline-block;';
+                                    botMsg.innerText = "Network error.";
+                                    msgContainer.appendChild(botMsg);
+                                }
+                                msgContainer.scrollTop = msgContainer.scrollHeight;
+                            }
+                        }
+
+                        function toggleArticle(element) {
+                            const content = element.querySelector('.article-content');
+                            if(content) content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                        }
+                        function searchHelp() {
+                            const input = document.getElementById('help-search-input').value.toLowerCase();
+                            document.querySelectorAll('.help-article').forEach(article => {
+                                article.style.display = article.innerText.toLowerCase().includes(input) ? 'block' : 'none';
+                            });
+                        }
+
+                        const walkthroughs = {
+                            'store-setup': [
+                                { screenId: 'dashboard-screen', targetId: 'main-nav', title: 'Dashboard', text: 'This menu helps you navigate. Let\'s go to the Setup Wizard to build your store.' },
+                                { screenId: 'setup-screen', targetId: 'btn-setup-payments', title: 'Get Paid', text: 'Click here to connect your bank account so customers can pay you.' }
+                            ],
+                            'accept-payment': [
+                                { screenId: 'setup-screen', targetId: 'btn-setup-payments', title: 'Connect Bank', text: 'To accept payments, we need to securely link your bank.' }
+                            ]
+                        };
+                        let currentWt = null; let currentWtStep = 0;
+                        function startWalkthrough(id) {
+                            showScreen('dashboard-screen'); currentWt = walkthroughs[id]; currentWtStep = 0;
+                            const overlay = document.getElementById('walkthrough-overlay');
+                            if(overlay) overlay.style.display = 'block';
+                            renderWalkthroughStep();
+                        }
+                        function renderWalkthroughStep() {
+                            if (!currentWt || currentWtStep >= currentWt.length) { endWalkthrough(); return; }
+                            const step = currentWt[currentWtStep];
+                            if (step.screenId) showScreen(step.screenId);
+                            setTimeout(() => {
+                                const target = document.getElementById(step.targetId);
+                                if (target) {
+                                    const rect = target.getBoundingClientRect(); const hl = document.getElementById('walkthrough-highlight');
+                                    if(hl) { hl.style.top = (rect.top - 5) + 'px'; hl.style.left = (rect.left - 5) + 'px'; hl.style.width = (rect.width + 10) + 'px'; hl.style.height = (rect.height + 10) + 'px'; }
+                                    const bubble = document.getElementById('walkthrough-bubble');
+                                    if(bubble) { bubble.style.top = (rect.bottom + 15) + 'px'; bubble.style.left = rect.left + 'px'; }
+                                    const titleEl = document.getElementById('wt-title'); if(titleEl) titleEl.innerText = step.title;
+                                    const textEl = document.getElementById('wt-text'); if(textEl) textEl.innerText = step.text;
+                                    target.dataset.oldPos = target.style.position || getComputedStyle(target).position; target.style.position = 'relative'; target.dataset.oldZ = target.style.zIndex; target.style.zIndex = '2005';
+                                }
+                            }, 50);
+                        }
+                        function nextWalkthroughStep() {
+                            const step = currentWt[currentWtStep]; const target = document.getElementById(step.targetId);
+                            if (target) { target.style.zIndex = target.dataset.oldZ || ''; target.style.position = target.dataset.oldPos || ''; }
+                            currentWtStep++; renderWalkthroughStep();
+                        }
+                        function endWalkthrough() {
+                            const overlay = document.getElementById('walkthrough-overlay'); if(overlay) overlay.style.display = 'none';
+                            if (currentWt) {
+                                const step = currentWt[currentWtStep < currentWt.length ? currentWtStep : currentWt.length - 1];
+                                if (step) { const target = document.getElementById(step.targetId); if (target) { target.style.zIndex = target.dataset.oldZ || ''; target.style.position = target.dataset.oldPos || ''; } }
+                            }
+                            currentWt = null;
+                        }
+                        // --- End Documentation System JS ---
+
+</script>
                 </body>
             </html>
         "#,
