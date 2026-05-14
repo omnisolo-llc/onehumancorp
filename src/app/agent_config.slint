@@ -20,11 +20,12 @@ export component AgentConfig inherits Window {
     in-out property <bool> can_send_updates: false;
     in-out property <float> frequency_value: 2.0;
     in-out property <string> frequency: round(frequency_value) == 0 ? "Real-time" : (round(frequency_value) == 1 ? "Hourly" : (round(frequency_value) == 2 ? "Daily" : "Weekly"));
+    property <int> max_sessions_per_day: round(frequency_value) == 0 ? 1440 : (round(frequency_value) == 1 ? 24 : (round(frequency_value) == 2 ? 1 : 0));
     in-out property <bool> is_advanced: false;
     in-out property <bool> show_toast: false;
     in-out property <string> api_scope_override: "";
     in-out property <string> cron_override: "";
-    in-out property <string> raw_activation_payload: "";
+    in-out property <string> raw_activation_payload: "{\"agent_id\":\"" + selected_agent + "\",\"config\":{\"max_sessions_per_day\":" + max_sessions_per_day + "}}";
 
     next_step => { step = step + 1; }
 
@@ -164,8 +165,8 @@ export component AgentConfig inherits Window {
         if (step == 2) : VerticalBox {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Developer: Cron Expression Override"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "0 * * * *"; text <=> cron_override; }
+                Text { text: "Developer: Raw Rate Limit Config (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                LineEdit { placeholder-text: "{\"max_sessions_per_day\": " + max_sessions_per_day + "}"; text: "{\"max_sessions_per_day\": " + max_sessions_per_day + "}"; }
             }
             spacing: 20px;
             Text { text: "How often should this agent work?"; color: white; font-family: "Inter"; }
@@ -187,7 +188,7 @@ export component AgentConfig inherits Window {
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
                 Text { text: "Developer: Raw Activation Payload (JSON)"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
-                LineEdit { placeholder-text: "{\"agent_id\":\"" + selected_agent + "\",\"config\":{}}"; text <=> raw_activation_payload; }
+                LineEdit { text <=> raw_activation_payload; }
             }
             spacing: 16px;
             Text { text: "Review & Activate"; color: white; font-family: "Inter"; }

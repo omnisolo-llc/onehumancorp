@@ -133,66 +133,39 @@ test.describe('Agent Hire Flow', () => {
 });
 
 test.describe('Agent Configuration', () => {
-  test('should open agent configuration wizard', async ({ page }) => {
+  test('should navigate full CUJ for Agent Configuration', async ({ page }) => {
     await page.goto('/agents/configure');
-    await expect(page.locator('text=/configure|config|wizard/i')).toBeVisible();
-  });
 
-  test('should show configuration steps', async ({ page }) => {
-    await page.goto('/agents/configure');
-    const steps = page.locator('[class*="step"], text=/step \\d+/i');
-    await expect(steps.first()).toBeVisible();
-  });
+    // Step 0: Choose Agent
+    await expect(page.locator('text=Configure Helper')).toBeVisible();
+    await page.click('text=Customer Support');
+    await expect(page.locator('text=Selected: Customer Support')).toBeVisible();
+    await page.click('text=Next');
 
-  test('should navigate through config steps', async ({ page }) => {
-    await page.goto('/agents/configure');
-    const nextBtn = page.locator('button:has-text("Next")');
-    if (await nextBtn.isVisible()) {
-      await nextBtn.click();
-      await expect(page.locator('text=/step \\d+/i')).toBeVisible();
-    }
-  });
+    // Step 1: Capabilities
+    await expect(page.locator('text=What should this helper do?')).toBeVisible();
+    await page.click('text=Reply to customer messages');
+    await page.click('text=Next');
 
-  test('should set agent name in config', async ({ page }) => {
-    await page.goto('/agents/configure');
-    const nameInput = page.locator('input[type="text"]').first();
-    if (await nameInput.isVisible()) {
-      await nameInput.fill('Sales Agent');
-    }
-  });
+    // Step 2: Frequency
+    await expect(page.locator('text=How often should this agent work?')).toBeVisible();
+    // Default frequency is Daily (value 2.0).
+    await expect(page.locator('text=Schedule: Daily')).toBeVisible();
 
-  test('should set agent personality', async ({ page }) => {
-    await page.goto('/agents/configure');
-    const personalitySelect = page.locator('select, [class*="personality"]').first();
-    if (await personalitySelect.isVisible()) {
-      await personalitySelect.selectOption({ index: 1 });
-    }
-  });
+    // We can simulate slider action or advanced text modification,
+    // but the default UI flow click Next should suffice for basic CUJ
+    await page.click('text=Next');
 
-  test('should set response tone', async ({ page }) => {
-    await page.goto('/agents/configure');
-    const toneOptions = page.locator('text=/formal|casual|professional/i');
-    if (await toneOptions.first().isVisible()) {
-      await toneOptions.first().click();
-    }
-  });
+    // Step 3: Review
+    await expect(page.locator('text=Review & Activate')).toBeVisible();
+    await expect(page.locator('text=Helper: Customer Support')).toBeVisible();
+    await expect(page.locator('text=Reply: Yes')).toBeVisible();
+    await expect(page.locator('text=Schedule: Daily')).toBeVisible();
 
-  test('should save agent configuration', async ({ page }) => {
-    await page.goto('/agents/configure');
-    const saveBtn = page.locator('button:has-text("Save"), button:has-text("Finish")');
-    if (await saveBtn.isVisible()) {
-      await saveBtn.click();
-      await expect(page.locator('text=/saved|success/i')).toBeVisible({ timeout: 5000 });
-    }
-  });
+    await page.click('text=Activate');
 
-  test('should show config preview', async ({ page }) => {
-    await page.goto('/agents/configure');
-    const previewBtn = page.locator('button:has-text("Preview")');
-    if (await previewBtn.isVisible()) {
-      await previewBtn.click();
-      await expect(page.locator('text=/preview/i')).toBeVisible();
-    }
+    // Toast check
+    await expect(page.locator('text=Helper Activated ✓')).toBeVisible();
   });
 });
 
