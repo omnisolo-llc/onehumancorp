@@ -376,6 +376,8 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            permission_mode: crate::types::PermissionMode::Permissive,
+            permission_config: crate::permissions::PermissionConfig::default(),
             max_retries: 2,
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
@@ -693,6 +695,8 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                permission_mode: crate::types::PermissionMode::Permissive,
+                permission_config: crate::permissions::PermissionConfig::default(),
                 max_retries: 2,
                 enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
