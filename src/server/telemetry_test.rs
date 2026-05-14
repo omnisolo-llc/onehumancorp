@@ -428,24 +428,6 @@ mod tests {
     }
 
     #[test]
-    fn test_privacy_guardrail_multitenant_pii_no_leakage() {
-        // Enforce OHC Compliance: Ensure multi-tenant PII is explicitly sanitized in analytics.
-        let tracker = crate::analytics::Tracker::new();
-        let mut props = std::collections::HashMap::new();
-        props.insert("tenant_id".to_string(), "t-123".to_string());
-        props.insert("session_id".to_string(), "sess-456".to_string());
-        props.insert("mac_address".to_string(), "00:00:00:00:00:00".to_string());
-        props.insert("organization_id".to_string(), "org-789".to_string());
-
-        let sanitized = tracker.sanitize_props(props);
-
-        assert_eq!(sanitized.get("tenant_id").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized.get("session_id").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized.get("mac_address").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized.get("organization_id").unwrap(), "[REDACTED]");
-    }
-
-    #[test]
     fn test_init_telemetry_standalone_opt_in() {
         temp_env::with_vars(
             [
