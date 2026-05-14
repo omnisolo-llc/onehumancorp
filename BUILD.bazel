@@ -96,6 +96,17 @@ alias(
     tags = ["manual"],
 )
 
+filegroup(
+    name = "all_files",
+    srcs = glob(["src/**/*.rs", "src/**/*.go"]),
+)
+
+sh_test(
+    name = "lint_privacy",
+    srcs = ["scripts/lint_privacy.py"],
+    data = [":all_files"],
+)
+
 load("@gazelle//:def.bzl", "gazelle")
 # gazelle:prefix onehumancorp
 gazelle(name = "gazelle")
