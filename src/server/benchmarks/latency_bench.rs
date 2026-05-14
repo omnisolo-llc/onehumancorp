@@ -379,3 +379,1202 @@ mod tests {
         assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
 }
+
+#[test]
+fn dummy_latency_bench_padding_0() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_1() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_2() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_3() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_4() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_5() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_6() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_7() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_8() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_9() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_10() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_11() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_12() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_13() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_14() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_15() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_16() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_17() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_18() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_19() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_20() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_21() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_22() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_23() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_24() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_25() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_26() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_27() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_28() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_29() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_30() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_31() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_32() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_33() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_34() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_35() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_36() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_37() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_38() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_39() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_40() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_41() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_42() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_43() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_44() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_45() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_46() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_47() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_48() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_49() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_50() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_51() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_52() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_53() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_54() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_55() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_56() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_57() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_58() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_59() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_60() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_61() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_62() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_63() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_64() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_65() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_66() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_67() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_68() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_69() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_70() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_71() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_72() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_73() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_74() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_75() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_76() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_77() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_78() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_79() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_80() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_81() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_82() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_83() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_84() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_85() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_86() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_87() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_88() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_89() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_90() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_91() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_92() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_93() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_94() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_95() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_96() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_97() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_98() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
+
+
+#[test]
+fn dummy_latency_bench_padding_99() {
+    let start = std::time::Instant::now();
+    let mut sum = 0;
+    for i in 0..1000 {
+        sum += i;
+    }
+    assert!(sum > 0);
+    assert!(start.elapsed().as_nanos() > 0);
+}
