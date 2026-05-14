@@ -52,6 +52,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
+    pub enable_restrictive_permission_architecture: bool,
     pub visual_verification_command: String,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
@@ -101,6 +102,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
             enable_visual_verification: false,
+            enable_restrictive_permission_architecture: false,
             visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
@@ -2008,6 +2010,12 @@ impl Agent {
             if !allowed.contains(&tc.name) {
                 return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
             }
+        }
+
+        // Architectural Decision 5: Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval).
+        // If restrictive mode is enabled, any mutating tool requires explicit approval.
+        if cfg.enable_restrictive_permission_architecture && !is_read_only && !cfg.approved_tool_calls.contains(&tc.id) {
+             return Err(ToolError::UserFixable(format!("Restrictive permission architecture enabled: Mutating tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
         }
 
         // Stage 3: Explicit user confirmation for high-risk operations
@@ -4815,3 +4823,69 @@ mod stream_tests {
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
+#[cfg(test)]
+mod permission_tests {
+    use super::*;
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Usage, Role, Message, ToolCall};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use crate::tools::ToolExecutor;
+
+    struct DummyLlm;
+    #[async_trait::async_trait]
+    impl LlmClient for DummyLlm {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: "call_1".to_string(),
+                        name: "mutating_tool".to_string(),
+                        arguments: serde_json::json!({}),
+                    }],
+                    tool_results: vec![],
+                    response_id: Some("id1".to_string()),
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("id1".to_string()),
+            })
+        }
+    }
+
+    struct DummyTool;
+    #[async_trait::async_trait]
+    impl ToolExecutor for DummyTool {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+            Ok("Success".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_restrictive_permission_architecture() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_restrictive_permission_architecture = true;
+        cfg.project_trusted = true; // Make sure it passes Stage 1
+
+        let tool = Tool {
+            name: "mutating_tool".to_string(),
+            description: "mutates".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(DummyTool),
+        };
+
+        let llm = Arc::new(DummyLlm);
+        let agent = Agent::new(llm, vec![tool]);
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Do it", &mut |e| events.push(e)).await;
+
+        assert!(res.is_err());
+        let err_msg = res.unwrap_err().to_string();
+        assert!(err_msg.contains("Restrictive permission architecture enabled: Mutating tool 'mutating_tool' requires explicit user confirmation."));
+    }
+}
