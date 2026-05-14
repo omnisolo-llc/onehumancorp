@@ -78,11 +78,11 @@ jobs:
 
 
       - name: Build release artifacts
-        run: bazelisk build //release:all_release_artifacts --config=linux
+        run: bazelisk --output_user_root=/tmp/bazel build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
-          bazelisk test \
+          bazelisk --output_user_root=/tmp/bazel test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
@@ -148,9 +148,9 @@ jobs:
 
       - name: Build all artifacts
         run: |
-          bazelisk build //... --config=linux
-          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
-          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
+          bazelisk --output_user_root=/tmp/bazel build //... --config=linux
+          bazelisk --output_user_root=/tmp/bazel build //... --config=windows || echo "Warning: Windows build failed"
+          bazelisk --output_user_root=/tmp/bazel build //... --config=macos || echo "Warning: MacOS build failed"
 
 #   playwright-e2e:
 #     runs-on: oci-runner
@@ -203,7 +203,7 @@ jobs:
 #
 #       - name: Run E2E tests
 #         run: |
-#           bazelisk test //src/e2e:playwright \
+#           bazelisk --output_user_root=/tmp/bazel test //src/e2e:playwright \
 #             --config=linux \
 #             --test_output=errors \
 #             --test_summary=terse \

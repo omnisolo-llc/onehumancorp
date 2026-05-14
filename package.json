@@ -30,5 +30,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": []
+  },
+  "scripts": {
+    "postinstall": "sed -i 's/startup --output_user_root/\\# startup --output_user_root/g' .bazelrc || true"
   }
 }
