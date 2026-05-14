@@ -1,5 +1,7 @@
-issue_category: cleanup
-debt_report:
-  description: "Bump version to v0.4.41"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+triage_status: "Complete"
+issue_category: "cleanup"
+debt_report: |
+  PII and Data Sovereignty Compliance Guardrails
+  1. The test `test_no_pii_logging_statements` was quietly skipping due to a misconfiguration of source files under Bazel.
+  2. Fixed Bazel data dependency by adding `glob(["**/*.rs", "**/*.ts"], allow_empty=True)` to `server_test` target.
+  3. Switched skipped behavior from a silent `println!` to a loud `panic!` to ensure strict compliance enforcement.
