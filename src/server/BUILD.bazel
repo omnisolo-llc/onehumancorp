@@ -129,7 +129,7 @@ rust_test(
     name = "server_test",
     size = "large",
     crate = ":server_lib",
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"] + glob(["**/*.rs"]),
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"] + glob(["**/*.rs", "**/*.ts", "**/*.go"], allow_empty=True),
     edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
