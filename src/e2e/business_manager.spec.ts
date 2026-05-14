@@ -9,7 +9,7 @@ test.describe('Business Manager UI', () => {
 
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
@@ -29,8 +29,8 @@ test.describe('Business Manager UI', () => {
 test.describe('Navigation', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/');
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await page.locator('nav a:has-text("Team")').click();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 
   test('should navigate to dashboard from nav', async ({ page }) => {

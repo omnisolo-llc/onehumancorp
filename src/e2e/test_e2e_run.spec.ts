@@ -84,7 +84,7 @@ test('verify wizard AI agent configuration', async ({ page }) => {
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Navigate to agent settings
-    await page.click('text="Manage Agents"');
+    await page.click('text="Manage Team"');
 
     await expect(page.locator('text="Agent Configuration"')).toBeVisible();
 
@@ -111,7 +111,7 @@ test('verify wizard prompt tuning', async ({ page }) => {
     await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
 
     // Navigate to agent settings
-    await page.click('text="Manage Agents"');
+    await page.click('text="Manage Team"');
 
     // Open Prompt Tuning
     await page.click('button:has-text("Tune Prompt")');

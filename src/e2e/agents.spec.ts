@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Agent Management', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 
   test('should display hire button', async ({ page }) => {

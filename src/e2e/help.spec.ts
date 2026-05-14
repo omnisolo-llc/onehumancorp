@@ -16,7 +16,7 @@ test.describe('Help Center', () => {
   });
 
   test('should show agents link in nav', async ({ page }) => {
-    const agentsLink = page.locator('nav a:has-text("Agents")');
+    const agentsLink = page.locator('nav a:has-text("Team")');
     await expect(agentsLink).toBeVisible();
   });
 
@@ -47,7 +47,7 @@ test.describe('Login Page', () => {
 test.describe('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {
@@ -71,7 +71,7 @@ test.describe('Business Setup Page', () => {
 test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/');
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await page.locator('nav a:has-text("Team")').click();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 });

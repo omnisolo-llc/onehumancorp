@@ -119,7 +119,7 @@
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
+                        <a onclick="showScreen('team-screen')">Team</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
@@ -139,25 +139,23 @@
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
-                        <div class="card glass">
-
     <div class="card glass">
         <h2 style="font-size: 24px; margin-bottom: 8px;">Today's Sales <button class="secondary" style="float: right; padding: 4px 8px; min-height: 44px; min-width: 44px;" onclick="document.getElementById('sales-hint').style.display='block'">?</button></h2>
         <p id="sales-hint" style="display: none; font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">This shows your total revenue for today.</p>
         <p style="font-size: 36px; font-weight: 600; color: var(--primary);">$0.00</p>
         <button style="width: 100%; min-height: 44px; margin-top: 16px;" onclick="const btn = this; btn.classList.add('skeleton'); setTimeout(() => { btn.classList.remove('skeleton'); alert('Loading orders...'); }, 1000);">View Orders</button>
     </div>
-
-<h2>Welcome back, Human.</h2>
+                        <div class="card glass">
+                            <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Team</button>
+                            <button onclick="showScreen('team-screen')">My Team</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="showScreen('team-screen')">Manage Team</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
@@ -295,8 +293,8 @@
                     </div>
 
                     <!-- Agents Page -->
-                    <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
+                    <div id="team-screen" class="screen">
+                        <h1>Team</h1>
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>

@@ -6,13 +6,13 @@ test.describe('Business Share & Embed', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.locator('nav')).toBeVisible();
     await expect(page.locator('nav a:has-text("Dashboard")')).toBeVisible();
-    await expect(page.locator('nav a:has-text("Agents")')).toBeVisible();
+    await expect(page.locator('nav a:has-text("Team")')).toBeVisible();
   });
 
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/?dashboard=1');
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await page.locator('nav a:has-text("Team")').click();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
@@ -31,7 +31,7 @@ test.describe('Business Share & Embed', () => {
 test.describe('Agents Page', () => {
   test('should show agents list', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
     await expect(page.locator('text=Marketing Pro')).toBeVisible();
   });
 

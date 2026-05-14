@@ -56,7 +56,7 @@ test.describe('Login', () => {
 test.describe('Agent Management', () => {
   test('should show agents list', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.locator('h1:has-text("Agents")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Team")')).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {

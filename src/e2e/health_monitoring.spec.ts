@@ -20,8 +20,8 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
     test('Agent health status transitions and recovers using real data flow', async ({ page, context }) => {
         // Navigate by clicking UI exactly as a user would
-        await page.click('a:has-text("Agents"), button:has-text("Agents")');
-        await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+        await page.click('a:has-text("Team"), button:has-text("Team")');
+        await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
 
         // Assert an agent card from the live system is rendered unconditionally
         await page.waitForSelector('.agent-card');

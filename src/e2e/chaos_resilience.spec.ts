@@ -60,7 +60,7 @@ test.describe('E2E Chaos Resilience', () => {
 
   test('should handle transient agent failure with automatic retry', async ({ page }) => {
     // Navigate to AI Helpers
-    await page.locator('button:has-text("Helpers"), button:has-text("Agents")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Helpers"), button:has-text("Team")').filter({ visible: true }).first().click();
     await expect(page.locator('text=/AI Helpers|Workforce/i')).toBeVisible();
 
     // Trigger an agent task

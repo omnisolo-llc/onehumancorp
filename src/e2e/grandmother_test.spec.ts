@@ -21,7 +21,7 @@ test.describe('Grandmother Test - Plain Language Check', () => {
 
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 
   test('should display business setup', async ({ page }) => {

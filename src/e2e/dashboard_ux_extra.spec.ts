@@ -21,8 +21,8 @@ test.describe('Dashboard UX Friction Fix Verification', () => {
 test.describe('Navigation', () => {
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/?dashboard=1');
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await page.locator('nav a:has-text("Team")').click();
+    await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
