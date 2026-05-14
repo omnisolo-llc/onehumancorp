@@ -149,14 +149,27 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     
     let raw = token_data.claims;
 
-    // Securely check for token expiration before processing
+    // Securely check for token expiration and validity before processing
     let current_ts = Utc::now().timestamp();
+
     if let Some(exp) = raw.get("exp").and_then(|v| v.as_i64()) {
         if exp < current_ts {
             return Err("OIDC token expired".to_string());
         }
     } else {
         return Err("OIDC token missing expiration".to_string());
+    }
+
+    if let Some(nbf) = raw.get("nbf").and_then(|v| v.as_i64()) {
+        if nbf > current_ts + 60 { // 60s clock skew allowed
+            return Err("OIDC token not yet valid (nbf)".to_string());
+        }
+    }
+
+    if let Some(iat) = raw.get("iat").and_then(|v| v.as_i64()) {
+        if iat > current_ts + 60 { // 60s clock skew allowed
+            return Err("OIDC token issued in the future (iat)".to_string());
+        }
     }
     
     let mut roles = Vec::new();
@@ -189,7 +202,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     Ok(Claims {
         sub: {
             let sub = raw.get("sub").and_then(|v| v.as_str()).unwrap_or_default().to_string();
-            if sub.trim().is_empty() { return Err("missing or empty sub in OIDC token".to_string()); }
+            if sub.trim().len() < 8 { return Err("OIDC token sub is too short or missing".to_string()); }
             sub
         },
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
@@ -201,7 +214,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
         jti: {
             let jti = raw.get("jti").and_then(|v| v.as_str()).unwrap_or_default().to_string();
-            if jti.trim().is_empty() { return Err("missing or empty jti in OIDC token".to_string()); }
+            if jti.trim().len() < 8 { return Err("OIDC token jti is too short or missing".to_string()); }
             jti
         },
     })

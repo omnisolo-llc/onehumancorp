@@ -142,8 +142,8 @@ impl Store {
                 }
 
                 let new_secret = if let Ok(sqlite_key) = std::env::var("OHC_SQLITE_KEY") {
-                    tracing::warn!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
-                    let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
+                    tracing::warn!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY using HMAC for determinism; writing to .ohc_jwt_secret for persistence");
+                    let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt_v2").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {

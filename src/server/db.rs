@@ -126,8 +126,8 @@ impl DB {
                 std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
             };
 
-            if key.is_empty() {
-                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
+            if key.len() < 32 {
+                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be at least 32 characters for sufficient entropy. Encrypted storage is mandatory in Standalone Mode.");
             }
 
             conn_opts = conn_opts.pragma("key", key);
@@ -232,6 +232,7 @@ impl DB {
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         agent_id TEXT NOT NULL,
                         context_data TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -256,6 +257,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         context TEXT NOT NULL,
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -315,6 +317,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS swarm_tasks (
                         id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         mission_id TEXT NOT NULL,
                         parent_plan_id TEXT,
                         dependencies TEXT NOT NULL DEFAULT '[]',
@@ -709,14 +712,19 @@ impl DB {
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, org_id).await?;
+                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
                 .bind(content)
                 .bind(embedding)
-                .execute(&self.pool)
-                .await?; }
+                .execute(&mut *tx)
+                .await?;
+                tx.commit().await?;
+            }
         };
 
         Ok(())
@@ -746,6 +754,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -754,8 +764,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -785,6 +796,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -793,8 +806,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -1075,7 +1089,7 @@ mod security_tests_final {
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
         let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("dummy_key"))], || {
+        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("dummy_key_dummy_key_dummy_key_32"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.

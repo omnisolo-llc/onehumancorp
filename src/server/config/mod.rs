@@ -94,9 +94,11 @@ pub trait ModeEnforcer {
 
 pub struct StandaloneModeEnforcer;
 
-#[cfg(feature = "standalone")]
 impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
+    if !cfg.standalone {
+        return cfg;
+    }
     if let Some(db_url) = &cfg.database_url {
         if db_url != "sqlite://ohc-standalone.db" {
             tracing::info!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
@@ -110,13 +112,22 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
     let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
         if !key.is_empty() {
+            if key.len() < 32 {
+                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be at least 32 characters for sufficient entropy.");
+            }
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
         } else {
             let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+            if fallback_key.len() < 32 {
+                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be at least 32 characters for sufficient entropy.");
+            }
             format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
         }
     } else {
         let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+        if fallback_key.len() < 32 {
+            panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be at least 32 characters for sufficient entropy.");
+        }
         format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
     };
     cfg.database_url = Some(sqlite_url);
@@ -166,14 +177,6 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         cfg.telemetry_enabled = false;
     }
     cfg
-    }
-}
-
-
-#[cfg(not(feature = "standalone"))]
-impl ModeEnforcer for StandaloneModeEnforcer {
-    fn enforce(&self, cfg: AppConfig) -> AppConfig {
-        cfg
     }
 }
 

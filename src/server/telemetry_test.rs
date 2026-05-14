@@ -414,6 +414,7 @@ mod tests {
                 ("STANDALONE_MODE", Some("true")),
                 ("OHC_TELEMETRY_ENABLED", Some("false")),
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OHC_SQLITE_KEY", Some("secure_test_key_32_characters_long_1234567890")),
             ],
             || {
                 let config = ::server_config::load().unwrap();
@@ -435,6 +436,7 @@ mod tests {
                 ("STANDALONE_MODE", Some("true")),
                 ("OHC_TELEMETRY_ENABLED", Some("true")),
                 ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OHC_SQLITE_KEY", Some("secure_test_key_32_characters_long_1234567890")),
             ],
             || {
                 let config = ::server_config::load().unwrap();
