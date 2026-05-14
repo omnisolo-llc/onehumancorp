@@ -114,9 +114,8 @@ impl InteropProtocol {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
+                let decoded = match proto::StateHandoff::decode(&msg.payload[..]) { Ok(d) => d, Err(_) => return, };
                     handler(decoded);
-                }
             }
         });
 
@@ -131,7 +130,7 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
+                let decoded = match proto::HealthPing::decode(&msg.payload[..]) { Ok(d) => d, Err(_) => return, };
                     let ack = proto::HealthAck {
                         source_node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -157,7 +156,6 @@ impl InteropProtocol {
                             }
                         });
                     }
-                }
             }
         });
 
@@ -283,7 +281,7 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
+                let decoded = match proto::JobDispatch::decode(&msg.payload[..]) { Ok(d) => d, Err(_) => return, };
                     // In a real implementation, we would process the job here or send it to a worker pool
                     // Here, we just acknowledge receipt
                     let ack = proto::JobAck {
@@ -312,7 +310,6 @@ impl InteropProtocol {
                             }
                         });
                     }
-                }
             }
         });
 
@@ -362,9 +359,8 @@ impl InteropProtocol {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
+                let decoded = match proto::JobStatusUpdate::decode(&msg.payload[..]) { Ok(d) => d, Err(_) => return, };
                     handler(decoded);
-                }
             }
         });
 
