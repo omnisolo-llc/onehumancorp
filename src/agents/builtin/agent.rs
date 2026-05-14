@@ -1,3 +1,720 @@
+
+// --- 10. Verification Loops (Guides, Visual, Inferential) ---
+// Extracted and robustly implemented to meet industry standards.
+pub mod verification {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::process::Command;
+
+    #[derive(Debug, Clone)]
+    pub struct VerificationResult {
+        pub passed: bool,
+        pub feedback: String,
+        pub cost: crate::types::Usage,
+    }
+
+    #[async_trait::async_trait]
+    pub trait Verifier: Send + Sync {
+        async fn verify(&self, content: &str, wd: &str) -> Result<VerificationResult, String>;
+    }
+
+    pub struct ComputationalGuide {
+        pub command: String,
+    }
+    #[async_trait::async_trait]
+    impl Verifier for ComputationalGuide {
+        async fn verify(&self, _content: &str, wd: &str) -> Result<VerificationResult, String> {
+            if self.command.is_empty() {
+                return Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() });
+            }
+            let output = Command::new("bash").arg("-c").arg(&self.command).current_dir(wd).output().await;
+            match output {
+                Ok(out) => {
+                    if out.status.success() {
+                        Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+                    } else {
+                        let stdout = String::from_utf8_lossy(&out.stdout);
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        Ok(VerificationResult {
+                            passed: false,
+                            feedback: format!("Guide failed ({}).
+Stdout: {}
+Stderr: {}", self.command, stdout, stderr),
+                            cost: Default::default(),
+                        })
+                    }
+                }
+                Err(e) => Ok(VerificationResult {
+                            passed: false,
+                            feedback: format!("Command execution error: {}", e),
+                            cost: Default::default(),
+                        }),
+            }
+        }
+    }
+
+    pub struct VisualVerifier {
+        pub command: String,
+    }
+    #[async_trait::async_trait]
+    impl Verifier for VisualVerifier {
+        async fn verify(&self, _content: &str, wd: &str) -> Result<VerificationResult, String> {
+            if self.command.is_empty() {
+                return Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() });
+            }
+            let output = Command::new("bash").arg("-c").arg(&self.command).current_dir(wd).output().await;
+            match output {
+                Ok(out) => {
+                    let stdout = String::from_utf8_lossy(&out.stdout);
+                    if !out.status.success() || stdout.contains("REJECT") {
+                        let stderr = String::from_utf8_lossy(&out.stderr);
+                        Ok(VerificationResult {
+                            passed: false,
+                            feedback: format!("Visual verification rejected.
+Stdout: {}
+Stderr: {}", stdout, stderr),
+                            cost: Default::default(),
+                        })
+                    } else {
+                        Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+                    }
+                }
+                Err(e) => Ok(VerificationResult {
+                            passed: false,
+                            feedback: format!("Visual command error: {}", e),
+                            cost: Default::default(),
+                        }),
+            }
+        }
+    }
+
+    pub struct LlmJudgeVerifier {
+        pub llm: Arc<dyn crate::llm::LlmClient>,
+        pub model: String,
+    }
+    #[async_trait::async_trait]
+    impl Verifier for LlmJudgeVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let req = crate::types::ChatRequest {
+                model: self.model.clone(),
+                system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
+                messages: vec![crate::types::Message::user(format!("Evaluate this output:
+{}", content))],
+                tools: vec![],
+                max_tokens: 500,
+                temperature: 0.0,
+            };
+
+            let resp = self.llm.chat(req).await.map_err(|e| format!("LLM Judge error: {}", e))?;
+            let judge_text = resp.message.content.trim();
+
+            if judge_text.starts_with("REJECT:") {
+                let reason = judge_text.strip_prefix("REJECT:").unwrap_or(judge_text).trim();
+                Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("LLM-as-judge rejected. Reason: {}", reason),
+                    cost: resp.usage,
+                })
+            } else {
+                Ok(VerificationResult { passed: true, feedback: String::new(), cost: resp.usage })
+            }
+        }
+    }
+
+    pub struct RegexVerifier {
+        pub pattern: String,
+        pub must_match: bool,
+        pub custom_message: String,
+    }
+    #[async_trait::async_trait]
+    impl Verifier for RegexVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let re = match regex::Regex::new(&self.pattern) {
+                Ok(r) => r,
+                Err(e) => return Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Invalid regex pattern: {}", e),
+                    cost: Default::default(),
+                }),
+            };
+            let is_match = re.is_match(content);
+            if is_match == self.must_match {
+                Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+            } else {
+                let msg = if self.custom_message.is_empty() {
+                    if self.must_match {
+                        format!("Content must match pattern: {}", self.pattern)
+                    } else {
+                        format!("Content must NOT match pattern: {}", self.pattern)
+                    }
+                } else {
+                    self.custom_message.clone()
+                };
+                Ok(VerificationResult { passed: false, feedback: msg, cost: Default::default() })
+            }
+        }
+    }
+
+    pub struct LengthConstraintVerifier {
+        pub min_chars: usize,
+        pub max_chars: usize,
+    }
+    #[async_trait::async_trait]
+    impl Verifier for LengthConstraintVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let len = content.len();
+            if len < self.min_chars {
+                Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Output too short. Minimum is {} characters, got {}.", self.min_chars, len),
+                    cost: Default::default(),
+                })
+            } else if self.max_chars > 0 && len > self.max_chars {
+                Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Output too long. Maximum is {} characters, got {}.", self.max_chars, len),
+                    cost: Default::default(),
+                })
+            } else {
+                Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+            }
+        }
+    }
+
+    pub struct JsonFormatVerifier;
+    #[async_trait::async_trait]
+    impl Verifier for JsonFormatVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            match serde_json::from_str::<serde_json::Value>(content.trim()) {
+                Ok(_) => Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() }),
+                Err(e) => Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Output is not valid JSON: {}", e),
+                    cost: Default::default(),
+                }),
+            }
+        }
+    }
+
+    // Advanced Output Schema Verifier for arbitrary AST structures
+    pub struct OutputSchemaVerifier {
+        pub schema_json: String,
+    }
+
+    #[derive(Debug)]
+    enum SchemaNode {
+        Object(std::collections::HashMap<String, Box<SchemaNode>>),
+        Array(Box<SchemaNode>),
+        String,
+        Number,
+        Boolean,
+        Any,
+    }
+
+    impl OutputSchemaVerifier {
+        fn parse_schema(val: &serde_json::Value) -> Result<SchemaNode, String> {
+            if let Some(obj) = val.as_object() {
+                if let Some(t) = obj.get("type").and_then(|v| v.as_str()) {
+                    match t {
+                        "object" => {
+                            let mut props = std::collections::HashMap::new();
+                            if let Some(p) = obj.get("properties").and_then(|v| v.as_object()) {
+                                for (k, v) in p {
+                                    props.insert(k.clone(), Box::new(Self::parse_schema(v)?));
+                                }
+                            }
+                            Ok(SchemaNode::Object(props))
+                        }
+                        "array" => {
+                            let items = if let Some(i) = obj.get("items") {
+                                Box::new(Self::parse_schema(i)?)
+                            } else {
+                                Box::new(SchemaNode::Any)
+                            };
+                            Ok(SchemaNode::Array(items))
+                        }
+                        "string" => Ok(SchemaNode::String),
+                        "number" | "integer" => Ok(SchemaNode::Number),
+                        "boolean" => Ok(SchemaNode::Boolean),
+                        _ => Ok(SchemaNode::Any),
+                    }
+                } else {
+                    Ok(SchemaNode::Any)
+                }
+            } else {
+                Ok(SchemaNode::Any)
+            }
+        }
+
+        fn validate(node: &SchemaNode, val: &serde_json::Value, path: &str) -> Result<(), String> {
+            match node {
+                SchemaNode::Object(props) => {
+                    if let Some(obj) = val.as_object() {
+                        for (k, expected_node) in props {
+                            if let Some(actual_val) = obj.get(k) {
+                                Self::validate(expected_node, actual_val, &format!("{}.{}", path, k))?;
+                            } else {
+                                return Err(format!("Missing required property at {}.{}", path, k));
+                            }
+                        }
+                        Ok(())
+                    } else {
+                        Err(format!("Expected object at {}, got {}", path, val))
+                    }
+                }
+                SchemaNode::Array(items_node) => {
+                    if let Some(arr) = val.as_array() {
+                        for (i, item) in arr.iter().enumerate() {
+                            Self::validate(items_node, item, &format!("{}[{}]", path, i))?;
+                        }
+                        Ok(())
+                    } else {
+                        Err(format!("Expected array at {}, got {}", path, val))
+                    }
+                }
+                SchemaNode::String => {
+                    if val.is_string() { Ok(()) } else { Err(format!("Expected string at {}, got {}", path, val)) }
+                }
+                SchemaNode::Number => {
+                    if val.is_number() { Ok(()) } else { Err(format!("Expected number at {}, got {}", path, val)) }
+                }
+                SchemaNode::Boolean => {
+                    if val.is_boolean() { Ok(()) } else { Err(format!("Expected boolean at {}, got {}", path, val)) }
+                }
+                SchemaNode::Any => Ok(()),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for OutputSchemaVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let schema_val = match serde_json::from_str::<serde_json::Value>(&self.schema_json) {
+                Ok(v) => v,
+                Err(e) => return Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Invalid schema definition: {}", e),
+                    cost: Default::default(),
+                }),
+            };
+
+            let schema_tree = match Self::parse_schema(&schema_val) {
+                Ok(t) => t,
+                Err(e) => return Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Failed to parse schema definition: {}", e),
+                    cost: Default::default(),
+                }),
+            };
+
+            let target_val = match serde_json::from_str::<serde_json::Value>(content.trim()) {
+                Ok(v) => v,
+                Err(e) => return Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Output is not valid JSON: {}", e),
+                    cost: Default::default(),
+                }),
+            };
+
+            match Self::validate(&schema_tree, &target_val, "$") {
+                Ok(_) => Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() }),
+                Err(e) => Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Schema validation failed: {}", e),
+                    cost: Default::default(),
+                }),
+            }
+        }
+    }
+
+    // Basic SQL AST Verifier for sanity checks
+    pub struct SqlAstVerifier {
+        pub require_where_clause_on_delete: bool,
+        pub require_where_clause_on_update: bool,
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for SqlAstVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let sql = content.trim().to_uppercase();
+            if self.require_where_clause_on_delete && sql.contains("DELETE FROM") && !sql.contains("WHERE") {
+                return Ok(VerificationResult {
+                    passed: false,
+                    feedback: "SQL DELETE statement is missing a WHERE clause. This is unsafe.".to_string(),
+                    cost: Default::default(),
+                });
+            }
+            if self.require_where_clause_on_update && sql.contains("UPDATE ") && !sql.contains("WHERE") {
+                return Ok(VerificationResult {
+                    passed: false,
+                    feedback: "SQL UPDATE statement is missing a WHERE clause. This is unsafe.".to_string(),
+                    cost: Default::default(),
+                });
+            }
+            Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+        }
+    }
+
+    pub struct VerificationLoop {
+        verifiers: Vec<Box<dyn Verifier>>,
+    }
+
+
+    // Advanced Markdown Structure Verifier
+    pub struct MarkdownStructureVerifier {
+        pub require_headers: Vec<String>,
+        pub max_code_blocks: usize,
+        pub require_links: bool,
+    }
+
+    #[derive(Debug)]
+    enum MarkdownNode {
+        Header(usize, String),
+        Paragraph(String),
+        CodeBlock(String, String),
+        Link(String, String),
+        List(Vec<String>),
+        Unknown,
+    }
+
+    impl MarkdownStructureVerifier {
+        fn parse_markdown(content: &str) -> Vec<MarkdownNode> {
+            let mut nodes = Vec::new();
+            let mut in_code_block = false;
+            let mut current_code_block = String::new();
+            let mut current_lang = String::new();
+
+            let lines: Vec<&str> = content.lines().collect();
+            for line in lines {
+                let trimmed = line.trim();
+
+                if trimmed.starts_with("```") {
+                    if in_code_block {
+                        nodes.push(MarkdownNode::CodeBlock(current_lang.clone(), current_code_block.clone()));
+                        in_code_block = false;
+                        current_code_block.clear();
+                        current_lang.clear();
+                    } else {
+                        in_code_block = true;
+                        current_lang = trimmed.strip_prefix("```").unwrap_or("").trim().to_string();
+                    }
+                    continue;
+                }
+
+                if in_code_block {
+                    current_code_block.push_str(line);
+                    current_code_block.push_str("\n");
+                    continue;
+                }
+
+                if trimmed.starts_with("#") {
+                    let mut level = 0;
+                    for c in trimmed.chars() {
+                        if c == '#' { level += 1; } else { break; }
+                    }
+                    let title = trimmed[level..].trim().to_string();
+                    nodes.push(MarkdownNode::Header(level, title));
+                    continue;
+                }
+
+                if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
+                    nodes.push(MarkdownNode::List(vec![trimmed[2..].to_string()]));
+                    continue;
+                }
+
+                if trimmed.contains("[") && trimmed.contains("](") && trimmed.contains(")") {
+                    nodes.push(MarkdownNode::Link("text".to_string(), "url".to_string()));
+                    continue;
+                }
+
+                if !trimmed.is_empty() {
+                    nodes.push(MarkdownNode::Paragraph(trimmed.to_string()));
+                }
+            }
+            nodes
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for MarkdownStructureVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let nodes = Self::parse_markdown(content);
+
+            let mut found_headers = std::collections::HashSet::new();
+            let mut code_block_count = 0;
+            let mut has_links = false;
+
+            for node in &nodes {
+                match node {
+                    MarkdownNode::Header(_, title) => { found_headers.insert(title.to_lowercase()); }
+                    MarkdownNode::CodeBlock(_, _) => { code_block_count += 1; }
+                    MarkdownNode::Link(_, _) => { has_links = true; }
+                    _ => {}
+                }
+            }
+
+            for req in &self.require_headers {
+                if !found_headers.contains(&req.to_lowercase()) {
+                    return Ok(VerificationResult {
+                        passed: false,
+                        feedback: format!("Markdown is missing required header: '{}'", req),
+                        cost: Default::default(),
+                    });
+                }
+            }
+
+            if code_block_count > self.max_code_blocks {
+                return Ok(VerificationResult {
+                    passed: false,
+                    feedback: format!("Too many code blocks. Found {}, max allowed is {}.", code_block_count, self.max_code_blocks),
+                    cost: Default::default(),
+                });
+            }
+
+            if self.require_links && !has_links {
+                return Ok(VerificationResult {
+                    passed: false,
+                    feedback: "Markdown must contain at least one link.".to_string(),
+                    cost: Default::default(),
+                });
+            }
+
+            Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+        }
+    }
+
+    // HTML Structure Verifier
+    pub struct HtmlStructureVerifier {
+        pub require_tags: Vec<String>,
+        pub forbid_tags: Vec<String>,
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for HtmlStructureVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let lower_content = content.to_lowercase();
+
+            for tag in &self.require_tags {
+                let open_tag = format!("<{}", tag.to_lowercase());
+                if !lower_content.contains(&open_tag) {
+                    return Ok(VerificationResult {
+                        passed: false,
+                        feedback: format!("HTML is missing required tag: '{}'", tag),
+                        cost: Default::default(),
+                    });
+                }
+            }
+
+            for tag in &self.forbid_tags {
+                let open_tag = format!("<{}", tag.to_lowercase());
+                if lower_content.contains(&open_tag) {
+                    return Ok(VerificationResult {
+                        passed: false,
+                        feedback: format!("HTML contains forbidden tag: '{}'", tag),
+                        cost: Default::default(),
+                    });
+                }
+            }
+
+            Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+        }
+    }
+
+    // CSV Format Verifier
+    pub struct CsvFormatVerifier {
+        pub require_headers: Vec<String>,
+        pub strict_column_count: bool,
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for CsvFormatVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+            if lines.is_empty() {
+                return Ok(VerificationResult {
+                    passed: false,
+                    feedback: "CSV is empty".to_string(),
+                    cost: Default::default(),
+                });
+            }
+
+            let headers: Vec<&str> = lines[0].split(',').map(|s| s.trim()).collect();
+            for req in &self.require_headers {
+                if !headers.contains(&req.as_str()) {
+                    return Ok(VerificationResult {
+                        passed: false,
+                        feedback: format!("CSV missing required header: '{}'", req),
+                        cost: Default::default(),
+                    });
+                }
+            }
+
+            let expected_cols = headers.len();
+            if self.strict_column_count {
+                for (i, line) in lines.iter().enumerate().skip(1) {
+                    let cols: Vec<&str> = line.split(',').collect();
+                    if cols.len() != expected_cols {
+                        return Ok(VerificationResult {
+                            passed: false,
+                            feedback: format!("CSV line {} has {} columns, expected {}", i + 1, cols.len(), expected_cols),
+                            cost: Default::default(),
+                        });
+                    }
+                }
+            }
+
+            Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+        }
+    }
+
+    // Keyword Density Verifier
+    pub struct KeywordDensityVerifier {
+        pub keywords: Vec<String>,
+        pub max_density: f64,
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for KeywordDensityVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let words: Vec<&str> = content.split_whitespace().collect();
+            let total_words = words.len();
+            if total_words == 0 {
+                return Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() });
+            }
+
+            let lower_content = content.to_lowercase();
+            let lower_words: Vec<&str> = lower_content.split_whitespace().collect();
+
+            for keyword in &self.keywords {
+                let kw_lower = keyword.to_lowercase();
+                let count = lower_words.iter().filter(|&&w| w == kw_lower).count();
+                let density = count as f64 / total_words as f64;
+
+                if density > self.max_density {
+                    return Ok(VerificationResult {
+                        passed: false,
+                        feedback: format!("Keyword '{}' has density {:.2}, which exceeds max allowed {:.2}", keyword, density, self.max_density),
+                        cost: Default::default(),
+                    });
+                }
+            }
+
+            Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+        }
+    }
+
+    // Exact Substring Verifier
+    pub struct ExactSubstringVerifier {
+        pub require_substrings: Vec<String>,
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for ExactSubstringVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            for sub in &self.require_substrings {
+                if !content.contains(sub) {
+                    return Ok(VerificationResult {
+                        passed: false,
+                        feedback: format!("Missing exact required substring: '{}'", sub),
+                        cost: Default::default(),
+                    });
+                }
+            }
+            Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+        }
+    }
+
+
+    // Advanced Regex Batch Verifier
+    pub struct RegexBatchVerifier {
+        pub rules: Vec<(String, bool, String)>, // (pattern, must_match, custom_msg)
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for RegexBatchVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            let mut failed_rules = Vec::new();
+            for (pattern, must_match, msg) in &self.rules {
+                let re = match regex::Regex::new(pattern) {
+                    Ok(r) => r,
+                    Err(e) => return Ok(VerificationResult {
+                        passed: false,
+                        feedback: format!("Invalid regex pattern '{}': {}", pattern, e),
+                        cost: Default::default(),
+                    }),
+                };
+
+                let is_match = re.is_match(content);
+                if is_match != *must_match {
+                    let default_msg = if *must_match {
+                        format!("Content must match pattern: {}", pattern)
+                    } else {
+                        format!("Content must NOT match pattern: {}", pattern)
+                    };
+                    let err_msg = if msg.is_empty() { default_msg } else { msg.clone() };
+                    failed_rules.push(err_msg);
+                }
+            }
+
+            if failed_rules.is_empty() {
+                Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+            } else {
+                Ok(VerificationResult { passed: false, feedback: failed_rules.join("\n"), cost: Default::default() })
+            }
+        }
+    }
+
+    // Structure format validator for config files
+    pub struct ConfigFormatVerifier {
+        pub format_type: String, // "yaml", "toml", "json"
+    }
+
+    #[async_trait::async_trait]
+    impl Verifier for ConfigFormatVerifier {
+        async fn verify(&self, content: &str, _wd: &str) -> Result<VerificationResult, String> {
+            match self.format_type.as_str() {
+                "json" => {
+                    if serde_json::from_str::<serde_json::Value>(content).is_ok() {
+                        Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+                    } else {
+                        Ok(VerificationResult { passed: false, feedback: "Invalid JSON format".to_string(), cost: Default::default() })
+                    }
+                }
+                "yaml" => {
+                    // Just a basic heuristic check for yaml to avoid adding another crate dependency just for this
+                    if content.contains(": ") || content.trim().starts_with("- ") {
+                        Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+                    } else {
+                        Ok(VerificationResult { passed: false, feedback: "Does not look like valid YAML format".to_string(), cost: Default::default() })
+                    }
+                }
+                "toml" => {
+                    // Basic heuristic for toml
+                    if content.contains("=") && (content.contains("[") || content.contains("\"")) {
+                        Ok(VerificationResult { passed: true, feedback: String::new(), cost: Default::default() })
+                    } else {
+                        Ok(VerificationResult { passed: false, feedback: "Does not look like valid TOML format".to_string(), cost: Default::default() })
+                    }
+                }
+                _ => Ok(VerificationResult { passed: false, feedback: format!("Unknown config format: {}", self.format_type), cost: Default::default() }),
+            }
+        }
+    }
+
+    impl VerificationLoop {
+        pub fn new() -> Self { Self { verifiers: vec![] } }
+        pub fn add_verifier(&mut self, v: Box<dyn Verifier>) { self.verifiers.push(v); }
+
+        pub async fn run_all(&self, content: &str, wd: &str) -> Result<Vec<VerificationResult>, String> {
+            let mut results = vec![];
+            for v in &self.verifiers {
+                results.push(v.verify(content, wd).await?);
+            }
+            Ok(results)
+        }
+    }
+}
+
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -53,6 +770,25 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
     pub visual_verification_command: String,
+    pub enable_regex_verification: bool,
+    pub regex_verification_pattern: String,
+    pub enable_length_verification: bool,
+    pub length_verification_min: usize,
+    pub length_verification_max: usize,
+    pub enable_json_format_verification: bool,
+    pub enable_output_schema_verification: bool,
+    pub output_schema_json: String,
+    pub enable_sql_ast_verification: bool,
+    pub enable_markdown_structure_verification: bool,
+    pub markdown_require_headers: Vec<String>,
+    pub enable_html_structure_verification: bool,
+    pub enable_csv_format_verification: bool,
+    pub enable_keyword_density_verification: bool,
+    pub keyword_density_keywords: Vec<String>,
+    pub enable_exact_substring_verification: bool,
+    pub exact_substrings: Vec<String>,
+    pub enable_regex_batch_verification: bool,
+    pub enable_config_format_verification: bool,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
     pub enable_git_checkpointing: bool,
@@ -102,6 +838,25 @@ enable_llmcompiler_plan_and_execute: false,
             computational_guide_command: String::new(),
             enable_visual_verification: false,
             visual_verification_command: String::new(),
+            enable_regex_verification: false,
+            regex_verification_pattern: String::new(),
+            enable_length_verification: false,
+            length_verification_min: 0,
+            length_verification_max: 0,
+            enable_json_format_verification: false,
+            enable_output_schema_verification: false,
+            output_schema_json: String::new(),
+            enable_sql_ast_verification: false,
+            enable_markdown_structure_verification: false,
+            markdown_require_headers: vec![],
+            enable_html_structure_verification: false,
+            enable_csv_format_verification: false,
+            enable_keyword_density_verification: false,
+            keyword_density_keywords: vec![],
+            enable_exact_substring_verification: false,
+            exact_substrings: vec![],
+            enable_regex_batch_verification: false,
+            enable_config_format_verification: false,
             guardrails: None,
             enable_state_checkpointing: false,
             enable_git_checkpointing: false,
@@ -1537,100 +2292,79 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                // Computational/Guides (feedforward verification)
-                if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.computational_guide_command).current_dir(wd);
+                let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+                let mut vloop = verification::VerificationLoop::new();
 
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                                    final_cfg.computational_guide_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            }
-                        }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute computational guide command '{}': {}", final_cfg.computational_guide_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
-                    }
+                if final_cfg.enable_computational_guides {
+                    vloop.add_verifier(Box::new(verification::ComputationalGuide { command: final_cfg.computational_guide_command.clone() }));
                 }
-
-                // Visual Verification (screenshots via Playwright or Slint)
-                if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.visual_verification_command).current_dir(wd);
-
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                                    final_cfg.visual_verification_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            } else {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                if stdout.contains("REJECT") {
-                                    let err_msg = format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim());
-                                    messages.push(Message::user(err_msg));
-                                    continue;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute visual verification command '{}': {}", final_cfg.visual_verification_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
-                    }
+                if final_cfg.enable_visual_verification {
+                    vloop.add_verifier(Box::new(verification::VisualVerifier { command: final_cfg.visual_verification_command.clone() }));
                 }
-
-                // Inferential/Sensors (LLM-as-judge subagent)
                 if final_cfg.enable_llm_judge {
-                    let judge_req = ChatRequest {
-                        model: final_cfg.model.clone(),
-                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
-                        messages: vec![Message::user(format!("Evaluate this output:
-{}", last_assistant_content))],
-                        tools: vec![],
-                        max_tokens: 500,
-                        temperature: 0.0,
-                    };
+                    vloop.add_verifier(Box::new(verification::LlmJudgeVerifier { llm: self.llm.clone(), model: final_cfg.model.clone() }));
+                }
+                if final_cfg.enable_regex_verification {
+                    vloop.add_verifier(Box::new(verification::RegexVerifier { pattern: final_cfg.regex_verification_pattern.clone(), must_match: true, custom_message: String::new() }));
+                }
+                if final_cfg.enable_length_verification {
+                    vloop.add_verifier(Box::new(verification::LengthConstraintVerifier { min_chars: final_cfg.length_verification_min, max_chars: final_cfg.length_verification_max }));
+                }
+                if final_cfg.enable_json_format_verification {
+                    vloop.add_verifier(Box::new(verification::JsonFormatVerifier));
+                }
+                if final_cfg.enable_output_schema_verification {
+                    vloop.add_verifier(Box::new(verification::OutputSchemaVerifier { schema_json: final_cfg.output_schema_json.clone() }));
+                }
+                if final_cfg.enable_sql_ast_verification {
+                    vloop.add_verifier(Box::new(verification::SqlAstVerifier { require_where_clause_on_delete: true, require_where_clause_on_update: true }));
+                }
+                if final_cfg.enable_markdown_structure_verification {
+                    vloop.add_verifier(Box::new(verification::MarkdownStructureVerifier { require_headers: final_cfg.markdown_require_headers.clone(), max_code_blocks: 10, require_links: false }));
+                }
+                if final_cfg.enable_html_structure_verification {
+                    vloop.add_verifier(Box::new(verification::HtmlStructureVerifier { require_tags: vec![], forbid_tags: vec![] }));
+                }
+                if final_cfg.enable_csv_format_verification {
+                    vloop.add_verifier(Box::new(verification::CsvFormatVerifier { require_headers: vec![], strict_column_count: false }));
+                }
+                if final_cfg.enable_keyword_density_verification {
+                    vloop.add_verifier(Box::new(verification::KeywordDensityVerifier { keywords: final_cfg.keyword_density_keywords.clone(), max_density: 0.1 }));
+                }
+                if final_cfg.enable_exact_substring_verification {
+                    vloop.add_verifier(Box::new(verification::ExactSubstringVerifier { require_substrings: final_cfg.exact_substrings.clone() }));
+                }
+                if final_cfg.enable_regex_batch_verification {
+                    vloop.add_verifier(Box::new(verification::RegexBatchVerifier { rules: vec![] }));
+                }
+                if final_cfg.enable_config_format_verification {
+                    vloop.add_verifier(Box::new(verification::ConfigFormatVerifier { format_type: "json".to_string() }));
+                }
 
-                    match self.llm.chat(judge_req).await {
-                        Ok(judge_resp) => {
-                            let judge_text = judge_resp.message.content.trim();
-                            if judge_text.starts_with("REJECT:") {
-                                let reason = judge_text.strip_prefix("REJECT:").unwrap_or(judge_text).trim();
-                                let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Please correct your work and use tools if necessary.", reason);
-                                messages.push(Message::user(err_msg));
-                                continue;
+
+                match vloop.run_all(&last_assistant_content, &wd).await {
+                    Ok(results) => {
+                        let mut all_passed = true;
+                        let mut combined_feedback = String::new();
+                        for r in results {
+                            if !r.passed {
+                                all_passed = false;
+                                combined_feedback.push_str(&r.feedback);
+                                combined_feedback.push_str("\n");
                             }
-                            // If APPROVE or anything else, we proceed to output guardrails.
                         }
-                        Err(e) => {
-                            let err = format!("LLM Judge error: {}", e);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
+
+                        if !all_passed {
+                            messages.push(Message::user(format!("Verification failed:\n{}\nPlease correct your work and use tools to fix the issue.", combined_feedback)));
+                            continue;
                         }
                     }
+                    Err(e) => {
+                        let err = format!("Verification loop error: {}", e);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
                 }
-                // In a production-grade agent, we might use a separate LLM pass
-                // to evaluate confidence in the final answer if threshold > 0.
-                // For now, we'll assume the model is confident if it didn't use more tools.
 
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
@@ -4004,7 +4738,7 @@ mod tests {
                     // Harness should have injected the User message about the check failing
                     // We check that the last message is the error
                     let last_msg = req.messages.last().unwrap();
-                    assert!(last_msg.content.contains("Computational guide verification failed"));
+                    assert!(last_msg.content.contains("Verification failed"));
                     assert!(last_msg.content.contains("exit 1"));
 
                     // Second turn: model corrects it and we return something. Since it's a test, the command will fail again,
@@ -5266,3 +6000,263 @@ mod stream_tests {
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
+
+
+#[cfg(test)]
+mod verification_robust_tests {
+    use super::*;
+    use crate::agent::verification::Verifier;
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+    use tokio::sync::Mutex;
+
+    struct MockJudgeLlm {
+        responses: Mutex<Vec<String>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for MockJudgeLlm {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            let text = if !resps.is_empty() { resps.remove(0) } else { "APPROVE".to_string() };
+            Ok(ChatResponse {
+                message: Message::assistant(text),
+                usage: Usage { input_tokens: 10, output_tokens: 5, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                stop_reason: "stop".to_string(),
+                response_id: Some("j1".to_string()),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_inferential_llm_judge_reject_then_approve() {
+        let client = std::sync::Arc::new(MockJudgeLlm {
+            responses: Mutex::new(vec![
+                "REJECT: The output lacks detailed analysis.".to_string(),
+                "APPROVE".to_string(),
+            ])
+        });
+
+        let mut vloop = verification::VerificationLoop::new();
+        vloop.add_verifier(Box::new(verification::LlmJudgeVerifier { llm: client, model: "test".to_string() }));
+
+        let r1 = vloop.run_all("Draft output", ".").await.unwrap();
+        assert_eq!(r1.len(), 1);
+        assert!(!r1[0].passed);
+        assert!(r1[0].feedback.contains("lacks detailed analysis"));
+
+        let r2 = vloop.run_all("Better output", ".").await.unwrap();
+        assert_eq!(r2.len(), 1);
+        assert!(r2[0].passed);
+    }
+
+    #[tokio::test]
+    async fn test_regex_verifier() {
+        let v = verification::RegexVerifier { pattern: "^[A-Z]+$".to_string(), must_match: true, custom_message: "".to_string() };
+        let r1 = v.verify("ALLCAPS", ".").await.unwrap();
+        assert!(r1.passed);
+        let r2 = v.verify("lowercase", ".").await.unwrap();
+        assert!(!r2.passed);
+    }
+
+    #[tokio::test]
+    async fn test_length_constraint_verifier() {
+        let v = verification::LengthConstraintVerifier { min_chars: 10, max_chars: 20 };
+        let r1 = v.verify("short", ".").await.unwrap();
+        assert!(!r1.passed);
+        let r2 = v.verify("this is a valid len", ".").await.unwrap();
+        assert!(r2.passed);
+        let r3 = v.verify("this is a very very very long output that exceeds constraints", ".").await.unwrap();
+        assert!(!r3.passed);
+    }
+
+    #[tokio::test]
+    async fn test_json_format_verifier() {
+        let v = verification::JsonFormatVerifier;
+        let r1 = v.verify("{\"key\": \"value\"}", ".").await.unwrap();
+        assert!(r1.passed);
+        let r2 = v.verify("not json", ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("not valid JSON"));
+    }
+
+    #[tokio::test]
+    async fn test_output_schema_verifier() {
+        let schema = r#"{
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "age": { "type": "number" },
+                "tags": { "type": "array", "items": { "type": "string" } }
+            }
+        }"#;
+        let v = verification::OutputSchemaVerifier { schema_json: schema.to_string() };
+
+        // valid
+        let r1 = v.verify(r#"{"name": "Alice", "age": 30, "tags": ["rust", "agent"]}"#, ".").await.unwrap();
+        assert!(r1.passed);
+
+        // missing field
+        let r2 = v.verify(r#"{"name": "Alice", "tags": []}"#, ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("Missing required property"));
+
+        // wrong type
+        let r3 = v.verify(r#"{"name": "Alice", "age": "thirty", "tags": []}"#, ".").await.unwrap();
+        assert!(!r3.passed);
+        assert!(r3.feedback.contains("Expected number"));
+    }
+
+    #[tokio::test]
+    async fn test_sql_ast_verifier() {
+        let v = verification::SqlAstVerifier { require_where_clause_on_delete: true, require_where_clause_on_update: true };
+
+        let r1 = v.verify("DELETE FROM users WHERE id = 1;", ".").await.unwrap();
+        assert!(r1.passed);
+
+        let r2 = v.verify("DELETE FROM users;", ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("missing a WHERE clause"));
+
+        let r3 = v.verify("UPDATE users SET status = 'active';", ".").await.unwrap();
+        assert!(!r3.passed);
+
+        let r4 = v.verify("UPDATE users SET status = 'active' WHERE id = 1;", ".").await.unwrap();
+        assert!(r4.passed);
+    }
+
+    #[tokio::test]
+    async fn test_markdown_verifier() {
+        let v = verification::MarkdownStructureVerifier {
+            require_headers: vec!["Introduction".to_string(), "Conclusion".to_string()],
+            max_code_blocks: 1,
+            require_links: true,
+        };
+
+        let md = "
+# Introduction
+Here is an intro with a [link](http://test).
+```rust
+println!();
+```
+# Conclusion
+Done.
+";
+        let r1 = v.verify(md, ".").await.unwrap();
+        assert!(r1.passed);
+
+        let md_bad = "
+# Intro
+No conclusion.
+```rust
+```
+```js
+```
+";
+        let r2 = v.verify(md_bad, ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("missing required header"));
+    }
+
+    #[tokio::test]
+    async fn test_html_verifier() {
+        let v = verification::HtmlStructureVerifier {
+            require_tags: vec!["html".to_string(), "body".to_string()],
+            forbid_tags: vec!["script".to_string()],
+        };
+
+        let h1 = "<html><body>Hello</body></html>";
+        let r1 = v.verify(h1, ".").await.unwrap();
+        assert!(r1.passed);
+
+        let h2 = "<html><body><script>alert(1)</script></body></html>";
+        let r2 = v.verify(h2, ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("forbidden tag"));
+    }
+
+    #[tokio::test]
+    async fn test_csv_verifier() {
+        let v = verification::CsvFormatVerifier {
+            require_headers: vec!["id".to_string(), "name".to_string()],
+            strict_column_count: true,
+        };
+
+        let c1 = "id,name,age\n1,Alice,30\n2,Bob,25";
+        let r1 = v.verify(c1, ".").await.unwrap();
+        assert!(r1.passed);
+
+        let c2 = "id,name,age\n1,Alice";
+        let r2 = v.verify(c2, ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("line 2 has 2 columns, expected 3"));
+    }
+
+    #[tokio::test]
+    async fn test_keyword_density_verifier() {
+        let v = verification::KeywordDensityVerifier {
+            keywords: vec!["spam".to_string()],
+            max_density: 0.2, // max 20%
+        };
+
+        let t1 = "this is a normal sentence without too much spam in it";
+        let r1 = v.verify(t1, ".").await.unwrap();
+        assert!(r1.passed);
+
+        let t2 = "spam spam spam spam eggs";
+        let r2 = v.verify(t2, ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("exceeds max allowed"));
+    }
+
+    #[tokio::test]
+    async fn test_exact_substring_verifier() {
+        let v = verification::ExactSubstringVerifier { require_substrings: vec!["secret_key_123".to_string()] };
+        let r1 = v.verify("here is the secret_key_123", ".").await.unwrap();
+        assert!(r1.passed);
+        let r2 = v.verify("here is the secret_key_456", ".").await.unwrap();
+        assert!(!r2.passed);
+    }
+
+
+    #[tokio::test]
+    async fn test_regex_batch_verifier() {
+        let v = verification::RegexBatchVerifier {
+            rules: vec![
+                ("^[A-Z]".to_string(), true, "Must start with uppercase".to_string()),
+                ("badword".to_string(), false, "Contains bad word".to_string()),
+            ],
+        };
+
+        let r1 = v.verify("Good sentence", ".").await.unwrap();
+        assert!(r1.passed);
+
+        let r2 = v.verify("badword is here", ".").await.unwrap();
+        assert!(!r2.passed);
+        assert!(r2.feedback.contains("uppercase"));
+        assert!(r2.feedback.contains("bad word"));
+    }
+
+    #[tokio::test]
+    async fn test_config_format_verifier_json() {
+        let v = verification::ConfigFormatVerifier { format_type: "json".to_string() };
+        let r1 = v.verify(r#"{"test": 1}"#, ".").await.unwrap();
+        assert!(r1.passed);
+        let r2 = v.verify("test: 1", ".").await.unwrap();
+        assert!(!r2.passed);
+    }
+
+    #[tokio::test]
+    async fn test_config_format_verifier_yaml() {
+        let v = verification::ConfigFormatVerifier { format_type: "yaml".to_string() };
+        let r1 = v.verify("key: value", ".").await.unwrap();
+        assert!(r1.passed);
+    }
+
+    #[tokio::test]
+    async fn test_config_format_verifier_toml() {
+        let v = verification::ConfigFormatVerifier { format_type: "toml".to_string() };
+        let r1 = v.verify("[section]\nkey = \"value\"", ".").await.unwrap();
+        assert!(r1.passed);
+    }
+
+}
