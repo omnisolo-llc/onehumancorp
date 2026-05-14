@@ -94,16 +94,22 @@ struct MessageContent {
 
 impl MinimaxClient {
     pub fn new(api_key: String) -> Self {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+        let mut cache = PromptCache::new(Duration::from_secs(300));
+        if let Ok(client) = redis::Client::open(redis_url) {
+            cache = cache.with_redis(client);
+        }
+
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
-            cache: PromptCache::new(Duration::from_secs(300)), // 5 minute TTL
+            cache,
         }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let Some(cached) = self.cache.get(prompt) {
+        if let Some(cached) = self.cache.get(prompt).await {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -149,7 +155,7 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            self.cache.set(prompt, &content, prompt.len() / 4).await; // rough token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();

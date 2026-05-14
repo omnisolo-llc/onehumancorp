@@ -282,6 +282,9 @@ service HubService {
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
+  rpc GetMiserRecommendations(EmptyRequest) returns (MiserRecommendationsResponse);
+  rpc ApplyMiserAction(ApplyMiserActionRequest) returns (ApplyMiserActionResponse);
+  rpc CreatePortalSession(EmptyRequest) returns (CreatePortalSessionResponse);
 }
 
 message StartOnboardingRequest {
@@ -1634,6 +1637,35 @@ message MyPlanResponse {
   int64 storage_used_bytes = 4;
   optional int64 storage_limit_bytes = 5;
   int64 next_bill_estimated = 6;
+  string savings_insight = 7;
+  repeated MiserAction optimization_tips = 8;
+}
+
+message MiserAction {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string impact = 4;
+  int64 potential_savings_cents = 5;
+  string action_type = 6; // e.g. "UPGRADE", "OPTIMIZE_STORAGE", "SWITCH_TO_ACH"
+}
+
+message MiserRecommendationsResponse {
+  repeated MiserAction recommendations = 1;
+  int64 total_potential_savings_cents = 2;
+}
+
+message ApplyMiserActionRequest {
+  string action_id = 1;
+}
+
+message ApplyMiserActionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CreatePortalSessionResponse {
+  string url = 1;
 }
 
 message CostDashboardResponse {

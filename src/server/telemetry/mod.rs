@@ -106,6 +106,21 @@ pub async fn record_agent_cost(pool: &PgPool, agent_id: &str, organization_id: &
     .await
 }
 
+pub async fn record_tool_execution_cost(pool: &PgPool, organization_id: &str, agent_id: &str, tool_name: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_tool_execution_cost",
+        "counter",
+        cost as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "agent_id": agent_id,
+            "tool_name": tool_name,
+        }),
+    )
+    .await
+}
+
 pub async fn record_api_call_cost(pool: &PgPool, organization_id: &str, entity: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(
         pool,

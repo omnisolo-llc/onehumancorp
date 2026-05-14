@@ -40,6 +40,24 @@ impl PaymentRouter {
             0.0
         }
     }
+
+    pub fn get_miser_recommendation(amount_usd: f64) -> Option<String> {
+        let savings = Self::calculate_fee_savings(amount_usd);
+        if savings > 0.0 {
+            Some(format!(
+                "💡 Miser Tip: Switch to ACH for this ${:.2} payment to save ${:.2} in transaction fees. Every dollar saved helps keep OHC accessible for everyone!",
+                amount_usd,
+                savings
+            ))
+        } else if amount_usd > 0.0 && amount_usd < Self::ACH_MIN_AMOUNT {
+             Some(format!(
+                "💡 Miser Tip: This payment of ${:.2} is below the ACH threshold. Credit card is currently the most efficient method for your business.",
+                amount_usd
+            ))
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]

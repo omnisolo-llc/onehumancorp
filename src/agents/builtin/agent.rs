@@ -1397,7 +1397,15 @@ impl Agent {
             };
 
             // Intelligent Context Truncation to save tokens
-            let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
+            // Dynamic limit based on remaining budget to ensure we don't hit hard limit prematurely
+            let history_limit = if final_cfg.max_task_tokens > 0 {
+                let remaining = (final_cfg.max_task_tokens - global_turn_tokens).max(0) as usize;
+                // Roughly 1 word ~= 1.3 tokens. We want to keep context significantly smaller than budget.
+                (remaining / 2).clamp(1000, 10000)
+            } else {
+                10000
+            };
+            let req = ohc_builtin_agent_llm::truncate_chat_request(req, history_limit);
 
             let resp = match self.llm.chat(req).await {
                 Ok(r) => r,

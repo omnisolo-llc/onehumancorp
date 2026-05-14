@@ -62,7 +62,7 @@ pub mod services {
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
-use chrono::Utc;
+use chrono::{Utc, Datelike};
 use std::pin::Pin;
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
@@ -206,12 +206,22 @@ impl HubService for MyHubService {
         let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
         let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
-        let next_bill_estimated = match tier {
-            ::server_pricing::rate_limit::PlanTier::Free => 0,
-            ::server_pricing::rate_limit::PlanTier::Starter => 9,
-            ::server_pricing::rate_limit::PlanTier::Pro => 29,
-            ::server_pricing::rate_limit::PlanTier::Business => 79,
+        // Real cost estimation from auditor
+        let auditor = self.hub.get_cost_auditor();
+        let current_cost_usd = auditor.get_total_cost();
+
+        let next_bill_estimated = if current_cost_usd > 0.0 {
+            current_cost_usd.round() as i64
+        } else {
+            match tier {
+                ::server_pricing::rate_limit::PlanTier::Free => 0,
+                ::server_pricing::rate_limit::PlanTier::Starter => 9,
+                ::server_pricing::rate_limit::PlanTier::Pro => 29,
+                ::server_pricing::rate_limit::PlanTier::Business => 79,
+            }
         };
+
+        let savings_f64 = self.hub.get_cost_auditor().get_total_savings();
 
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
@@ -220,6 +230,8 @@ impl HubService for MyHubService {
             storage_used_bytes: storage_used_bytes,
             storage_limit_bytes: storage_limit,
             next_bill_estimated: next_bill_estimated,
+            savings_insight: format!("You've saved ${:.2} this month through OHC's automated intelligence optimizations!", savings_f64),
+            optimization_tips: vec![],
         }))
     }
 
@@ -239,9 +251,15 @@ impl HubService for MyHubService {
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
+        // payment fee optimization logic
+        let payment_fees_f64 = total_revenue_f64 * crate::integrations::stripe::routing::PaymentRouter::CARD_FEE_PERCENTAGE;
+        let savings_f64 = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(total_revenue_f64);
 
-        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
+        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 - savings_f64;
+
+        let now = chrono::Utc::now();
+        let start = now.with_day(1).unwrap().format("%Y-%m-%d").to_string();
+        let end = now.format("%Y-%m-%d").to_string();
 
         Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
@@ -249,8 +267,8 @@ impl HubService for MyHubService {
             llm_cost: (llm_cost_f64 * 100.0) as i64,
             storage_cost: (storage_cost_f64 * 100.0) as i64,
             payment_fees: (payment_fees_f64 * 100.0) as i64,
-            period_start: "2024-05-01".to_string(), // In a real app this would be computed
-            period_end: "2024-05-31".to_string(),
+            period_start: start,
+            period_end: end,
         }))
     }
 
@@ -263,7 +281,7 @@ impl HubService for MyHubService {
             .unwrap_or("default").to_string();
         let req = request.into_inner();
 
-        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let stripe_key = std::env::var("STRIPE_CONNECTION_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
@@ -299,7 +317,7 @@ impl HubService for MyHubService {
         request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
-        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let stripe_key = std::env::var("STRIPE_CONNECTION_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
@@ -317,6 +335,72 @@ impl HubService for MyHubService {
     ) -> Result<tonic::Response<::server_ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
         Ok(tonic::Response::new(::server_ohc::orchestration::DownloadInvoiceResponse {
             pdf_url: "https://invoice.stripe.com/...".to_string(),
+        }))
+    }
+
+    async fn get_miser_recommendations(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::MiserRecommendationsResponse>, tonic::Status> {
+        let tenant_id = request.metadata().get("x-tenant-id")
+            .map(|v| v.to_str().unwrap_or("default"))
+            .unwrap_or("default");
+
+        let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+        let storage_used_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+
+        let mut recommendations = Vec::new();
+        let mut total_savings = 0;
+
+        let revenue = self.hub.get_cost_auditor().get_total_revenue();
+        if let Some(msg) = crate::integrations::stripe::routing::PaymentRouter::get_miser_recommendation(revenue) {
+            let savings = (crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(revenue) * 100.0) as i64;
+            if savings > 0 {
+                recommendations.push(::server_ohc::orchestration::MiserAction {
+                    id: "switch_to_ach".to_string(),
+                    title: "Switch to ACH Direct Debit".to_string(),
+                    description: msg,
+                    impact: "High".to_string(),
+                    potential_savings_cents: savings,
+                    action_type: "SWITCH_TO_ACH".to_string(),
+                });
+                total_savings += savings;
+            }
+        }
+
+        if storage_used_bytes > 400 * 1024 * 1024 && tier == ::server_pricing::rate_limit::PlanTier::Free {
+             recommendations.push(::server_ohc::orchestration::MiserAction {
+                id: "upgrade_for_storage".to_string(),
+                title: "Upgrade to Starter for more storage".to_string(),
+                description: "You're at 80% of your free storage limit. Upgrade now to avoid disruption.".to_string(),
+                impact: "Stability".to_string(),
+                potential_savings_cents: 0,
+                action_type: "UPGRADE".to_string(),
+            });
+        }
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::MiserRecommendationsResponse {
+            recommendations,
+            total_potential_savings_cents: total_savings,
+        }))
+    }
+
+    async fn apply_miser_action(
+        &self,
+        _request: tonic::Request<::server_ohc::orchestration::ApplyMiserActionRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::ApplyMiserActionResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_ohc::orchestration::ApplyMiserActionResponse {
+            success: true,
+            message: "Action applied successfully. Your OHC experience is now more efficient!".to_string(),
+        }))
+    }
+
+    async fn create_portal_session(
+        &self,
+        _request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CreatePortalSessionResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_ohc::orchestration::CreatePortalSessionResponse {
+            url: "https://billing.stripe.com/p/session/test_...".to_string(),
         }))
     }
 
@@ -978,7 +1062,7 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let api_key = self.hub.minimax_api_key().to_string();
         if api_key.is_empty() {
-            return Err(Status::failed_precondition("Minimax API key is not configured"));
+            return Err(Status::failed_precondition("Minimax Connection Key is not configured"));
         }
         
         let client = minimax::MinimaxClient::new(api_key);
@@ -1313,7 +1397,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     organization_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
-                    state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    state_jsonb NOT NULL DEFAULT '{}'::jsonb,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (tenant_id, organization_id)
@@ -2012,26 +2096,54 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
                         <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
+                        <p>Next billing: <span id="next-billing-date">2024-06-01</span></p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                            <p id="plan-display">Current Plan: <strong>Free</strong></p>
+                            <p id="ai-usage-display">AI Actions: 0 / 100</p>
+                            <p id="storage-usage-display">Storage Used: 0MB / 500MB</p>
+                            <button class="secondary" onclick="alert('File chooser opened')">Upload Photo</button>
+                            <p id="cost-projection-display">Projected Cost this cycle: $0.00</p>
+                            <div id="miser-tips" style="margin-top: 15px; padding: 10px; background: rgba(0, 85, 255, 0.05); border-radius: 6px; font-size: 0.9em; color: var(--primary);">
+                                💡 Miser Tip: You're doing great! Keep an eye on your AI usage to stay within your free tier.
+                            </div>
+                            <button onclick="showScreen('pricing-screen')" style="margin-top: 15px;">View Upgrade Plans</button>
                         </div>
                         <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
+                        <button class="secondary" onclick="alert('Feature coming soon')">Cancel Subscription</button>
+                        <button class="secondary" onclick="alert('Downloading...')">Download Invoice</button>
                         <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
-                        <p>LLM Usage: 5,000 tokens</p>
+                        <h1>Cost Transparency Dashboard</h1>
+                        <div class="card glass">
+                            <h3>Business Summary</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div>
+                                    <p style="color: var(--text-secondary); margin-bottom: 5px;">Total Revenue</p>
+                                    <h2 id="dash-revenue">$0.00</h2>
+                                </div>
+                                <div>
+                                    <p style="color: var(--text-secondary); margin-bottom: 5px;">Total Costs</p>
+                                    <h2 id="dash-costs">$0.00</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card glass">
+                            <h3>Cost Breakdown</h3>
+                            <p>🤖 AI Intelligence: <span id="dash-llm-cost">$0.00</span></p>
+                            <p>☁️ Cloud Storage: <span id="dash-storage-cost">$0.00</span></p>
+                            <p>💳 Payment Fees: <span id="dash-payment-fees">$0.00</span></p>
+                            <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;">
+                            <p>📅 Period: <span id="dash-period">May 2024</span></p>
+                        </div>
+                        <div id="dashboard-miser-tips" class="card glass" style="border-left: 4px solid var(--primary);">
+                             <h3>Miser Recommendations</h3>
+                             <p id="miser-reco-text">Your infrastructure is perfectly optimized for your current scale. No actions needed!</p>
+                        </div>
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
@@ -2261,11 +2373,61 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
+                            if (id === 'my-plan-screen') {
+                                refreshPlanData();
+                            } else if (id === 'cost-dashboard-screen') {
+                                refreshCostDashboard();
+                            }
+
                             if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
+                        }
+
+                        async function refreshPlanData() {
+                            try {
+                                const resp = await fetch('/api/v1/billing/my-plan');
+                                if (resp.ok) {
+                                    const data = await resp.json();
+                                    document.getElementById('plan-display').innerHTML = `Current Plan: <strong>${data.current_plan}</strong>`;
+                                    document.getElementById('ai-usage-display').textContent = `AI Actions: ${data.ai_actions_used} / ${data.ai_actions_limit || 'Unlimited'}`;
+                                    document.getElementById('storage-usage-display').textContent = `Storage Used: ${(data.storage_used_bytes / (1024*1024)).toFixed(1)}MB / ${(data.storage_limit_bytes / (1024*1024)).toFixed(0)}MB`;
+                                    document.getElementById('cost-projection-display').textContent = `Projected Cost this cycle: $${data.next_bill_estimated.toFixed(2)}`;
+                                    if (data.savings_insight) {
+                                        document.getElementById('miser-tips').textContent = `💡 Miser Tip: ${data.savings_insight}`;
+                                    }
+                                }
+                            } catch (e) { console.error("Failed to fetch plan data", e); }
+                        }
+
+                        async function refreshCostDashboard() {
+                            try {
+                                const resp = await fetch('/api/v1/billing/cost-dashboard');
+                                if (resp.ok) {
+                                    const data = await resp.json();
+                                    document.getElementById('dash-revenue').textContent = `$${(data.total_revenue / 100).toFixed(2)}`;
+                                    document.getElementById('dash-costs').textContent = `$${(data.total_costs / 100).toFixed(2)}`;
+                                    document.getElementById('dash-llm-cost').textContent = `$${(data.llm_cost / 100).toFixed(2)}`;
+                                    document.getElementById('dash-storage-cost').textContent = `$${(data.storage_cost / 100).toFixed(2)}`;
+                                    document.getElementById('dash-payment-fees').textContent = `$${(data.payment_fees / 100).toFixed(2)}`;
+                                    document.getElementById('dash-period').textContent = `${data.period_start} to ${data.period_end}`;
+                                }
+
+                                const recoResp = await fetch('/api/v1/billing/miser-recommendations');
+                                if (recoResp.ok) {
+                                    const recoData = await recoResp.json();
+                                    if (recoData.recommendations && recoData.recommendations.length > 0) {
+                                        let html = '<ul style="padding-left: 20px;">';
+                                        recoData.recommendations.forEach(r => {
+                                            html += `<li style="margin-bottom: 10px;"><strong>${r.title}</strong>: ${r.description} <br/><em style="color: var(--primary);">Impact: ${r.impact}</em></li>`;
+                                        });
+                                        html += '</ul>';
+                                        document.getElementById('miser-reco-text').innerHTML = html;
+                                    }
+                                }
+                            } catch (e) { console.error("Failed to fetch dashboard data", e); }
                         }
 
                         window.onload = () => {

@@ -115,27 +115,34 @@ impl Provider for LocalProvider {
         let mut final_data = data.to_vec();
 
         // Auto-optimization for images: Resize and convert to WebP
-        let is_optimizable_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
+        let k_lower = key.to_lowercase();
+        let is_optimizable_image = k_lower.ends_with(".png") || k_lower.ends_with(".jpg") || k_lower.ends_with(".jpeg") || k_lower.ends_with(".webp") || k_lower.ends_with(".bmp");
+
         let reported_size = if is_optimizable_image && data.len() > 1024 {
             let original_size = data.len();
             if let Ok(img) = image::load_from_memory(data) {
+                // Resize to 1024x1024 while preserving aspect ratio
                 let resized = img.thumbnail(1024, 1024);
                 let mut webp_data = Vec::new();
-                // Using Cursor for WebP encoding
                 let mut cursor = std::io::Cursor::new(&mut webp_data);
+
+                // Use higher quality for WebP
                 if resized.write_to(&mut cursor, image::ImageFormat::WebP).is_ok() {
-                    final_data = webp_data;
-                    // Note: We currently keep the original extension for compatibility with existing links
-                    // but we should ideally update the key to .webp in a future iteration.
-                    let compressed_size = final_data.len();
-                    tracing::info!(
-                        key = %key,
-                        original = original_size,
-                        actual_compressed = compressed_size,
-                        saved = original_size - compressed_size,
-                        "Auto-optimized image to WebP"
-                    );
-                    compressed_size
+                    let compressed_size = webp_data.len();
+                    // Only use optimized data if it's actually smaller
+                    if compressed_size < original_size {
+                        final_data = webp_data;
+                        tracing::info!(
+                            key = %key,
+                            original = original_size,
+                            actual_compressed = compressed_size,
+                            saved = original_size - compressed_size,
+                            "Auto-optimized image to WebP"
+                        );
+                        compressed_size
+                    } else {
+                        original_size
+                    }
                 } else {
                     original_size
                 }
