@@ -32,7 +32,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -95,7 +95,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -147,7 +147,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -185,7 +185,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -234,7 +234,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -279,7 +279,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -331,7 +331,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -382,7 +382,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
@@ -468,7 +468,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: false
+          repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
