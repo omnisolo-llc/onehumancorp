@@ -129,27 +129,30 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         use std::os::unix::fs::PermissionsExt;
 
         let db_path = "ohc-standalone.db";
-        match OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .mode(0o600)
-            .open(db_path)
-        {
-            Ok(file) => {
-                if let Ok(metadata) = file.metadata() {
-                    let mut perms = metadata.permissions();
-                    if perms.mode() & 0o777 != 0o600 {
-                        perms.set_mode(0o600);
-                        if let Err(e) = file.set_permissions(perms) {
-                            tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                            panic!("Failed to securely update existing standalone database file permissions: {}", e); // Fail-closed gracefully
+        let paths = vec![db_path.to_string(), format!("{}-wal", db_path), format!("{}-shm", db_path)];
+        for path in paths {
+            match OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .mode(0o600)
+                .open(&path)
+            {
+                Ok(file) => {
+                    if let Ok(metadata) = file.metadata() {
+                        let mut perms = metadata.permissions();
+                        if perms.mode() & 0o777 != 0o600 {
+                            perms.set_mode(0o600);
+                            if let Err(e) = file.set_permissions(perms) {
+                                tracing::error!("Failed to securely update existing standalone database file permissions for {}: {}", path, e);
+                                panic!("Failed to securely update existing standalone database file permissions for {}: {}", path, e); // Fail-closed gracefully
+                            }
                         }
                     }
                 }
-            }
-            Err(e) => {
-                panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
+                Err(e) => {
+                    panic!("Failed to securely create or open standalone database file {} with restricted permissions: {}", path, e);
+                }
             }
         }
     }

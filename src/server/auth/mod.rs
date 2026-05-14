@@ -581,8 +581,17 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
-        if ::server_config::get().multitenant && req.organization_id.is_empty() {
-             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        let mut org_id = req.organization_id.clone();
+        if ::server_config::get().multitenant {
+             if org_id.is_empty() || org_id == "system" {
+                 // For new registrations in multi-tenant mode, do not allow arbitrary or system organization_ids.
+                 // Force generation of a new tenant ID to ensure isolation, unless an invite system overrides this.
+                 org_id = uuid::Uuid::new_v4().to_string();
+             } else {
+                 // Prevent users from specifying an existing organization_id without an invite.
+                 // For safety against Tenant Leakage, we always generate a new one if not empty/system.
+                 org_id = uuid::Uuid::new_v4().to_string();
+             }
         }
 
         let user = self.store.create_user(
@@ -590,7 +599,7 @@ impl AuthService for AuthServiceServerImpl {
             req.email.clone(),
             req.password,
             vec![ROLE_VIEWER.to_string()],
-            req.organization_id.clone(),
+            org_id,
         ).map_err(|e| Status::internal(e))?;
 
         let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
@@ -687,12 +696,22 @@ impl AuthService for AuthServiceServerImpl {
     }
 
     async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
-        let org_id = request.extensions().get::<AuthInfo>()
-            .map(|ai| ai.org_id.clone())
+        let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
+        let org_id = auth_info.org_id.clone();
+
+        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id)
+            .ok_or_else(|| Status::not_found("User not found"))?;
+
         let req = request.into_inner();
 
-        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
+        // Prevent privilege escalation: Only ADMINs can update roles or active status
+        let is_admin = caller.roles.contains(&ROLE_ADMIN.to_string());
+
+        let roles_to_update = if is_admin { Some(req.roles) } else { None };
+        let active_to_update = if is_admin { req.active } else { None };
+
+        let user = self.store.update_user(&req.id, req.email, roles_to_update, active_to_update, &org_id)
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
