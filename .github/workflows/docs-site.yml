@@ -50,6 +50,8 @@ jobs:
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
+            # Prevent root permission errors in Github Action CI runner cache
+            startup --output_user_root=/tmp/bazel-root
 
       - name: Build docs site
         run: bazelisk run //:docs_build
