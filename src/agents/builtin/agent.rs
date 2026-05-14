@@ -63,7 +63,6 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
-    pub permission_mode: crate::permission_architecture::PermissionMode,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
@@ -113,7 +112,6 @@ enable_llmcompiler_plan_and_execute: false,
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
-            permission_mode: crate::permission_architecture::PermissionMode::Restrictive,
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_single_agent_maximization: false,
@@ -2265,14 +2263,24 @@ impl Agent {
 
     // Anthropic Mechanic: 3-Stage Tool Gating
     fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
-        let perm_mgr = crate::permission_architecture::PermissionManager::new(
-            cfg.permission_mode.clone(),
-            cfg.project_trusted,
-            cfg.allowed_tools.clone(),
-            cfg.high_risk_tools.clone(),
-            cfg.approved_tool_calls.clone()
-        );
-        perm_mgr.check_tool_gating(tc, is_read_only)
+        // Stage 1: Trust establishment at project load
+        if !cfg.project_trusted && !is_read_only {
+            return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
+        }
+
+        // Stage 2: Permission check before each tool call
+        if let Some(allowed) = &cfg.allowed_tools {
+            if !allowed.contains(&tc.name) {
+                return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
+            }
+        }
+
+        // Stage 3: Explicit user confirmation for high-risk operations
+        if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
+            return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+        }
+
+        Ok(())
     }
 
 
