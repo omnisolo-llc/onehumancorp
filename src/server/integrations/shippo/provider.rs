@@ -2,12 +2,12 @@ use super::client::{ShippoClientWrapper, RealShippoClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-pub struct ShippoClientProvider {
+pub struct ShippoProvider {
     client: Arc<dyn ShippoClientWrapper>,
     metadata: ProviderMetadata,
 }
 
-impl ShippoClientProvider {
+impl ShippoProvider {
     pub fn new(api_key: String, base_url: String) -> Self {
         let client = RealShippoClient::new(api_key, base_url);
 

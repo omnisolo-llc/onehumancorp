@@ -2,12 +2,12 @@ use super::client::{ResendClientWrapper, RealResendClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-pub struct ResendClientProvider {
+pub struct ResendProvider {
     client: Arc<dyn ResendClientWrapper>,
     metadata: ProviderMetadata,
 }
 
-impl ResendClientProvider {
+impl ResendProvider {
     pub fn new(api_key: String, base_url: String) -> Self {
         let client = RealResendClient::new(api_key, base_url);
 
