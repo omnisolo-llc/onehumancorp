@@ -211,6 +211,91 @@ impl InteropProtocol {
     }
 
     /// Dispatches a background job and waits for acknowledgment
+    pub async fn listen_for_hybrid_sync_pings(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let node_id = self.node_id.clone();
+        let bus = self.bus.clone();
+
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == "system:hybrid_sync_ping" {
+                use prost::Message as ProstMessage;
+                if let Ok(ping) = proto::HealthPing::decode(&msg.payload[..]) {
+                    let ack = proto::HealthAck {
+                        source_node_id: node_id.clone(),
+                        target_node_id: ping.source_node_id.clone(),
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                    };
+
+                    let mut buf = Vec::new();
+                    if ack.encode(&mut buf).is_ok() {
+                        let ack_msg = Message {
+                            topic: format!("system:hybrid_sync_ack:{}", ping.source_node_id),
+                            payload: buf,
+                        };
+                        let bus_clone = bus.clone();
+                        tokio::spawn(async move {
+                            let mut retries = 0;
+                            let mut delay_ms = 50;
+                            while retries < 5 {
+                                if bus_clone.publish(ack_msg.clone()).await.is_ok() {
+                                    break;
+                                }
+                                retries += 1;
+                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                delay_ms *= 2;
+                            }
+                        });
+                    }
+                }
+            }
+        });
+
+        self.bus.subscribe("system:hybrid_sync_ping".to_string(), handler).await
+    }
+
+    pub async fn check_hybrid_sync_health(&self, timeout_ms: u64) -> Result<bool, String> {
+        use prost::Message as ProstMessage;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+
+        let ack_topic = format!("system:hybrid_sync_ack:{}", self.node_id);
+        let handler = Box::new(move |msg: Message| {
+            if msg.topic == ack_topic {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let cancel = self.bus.subscribe(format!("system:hybrid_sync_ack:{}", self.node_id), handler).await?;
+
+        let ping = proto::HealthPing {
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+            source_node_id: self.node_id.clone(),
+        };
+
+        let mut buf = Vec::new();
+        ping.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let msg = Message {
+            topic: "system:hybrid_sync_ping".to_string(),
+            payload: buf,
+        };
+        self.bus.publish(msg).await?;
+
+        let start = std::time::Instant::now();
+        while start.elapsed().as_millis() < timeout_ms as u128 {
+            if received.load(Ordering::SeqCst) {
+                cancel();
+                return Ok(true);
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        }
+
+        cancel();
+        Ok(false)
+    }
+
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
         use std::sync::atomic::{AtomicBool, Ordering};

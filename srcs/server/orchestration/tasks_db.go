@@ -33,6 +33,7 @@ type TaskStore interface {
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
 	ReportMissionHandover(ctx context.Context, missionID string, blockers string) error
+	SanitizeBacklog(ctx context.Context) error
 }
 
 // PostgresTaskStore implementation
@@ -297,6 +298,11 @@ func (s *PostgresTaskStore) PollDelegatedTasks(ctx context.Context, limit int) (
 	}
 
 	return tasks, nil
+}
+
+func (s *PostgresTaskStore) SanitizeBacklog(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM agent_missions WHERE status = 'blocked'")
+	return err
 }
 
 func (s *PostgresTaskStore) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
@@ -641,6 +647,11 @@ func (s *SqliteTaskStore) UpdateTaskStatus(ctx context.Context, id string, statu
 	return err
 }
 
+
+func (s *SqliteTaskStore) SanitizeBacklog(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM agent_missions WHERE status = 'blocked'")
+	return err
+}
 
 func (s *SqliteTaskStore) ReportMissionHandover(ctx context.Context, missionID string, blockers string) error {
 	_, err := s.db.ExecContext(ctx, `

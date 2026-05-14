@@ -255,6 +255,92 @@ func (p *InteropProtocol) DispatchJob(ctx context.Context, jobID, tenantID, acti
 	return false, nil
 }
 
+func (p *InteropProtocol) CheckHybridSyncHealth(ctx context.Context, timeoutMs uint64) (bool, error) {
+	var received int32
+
+	ackTopic := fmt.Sprintf("system:hybrid_sync_ack:%s", p.nodeID)
+	handler := func(msg Message) {
+		if msg.Topic == ackTopic {
+			atomic.StoreInt32(&received, 1)
+		}
+	}
+
+	cancel, err := p.bus.Subscribe(ctx, ackTopic, handler)
+	if err != nil {
+		return false, err
+	}
+	defer cancel()
+
+	ping := &interoppb.HealthPing{
+		SourceNodeId: p.nodeID,
+		TimestampMs:  time.Now().UnixMilli(),
+		CurrentMode:  0, // Assuming 0 is MODE_UNSPECIFIED
+	}
+
+	buf, err := proto.Marshal(ping)
+	if err != nil {
+		return false, err
+	}
+
+	msg := Message{
+		Topic:   "system:hybrid_sync_ping",
+		Payload: buf,
+	}
+
+	if err := p.bus.Publish(ctx, msg); err != nil {
+		return false, err
+	}
+
+	start := time.Now()
+	for time.Since(start).Milliseconds() < int64(timeoutMs) {
+		if atomic.LoadInt32(&received) == 1 {
+			return true, nil
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	return false, nil
+}
+
+func (p *InteropProtocol) ListenForHybridSyncPings(ctx context.Context) (func(), error) {
+	nodeID := p.nodeID
+	bus := p.bus
+
+	handler := func(msg Message) {
+		if msg.Topic == "system:hybrid_sync_ping" {
+			var ping interoppb.HealthPing
+			if err := proto.Unmarshal(msg.Payload, &ping); err == nil {
+				ack := &interoppb.HealthAck{
+					SourceNodeId: nodeID,
+					TargetNodeId: ping.SourceNodeId,
+					TimestampMs:  time.Now().UnixMilli(),
+				}
+
+				buf, err := proto.Marshal(ack)
+				if err == nil {
+					ackMsg := Message{
+						Topic:   fmt.Sprintf("system:hybrid_sync_ack:%s", ping.SourceNodeId),
+						Payload: buf,
+					}
+
+					go func() {
+						delayMs := 50
+						for retries := 0; retries < 5; retries++ {
+							if err := bus.Publish(context.Background(), ackMsg); err == nil {
+								break
+							}
+							time.Sleep(time.Duration(delayMs) * time.Millisecond)
+							delayMs *= 2
+						}
+					}()
+				}
+			}
+		}
+	}
+
+	return p.bus.Subscribe(ctx, "system:hybrid_sync_ping", handler)
+}
+
 func (p *InteropProtocol) ListenForJobs(ctx context.Context, tenantID string, processor func(*interoppb.JobDispatch)) (func(), error) {
 	nodeID := p.nodeID
 	bus := p.bus
