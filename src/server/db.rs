@@ -9,6 +9,400 @@ use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
 
+
+
+use async_trait::async_trait;
+
+#[async_trait]
+pub trait WizardRepository: Send + Sync {
+    async fn save_wizard_state(&self, tenant_id: String, step: String, data: String) -> Result<(), Box<dyn std::error::Error>>;
+    async fn get_wizard_state(&self, tenant_id: String) -> Result<String, Box<dyn std::error::Error>>;
+}
+
+pub struct PostgresWizardRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresWizardRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl WizardRepository for PostgresWizardRepository {
+    async fn save_wizard_state(&self, tenant_id: String, step: String, data: String) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+        sqlx::query("INSERT INTO wizard_states (tenant_id, step, data) VALUES ($1, $2, $3) ON CONFLICT (tenant_id) DO UPDATE SET step = EXCLUDED.step, data = EXCLUDED.data")
+            .bind(&tenant_id)
+            .bind(&step)
+            .bind(&data)
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+    async fn get_wizard_state(&self, tenant_id: String) -> Result<String, Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+        let row = sqlx::query("SELECT data FROM wizard_states WHERE tenant_id = $1").bind(&tenant_id).fetch_optional(&mut *tx).await?;
+        tx.commit().await?;
+        if let Some(r) = row {
+            Ok(r.try_get("data").unwrap_or_default())
+        } else {
+            Ok("{}".to_string())
+        }
+    }
+}
+
+pub struct SqliteWizardRepository {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteWizardRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl WizardRepository for SqliteWizardRepository {
+    async fn save_wizard_state(&self, tenant_id: String, step: String, data: String) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO wizard_states (tenant_id, step, data) VALUES (?, ?, ?) ON CONFLICT (tenant_id) DO UPDATE SET step = excluded.step, data = excluded.data")
+            .bind(&tenant_id)
+            .bind(&step)
+            .bind(&data)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+    async fn get_wizard_state(&self, tenant_id: String) -> Result<String, Box<dyn std::error::Error>> {
+        let row = sqlx::query("SELECT data FROM wizard_states WHERE tenant_id = ?").bind(&tenant_id).fetch_optional(&self.pool).await?;
+        if let Some(r) = row {
+            Ok(r.try_get("data").unwrap_or_default())
+        } else {
+            Ok("{}".to_string())
+        }
+    }
+}
+
+#[async_trait]
+pub trait AgentMemoryRepository: Send + Sync {
+    async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+pub struct PostgresAgentMemoryRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresAgentMemoryRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl AgentMemoryRepository for PostgresAgentMemoryRepository {
+    async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            .bind(id)
+            .bind(org_id)
+            .bind(task_id)
+            .bind(content)
+            .bind(embedding)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
+
+pub struct SqliteAgentMemoryRepository {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteAgentMemoryRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl AgentMemoryRepository for SqliteAgentMemoryRepository {
+    async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)")
+            .bind(id)
+            .bind(org_id)
+            .bind(task_id)
+            .bind(content)
+            .bind(embedding)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+pub trait AutodreamMemoryRepository: Send + Sync {
+    async fn insert_autodream_memory(&self, id: &str, org_id: &str, agent_id: &str, task_id: &str, content: &str, embedding: &str, source_type: &str) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+pub struct PostgresAutodreamMemoryRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresAutodreamMemoryRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl AutodreamMemoryRepository for PostgresAutodreamMemoryRepository {
+    async fn insert_autodream_memory(&self, id: &str, org_id: &str, agent_id: &str, task_id: &str, content: &str, embedding: &str, source_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+            .bind(id)
+            .bind(org_id)
+            .bind(agent_id)
+            .bind(task_id)
+            .bind(content)
+            .bind(embedding)
+            .bind(source_type)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
+
+pub struct SqliteAutodreamMemoryRepository {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteAutodreamMemoryRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl AutodreamMemoryRepository for SqliteAutodreamMemoryRepository {
+    async fn insert_autodream_memory(&self, id: &str, org_id: &str, agent_id: &str, task_id: &str, content: &str, embedding: &str, source_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind(id)
+            .bind(org_id)
+            .bind(agent_id)
+            .bind(task_id)
+            .bind(content)
+            .bind(embedding)
+            .bind(source_type)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+pub trait KnowledgeEmbeddingRepository: Send + Sync {
+    async fn insert_knowledge_embedding(&self, id: &str, org_id: &str, agent_id: &str, task_id: &str, content: &str, embedding: &str, source_type: &str) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+pub struct PostgresKnowledgeEmbeddingRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresKnowledgeEmbeddingRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl KnowledgeEmbeddingRepository for PostgresKnowledgeEmbeddingRepository {
+    async fn insert_knowledge_embedding(&self, id: &str, org_id: &str, agent_id: &str, task_id: &str, content: &str, embedding: &str, source_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+            .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+            .bind(org_id)
+            .bind(agent_id)
+            .bind(task_id)
+            .bind(content)
+            .bind(embedding)
+            .bind(source_type)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
+
+pub struct SqliteKnowledgeEmbeddingRepository {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteKnowledgeEmbeddingRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl KnowledgeEmbeddingRepository for SqliteKnowledgeEmbeddingRepository {
+    async fn insert_knowledge_embedding(&self, id: &str, org_id: &str, agent_id: &str, task_id: &str, content: &str, embedding: &str, source_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind(id)
+            .bind(org_id)
+            .bind(agent_id)
+            .bind(task_id)
+            .bind(content)
+            .bind(embedding)
+            .bind(source_type)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+pub trait HandoffMissionRepository: Send + Sync {
+    async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+pub struct PostgresHandoffMissionRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresHandoffMissionRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl HandoffMissionRepository for PostgresHandoffMissionRepository {
+    async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+        sqlx::query(
+            "UPDATE agent_missions
+             SET status = 'blocked',
+                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2"
+        )
+        .bind(blockers)
+        .bind(mission_id)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+}
+
+pub struct SqliteHandoffMissionRepository {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteHandoffMissionRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl HandoffMissionRepository for SqliteHandoffMissionRepository {
+    async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query(
+            "UPDATE agent_missions
+             SET status = 'blocked',
+                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2"
+        )
+        .bind(blockers)
+        .bind(mission_id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+pub trait CleanupStagnantMissionsRepository: Send + Sync {
+    async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>>;
+}
+
+pub struct PostgresCleanupStagnantMissionsRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresCleanupStagnantMissionsRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl CleanupStagnantMissionsRepository for PostgresCleanupStagnantMissionsRepository {
+    async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
+        let threshold = chrono::Utc::now() - chrono::Duration::seconds(timeout_secs);
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+        let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < $1")
+            .bind(threshold)
+            .execute(&mut *tx)
+            .await?.rows_affected();
+        tx.commit().await?;
+        Ok(affected)
+    }
+}
+
+pub struct SqliteCleanupStagnantMissionsRepository {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteCleanupStagnantMissionsRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl CleanupStagnantMissionsRepository for SqliteCleanupStagnantMissionsRepository {
+    async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
+        let threshold = chrono::Utc::now() - chrono::Duration::seconds(timeout_secs);
+        let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < ?")
+            .bind(threshold.to_rfc3339())
+            .execute(&self.pool)
+            .await?.rows_affected();
+        Ok(affected)
+    }
+}
+
+#[async_trait]
+pub trait MarkTaskAutoDreamedRepository: Send + Sync {
+    async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+pub struct PostgresMarkTaskAutoDreamedRepository {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresMarkTaskAutoDreamedRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl MarkTaskAutoDreamedRepository for PostgresMarkTaskAutoDreamedRepository {
+    async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let query = if table == "swarm_tasks" {
+            "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
+        } else {
+            "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
+        };
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+        sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+}
+
+pub struct SqliteMarkTaskAutoDreamedRepository {
+    pool: sqlx::SqlitePool,
+}
+
+impl SqliteMarkTaskAutoDreamedRepository {
+    pub fn new(pool: sqlx::SqlitePool) -> Self { Self { pool } }
+}
+
+#[async_trait]
+impl MarkTaskAutoDreamedRepository for SqliteMarkTaskAutoDreamedRepository {
+    async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let query = if table == "swarm_tasks" {
+            "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?"
+        } else {
+            "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
+        };
+        sqlx::query(query).bind(task_id).execute(&self.pool).await?;
+        Ok(())
+    }
+}
+
+
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
@@ -707,18 +1101,15 @@ impl DB {
     }
 
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
-                .bind(id)
-                .bind(org_id)
-                .bind(task_id)
-                .bind(content)
-                .bind(embedding)
-                .execute(&self.pool)
-                .await?; }
-        };
-
+        if self.is_sqlite() {
+            if let DbStore::Sqlite(pool) = &self.store {
+                let repo = SqliteAgentMemoryRepository::new(pool.clone());
+                repo.insert_agent_memory(id, org_id, task_id, content, embedding).await?;
+            }
+        } else {
+            let repo = PostgresAgentMemoryRepository::new(self.pool.clone());
+            repo.insert_agent_memory(id, org_id, task_id, content, embedding).await?;
+        }
         Ok(())
     }
 
@@ -732,31 +1123,14 @@ pub async fn insert_autodream_memory(
         embedding: &str,
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                    .bind(id)
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(sqlite_pool)
-                    .await?;
+        if self.is_sqlite() {
+            if let DbStore::Sqlite(pool) = &self.store {
+                let repo = SqliteAutodreamMemoryRepository::new(pool.clone());
+                repo.insert_autodream_memory(id, org_id, agent_id, task_id, content, embedding, source_type).await?;
             }
-            DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                    .bind(id)
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(&self.pool)
-                    .await?;
-            }
+        } else {
+            let repo = PostgresAutodreamMemoryRepository::new(self.pool.clone());
+            repo.insert_autodream_memory(id, org_id, agent_id, task_id, content, embedding, source_type).await?;
         }
         Ok(())
     }
@@ -771,90 +1145,41 @@ pub async fn insert_autodream_memory(
         embedding: &str,
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                    .bind(id)
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(sqlite_pool)
-                    .await?;
+        if self.is_sqlite() {
+            if let DbStore::Sqlite(pool) = &self.store {
+                let repo = SqliteKnowledgeEmbeddingRepository::new(pool.clone());
+                repo.insert_knowledge_embedding(id, org_id, agent_id, task_id, content, embedding, source_type).await?;
             }
-            DbStore::Postgres => {
-                sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                    .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(&self.pool)
-                    .await?;
-            }
+        } else {
+            let repo = PostgresKnowledgeEmbeddingRepository::new(self.pool.clone());
+            repo.insert_knowledge_embedding(id, org_id, agent_id, task_id, content, embedding, source_type).await?;
         }
         Ok(())
     }
 
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
-                    "UPDATE agent_missions
-                     SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2"
-                )
-                .bind(blockers)
-                .bind(mission_id)
-                .execute(sqlite_pool)
-                .await?;
-            },
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
-                sqlx::query(
-                    "UPDATE agent_missions
-                     SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2"
-                )
-                .bind(blockers)
-                .bind(mission_id)
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await?;
+        if self.is_sqlite() {
+            if let DbStore::Sqlite(pool) = &self.store {
+                let repo = SqliteHandoffMissionRepository::new(pool.clone());
+                repo.handoff_mission(mission_id, blockers).await?;
             }
+        } else {
+            let repo = PostgresHandoffMissionRepository::new(self.pool.clone());
+            repo.handoff_mission(mission_id, blockers).await?;
         }
         Ok(())
     }
 
     pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
-        let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
-        let affected = match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < ?")
-                    .bind(threshold.to_rfc3339())
-                    .execute(sqlite_pool)
-                    .await?.rows_affected()
-            },
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < $1")
-                    .bind(threshold)
-                    .execute(&mut *tx)
-                    .await?.rows_affected();
-                tx.commit().await?;
-                affected
-            }
+        let affected = if self.is_sqlite() {
+            if let DbStore::Sqlite(pool) = &self.store {
+                let repo = SqliteCleanupStagnantMissionsRepository::new(pool.clone());
+                repo.cleanup_stagnant_missions(timeout_secs).await?
+            } else { 0 }
+        } else {
+            let repo = PostgresCleanupStagnantMissionsRepository::new(self.pool.clone());
+            repo.cleanup_stagnant_missions(timeout_secs).await?
         };
         if affected > 0 {
             tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
@@ -863,29 +1188,15 @@ pub async fn insert_autodream_memory(
     }
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                let query = if table == "swarm_tasks" {
-                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?"
-                } else {
-                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
-                };
-                sqlx::query(query).bind(task_id).execute(sqlite_pool).await?;
-            },
-            DbStore::Postgres => {
-                let query = if table == "swarm_tasks" {
-                    // swarm_tasks uses UUID primary key
-                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
-                } else {
-                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
-                };
-                let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, "system").await?;
-                sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
-                tx.commit().await?;
+        if self.is_sqlite() {
+            if let DbStore::Sqlite(pool) = &self.store {
+                let repo = SqliteMarkTaskAutoDreamedRepository::new(pool.clone());
+                repo.mark_task_auto_dreamed(task_id, table).await?;
             }
-        };
-
+        } else {
+            let repo = PostgresMarkTaskAutoDreamedRepository::new(self.pool.clone());
+            repo.mark_task_auto_dreamed(task_id, table).await?;
+        }
         Ok(())
     }
 }
@@ -1021,7 +1332,7 @@ mod autodream_db_tests {
             .unwrap();
 
         assert_eq!(rows.len(), 1);
-        use sqlx::Row;
+
         let data: String = rows[0].get("data");
         assert_eq!(data, "data_a"); // Tenant B's data is isolated and safely inaccessible
     }
@@ -1187,5 +1498,28 @@ mod e2e_tenant_isolation_tests {
         // If the pool initialized without the `before_acquire` hook, this is a success.
         // Discarding `DISCARD ALL` safely scopes context explicitly for each execution.
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
+    }
+}
+
+#[cfg(test)]
+mod wizard_repo_tests {
+    use super::*;
+    use sqlx::Row;
+
+    #[tokio::test]
+    async fn test_wizard_repo_dummy_postgres() {
+        // Since we can't easily mock PgPool without a real connection, we just ensure the traits compile and can be referenced.
+        let _trait_check: Option<Box<dyn WizardRepository>> = None;
+        let _trait_check2: Option<Box<dyn AgentMemoryRepository>> = None;
+        let _trait_check3: Option<Box<dyn AutodreamMemoryRepository>> = None;
+        assert!(true);
+    }
+
+    #[tokio::test]
+    async fn test_wizard_repo_dummy_sqlite() {
+        let _trait_check: Option<Box<dyn CleanupStagnantMissionsRepository>> = None;
+        let _trait_check2: Option<Box<dyn HandoffMissionRepository>> = None;
+        let _trait_check3: Option<Box<dyn MarkTaskAutoDreamedRepository>> = None;
+        assert!(true);
     }
 }

@@ -1,0 +1,7 @@
+
+CREATE TABLE IF NOT EXISTS wizard_states (
+    tenant_id TEXT PRIMARY KEY,
+    step TEXT NOT NULL,
+    data TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

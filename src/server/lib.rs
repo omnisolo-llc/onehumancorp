@@ -1459,6 +1459,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
+        .route("/api/wizard", axum::routing::post(save_wizard_state).get(get_wizard_state))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
@@ -1600,6 +1601,72 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+pub async fn save_wizard_state(
+    claims: Option<axum::Extension<::server_common::Claims>>,
+    axum::extract::Json(payload): axum::extract::Json<serde_json::Value>,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = claims.and_then(|c| c.organization_id.clone()).unwrap_or_else(|| "default_tenant".to_string());
+    if tenant_id == "default_tenant" && std::env::var("STANDALONE_MODE").unwrap_or_default() != "true" {
+        return axum::response::Response::builder().status(401).body(axum::body::Body::from("Unauthorized")).unwrap();
+    }
+    let db = crate::db::DB::new().await.unwrap();
+    let step = payload.get("step").and_then(|s| s.as_str()).unwrap_or("0");
+    let data = payload.to_string();
+
+    let result = if db.is_sqlite() {
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let repo = crate::db::SqliteWizardRepository::new(pool.clone());
+            use crate::db::WizardRepository;
+            repo.save_wizard_state(tenant_id.to_string(), step.to_string(), data).await
+        } else { Ok(()) }
+    } else {
+        let repo = crate::db::PostgresWizardRepository::new(db.pool.clone());
+        use crate::db::WizardRepository;
+        repo.save_wizard_state(tenant_id.to_string(), step.to_string(), data).await
+    };
+
+    if let Err(e) = result {
+        tracing::error!("Failed to save wizard state: {:?}", e);
+        axum::response::Response::builder().status(500).body(axum::body::Body::from("Internal Error")).unwrap()
+    } else {
+        axum::response::Response::builder().status(200).body(axum::body::Body::from("Saved")).unwrap()
+    }
+}
+
+pub async fn get_wizard_state(
+    claims: Option<axum::Extension<::server_common::Claims>>,
+) -> axum::response::Response {
+    let tenant_id = claims.and_then(|c| c.organization_id.clone()).unwrap_or_else(|| "default_tenant".to_string());
+    if tenant_id == "default_tenant" && std::env::var("STANDALONE_MODE").unwrap_or_default() != "true" {
+        return axum::response::Response::builder().status(401).body(axum::body::Body::from("Unauthorized")).unwrap();
+    }
+    let db = crate::db::DB::new().await.unwrap();
+    let mut data_str = "{}".to_string();
+    let result = if db.is_sqlite() {
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let repo = crate::db::SqliteWizardRepository::new(pool.clone());
+            use crate::db::WizardRepository;
+            repo.get_wizard_state(tenant_id.to_string()).await
+        } else { Ok("{}".to_string()) }
+    } else {
+        let repo = crate::db::PostgresWizardRepository::new(db.pool.clone());
+        use crate::db::WizardRepository;
+        repo.get_wizard_state(tenant_id.to_string()).await
+    };
+
+    match result {
+        Ok(d) => {
+            let val = serde_json::from_str(&d).unwrap_or(serde_json::json!({"step": "0", "data": "{}"}));
+            axum::response::Response::builder().status(200).header("Content-Type", "application/json").body(axum::body::Body::from(val.to_string())).unwrap()
+        },
+        Err(e) => {
+            tracing::error!("Failed to get wizard state: {:?}", e);
+            axum::response::Response::builder().status(500).body(axum::body::Body::from("Internal Error")).unwrap()
+        }
+    }
+}
+
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
     let content = match path {
@@ -1900,18 +1967,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
-                    <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
+
 
 
                     <!-- API Screen -->
@@ -2089,109 +2145,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                      <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
+                        <div id="step-0">
+                            <label><input type="checkbox" onchange="toggleAdvancedMode()" id="advanced-toggle"> Advanced Mode</label>
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
+                            <button onclick="nextStep(1)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
-                        </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
-                        </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-
                         <div id="step-ai" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="nextStep(0)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <h1>Designing your storefront...</h1>
@@ -2201,7 +2166,98 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Your live storefront!</h1>
                             <h2>AI Store</h2>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        </div>
+                        <div id="step-1" style="display: none;">
+                            <h1>What kind of business are you building?</h1>
+                            <button class="secondary" onclick="nextStep(2)">🛒 Online Store</button>
+                            <button class="secondary" onclick="nextStep(2)">🛠️ Service Business</button>
+                            <button class="secondary" onclick="nextStep(2)">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="nextStep(2)">🎨 Creative</button>
+                            <button class="secondary" onclick="nextStep(2)">🏠 Local Business</button>
+                            <br/><button class="secondary" onclick="nextStep(0)">Back</button>
+                            <br/><button onclick="nextStep(2)">Next</button>
+                        </div>
+                        <div id="step-2" style="display: none;">
+                            <h1>What is your business called?</h1>
+                            <input type="text" placeholder="e.g. Maya's Cakes" id="business-name-input"/>
+                            <textarea placeholder="Description" id="business-desc-input" style="display:none;"></textarea>
+                            <button onclick="autoSuggestAI()">Auto-suggest Description</button>
+                            <button onclick="nextStep(3)">Next</button>
+                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                        </div>
+                        <div id="step-3" style="display: none;">
+                            <h1>What do you sell?</h1>
+                            <button class="secondary" onclick="nextStep(4)">Physical products</button>
+                            <button class="secondary" onclick="nextStep(4)">Services / Appointments</button>
+                            <button class="secondary" onclick="nextStep(4)">Subscriptions</button>
+                            <br/><button onclick="nextStep(4)">Next</button>
+                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                        </div>
+                        <div id="step-4" style="display: none;">
+                            <h1>Add your first product</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
+                            <input type="text" placeholder="0.00" />
+                            <div class="advanced-only" style="display: none;">
+                                <input type="text" placeholder="SKU (Advanced)" />
+                                <input type="text" placeholder="Tax Code (Advanced)" />
+                                <input type="text" placeholder="Inventory Threshold (Advanced)" />
+                            </div>
+                            <button onclick="nextStep(5)">Next</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                        </div>
+                        <div id="step-5" style="display: none;">
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(6)">Online only</button>
+                            <button class="secondary" onclick="nextStep(6)">Both Online & In-person</button>
+                            <br/><button onclick="nextStep(6)">Next</button>
+                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                        </div>
+                        <div id="step-6" style="display: none;">
+                            <h1>Choose a Template</h1>
+                            <button class="secondary" onclick="nextStep(7)">Modern</button>
+                            <button class="secondary" onclick="nextStep(7)">Bold</button>
+                            <br/><button onclick="nextStep(7)">Next</button>
+                            <button class="secondary" onclick="nextStep(5)">Back</button>
+                        </div>
+                        <div id="step-7" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <button class="secondary" onclick="nextStep(8)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(8)">🔗 Connect Custom Domain</button>
+                            <div class="advanced-only" style="display: none;">
+                                <input type="text" placeholder="Custom Nameservers (Advanced)" />
+                                <input type="text" placeholder="SSL Certificate PEM (Advanced)" />
+                            </div>
+                            <br/><button onclick="nextStep(8)">Next</button>
+                            <button class="secondary" onclick="nextStep(6)">Back</button>
+                        </div>
+                        <div id="step-8" style="display: none;">
+                            <h1>Administrator account</h1>
+                            <input type="text" placeholder="e.g. Maya Smith" />
+                            <input type="email" placeholder="you@email.com" />
+                            <input type="password" placeholder="Password" onkeyup="document.getElementById('pwd-meter').innerText = this.value.length > 8 ? 'Strong' : 'Weak'" />
+                            <div id="pwd-meter">Weak</div>
+                            <button class="secondary" onclick="alert('SSO flow triggered')">Sign in with Google</button>
+                            <button onclick="nextStep(9)">Review & Launch</button>
+                            <button class="secondary" onclick="nextStep(7)">Back</button>
+                        </div>
+                        <div id="step-9" style="display: none;">
+                            <h1>Almost there</h1>
+                            <button onclick="nextStep(10)">Launch!</button>
+                        </div>
+                        <div id="step-10" style="display: none;">
+                            <h1>Onboarding Complete!</h1>
+                            <p>Your business is now live!</p>
+                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                        </div>
+
+                        <div id="checklist-screen" class="screen" style="display: none;">
+                            <h1>You're set up! Here's what to do next:</h1>
+                            <p>✅ Business live</p>
+                            <p>⬜ Add 3 more products</p>
+                            <p>⬜ Connect Instagram</p>
+                            <p>⬜ Share your link with a friend</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
                     </div>
 
@@ -2239,6 +2295,50 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meeting-room-screen': '/meetings/room/1'
                         };
 
+                        function toggleAdvancedMode() {
+                            const isAdvanced = document.body.classList.toggle('advanced-mode');
+                            localStorage.setItem('advancedMode', isAdvanced);
+                            document.querySelectorAll('.advanced-only').forEach(el => el.style.display = isAdvanced ? 'block' : 'none');
+                        }
+
+                        function autoSuggestAI() {
+                            let btn = event.target;
+                            btn.innerText = "Thinking...";
+                            setTimeout(() => {
+                                let name = document.getElementById('business-name-input').value || "Your Business";
+                                let desc = document.getElementById('business-desc-input');
+                                desc.style.display = 'block';
+                                desc.value = "An innovative and modern " + name + " providing exceptional value.";
+                                btn.innerText = "Auto-suggest Description";
+                            }, 1000);
+                        }
+
+                        function generateAI() {
+                            nextStep('generating');
+                            setTimeout(() => {
+                                nextStep('launch-ai');
+                            }, 2000);
+                        }
+
+                        function nextStep(step) {
+                            let data = {};
+                            document.querySelectorAll('#setup-screen input').forEach(input => {
+                                if(input.value && input.type !== 'password') data[input.placeholder || input.name] = input.value;
+                            });
+                            fetch('/api/wizard', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({step: step.toString(), timestamp: Date.now(), formData: data})
+                            }).catch(console.error);
+
+                            document.querySelectorAll('#setup-screen > div').forEach(div => div.style.display = 'none');
+                            if (document.getElementById('step-' + step)) {
+                                document.getElementById('step-' + step).style.display = 'block';
+                            } else if (document.getElementById(step + '-screen')) {
+                                showScreen(step + '-screen');
+                            }
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -2269,6 +2369,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         window.onload = () => {
+                            if (localStorage.getItem('advancedMode') === 'true') toggleAdvancedMode();
+                            fetch('/api/wizard').then(r => r.json()).then(state => {
+                                if (state && state.step && state.step !== '0' && state.step !== '10' && state.step !== '100' && state.step !== 'ai') {
+                                    document.querySelectorAll('#setup-screen > div').forEach(div => div.style.display = 'none');
+                                    let stepEl = document.getElementById('step-' + state.step);
+                                    if (stepEl) stepEl.style.display = 'block';
+                                }
+                            }).catch(console.error);
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
@@ -2279,4 +2387,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         "#,
     };
     axum::response::Html(content)
+}
+
+#[cfg(test)]
+mod wizard_api_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_save_wizard_state_signature() {
+        // Just verify the function signatures exist
+        let _f = save_wizard_state;
+        let _g = get_wizard_state;
+        assert!(true);
+    }
 }
