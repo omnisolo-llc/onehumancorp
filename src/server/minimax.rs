@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+use crate::services::billing::auditor::{CostAuditor, AuditEvent};
+use crate::pricing::calculator::CostConfig;
+use std::sync::Arc;
 
 struct CircuitBreaker {
     failures: Mutex<usize>,
@@ -56,6 +59,7 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
 pub struct MinimaxClient {
     api_key: String,
     url: String,
+    cost_auditor: Arc<CostAuditor>,
 }
 
 #[derive(Debug, Serialize)]
@@ -87,9 +91,12 @@ struct MessageContent {
 
 impl MinimaxClient {
     pub fn new(api_key: String) -> Self {
+        let cost_config = CostConfig::default();
+        let cost_auditor = Arc::new(CostAuditor::new(cost_config));
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
+            cost_auditor,
         }
     }
 
@@ -124,6 +131,16 @@ impl MinimaxClient {
                     if resp.status().is_success() {
                         let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
                         cb.record_success();
+                        let input_tokens = prompt.len() as i64 / 4;
+                        let output_tokens = if let Some(choice) = result.choices.first() { choice.message.content.len() as i64 / 4 } else { 0 };
+                        let audit_event = AuditEvent {
+                            agent_id: "system".to_string(),
+                            input_tokens,
+                            output_tokens,
+                            cached_input_tokens: 0,
+                            local_embedding_tokens: 0,
+                        };
+                        self.cost_auditor.record_event(audit_event);
                         if let Some(choice) = result.choices.first() {
                             return Ok(choice.message.content.clone());
                         } else {

@@ -256,10 +256,30 @@ impl Hub {
         let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
         let agent_id = msg.to_agent.clone();
         let tracker = self.tracker.clone();
+        let hub_clone = self.clone();
+        let to_agent_clone = msg.to_agent.clone();
         tokio::spawn(async move {
             if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
                 if limit_status.soft_limit_reached {
                     tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
+                    if let Some(user_msg) = limit_status.user_message {
+                        let sys_msg = crate::ohc::orchestration::Message {
+                            id: format!("sys-{}", chrono::Utc::now().timestamp_millis()),
+                            from_agent: "system".to_string(),
+                            to_agent: to_agent_clone.clone(),
+                            r#type: "SYSTEM_WARNING".to_string(),
+                            content: format!("Tier limit reached: {}", user_msg),
+                            occurred_at_unix: chrono::Utc::now().timestamp(),
+                            meeting_id: "".to_string(),
+                        };
+                        let mut rx_inbox = hub_clone.inbox.write().unwrap();
+                        let entry = rx_inbox.entry(to_agent_clone.clone()).or_insert_with(Vec::new);
+                        entry.push(sys_msg.clone());
+                        let rx_subs = hub_clone.subs.read().unwrap();
+                        if let Some(tx) = rx_subs.get(&to_agent_clone) {
+                            let _ = tx.send(sys_msg);
+                        }
+                    }
                 }
             }
         });

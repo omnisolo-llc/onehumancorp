@@ -86,7 +86,7 @@ impl CostAuditor {
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
 
-        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone()), KeyValue::new("tenant_id", event.agent_id.split("-").next().unwrap_or("default").to_string())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -204,7 +204,7 @@ impl CostAuditor {
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
 
-        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone()), KeyValue::new("tenant_id", event.agent_id.split("-").next().unwrap_or("default").to_string())]);
 
         total
     }

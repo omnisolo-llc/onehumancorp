@@ -5,18 +5,23 @@ use std::io;
 
 use std::path::{Path, PathBuf};
 use crate::billing::Tracker;
+use crate::services::billing::auditor::CostAuditor;
+use std::sync::Arc;
 use super::provider::{BlobMetadata, Provider};
 
 pub struct LocalProvider {
     base_path: PathBuf,
     tracker: Tracker,
+    cost_auditor: Arc<CostAuditor>,
 }
 
 impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
         fs::create_dir_all(&abs_path)?;
-        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new() })
+        let cost_config = crate::pricing::calculator::CostConfig::default();
+        let cost_auditor = Arc::new(CostAuditor::new(cost_config));
+        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new(), cost_auditor })
     }
 
     fn get_local_path(&self, key: &str) -> io::Result<PathBuf> {
@@ -114,8 +119,11 @@ impl Provider for LocalProvider {
         // Auto-compression to WebP mock for images
         let is_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg") || key.ends_with(".webp");
         if is_image && data.len() > 100 {
+            let original_size = data.len() as i64;
             // Mock compression: reduce size by 80% (truncate to 20%) to simulate WebP conversion
             final_data.truncate(data.len() / 5);
+            let compressed_size = final_data.len() as i64;
+            self.cost_auditor.record_storage_compression(original_size, compressed_size);
         }
 
         // Quota Enforcement
