@@ -440,9 +440,45 @@ impl DashboardService for MyDashboardService {
 
     async fn post_message(
         &self,
-        _request: Request<PostMessageRequest>,
+        request: Request<PostMessageRequest>,
     ) -> Result<Response<PostMessageResponse>, Status> {
-        Err(Status::unimplemented("Not implemented"))
+        let auth_info = request
+            .extensions()
+            .get::<crate::auth::orchestration::AuthInfo>()
+            .cloned()
+            .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
+
+        let tenant_id = if auth_info.org_id.is_empty() { "system".to_string() } else { auth_info.org_id };
+        let req = request.into_inner();
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let msg = req.message.unwrap_or_default();
+        let payload = serde_json::json!({
+            "message": msg.content,
+        });
+
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'customer_success', 'CustomerMessageReceived', $3, 'PENDING')")
+                    .bind(&task_id)
+                    .bind(&tenant_id)
+                    .bind(&payload)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, 'customer_success', 'CustomerMessageReceived', ?, 'PENDING')")
+                    .bind(&task_id)
+                    .bind(&tenant_id)
+                    .bind(payload.to_string())
+                    .execute(sqlite_pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+            }
+        }
+
+        Ok(Response::new(PostMessageResponse { snapshot: None }))
     }
 
     async fn seed_dashboard(

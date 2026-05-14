@@ -75,6 +75,7 @@ export component Dashboard inherits Window { // milestones
     callback action_mark_order_ready();
     callback action_open_kairos_orchestration();
     callback action_simulate_order();
+    callback action_simulate_message();
     callback action_manage_my_ai_team();
 
     in-out property <bool> show_upgrade_prompt: false;
@@ -355,6 +356,7 @@ export component Dashboard inherits Window { // milestones
                     TooltipElement { tooltip_id: "social_posting"; Button { text: "Social"; height: 44px; clicked => { action_open_social_posting(); } } }
                     TooltipElement { tooltip_id: "kairos_orchestration"; Button { text: "Automations"; height: 44px; clicked => { action_open_kairos_orchestration(); } } }
                     Button { text: "Test Order"; height: 44px; clicked => { action_simulate_order(); } }
+                    Button { text: "Test Message"; height: 44px; clicked => { action_simulate_message(); } }
                     if (new_orders_count > 0) : Button {
                         text: "Ship Order";
                         height: 44px;
@@ -365,7 +367,7 @@ export component Dashboard inherits Window { // milestones
         }
         if (pending_approvals.length > 0) : VerticalBox {
             spacing: 16px;
-            Text { text: "Tasks for You to Approve"; font-size: 20px; font-weight: 700; color: white; }
+            Text { text: "Agent Actions"; font-size: 20px; font-weight: 700; color: white; }
 
             for approval in pending_approvals : GlassCard {
                 border-color: rgba(255, 255, 255, 0.1);
