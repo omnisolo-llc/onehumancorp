@@ -94,23 +94,26 @@ export component PromptTuning inherits Window {
                 spacing: 12px;
                 Text { text: "Domain focus"; color: white; font-family: "Inter"; }
 
-                GlassCard {
-                    height: 44px;
-                    background: focus_only_business ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🎯 Only discuss business"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_only_business = !focus_only_business; } }
-                }
-                GlassCard {
-                    height: 44px;
-                    background: focus_avoid_competitors ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🛡️ Avoid competitors"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
-                }
-                GlassCard {
-                    height: 44px;
-                    background: focus_reply_spanish ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-                    VerticalBox { alignment: center; padding: 12px; Text { text: "🌐 Always reply in Spanish"; font-family: "Inter"; font-size: 14px; color: white; } }
-                    TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
+                HorizontalBox {
+                    spacing: 8px;
+                    GlassCard {
+                        background: focus_only_business ? rgba(168, 85, 247, 0.8) : rgba(255, 255, 255, 0.1);
+                        border-radius: 16px;
+                        HorizontalBox { padding: 8px; Text { text: "🎯 Only about my products"; color: white; font-family: "Inter"; font-size: 12px; } }
+                        TouchArea { clicked => { focus_only_business = !focus_only_business; } }
+                    }
+                    GlassCard {
+                        background: focus_avoid_competitors ? rgba(168, 85, 247, 0.8) : rgba(255, 255, 255, 0.1);
+                        border-radius: 16px;
+                        HorizontalBox { padding: 8px; Text { text: "🛡️ Avoid competitor mentions"; color: white; font-family: "Inter"; font-size: 12px; } }
+                        TouchArea { clicked => { focus_avoid_competitors = !focus_avoid_competitors; } }
+                    }
+                    GlassCard {
+                        background: focus_reply_spanish ? rgba(168, 85, 247, 0.8) : rgba(255, 255, 255, 0.1);
+                        border-radius: 16px;
+                        HorizontalBox { padding: 8px; Text { text: "🌐 Always reply in Spanish"; color: white; font-family: "Inter"; font-size: 12px; } }
+                        TouchArea { clicked => { focus_reply_spanish = !focus_reply_spanish; } }
+                    }
                 }
             }
 

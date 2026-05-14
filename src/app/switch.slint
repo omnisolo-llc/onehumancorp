@@ -1,0 +1,28 @@
+
+export component Switch inherits Rectangle {
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    background: checked ? #10b981 : #334155; // green vs slate
+    in-out property<bool> checked: false;
+    callback toggled;
+
+    animate background { duration: 200ms; }
+
+    Rectangle {
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: white;
+        x: checked ? 22px : 2px;
+        y: 2px;
+        animate x { duration: 200ms; easing: ease-in-out; }
+    }
+
+    TouchArea {
+        clicked => {
+            checked = !checked;
+            toggled();
+        }
+    }
+}

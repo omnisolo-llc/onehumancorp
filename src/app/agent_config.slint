@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit, Slider, ScrollView } from "std-widgets.slint";
+import { Switch } from "switch.slint";
 import { GlassCard } from "glass_card.slint";
 import { AdvancedToggle } from "advanced_toggle.slint";
 
@@ -144,19 +145,19 @@ export component AgentConfig inherits Window {
             
             HorizontalBox {
                 Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+                Switch { checked: can_reply; toggled => { can_reply = !can_reply; } }
             }
             HorizontalBox {
                 Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+                Switch { checked: can_social; toggled => { can_social = !can_social; } }
             }
             HorizontalBox {
                 Text { text: "Write product descriptions"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
+                Switch { checked: can_write_descriptions; toggled => { can_write_descriptions = !can_write_descriptions; } }
             }
             HorizontalBox {
                 Text { text: "Send order updates"; color: white; font-family: "Inter"; }
-                CheckBox { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
+                Switch { checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
             }
         }
 
