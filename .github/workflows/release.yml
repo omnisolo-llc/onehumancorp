@@ -27,16 +27,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -100,16 +90,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -162,16 +142,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -209,16 +179,6 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -269,16 +229,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -323,16 +273,6 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -386,16 +326,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
@@ -446,16 +376,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -542,16 +462,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
