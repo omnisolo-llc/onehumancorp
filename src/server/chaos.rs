@@ -425,7 +425,7 @@ mod tests {
             );"
         ).execute(&pool).await.unwrap();
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap_or_else(|_| PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap());
         let sip_db = Arc::new(SipDB::new(pg_pool, "system".to_string()));
 
         // Cloud Mode Simulation (100 simultaneous business owners)

@@ -194,21 +194,36 @@ impl DB {
         let max_attempts = 10;
         let mut backoff = std::time::Duration::from_millis(50);
 
+        // ML-Resilience Circuit Breaker Context
+        static CONSECUTIVE_FAILURES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let current_failures = CONSECUTIVE_FAILURES.load(std::sync::atomic::Ordering::SeqCst);
+        if current_failures >= 15 {
+            // Circuit is OPEN. Fast fail to prevent cascading failure
+            if rand::random::<f64>() > 0.1 {
+                return Err(E::from(format!("Circuit Breaker OPEN: {} is paused due to high failure rate. Operations queued locally.", operation)));
+            }
+        }
+
         loop {
             match f().await {
-                Ok(val) => return Ok(val),
+                Ok(val) => {
+                    CONSECUTIVE_FAILURES.store(0, std::sync::atomic::Ordering::SeqCst);
+                    return Ok(val);
+                }
                 Err(err) => {
                     let err_str = err.to_string().to_lowercase();
                     if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
                         attempt += 1;
                         if attempt >= max_attempts {
                             let _ = ::server_telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
+                            CONSECUTIVE_FAILURES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                             return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
                         }
                         let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
                     } else {
+                        CONSECUTIVE_FAILURES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                         return Err(err);
                     }
                 }

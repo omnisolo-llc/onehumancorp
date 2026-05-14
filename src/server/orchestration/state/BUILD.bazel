@@ -4,6 +4,7 @@ filegroup(
         "cloud.rs",
         "mod.rs",
         "parity_test.rs",
+        "parity_audit.rs",
         "standalone.rs",
         "test.rs",
     ],

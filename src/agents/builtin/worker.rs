@@ -190,7 +190,7 @@ impl TaskWorker {
                 while let Some(event) = stream.message().await.map_err(|e| e.to_string())? {
                     // ML-Resilience: token budgets must be enforced server-side
                     token_usage += event.content.len();
-                    if token_usage > 100_000 {
+                    if token_usage > 100000 {
                          return Ok("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string());
                     }
                     if !event.content.is_empty() {

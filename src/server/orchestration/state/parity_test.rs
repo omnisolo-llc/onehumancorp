@@ -17,7 +17,7 @@ mod parity_tests {
 
         // Run migrations/schema setup for SQLite
         let db = DB {
-            pool: PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap_or_else(|_| PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()),
             store: DbStore::Sqlite(sqlite_pool),
         };
         db.run_migrations().await.unwrap();

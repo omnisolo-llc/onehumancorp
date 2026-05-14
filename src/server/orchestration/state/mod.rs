@@ -1,6 +1,8 @@
 pub mod cloud;
 pub mod standalone;
 #[cfg(test)]
+pub mod parity_audit;
+#[cfg(test)]
 mod test;
 #[cfg(test)]
 mod parity_test;
