@@ -1,10 +1,12 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
 filegroup(
     name = "srcs",
     srcs = [
+        "mod.rs",
         "chaos_bench.rs",
         "latency_bench.rs",
-        "mod.rs",
-
+        "sentry_padding.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
