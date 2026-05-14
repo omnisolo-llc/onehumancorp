@@ -244,6 +244,151 @@ pub async fn bench_dashboard_snapshot() {
     println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
+
+
+pub async fn bench_org_analytics() {
+    println!("Benchmarking Org Analytics (Async Hub)...");
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    if database_url == "postgres://localhost/dummy" {
+        return;
+    }
+
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap();
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+    };
+
+    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+    let iterations = 100;
+    let mut fetch_times = Vec::new();
+
+    let meeting_id = format!("meeting-{}", Uuid::new_v4());
+    hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
+    for i in 0..1000 {
+        let msg = ::server_ohc::orchestration::Message {
+            id: format!("msg-{}", i),
+            from_agent: "test_agent".to_string(),
+            to_agent: "all".to_string(),
+            r#type: "chat".to_string(),
+            content: "Hello world this is a test message for analytics load testing".to_string(),
+            occurred_at_unix: Utc::now().timestamp(),
+            meeting_id: meeting_id.clone(),
+        };
+        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
+            id: msg.id,
+            from_agent: msg.from_agent,
+            to_agent: msg.to_agent,
+            r#type: msg.r#type,
+            content: msg.content,
+            occurred_at_unix: msg.occurred_at_unix,
+            meeting_id: msg.meeting_id,
+        });
+    }
+
+    for i in 0..1000 {
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: format!("agent-{}", i),
+            name: format!("Agent {}", i),
+            role: "test".to_string(),
+            organization_id: "system".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+    }
+
+    for _ in 0..iterations {
+        let start = Instant::now();
+
+        let hub1 = hub.clone();
+        let hub2 = hub.clone();
+        let hub3 = hub.clone();
+
+        let req = ::server_ohc::orchestration::EmptyRequest {};
+        use ::server_ohc::orchestration::org_service_server::OrgService;
+        let org_service = crate::services::org::service::MyOrgService::new(hub.clone());
+        let mut request = tonic::Request::new(req);
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
+        let _res = org_service.get_analytics(request).await.unwrap().into_inner();
+
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    let p50 = fetch_times[iterations / 2];
+    let p95 = fetch_times[(iterations as f32 * 0.95) as usize];
+    let p99 = fetch_times[(iterations as f32 * 0.99) as usize];
+    println!("Org Analytics Fetch (1000 agents/msgs): p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
+}
+
+pub async fn bench_agent_delegation() {
+    println!("Benchmarking Agent Delegation Snapshot Fetching...");
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    if database_url == "postgres://localhost/dummy" {
+        return;
+    }
+
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap();
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+    };
+
+    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+    let iterations = 100;
+    let mut fetch_times = Vec::new();
+
+    for i in 0..500 {
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: format!("agent-{}", i),
+            name: format!("Agent {}", i),
+            role: "test".to_string(),
+            organization_id: "system".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+    }
+
+    for _ in 0..iterations {
+        let start = Instant::now();
+
+        let req = ::server_ohc::orchestration::EmptyRequest {};
+        use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+        let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
+        let mut request = tonic::Request::new(req);
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
+        let _res = agent_service.get_identities(request).await.unwrap().into_inner();
+
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    let p50 = fetch_times[iterations / 2];
+    let p95 = fetch_times[(iterations as f32 * 0.95) as usize];
+    let p99 = fetch_times[(iterations as f32 * 0.99) as usize];
+    println!("Agent Delegation Fetch: p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
+}
+
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
@@ -326,6 +471,20 @@ mod tests {
         bench_api_response_time().await;
     }
 
+
+    #[tokio::test]
+    async fn test_bench_org_analytics() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        if db_url == "dummy" { return; }
+        bench_org_analytics().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_agent_delegation() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        if db_url == "dummy" { return; }
+        bench_agent_delegation().await;
+    }
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());

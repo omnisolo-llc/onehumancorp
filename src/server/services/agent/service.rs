@@ -31,8 +31,8 @@ impl MyAgentManagerService {
 
         let hub_cost = self.hub.clone();
         let (agents, meetings, cost_res) = tokio::join!(
-            async { self.hub.get_agents() },
-            async { self.hub.get_meetings() },
+            self.hub.get_agents(),
+            self.hub.get_meetings(),
             async {
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
@@ -239,12 +239,11 @@ impl AgentManagerService for MyAgentManagerService {
         let req = request.into_inner();
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
-        let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+        let (agents, meetings) = tokio::join!(
+            hub1.get_agents(),
+            hub2.get_meetings()
         );
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+
 
         let mut msg_count = 0;
         for m in meetings.iter() {
