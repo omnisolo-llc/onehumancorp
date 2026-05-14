@@ -58,6 +58,29 @@ impl RalphLoop {
                 break;
             }
 
+            tracing::info!("Ralph Loop: Evaluating features to find highest priority incomplete feature.");
+
+            let mut pending_features = vec![];
+            for (i, f) in progress.features.iter().enumerate() {
+                if f.status != "completed" {
+                    pending_features.push(format!("{}: {}", i, f.name));
+                }
+            }
+
+            let sort_prompt = format!("Analyze these pending features and reply STRICTLY with the integer index of the highest-priority feature to implement next:\n{}", pending_features.join("\n"));
+            let mut on_event = |_| {};
+            let sort_result = self.agent.run(&self.config, &sort_prompt, &mut on_event).await.unwrap_or("0".to_string());
+
+            let mut highest_priority_idx = sort_result.trim().parse::<usize>().unwrap_or_else(|_| {
+                progress.features.iter().position(|f| f.status != "completed").unwrap_or(0)
+            });
+
+            if highest_priority_idx >= progress.features.len() || progress.features[highest_priority_idx].status == "completed" {
+                highest_priority_idx = progress.features.iter().position(|f| f.status != "completed").unwrap_or(0);
+            }
+
+            progress.current_feature_index = highest_priority_idx;
+
             let feature_name = progress.features[progress.current_feature_index].name.clone();
             if progress.features[progress.current_feature_index].status == "completed" {
                 progress.current_feature_index += 1;
