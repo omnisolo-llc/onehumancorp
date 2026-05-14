@@ -350,33 +350,6 @@ mod security_tests {
         assert!(res.is_ok() || res.is_err());
     }
 
-    #[tokio::test]
-    async fn test_auth_token_management_isolation() {
-        let database_url = match std::env::var("DATABASE_URL") {
-            Ok(url) => url,
-            Err(_) => return,
-        };
-
-        if database_url.starts_with("sqlite") {
-            return;
-        }
-
-        let pool = PgPoolOptions::new()
-            .acquire_timeout(Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-
-        let repo = PgUserRepository::new(pool.clone());
-        let exp = Utc::now() + chrono::Duration::hours(1);
-        let token = "multi-tenant-leakage-test-token".to_string();
-
-        let res1 = repo.revoke_token(token.clone(), exp, "tenant-A").await;
-        assert!(res1.is_ok());
-
-        // Verify isolation: tenant-B cannot see tenant-A's revoked token
-        let is_revoked_b = repo.is_revoked(&token, "tenant-B").await.unwrap_or(false);
-        assert!(!is_revoked_b, "Tenant-B should not see Tenant-A's revoked token due to RLS");
-    }
 
     #[tokio::test]
     async fn test_auth_token_management_isolation() {
