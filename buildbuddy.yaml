@@ -14,21 +14,13 @@ actions:
           - "*"
     steps:
       - run: |
-          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update && sudo apt-get install -y --fix-missing \
-            build-essential pkg-config libssl-dev \
-            libdbus-1-dev libatk1.0-dev libgtk-3-dev \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git
-          go install github.com/bazelbuild/bazelisk@latest
-          export PATH=$PATH:$(go env GOPATH)/bin
+          sudo apt-get update && sudo apt-get install -y ca-certificates curl git
           # Build the server first
-          bazelisk build //src/server:server --config=linux
+          bazel build //src/server:server --config=linux
 
           # Run Playwright tests with screenshots
           # Uses playwright_test.sh which handles Docker infra (postgres, redis) and server startup
-          bazelisk test //src/e2e:playwright \
+          bazel test //src/e2e:playwright \
             --test_output=streamed \
             --test_timeout=300,600,900,1800
 
@@ -52,19 +44,12 @@ actions:
       GOTOOLCHAIN: "auto"
     steps:
       - run: |
-          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update && sudo apt-get install -y --fix-missing \
-            build-essential pkg-config libssl-dev \
-            libdbus-1-dev libatk1.0-dev libgtk-3-dev \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git
-          go install github.com/bazelbuild/bazelisk@latest
-          export PATH=$PATH:$(go env GOPATH)/bin
+          # Install system dependencies required by libdbus-sys and Tauri
+          sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libatk1.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev ca-certificates curl git
           # Build release artifacts first (needed by verification_tests)
-          bazelisk build //release:all_release_artifacts --config=linux
+          bazel build //release:all_release_artifacts --config=linux
           # Run all tests on Linux
-          bazelisk test \
+          bazel test \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
@@ -88,16 +73,9 @@ actions:
       GOTOOLCHAIN: "auto"
     steps:
       - run: |
-          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update && sudo apt-get install -y --fix-missing \
-            build-essential pkg-config libssl-dev \
-            libdbus-1-dev libatk1.0-dev libgtk-3-dev \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git
-          go install github.com/bazelbuild/bazelisk@latest
-          export PATH=$PATH:$(go env GOPATH)/bin
-          bazelisk build //... --config=linux
+          # Install system dependencies required by libdbus-sys and Tauri
+          sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libatk1.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev ca-certificates curl git
+          bazel build //... --config=linux
           # Cross-platform builds (assumes CI environment has toolchains)
-          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
-          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
+          bazel build //... --config=windows || echo "Warning: Windows build failed"
+          bazel build //... --config=macos || echo "Warning: MacOS build failed"

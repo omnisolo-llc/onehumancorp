@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('🎨 Canvas: Telemetry Sync UI Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/dashboard*');
   });
@@ -26,7 +26,7 @@ test.describe('🎨 Canvas: Telemetry Sync UI Tests', () => {
 
   test('should allow enabling Advanced Mode', async ({ page }) => {
     await page.click('button:has-text("Settings"), a:has-text("Settings")');
-    const advancedTab = page.locator('text=Advanced').filter({ visible: true }).first();
+    const advancedTab = page.locator('text=Advanced').first();
     await advancedTab.click();
     await expect(page.locator('text=Advanced')).toBeVisible();
   });
