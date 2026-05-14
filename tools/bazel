@@ -1,0 +1,11 @@
+#!/bin/bash
+# Wrapper to override output_user_root
+# If bazelisk is already executing this, we need to call the real bazel.
+# Actually, if bazelisk finds `tools/bazel`, it will execute it INSTEAD of bazel.
+# Then `tools/bazel` needs to call the REAL bazel.
+# How to call the real bazel? Bazelisk sets `BAZEL_REAL` env var.
+if [ -n "$BAZEL_REAL" ]; then
+    exec "$BAZEL_REAL" --output_user_root=/tmp/bazel "$@"
+else
+    exec bazel --output_user_root=/tmp/bazel "$@"
+fi
