@@ -123,3 +123,19 @@ go_repository(
     sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYK4Q=",
     version = "v1.8.4",
 )
+
+go_repository(
+    name = "com_github_mattn_go_sqlite3",
+    build_file_generation = "on",
+    importpath = "github.com/mattn/go-sqlite3",
+    sum = "h1:MigqEP4ZmHw3aIdIT7T+9TLa90Z6smwcthx+Azv4Cgo=",
+    version = "v1.14.42",
+)
+
+go_repository(
+    name = "com_github_data_dog_go_sqlmock",
+    build_file_generation = "on",
+    importpath = "github.com/DATA-DOG/go-sqlmock",
+    sum = "h1:j4wEXK/XzI1O7K0uH6e9P4R7vH+5/aE68pY3V9YQoEw=",
+    version = "v1.5.2",
+)

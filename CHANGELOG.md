@@ -5,6 +5,17 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- **Speed Report:** Improved auto-scaling efficiency for Sub-Agent Queue and Teammate Mesh APIs.
+- **Validation:** Ensured high availability in Cloud with optimized Postgres connection handling.
+
+### Privacy/Offline Improvements
+- **Speed Report:** Reduced build duration and improved startup time for local agent initialization.
+- **Validation:** Confirmed low resource usage in Standalone mode with robust local-only fallback and offline-first vector embedding caching.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
