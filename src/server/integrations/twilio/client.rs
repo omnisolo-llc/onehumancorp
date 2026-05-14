@@ -47,7 +47,7 @@ impl TwilioClientWrapper for RealTwilioClient {
                     ).await;
                     Ok(())
                 } else {
-                    Err(format!("Twilio API error: {}", resp.status()))
+                    Err(format!("Message delivery failed. Please check the phone number and try again. Status: {}", resp.status()))
                 }
             }
             Err(e) => Err(format!("Network error: {}", e)),

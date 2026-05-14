@@ -158,7 +158,7 @@ impl TelemetrySyncDaemon {
                 }
             },
             Err(e) => {
-                error!("Cloud API error: {}", e);
+                error!("There was a problem syncing your data to the cloud. We will try again later. Error: {}", e);
             }
         }
 

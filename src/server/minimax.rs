@@ -166,7 +166,7 @@ impl MinimaxClient {
                         cb.record_failure();
                         let status = resp.status();
                         let text = resp.text().await.unwrap_or_default();
-                        last_err = format!("API error (status {}): {}", status, text);
+                        last_err = format!("We encountered a temporary issue generating your response. Please try again. (Code: {} {} )", status, text);
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
@@ -292,7 +292,7 @@ impl MinimaxClient {
                             continue;
                         }
                         cb.record_failure();
-                        last_err = format!("API error (status {})", resp.status());
+                        last_err = format!("We encountered a temporary issue connecting to our AI service. Please try again. (Code: {})", resp.status());
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
