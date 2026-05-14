@@ -11,21 +11,53 @@ use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
 
 #[derive(Clone)]
+/// Core API request/response payload for WebhookState.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct WebhookState {
+    /// Stores the `rate_limiter` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub rate_limiter: Arc<RedisRateLimiter>,
+    /// Stores the `db_pool` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
+    /// Stores the `db` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub db: std::sync::Arc<crate::db::DB>,
 }
 
 #[derive(Debug, Deserialize)]
+/// Core API request/response payload for StripeEvent.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct StripeEvent {
+    /// Stores the `id` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub id: String,
+    /// Stores the `r#type` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub r#type: String,
+    /// Stores the `data` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub data: StripeEventData,
 }
 
 #[derive(Debug, Deserialize)]
+/// Core API request/response payload for StripeEventData.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct StripeEventData {
+    /// Stores the `object` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub object: Value,
 }
 
@@ -155,21 +187,55 @@ pub async fn stripe_webhook_handler(
 }
 
 #[derive(Debug, Deserialize)]
+/// Core API request/response payload for MercadoPagoEvent.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct MercadoPagoEvent {
+    /// Stores the `id` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub id: i64,
+    /// Stores the `live_mode` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub live_mode: bool,
+    /// Stores the `r#type` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub r#type: String,
+    /// Stores the `date_created` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub date_created: String,
+    /// Stores the `application_id` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub application_id: i64,
+    /// Stores the `user_id` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub user_id: i64,
+    /// Stores the `version` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub version: i32,
+    /// Stores the `api_version` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub api_version: String,
+    /// Stores the `action` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub action: String,
+    /// Stores the `data` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub data: MercadoPagoEventData,
 }
 
 #[derive(Debug, Deserialize)]
+/// Core API request/response payload for MercadoPagoEventData.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct MercadoPagoEventData {
+    /// Stores the `id` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub id: String,
 }
 

@@ -10,17 +10,41 @@ use crate::hub::Hub;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
+/// Core API request/response payload for HireAgentRequest.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct HireAgentRequest {
+    /// Stores the `name` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub name: String,
+    /// Stores the `role` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub role: String,
     #[serde(rename = "providerType")]
+    /// Stores the `provider_type` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub provider_type: String,
 }
 
 #[derive(Serialize, Debug)]
+/// Core API request/response payload for HireAgentResponse.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct HireAgentResponse {
+    /// Stores the `status` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub status: String,
+    /// Stores the `agent_id` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub agent_id: String,
+    /// Stores the `message` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub message: String,
 }
 

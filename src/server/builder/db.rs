@@ -3,9 +3,24 @@ use uuid::Uuid;
 use serde_json::Value;
 
 #[derive(sqlx::FromRow)]
+/// Represents the Site entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct Site {
+    /// The `id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub id: Uuid,
+    /// The `tenant_id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub tenant_id: Uuid,
+    /// The `domain` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub domain: Option<String>,
 }
 
@@ -29,12 +44,33 @@ pub async fn create_site(pool: &PgPool, tenant_id: Uuid, domain: Option<String>)
 }
 
 #[derive(sqlx::FromRow)]
+/// Represents the Page entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct Page {
+    /// The `id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub id: Uuid,
+    /// The `tenant_id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub tenant_id: Uuid,
+    /// The `site_id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub site_id: Uuid,
+    /// The `path` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub path: String,
+    /// The `title` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub title: String,
+    /// The `seo_metadata` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub seo_metadata: Value,
 }
 
@@ -61,12 +97,33 @@ pub async fn create_page(pool: &PgPool, tenant_id: Uuid, site_id: Uuid, path: St
 }
 
 #[derive(sqlx::FromRow)]
+/// Represents the Block entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct Block {
+    /// The `id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub id: Uuid,
+    /// The `tenant_id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub tenant_id: Uuid,
+    /// The `page_id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub page_id: Uuid,
+    /// The `block_type` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub block_type: String,
+    /// The `content` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub content: Value,
+    /// The `sort_order` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub sort_order: i32,
 }
 

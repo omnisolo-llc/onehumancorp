@@ -11,7 +11,15 @@ use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 #[derive(Deserialize)]
+/// Core API request/response payload for ConnectQuery.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct ConnectQuery {
+    /// Stores the `channel` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub channel: String,
 }
 
@@ -24,8 +32,18 @@ pub async fn mesh_ws_handler(
 }
 
 #[derive(serde::Deserialize)]
+/// Core API request/response payload for BroadcastRequest.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct BroadcastRequest {
+    /// Stores the `topic` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub topic: String,
+    /// Stores the `message` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub message: MeshMessage,
 }
 

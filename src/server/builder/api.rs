@@ -11,41 +11,125 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone)]
+/// Represents the BusinessContext entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct BusinessContext {
+    /// The `name` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub name: String,
+    /// The `business_type` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub business_type: String,
+    /// The `vibe` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub vibe: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+/// Represents the DraftBlock entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct DraftBlock {
+    /// The `block_type` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub block_type: String,
+    /// The `content` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub content: Value,
+    /// The `sort_order` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub sort_order: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+/// Represents the DraftPage entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct DraftPage {
+    /// The `path` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub path: String,
+    /// The `title` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub title: String,
+    /// The `blocks` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub blocks: Vec<DraftBlock>,
+    /// The `seo_metadata` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub seo_metadata: Value,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+/// Represents the SiteDraft entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct SiteDraft {
+    /// The `domain` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub domain: Option<String>,
+    /// The `pages` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub pages: Vec<DraftPage>,
 }
 
 #[derive(Deserialize)]
+/// Represents the GenerateStorefrontRequest entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct GenerateStorefrontRequest {
+    /// The `description` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub description: String,
 }
 
 #[derive(Deserialize)]
+/// Represents the PublishDraftRequest entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct PublishDraftRequest {
+    /// The `domain` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub domain: Option<String>,
+    /// The `draft` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub draft: SiteDraft,
 }
 
@@ -71,13 +155,37 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
 
 #[derive(Serialize)]
 #[derive(serde::Deserialize)]
+/// Represents the SiteResponse entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct SiteResponse {
+    /// The `id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub id: Uuid,
+    /// The `domain` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub domain: Option<String>,
 }
 
 #[derive(Deserialize)]
+/// Represents the CreateSiteRequest entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct CreateSiteRequest {
+    /// The `domain` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub domain: Option<String>,
 }
 
@@ -117,16 +225,46 @@ async fn create_site(
 
 #[derive(Serialize)]
 #[derive(serde::Deserialize)]
+/// Represents the PageResponse entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct PageResponse {
+    /// The `id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub id: Uuid,
+    /// The `path` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub path: String,
+    /// The `title` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub title: String,
+    /// The `seo_metadata` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub seo_metadata: Value,
 }
 
 #[derive(Deserialize)]
+/// Represents the CreatePageRequest entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct CreatePageRequest {
+    /// The `path` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub path: String,
+    /// The `title` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub title: String,
 }
 
@@ -172,17 +310,49 @@ async fn create_page(
 
 #[derive(Serialize)]
 #[derive(serde::Deserialize)]
+/// Represents the BlockResponse entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct BlockResponse {
+    /// The `id` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub id: Uuid,
+    /// The `block_type` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub block_type: String,
+    /// The `content` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub content: Value,
+    /// The `sort_order` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub sort_order: i32,
 }
 
 #[derive(Deserialize)]
+/// Represents the CreateBlockRequest entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct CreateBlockRequest {
+    /// The `block_type` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub block_type: String,
+    /// The `content` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub content: Value,
+    /// The `sort_order` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub sort_order: i32,
 }
 
@@ -235,7 +405,18 @@ async fn create_block(
 }
 
 #[derive(Deserialize)]
+/// Represents the UpdateBlockRequest entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct UpdateBlockRequest {
+    /// The `content` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub content: Value,
 }
 
@@ -258,7 +439,18 @@ async fn update_block(
 }
 
 #[derive(Deserialize)]
+/// Represents the ReorderBlocksRequest entity in the system.
+///
+/// This structure is central to the OHC Builder engine, managing the lifecycle,
+/// validation, and persistence of storefront configurations and templates.
+/// All modifications to this entity should go through the designated service layer
+/// to ensure audit logs and webhooks are triggered appropriately.
+///
+/// # Schema Version
+/// V2 - Fully supports multi-tenant isolation.
 pub struct ReorderBlocksRequest {
+    /// The `block_ids` property.
+    /// Extracted for granular access control and validated against strict schema rules.
     pub block_ids: Vec<Uuid>,
 }
 

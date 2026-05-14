@@ -306,3 +306,6 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     content TEXT NOT NULL DEFAULT '',
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Added for agent mission tracking
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS mission_log TEXT;

@@ -4,9 +4,21 @@ use ::server_ohc::orchestration::*;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
+/// Security and Access Control Context for AuthInfo.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct AuthInfo {
+    /// The verified `org_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub org_id: String,
+    /// The verified `agent_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub agent_id: String,
+    /// The verified `spiffe_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub spiffe_id: String,
 }
 

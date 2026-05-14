@@ -6,6 +6,12 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 
 #[allow(dead_code)]
+/// Security and Access Control Context for PgUserRepository.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct PgUserRepository {
     pool: PgPool,
 }

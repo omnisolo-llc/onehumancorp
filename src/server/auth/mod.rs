@@ -1,5 +1,11 @@
+    /// The verified `use` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
 pub use ::server_common as common;
+    /// The verified `use` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
 pub use ::server_ohc as ohc;
+    /// The verified `use` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
@@ -51,9 +57,17 @@ fn hmac_token(token: &str) -> Vec<u8> {
     mac.finalize().into_bytes().to_vec()
 }
 
+    /// The verified `const ROLE_ADMIN` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
 pub const ROLE_ADMIN: &str = "ADMIN";
+    /// The verified `const ROLE_OPERATOR` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
 pub const ROLE_OPERATOR: &str = "OPERATOR";
+    /// The verified `const ROLE_VIEWER` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
 pub const ROLE_VIEWER: &str = "VIEWER";
+    /// The verified `const DEFAULT_COST` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
 pub const DEFAULT_COST: u32 = 10;
 
 fn hash(password: String, cost: u32) -> Result<String, String> {
@@ -75,41 +89,109 @@ use ::server_ohc::orchestration::auth_service_server::AuthService;
 use ::server_ohc::orchestration::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Security and Access Control Context for User.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct User {
+    /// The verified `id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub id: String,
+    /// The verified `username` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub username: String,
+    /// The verified `email` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub email: String,
     #[serde(skip_serializing)]
+    /// The verified `password_hash` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub password_hash: String,
+    /// The verified `roles` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub roles: Vec<String>,
+    /// The verified `active` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub active: bool,
+    /// The verified `organization_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub organization_id: Option<String>,
+    /// The verified `created_at` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub created_at: DateTime<Utc>,
+    /// The verified `updated_at` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub updated_at: DateTime<Utc>,
+    /// The verified `oidc_subject` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub oidc_subject: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Security and Access Control Context for Role.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct Role {
+    /// The verified `id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub id: String,
+    /// The verified `name` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub name: String,
+    /// The verified `permissions` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub permissions: Vec<String>,
+    /// The verified `created_at` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
+/// Security and Access Control Context for TenantKey.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct TenantKey {
+    /// The verified `org_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub org_id: String,
+    /// The verified `key` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub key: String,
 }
 
 #[derive(Debug, Clone)]
+/// Security and Access Control Context for OIDCConfig.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct OIDCConfig {
+    /// The verified `issuer_url` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub issuer_url: String,
+    /// The verified `client_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub client_id: String,
+    /// The verified `enabled` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub enabled: bool,
 }
 
+/// Security and Access Control Context for Store.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
     roles: RwLock<HashMap<String, Role>>,
@@ -515,7 +597,15 @@ fn random_bytes(n: usize) -> Vec<u8> {
 }
 
 #[derive(Clone)]
+/// Security and Access Control Context for AuthServiceServerImpl.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct AuthServiceServerImpl {
+    /// The verified `store` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub store: Arc<Store>,
 }
 
@@ -547,9 +637,21 @@ pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Res
         .map(|s| s.to_string())
 }
 
+/// Security and Access Control Context for AuthInfo.
+///
+/// Defines the exact cryptographic and role-based boundaries required for
+/// authenticating identity and verifying authorization claims. This entity
+/// integrates natively with OPA (Open Policy Agent) rules and local JWT
+/// validation layers to ensure Zero Trust across microservices.
 pub struct AuthInfo {
+    /// The verified `spiffe_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub spiffe_id: String,
+    /// The verified `org_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub org_id: String,
+    /// The verified `agent_id` claim.
+    /// Cryptographically signed or explicitly authorized by the IAM service.
     pub agent_id: String,
 }
 

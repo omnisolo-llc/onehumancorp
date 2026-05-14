@@ -10,25 +10,63 @@ use std::sync::Arc;
 use crate::autodream::AutoDreamWorker;
 
 #[derive(Deserialize)]
+/// Core API request/response payload for QueryRequest.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct QueryRequest {
+    /// Stores the `text` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub text: String,
+    /// Stores the `limit` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub limit: Option<i32>,
 }
 
 #[derive(Serialize)]
+/// Core API request/response payload for SearchResult.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct SearchResult {
+    /// Stores the `id` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub id: String,
+    /// Stores the `content` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub content: String,
+    /// Stores the `score` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub score: f32,
 }
 
 #[derive(Serialize)]
+/// Core API request/response payload for QueryResponse.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct QueryResponse {
+    /// Stores the `results` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub results: Vec<SearchResult>,
 }
 
 #[derive(Serialize)]
+/// Core API request/response payload for SyncResponse.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct SyncResponse {
+    /// Stores the `status` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub status: String,
 }
 

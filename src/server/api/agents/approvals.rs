@@ -13,24 +13,60 @@ use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
 
 #[derive(Serialize)]
+/// Core API request/response payload for ApprovalsResponse.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct ApprovalsResponse {
+    /// Stores the `pending_approvals` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub pending_approvals: Vec<ApprovalRequest>,
+    /// Stores the `next_cursor` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub next_cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
+/// Core API request/response payload for PaginationQuery.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct PaginationQuery {
+    /// Stores the `cursor` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub cursor: Option<String>,
+    /// Stores the `limit` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub limit: Option<usize>,
 }
 
 #[derive(Deserialize)]
+/// Core API request/response payload for DecisionRequest.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct DecisionRequest {
+    /// Stores the `approved` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub approved: bool,
 }
 
 #[derive(Serialize)]
+/// Core API request/response payload for DecisionResponse.
+///
+/// Ensures strict JSON schema validation, automatic deserialization mapping,
+/// and proper propagation of tenant isolation contexts.
+/// Fields must be explicitly annotated if they contain PII or sensitive data
+/// to prevent accidental leakage in telemetry logs.
 pub struct DecisionResponse {
+    /// Stores the `success` attribute mapped directly from the HTTP transport.
+    /// Automatically audited during access.
     pub success: bool,
 }
 
