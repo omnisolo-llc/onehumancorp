@@ -746,6 +746,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, "system").await?;
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -754,8 +756,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -785,6 +788,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, "system").await?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -793,8 +798,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
