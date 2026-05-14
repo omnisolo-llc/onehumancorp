@@ -26,7 +26,7 @@ func setupSyncTestDB(t *testing.T) *sql.DB {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority TEXT NOT NULL DEFAULT 'P2',
 			payload TEXT,
 			parent_plan_id TEXT,

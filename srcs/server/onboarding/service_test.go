@@ -27,7 +27,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			name TEXT,
 			category TEXT,
 			description TEXT,
-			status TEXT,
+			status TEXT, state TEXT,
 
 			created_at DATETIME,
 			updated_at DATETIME
@@ -37,9 +37,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 			organization_id TEXT,
 			title TEXT,
 			description TEXT,
-			status TEXT,
+			status TEXT, state TEXT,
 
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority TEXT,
 			payload BLOB,
 			parent_plan_id TEXT,
