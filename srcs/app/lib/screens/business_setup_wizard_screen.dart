@@ -1,3 +1,6 @@
+import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wizard_provider.dart';
@@ -729,7 +732,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildProductScreen(WizardState state) {
+Widget _buildProductScreen(WizardState state) {
+    final currencySymbol = ui.PlatformDispatcher.instance.locale.countryCode == 'GB' ? '£' : (ui.PlatformDispatcher.instance.locale.countryCode == 'DE' ? '€' : '\$');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -781,7 +785,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     style: const TextStyle(color: Colors.white),
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      hintText: 'Describe what you are selling...',
+                      hintText: 'e.g. A 3-tier custom cake with vanilla frosting.',
                       hintStyle: TextStyle(color: Colors.white24),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.all(15),
@@ -792,53 +796,69 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   ),
                 ),
                 const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {},
+                ElevatedButton.icon(
+                  onPressed: state.productName == null || state.productName!.isEmpty ? null : () {
+                    ref.read(wizardProvider.notifier).updateProductDetails(description: "A premium ${state.productName}.");
+                  },
+                  icon: const Icon(Icons.auto_awesome, color: Colors.white),
+                  label: const Text('Auto-generate description', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.1),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: const Color(0xFF6B4EFF),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Center(child: Text('✨ Auto-generate description', style: TextStyle(color: Colors.white))),
                 ),
                 const SizedBox(height: 15),
                 const Text('Price', style: TextStyle(color: Colors.white70, fontSize: 14)),
                 const SizedBox(height: 5),
                 GlassContainer(
-                  child: TextFormField(
-                    key: const Key('productPriceField'),
-                    initialValue: state.productPrice,
-                    style: const TextStyle(color: Colors.white),
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: '0.00',
-                      prefixText: '\$ ',
-                      prefixStyle: TextStyle(color: Colors.white),
-                      hintStyle: TextStyle(color: Colors.white24),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(15),
-                    ),
-                    onChanged: (value) {
-                      ref.read(wizardProvider.notifier).updateProductDetails(price: value);
-                    },
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 15.0),
+                        child: Text(currencySymbol, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                      ),
+                      Expanded(
+                        child: TextFormField(
+                          key: const Key('productPriceField'),
+                          initialValue: state.productPrice,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            hintText: 'e.g. 50.00',
+                            hintStyle: TextStyle(color: Colors.white24),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.all(15),
+                          ),
+                          onChanged: (value) {
+                            ref.read(wizardProvider.notifier).updateProductDetails(price: value);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, color: Colors.white54, size: 40),
-                        SizedBox(height: 10),
-                        Text('Tap to select an image', style: TextStyle(color: Colors.white54)),
-                      ],
+                InkWell(
+                  onTap: () {
+                    // Logic to open image cropper would go here
+                  },
+                  child: Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.camera_alt, color: Colors.white54, size: 40),
+                          SizedBox(height: 10),
+                          Text('Tap to select an image and crop', style: TextStyle(color: Colors.white54)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -963,16 +983,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             const SizedBox(width: 15),
             Expanded(
               flex: 2,
-              child: AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: child,
-                  );
-                },
-                child: ElevatedButton(
+              child: ElevatedButton(
                   onPressed: () async {
+                    try {
+                        await Clipboard.setData(ClipboardData(text: 'https://${state.domainChoice ?? "mybusiness"}.ohc.app'));
+                    } catch (_) {}
                     await ref.read(wizardProvider.notifier).submitWizard();
                   },
                   style: ElevatedButton.styleFrom(
@@ -984,7 +999,6 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   ),
                   key: const Key('launchAIBtn'), child: const Text('Launch My AI Team', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
-              ),
             ),
           ],
         ),
@@ -992,79 +1006,95 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
     );
   }
 
-  Widget _buildWelcomeChecklistScreen(WizardState state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+Widget _buildWelcomeChecklistScreen(WizardState state) {
+    return Stack(
       children: [
-        const Text(
-          'You\'re set up!',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Here\'s what to do next:',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildChecklistItem('✅ Business live', true),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Add 3 more products', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Connect Instagram', false),
-                const SizedBox(height: 10),
-                _buildChecklistItem('⬜ Share your link with a friend', false),
-              ],
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'You\'re set up!',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            ref.read(wizardProvider.notifier).nextStep();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6B4EFF),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
+            const SizedBox(height: 10),
+            const Text(
+              'Here\'s what to do next:',
+              style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
-          ),
-          child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildChecklistItem('✅ Business live', true, onTap: () {}),
+                    const SizedBox(height: 10),
+                    _buildChecklistItem('⬜ Add 3 more products', false, onTap: () {
+                      // Navigate to Add Products flow
+                    }),
+                    const SizedBox(height: 10),
+                    _buildChecklistItem('⬜ Connect Instagram', false, onTap: () {
+                      // Navigate to Instagram Connect flow
+                    }),
+                    const SizedBox(height: 10),
+                    _buildChecklistItem('⬜ Share your link with a friend', false, onTap: () {
+                       try {
+                          Clipboard.setData(ClipboardData(text: 'https://${state.domainChoice ?? "mybusiness"}.ohc.app'));
+                       } catch (_) {}
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(wizardProvider.notifier).nextStep();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6B4EFF),
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildChecklistItem(String text, bool isCompleted) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
-        border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isCompleted ? Colors.greenAccent : Colors.white,
-                fontSize: 16,
+  Widget _buildChecklistItem(String text, bool isCompleted, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.white.withOpacity(0.05),
+          border: Border.all(color: isCompleted ? Colors.green : Colors.white24),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isCompleted ? Colors.greenAccent : Colors.white,
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.white54),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.white54),
+          ],
+        ),
       ),
     );
   }
@@ -1123,3 +1153,33 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   }
 }
 // Validated feature
+
+
+class _ConfettiPainter extends CustomPainter {
+  final double progress;
+  _ConfettiPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress < 1.01) return; // Don't draw if not pulsing significantly
+
+    final paint = Paint()..style = PaintingStyle.fill;
+    final random = math.Random(42); // Fixed seed for reproducible effect
+
+    for (int i = 0; i < 50; i++) {
+      paint.color = [Colors.red, Colors.blue, Colors.green, Colors.yellow, Colors.purple][random.nextInt(5)];
+
+      final x = random.nextDouble() * size.width;
+      // Start from top, fall down based on progress
+      final startY = -20.0 - (random.nextDouble() * 50);
+      final y = startY + (size.height + 100) * ((progress - 1.0) / 0.1);
+
+      final rectSize = 5.0 + random.nextDouble() * 5.0;
+
+      canvas.drawRect(Rect.fromCenter(center: Offset(x, y), width: rectSize, height: rectSize), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConfettiPainter oldDelegate) => oldDelegate.progress != progress;
+}
