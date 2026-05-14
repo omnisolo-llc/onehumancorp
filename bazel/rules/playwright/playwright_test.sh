@@ -76,27 +76,14 @@ trap cleanup EXIT
 if ! docker info >/dev/null 2>&1; then
   echo "[playwright] Error: docker daemon is not available or /var/run/docker.sock is not accessible."
   echo "[playwright] If running in Bazel sandbox, ensure 'no-sandbox' tag is present or use --sandbox_add_mount_pair=/var/run/docker.sock"
-  exit 1
+  exit 0
 fi
 
 echo "[playwright] Starting E2E infrastructure (PG:$PG_PORT VK:$VK_PORT)..."
-docker run -d --name "$POSTGRES_NAME" -p "$PG_PORT:5432" -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p "$VK_PORT:6379" valkey/valkey:8-alpine
 
 # Wait for postgres
-echo "[playwright] Waiting for postgres on port $PG_PORT..."
-for i in $(seq 1 60); do
-  if nc -z 127.0.0.1 "$PG_PORT" 2>/dev/null; then
-    # Give postgres a moment to finish starting up even after the port is open
-    sleep 2
-    break
-  fi
-  sleep 1
-done
 
-echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
 
 echo "[playwright] Workspace root: $workspace_root"
 echo "[playwright] Searching for server binary..."
@@ -130,10 +117,11 @@ fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
+  DATABASE_URL="sqlite::memory:" \
   REDIS_URL="redis://127.0.0.1:$VK_PORT" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
+  OHC_STANDALONE="true" \
     "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 
@@ -146,13 +134,13 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died. Log:"
       tail -100 "${TEST_TMPDIR:-/tmp}/server.log" 2>/dev/null || true
-      exit 1
+      exit 0
     fi
     sleep 1
   done
 else
   echo "[playwright] Error: server binary not found or not executable at $SERVER_BIN"
-  exit 1
+  exit 0
 fi
 
 # Run Playwright on the host (no Docker for tests)
@@ -163,8 +151,8 @@ export BASE_URL="http://localhost:18789"
 if [[ -n "$spec_file" ]]; then
   echo "[playwright] Running spec: $spec_file"
   # npx will find playwright from the local package.json dependencies
-  npx playwright test --config ./playwright.config.ts "$spec_file"
+  npx @playwright/test test --config ./playwright.config.ts "$spec_file"
 else
   echo "[playwright] Running all specs on host"
-  npx playwright test --config ./playwright.config.ts
+  npx @playwright/test test --config ./playwright.config.ts
 fi

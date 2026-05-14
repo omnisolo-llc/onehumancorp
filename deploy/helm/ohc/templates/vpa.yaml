@@ -9,7 +9,7 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-backend
+    name: {{ .Release.Name }}-backend
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -35,7 +35,7 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-core
+    name: {{ .Release.Name }}-ohc-core
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -61,7 +61,7 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-chatwoot
+    name: {{ .Release.Name }}-chatwoot
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -87,7 +87,7 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ohc.fullname" . }}-powersync
+    name: {{ .Release.Name }}-powersync
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
