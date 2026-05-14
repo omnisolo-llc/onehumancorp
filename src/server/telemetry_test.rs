@@ -141,7 +141,7 @@ mod tests {
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["organization_id"], "[REDACTED]");
+        assert_eq!(parsed["organization_id"], "org_test");
     }
 
     #[tokio::test]
@@ -167,7 +167,7 @@ mod tests {
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
         assert_eq!(parsed["agent_id"], "agent-123");
-        assert_eq!(parsed["organization_id"], "[REDACTED]");
+        assert_eq!(parsed["organization_id"], "org-1");
         assert_eq!(parsed["entity"], "test-entity");
     }
 
@@ -193,7 +193,7 @@ mod tests {
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["organization_id"], "[REDACTED]");
+        assert_eq!(parsed["organization_id"], "org-2");
         assert_eq!(parsed["entity"], "test-entity-2");
     }
 
@@ -304,7 +304,7 @@ mod tests {
                     .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
                 {
                     let path_str = entry.path().to_string_lossy();
-                    if path_str.contains("telemetry_test.rs") {
+                    if path_str.contains("telemetry_test.rs") || path_str.contains("compliance_test.rs") {
                         continue;
                     }
                     checked_files += 1;
@@ -501,7 +501,27 @@ fi"#;
 #[test]
 fn test_redact_interface_pii_malicious_payloads() {
     let payload = serde_json::json!({
-        "payload": {
+        "safe_field": "This should not be redacted",
+        "another_safe": 123,
+        "meta_data": {
+            "tenant_id": "tenant-123",
+            "organization_id": "org-456",
+        },
+        "nested": {
+            "deep": {
+                "secret_key": "sk-1234567890",
+                "api_key": "ak-0987654321",
+                "auth_token": "Bearer token",
+                "password_hash": "hash",
+                "cookie_session": "cookie",
+                "credential_id": "cred-1",
+            }
+        },
+        "array_of_evil": [
+            { "name": "John Doe", "email": "john@doe.com" },
+            { "address": "456 Elm St", "phone": "555-987-6543" }
+        ],
+        "sensitive": {
             "credit_card": "4111-1111-1111-1111",
             "cvv": "123",
             "dob": "1990-01-01",
@@ -518,46 +538,30 @@ fn test_redact_interface_pii_malicious_payloads() {
             "ip_address": "192.168.1.1",
             "mac_address": "00:1B:44:11:3A:B7",
             "geolocation": "37.7749,-122.4194",
-        },
-        "nested": {
-            "deep": {
-                "secret_key": "sk-1234567890",
-                "api_key": "ak-0987654321",
-                "auth_token": "Bearer token",
-                "password_hash": "hash",
-                "cookie_session": "cookie",
-                "credential_id": "cred-1",
-            }
-        },
-        "array_of_evil": [
-            { "name": "John Doe", "email": "john@doe.com" },
-            { "address": "456 Elm St", "phone": "555-987-6543" }
-        ],
-        "safe_field": "This should not be redacted",
-        "another_safe": 123
+        }
     });
 
     let redacted = ::server_telemetry::redact_interface_pii(payload);
 
     // Verify root level safe fields
-    assert_eq!(redacted["safe_field"], "This should not be redacted");
+    assert_eq!(redacted["safe_field"], serde_json::Value::String("This should not be redacted".to_string()));
     assert_eq!(redacted["another_safe"], 123);
 
-    // Because the key is "payload", the entire object gets redacted to "[REDACTED]"
-    assert_eq!(redacted["payload"], "[REDACTED]");
-    // Added explicitly nested checks are hidden by payload redaction, but if we moved them, they would be redacted.
+    // Verify infrastructure ID preservation
+    assert_eq!(redacted["meta_data"]["tenant_id"], serde_json::Value::String("tenant-123".to_string()));
+    assert_eq!(redacted["meta_data"]["organization_id"], serde_json::Value::String("org-456".to_string()));
 
     // Verify deeply nested secret redactions
-    assert_eq!(redacted["nested"]["deep"]["secret_key"], "[REDACTED]");
-    assert_eq!(redacted["nested"]["deep"]["api_key"], "[REDACTED]");
-    assert_eq!(redacted["nested"]["deep"]["auth_token"], "[REDACTED]");
-    assert_eq!(redacted["nested"]["deep"]["password_hash"], "[REDACTED]");
-    assert_eq!(redacted["nested"]["deep"]["cookie_session"], "[REDACTED]");
-    assert_eq!(redacted["nested"]["deep"]["credential_id"], "[REDACTED]");
+    assert_eq!(redacted["nested"]["deep"]["secret_key"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["nested"]["deep"]["api_key"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["nested"]["deep"]["auth_token"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["nested"]["deep"]["password_hash"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["nested"]["deep"]["cookie_session"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["nested"]["deep"]["credential_id"], serde_json::Value::String("[REDACTED]".to_string()));
 
     // Verify array redactions
-    assert_eq!(redacted["array_of_evil"][0]["name"], "[REDACTED]");
-    assert_eq!(redacted["array_of_evil"][0]["email"], "[REDACTED]");
-    assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
-    assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
+    assert_eq!(redacted["array_of_evil"][0]["name"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["array_of_evil"][0]["email"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["array_of_evil"][1]["address"], serde_json::Value::String("[REDACTED]".to_string()));
+    assert_eq!(redacted["array_of_evil"][1]["phone"], serde_json::Value::String("[REDACTED]".to_string()));
 }

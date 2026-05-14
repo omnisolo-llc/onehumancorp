@@ -1,5 +1,7 @@
 pub use ::server_config as config;
 use serde_json::{Value, Map};
+use regex::Regex;
+use once_cell::sync::Lazy;
 use sqlx::{PgPool, query};
 use chrono::Utc;
 use std::sync::OnceLock;
@@ -189,6 +191,14 @@ pub fn redact_interface_pii(val: Value) -> Value {
         Value::Object(map) => {
             let mut new_map = Map::new();
             for (k, v) in map {
+                let k_lower = k.to_lowercase();
+
+                // Explicitly preserve infrastructure IDs for billing attribution
+                if (k_lower.contains("tenant_id") || k_lower.contains("organization_id")) && v.is_string() {
+                     new_map.insert(k, v);
+                     continue;
+                }
+
                 if is_sensitive_key(&k) {
                     new_map.insert(k, Value::String("[REDACTED]".to_string()));
                 } else {
@@ -202,8 +212,15 @@ pub fn redact_interface_pii(val: Value) -> Value {
             Value::Array(new_arr)
         }
         Value::String(s) => {
+            static PHONE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}").unwrap());
+            static CC_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(?:\d[ -]*?){13,16}\b").unwrap());
+
             if is_email(&s) {
                 Value::String("[EMAIL_REDACTED]".to_string())
+            } else if PHONE_REGEX.is_match(&s) {
+                Value::String("[PHONE_REDACTED]".to_string())
+            } else if CC_REGEX.is_match(&s) {
+                Value::String("[CREDIT_CARD_REDACTED]".to_string())
             } else {
                 Value::String(s)
             }
@@ -227,13 +244,17 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("address") ||
     k.contains("name") ||
     k.contains("pii") ||
-    k.contains("tenant_id") ||
-    k.contains("organization_id") ||
+    // tenant_id and organization_id preserved for billing
     k.contains("session_id") ||
     k.contains("payload") ||
     k.contains("credit") ||
     k.contains("card") ||
     k.contains("cvv") ||
+    k.contains("cvc") ||
+    k.contains("iban") ||
+    k.contains("swift") ||
+    k.contains("tax_id") ||
+    k.contains("social_security") ||
     k.contains("dob") ||
     k.contains("birth") ||
     k.contains("passport") ||
@@ -282,16 +303,16 @@ mod tests {
 
         let redacted_json = redact_interface_pii(original_json);
 
-        assert_eq!(redacted_json["safe_field"], "safe_value");
-        assert_eq!(redacted_json["nested"]["password"], "[REDACTED]");
-        assert_eq!(redacted_json["nested"]["email"], "[REDACTED]");
-        assert_eq!(redacted_json["nested"]["another_safe"], "value");
-        assert_eq!(redacted_json["array"][0]["ssn"], "[REDACTED]");
-        assert_eq!(redacted_json["array"][1]["phone"], "[REDACTED]");
+        assert_eq!(redacted_json["safe_field"], serde_json::Value::String("safe_value".to_string()));
+        assert_eq!(redacted_json["nested"]["password"], serde_json::Value::String("[REDACTED]".to_string()));
+        assert_eq!(redacted_json["nested"]["email"], serde_json::Value::String("[REDACTED]".to_string()));
+        assert_eq!(redacted_json["nested"]["another_safe"], serde_json::Value::String("value".to_string()));
+        assert_eq!(redacted_json["array"][0]["ssn"], serde_json::Value::String("[REDACTED]".to_string()));
+        assert_eq!(redacted_json["array"][1]["phone"], serde_json::Value::String("[REDACTED]".to_string()));
         // Since `raw_email`'s value contains an @ and ., it is considered an email by `is_email` check, NOT by the key!
         // But wait! `raw_email` key also contains "email"! Let's test a key that does NOT contain sensitive words but HAS email string
-        assert_eq!(redacted_json["raw_email"], "[REDACTED]"); // "email" in key matched first!
-        assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
+        assert_eq!(redacted_json["raw_email"], serde_json::Value::String("[REDACTED]".to_string())); // "email" in key matched first!
+        assert_eq!(redacted_json["API_KEY"], serde_json::Value::String("[REDACTED]".to_string()));
     }
 }
 
