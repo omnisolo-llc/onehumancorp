@@ -1,9 +1,9 @@
-# OHC Hybrid Agentic OS Release Notes: v0.4.41
+# OHC Hybrid Agentic OS Release Notes: v0.4.42
 
 ## Cloud (Scaling) Improvements
-- Enhanced backend scaling capabilities.
-- OCI container improvements.
+- Modernize E2E tests with locator API and improved Bazel test runner path resolution.
+- Enhance multi-tenant scaling with optimized Playwright infrastructure.
 
 ## Standalone (Privacy/Offline) Improvements
-- Desktop application refinements for better local execution.
-- Improved privacy guarantees for standalone mode.
+- Improve desktop application verification infrastructure for absolute local sovereignty.
+- Refactor standalone mode tests to ensure high-fidelity offline reliability.

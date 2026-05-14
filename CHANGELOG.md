@@ -5,6 +5,16 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Modernize E2E tests with locator API and improved Bazel test runner path resolution.
+- Enhance multi-tenant scaling with optimized Playwright infrastructure.
+
+### Privacy/Offline Improvements
+- Improve desktop application verification infrastructure for absolute local sovereignty.
+- Refactor standalone mode tests to ensure high-fidelity offline reliability.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
