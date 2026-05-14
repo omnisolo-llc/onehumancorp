@@ -44,6 +44,7 @@ rust_library(
         "codex_runner.rs",
         "agent.rs",
         "checkpointer.rs",
+        "compaction.rs",
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
