@@ -76,9 +76,6 @@ jobs:
             build --color=yes
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
-            # Limit parallelism to prevent OOM on self-hosted runners
-            common --jobs=4
-            common --local_cpu_resources=4
 
 
       - name: Build release artifacts
@@ -149,9 +146,6 @@ jobs:
             build --color=yes
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
-            # Limit parallelism to prevent OOM on self-hosted runners
-            common --jobs=4
-            common --local_cpu_resources=4
 
       - name: Build all artifacts
         run: |
