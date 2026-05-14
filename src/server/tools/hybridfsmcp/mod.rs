@@ -4,3 +4,4 @@ pub mod factory;
 
 #[cfg(test)]
 mod tests;
+pub mod lens_audit;

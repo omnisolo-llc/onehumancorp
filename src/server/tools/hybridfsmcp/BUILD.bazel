@@ -6,6 +6,7 @@ filegroup(
         "provider.rs",
         "server.rs",
         "tests.rs",
+        "lens_audit.rs",
     ],
     visibility = ["//src/server/tools:__pkg__"],
 )
