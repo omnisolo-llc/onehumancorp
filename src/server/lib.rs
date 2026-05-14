@@ -154,6 +154,10 @@ use ::server_ohc::orchestration::hub_service_server::{HubService, HubServiceServ
 use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ::server_ohc::billing::billing_service_server::BillingServiceServer;
 use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::{PublishMessageResponse, EventStreamRequest, InviteRequest, InviteResponse, AcceptInviteRequest, AcceptInviteResponse, EmptyRequest, GetMeetingsResponse, StartOnboardingRequest, StartOnboardingResponse, PublishTeammateMeshEventRequest, TeammateMeshEvent, Query, AgentCapabilities, MeshEvent, DelegateTaskResponse, ReasonRequest, ReasonResponse, SubTask, StreamMessagesRequest, DelegateTaskRequest, PublishMessageRequest, OpenMeetingRequest, RegisterAgentRequest, RegisterAgentResponse, CreateTaskRequest, PollTasksRequest, UpdateTaskStatusRequest, UpdateTaskStatusResponse, ApproveTaskRequest, ApproveTaskResponse, GetPendingApprovalsRequest, GetPendingApprovalsResponse, TriggerCustomOrderRequest, TriggerCustomOrderResponse, DecomposeTaskRequest, DecomposeTaskResponse, MyPlanResponse, CostDashboardResponse, SelectPlanRequest, SelectPlanResponse, CancelSubscriptionRequest, CancelSubscriptionResponse, DownloadInvoiceRequest, DownloadInvoiceResponse, AgentConfig, WizardResponse, PromptTuningConfig, SharedTask, Agent, DiagnosticsRequest, DiagnosticsResponse, GetWizardProfileRequest, GetWizardProfileResponse, CompleteOnboardingRequest, CompleteOnboardingResponse, ProvisionRequest, ProvisionResponse, PublishSiteRequest, PublishSiteResponse, AuditSetupRequest, AuditSetupResponse, ResetWizardStateRequest, ResetWizardStateResponse, GetWizardStateRequest, GetWizardStateResponse, SaveWizardStateRequest, SaveWizardStateResponse, UpdateSiteContentRequest, UpdateSiteContentResponse, RestoreSnapshotRequest, DashboardSnapshot, CreateSnapshotRequest, OrgSnapshot, SnapshotsResponse, VerifyEmailRequest, VerifyEmailResponse, UpdateProfileRequest, UpdateProfileResponse, AutoDreamSyncRequest, AutoDreamSyncResponse, AutoDreamQueryRequest, AutoDreamQueryResult, MeetingRoom, VerifyEnvironmentRequest, VerifyEnvironmentResponse, GenerateConfigRequest, GenerateConfigResponse, GetMyAgentRequest, GetMyAgentResponse, SetAgentStatusRequest, SetAgentStatusResponse, StopTaskRequest, StopTaskResponse, RetryTaskRequest, RetryTaskResponse, SkillPack};
+use crate::msgbus::Message;
+use ::server_auth::Store;
+use crate::services::onboarding::env_verifier::EnvConfig;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
@@ -1071,7 +1075,7 @@ impl HubService for MyHubService {
 
     async fn discover_agents(
         &self,
-        _request: Request<Query>,
+        _request: Request<::server_ohc::orchestration::Query>,
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
         
@@ -1084,7 +1088,7 @@ impl HubService for MyHubService {
         Ok(Response::new(Box::pin(rx_stream) as Self::DiscoverAgentsStream))
     }
 
-    type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<MeshEvent, Status>> + Send>>;
+    type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::MeshEvent, Status>> + Send>>;
 
     async fn publish_mesh_event(
         &self,
@@ -1095,7 +1099,7 @@ impl HubService for MyHubService {
             self.publish_counter.add(1, &[opentelemetry::KeyValue::new("topic", event.topic.clone())]);
 
             match self.hub.publish_mesh_event(event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Ok(_) => Ok(Response::new(::server_ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -1105,7 +1109,7 @@ impl HubService for MyHubService {
 
     async fn stream_mesh_events(
         &self,
-        request: Request<EventStreamRequest>,
+        request: Request<::server_ohc::orchestration::EventStreamRequest>,
     ) -> Result<Response<Self::StreamMeshEventsStream>, Status> {
         let req = request.into_inner();
         if req.topic.is_empty() {
@@ -1127,15 +1131,15 @@ impl HubService for MyHubService {
 
     async fn publish_teammate_mesh_event(
         &self,
-        request: Request<PublishTeammateMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<::server_ohc::orchestration::PublishTeammateMeshEventRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if req.channel.is_empty() {
             return Err(Status::invalid_argument("channel is required"));
         }
         if let Some(event) = req.event {
             match self.hub.publish_teammate_event(req.channel, event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Ok(_) => Ok(Response::new(::server_ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
