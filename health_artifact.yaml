@@ -11,6 +11,8 @@ debt_report: |
 
   ## Phase 2: Hygiene
   - Redundant logs and systemic noise sources have been sanitized in the codebase.
+  - Discovered that PostgreSQL migration `src/server/migrations/002_missing_tables.sql` was missing the newly added `agent_missions` columns (e.g., `cloud_mission_id`, `sync_error`, `last_synced_at`, `_sync_status`, `version`, `mission_log`).
+  - Added the missing columns using `ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS ...`.
   - Verified that `BUILD.bazel` is accurately capturing dependencies.
 
   ## Phase 3: Architectural Audit
