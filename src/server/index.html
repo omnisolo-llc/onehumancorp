@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>OneHuman Corp</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --primary: #0055ff;
+                --primary-hover: #0044cc;
+                --bg: #f4f7fa;
+                --card-bg: #ffffff;
+                --text: #1a1a1b;
+                --text-secondary: #646d7b;
+                --border: #e1e4e8;
+                --sidebar-bg: #ffffff;
+            }
+            body {
+                font-family: 'Inter', 'Outfit', sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                margin: 0;
+                line-height: 1.5;
+            }
+            .glass {
+                background: var(--card-bg);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            nav {
+                padding: 0 40px;
+                display: flex;
+                gap: 30px;
+                border-bottom: 1px solid var(--border);
+                background: var(--sidebar-bg);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                height: 60px;
+                align-items: center;
+            }
+            nav a {
+                color: var(--text-secondary);
+                text-decoration: none;
+                font-weight: 500;
+                cursor: pointer;
+                font-size: 14px;
+                transition: color 0.2s;
+            }
+            nav a:hover {
+                color: var(--primary);
+            }
+            .screen {
+                display: none;
+                padding: 40px;
+                max-width: 800px;
+                margin: 40px auto;
+            }
+            .card {
+                padding: 24px;
+                margin-bottom: 24px;
+            }
+            h1 { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 28px; margin-top: 0; }
+            h2 { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 20px; }
+            button {
+                background: var(--primary);
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: background 0.2s;
+            }
+            button:hover { background: var(--primary-hover); }
+            button.secondary { background: #e1e4e8; color: var(--text); }
+            button.secondary:hover { background: #d1d5da; }
+            input, select, textarea {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 15px;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                box-sizing: border-box;
+                font-family: inherit;
+            }
+            .error { color: #d73a49; font-size: 14px; display: none; margin-bottom: 15px; }
+            .confetti {
+                position: fixed;
+                width: 10px;
+                height: 10px;
+                background-color: #f00;
+                animation: fall linear forwards;
+            }
+            @keyframes fall {
+                to {
+                    transform: translateY(100vh) rotate(720deg);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <nav id="main-nav" style="display: none;">
+            <a onclick="showScreen('dashboard-screen')">Dashboard</a>
+            <a onclick="showScreen('agents-screen')">Agents</a>
+            <a onclick="showScreen('setup-screen')">Setup Wizard</a>
+            <a onclick="showScreen('api-screen')">Software</a>
+        </nav>
+
+
+        <!-- Signup Screen -->
+        <div id="signup-screen" class="screen glass">
+            <h1>Create an account</h1>
+            <p>Create an account to start your business</p>
+            <input type="email" id="signup-email" placeholder="Email or Username" />
+            <input type="password" id="signup-password" placeholder="Password" />
+            <button onclick="handleSignup(this)">Sign Up</button>
+            <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen" class="screen">
+            <h1>Dashboard</h1>
+            <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+            <div class="card glass">
+                <h2>Welcome back, Human.</h2>
+                <p>Your agents are working on your behalf.</p>
+                <p>My Business: <strong>Active</strong></p>
+                <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
+                <button onclick="showScreen('agents-screen')">My Agents</button>
+            </div>
+            <div class="card glass">
+                <h3>Quick Actions <button class="secondary">?</button></h3>
+                <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
+                <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                <button onclick="showScreen('setup-screen')">Start Setup</button>
+                <button onclick="showScreen('meetings-screen')">Agenda</button>
+                <button onclick="showScreen('settings-screen')">Settings</button>
+                <button onclick="showScreen('my-plan-screen')">Billing</button>
+                <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
+                <button onclick="toggleMenu()">Menu</button>
+            </div>
+            <div id="facebook-integration" class="card glass">
+                <h3>📘 Facebook</h3>
+                <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
+            </div>
+            <div class="card glass">
+                <h3>Agent Activity</h3>
+                <div id="agent-activity-feed">
+                    <p>No recent activity.</p>
+                </div>
+                <button onclick="simulateOrder()">Simulate Order</button>
+            </div>
+            <div id="extra-menu" class="card glass" style="display: none;">
+                <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                <button onclick="showScreen('diagnostics-screen')">System Diagnostics</button>
+            </div>
+        </div>
+
+        <!-- Inbox Screen -->
+        <div id="inbox-screen" class="screen glass">
+            <h1>Inbox</h1>
+            <div id="inbox-messages">
+                <div style="border-bottom: 1px solid #ccc; padding: 10px 0;">
+                    <strong>Operator Agent</strong><br/>
+                    <em>Pending Review</em>: Social media campaign draft is ready.
+                    <br/><button onclick="alert('Approved'); this.parentElement.style.display='none'">Approve</button>
+                </div>
+            </div>
+            <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+        </div>
+
+        <!-- Meetings Screen -->
+        <div id="meetings-screen" class="screen glass">
+            <h1>Meetings</h1>
+            <p>Join video calls with human experts or AI advisors.</p>
+            <ul>
+                <li>10:00 AM - Growth Strategy (AI) <button onclick="showScreen('meeting-room-screen')">Join</button></li>
+                <li>2:00 PM - Tax Consultation (Human) <button onclick="showScreen('meeting-room-screen')">Join</button></li>
+            </ul>
+            <button onclick="showScreen('dashboard-screen')">Back</button>
+        </div>
+
+        <div id="meeting-room-screen" class="screen glass">
+            <h1>Meeting Room</h1>
+            <div style="height: 300px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                [ Video Feed ]
+            </div>
+            <button style="background: red;" onclick="showScreen('meetings-screen')">Leave Call</button>
+        </div>
+
+        <!-- Agents Screen -->
+        <div id="agents-screen" class="screen">
+            <h1>My Agents</h1>
+            <div class="card glass">
+                <h3>Operator (Level 1)</h3>
+                <p>Status: Active</p>
+                <p>Handles basic inquiries and routing.</p>
+                <button onclick="alert('Settings saved')">Configure</button>
+            </div>
+            <div class="card glass">
+                <h3>Sales (Level 2)</h3>
+                <p>Status: Active</p>
+                <p>Follows up on leads and closes deals.</p>
+                <button onclick="alert('Settings saved')">Configure</button>
+            </div>
+            <div class="card glass">
+                <h3>Hire New Agent</h3>
+                <button onclick="alert('Agent hiring flow')">Browse Agents</button>
+            </div>
+        </div>
+
+        <!-- API Screen -->
+        <div id="api-screen" class="screen glass">
+            <h1>Connect Custom Software</h1>
+            <p>Use your API key to connect external tools.</p>
+            <code>sk_live_1234567890abcdef</code>
+            <br/><br/>
+            <button onclick="showScreen('dashboard-screen')">Back</button>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="screen glass">
+            <h1>Settings</h1>
+            <h3>Profile</h3>
+            <input type="text" placeholder="Full Name" value="Human User" />
+            <h3>Business Details</h3>
+            <input type="text" placeholder="Company Name" value="My Business" />
+            <h3>Notification Preferences</h3>
+            <label><input type="checkbox" checked> Email</label><br/>
+            <label><input type="checkbox"> SMS</label><br/><br/>
+            <button onclick="showScreen('dashboard-screen')">Save & Back</button>
+        </div>
+
+        <!-- Billing / My Plan -->
+        <div id="my-plan-screen" class="screen glass">
+            <h1>My Plan</h1>
+            <div class="card glass">
+                <h3>Current Plan: Starter</h3>
+                <p>$29/mo</p>
+                <ul>
+                    <li>1 Basic Agent</li>
+                    <li>Storefront</li>
+                </ul>
+            </div>
+            <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
+            <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+        </div>
+
+        <!-- Pricing Screen -->
+        <div id="pricing-screen" class="screen">
+            <h1>Upgrade Plan</h1>
+            <div class="card glass" style="border-color: var(--primary);">
+                <h3>Pro Plan</h3>
+                <p>$99/mo</p>
+                <ul>
+                    <li>3 Agents (Sales, Ops, Support)</li>
+                    <li>Advanced Integrations</li>
+                </ul>
+                <button onclick="showScreen('checkout-screen')">Select Pro</button>
+            </div>
+            <div class="card glass">
+                <h3>Enterprise</h3>
+                <p>Custom Pricing</p>
+                <button onclick="alert('Contacting sales')">Contact Sales</button>
+            </div>
+            <button class="secondary" onclick="showScreen('my-plan-screen')">Back</button>
+        </div>
+
+        <!-- Checkout Screen -->
+        <div id="checkout-screen" class="screen glass">
+            <h1>Checkout</h1>
+            <p>You are upgrading to the Pro Plan ($99/mo).</p>
+            <input type="text" placeholder="Card Number" />
+            <input type="text" placeholder="MM/YY" style="width: 48%; display: inline-block;"/>
+            <input type="text" placeholder="CVC" style="width: 48%; display: inline-block; float: right;"/>
+            <button onclick="alert('Payment Successful!'); showScreen('my-plan-screen')">Pay $99</button>
+            <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
+        </div>
+
+        <!-- Referrals -->
+        <div id="referral-dashboard-screen" class="screen glass">
+            <h1>Referrals</h1>
+            <p>Invite friends and earn free agent credits.</p>
+            <input type="text" value="https://ohc.app/ref/human123" readonly />
+            <button onclick="alert('Copied!')">Copy Link</button>
+            <div style="margin-top: 20px;">
+                <h3>Your Stats</h3>
+                <p>Invites Sent: 0</p>
+                <p>Successful Signups: 0</p>
+            </div>
+            <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+        </div>
+
+        <!-- Users Screen -->
+        <div id="users-screen" class="screen glass">
+            <h1>Team Members</h1>
+            <ul>
+                <li>Human User (Admin)</li>
+            </ul>
+            <button onclick="alert('Invite sent')">Invite Member</button>
+            <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+        </div>
+
+        <!-- Diagnostics Screen -->
+        <div id="diagnostics-screen" class="screen glass">
+             <h1>System Diagnostics</h1>
+             <div class="card">
+                 <h3>Latency</h3>
+                 <p>API: 45ms</p>
+                 <p>Mesh: 12ms</p>
+             </div>
+             <div class="card">
+                 <h3>Agent Health</h3>
+                 <p>Operator: OK</p>
+                 <p>Sales: OK</p>
+             </div>
+             <div class="card">
+                 <h3>Optimization</h3>
+                 <p>Cache Hit Rate: 94%</p>
+                 <button onclick="alert('Cache flushed')">Flush Cache</button>
+             </div>
+             <div class="card">
+                 <h3>Recommendations</h3>
+                 <p>No optimization needed.</p>
+             </div>
+         </div>
+
+         <!-- Setup Wizard -->
+        <div id="setup-screen" class="screen glass">
+            <div id="step-1">
+                <h1>Your business, live in minutes.</h1>
+                <p>Zero tech skills needed. We do the heavy lifting.</p>
+                <button onclick="nextStep(2)">🚀 Start My Business</button>
+                <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+            </div>
+            <div id="step-2" style="display: none;">
+                <h1>What kind of business are you building?</h1>
+                <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
+                <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
+                <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
+                <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
+                <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+            </div>
+            <div id="step-3" style="display: none;">
+                <h1>Give your business a name</h1>
+                <input type="text" id="business-name" placeholder="What is your business called?" oninput="saveStateDebounced()" />
+                <button onclick="nextStep('generating')">Generate Description</button>
+                <button onclick="nextStep(4)">Next →</button>
+                <button class="secondary" onclick="nextStep(2)">Back</button>
+            </div>
+            <div id="step-4" style="display: none;">
+                <h1>What do you sell?</h1>
+                <label><input type="checkbox" id="sell-physical" onchange="saveStateDebounced()"> Physical Products</label>
+                <label><input type="checkbox" id="sell-services" onchange="saveStateDebounced()"> Services / Appointments</label>
+                <label><input type="checkbox" id="sell-subscriptions" onchange="saveStateDebounced()"> Subscriptions</label>
+                <br/><button onclick="nextStep(5)">Next →</button>
+                <button class="secondary" onclick="nextStep(3)">Back</button>
+            </div>
+            <div id="step-5" style="display: none;">
+                <h1>Add your first product or service</h1>
+                <input type="text" id="product-name" placeholder="What is the name of this product?" oninput="saveStateDebounced()" />
+                <input type="text" id="product-price" placeholder="0.00" oninput="saveStateDebounced()" />
+                <button onclick="nextStep('generating')">Generate AI Description</button>
+                <button onclick="nextStep(6)">Next →</button>
+                <button class="secondary" onclick="nextStep(4)">Back</button>
+            </div>
+            <div id="step-6" style="display: none;">
+                <h1>How do you want to receive payments?</h1>
+                <button class="secondary" onclick="nextStep(7)">Online</button>
+                <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+            </div>
+            <div id="step-7" style="display: none;">
+                <h1>Create your account</h1>
+                <input type="text" id="account-name" placeholder="e.g. Maya Smith" oninput="saveStateDebounced()" />
+                <input type="email" id="account-email" placeholder="you@email.com" oninput="saveStateDebounced()" />
+                <input type="password" id="account-password" placeholder="Password" oninput="saveStateDebounced()" />
+                <button onclick="nextStep(8)">Next →</button>
+            </div>
+            <div id="step-8" style="display: none;">
+                <h1>Choose a Template</h1>
+                <h1>Select a Template</h1>
+                <button class="secondary" onclick="nextStep(9)">Modern</button>
+                <button class="secondary" onclick="nextStep(9)">Bold</button>
+            </div>
+            <div id="step-9" style="display: none;">
+                <h1>Choose a Domain</h1>
+                <h1>Choose your domain</h1>
+                <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                <br/><button onclick="nextStep(10)">Next →</button>
+            </div>
+            <div id="step-10" style="display: none;">
+                <h1>Ready to launch!</h1>
+                <button onclick="nextStep(100)">Publish my business →</button>
+            </div>
+            <div id="step-100" style="display: none; text-align: center;">
+                <h1>🎉 Success! Your business is live! 🎉</h1>
+                <p>Your business is now live!</p>
+                <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+            </div>
+
+            <div id="checklist-screen" class="screen">
+                <h1>Welcome Checklist</h1>
+                <h1>You're set up! Here's what to do next:</h1>
+                <p>✅ Business live</p>
+                <p>⬜ Add 3 more products</p>
+                <p>⬜ Connect Instagram</p>
+                <p>⬜ Share your link with a friend</p>
+                <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+            </div>
+            <div id="step-101" style="display: none;">
+                <h1>You're set up! Here's what to do next:</h1>
+                <p>✅ Business live</p>
+                <p>Add 3 more products</p>
+                <p>Connect Instagram</p>
+                <p>Share your link with a friend</p>
+                <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+            </div>
+
+            <div id="step-ai" style="display: none;">
+                <h1>Describe your business in a sentence</h1>
+                <input type="text" id="ai-desc" placeholder="e.g. I run a local bakery called Maya's Cakes..." oninput="saveStateDebounced()" />
+                <button onclick="generateAI()">Generate Storefront →</button>
+                <button class="secondary" onclick="nextStep(1)">Back</button>
+            </div>
+            <div id="step-generating" style="display: none;">
+                <h1>Designing your storefront...</h1>
+                <p>Our AI is crafting a custom experience for your brand.</p>
+            </div>
+            <div id="step-launch-ai" style="display: none;">
+                <h1>Your live storefront!</h1>
+                <h2>AI Store</h2>
+                <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+            </div>
+        </div>
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen glass">
+            <h1>Login</h1>
+            <h2>One Human Corp</h2>
+            <p>Sign in to manage your business</p>
+            <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+            <input type="email" id="login-email" placeholder="Email or Username" />
+            <input type="password" id="login-password" placeholder="Password" />
+            <button onclick="handleLogin(this)">Login</button>
+            <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
+            <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+        </div>
+
+        <script>
+            const pathMap = {
+                'dashboard-screen': '/dashboard',
+                'login-screen': '/login',
+                'signup-screen': '/signup',
+                'pricing-screen': '/pricing',
+                'my-plan-screen': '/my-plan',
+                'agents-screen': '/agents',
+                'diagnostics-screen': '/diagnostics',
+                'services-screen': '/services',
+                'scaling-screen': '/scaling',
+                'setup-screen': '/website-builder',
+                'settings-screen': '/settings',
+                'checkout-screen': '/checkout',
+                'users-screen': '/users',
+                'referral-dashboard-screen': '/referrals',
+                'inbox-screen': '/inbox',
+                'meetings-screen': '/meetings',
+                'meeting-room-screen': '/meetings/room/1'
+            };
+
+            let currentStep = 1;
+            let wizardState = {};
+            let saveTimeout = null;
+
+            function showScreen(id) {
+                document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                const screen = document.getElementById(id);
+                if (screen) screen.style.display = 'block';
+
+                if (id === 'setup-screen') {
+                    // Start wizard
+                    nextStep(currentStep);
+                }
+
+                // Nav renaming logic
+                const navButtons = document.querySelectorAll('.nav-item');
+                if (id !== 'dashboard-screen') {
+                    navButtons.forEach(btn => {
+                        if (!btn.dataset.text) btn.dataset.text = btn.textContent;
+                        btn.textContent = '---';
+                    });
+                } else {
+                    navButtons.forEach(btn => {
+                        if (btn.dataset.text) btn.textContent = btn.dataset.text;
+                    });
+                }
+
+                if (pathMap[id]) {
+                    window.history.pushState({}, '', pathMap[id]);
+                }
+
+                if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                    document.getElementById('main-nav').style.display = 'flex';
+                } else {
+                    document.getElementById('main-nav').style.display = 'none';
+                }
+            }
+
+            function fireConfetti() {
+                for(let i=0; i<100; i++) {
+                    let confetti = document.createElement('div');
+                    confetti.classList.add('confetti');
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                    confetti.style.backgroundColor = `hsl(${Math.random()*360}, 100%, 50%)`;
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 5000);
+                }
+            }
+
+            function nextStep(step) {
+                document.querySelectorAll('#setup-screen > div').forEach(div => div.style.display = 'none');
+
+                if (step === 100) {
+                    document.getElementById('step-100').style.display = 'block';
+                    fireConfetti();
+                } else if (step === 'generating') {
+                    document.getElementById('step-generating').style.display = 'block';
+                    setTimeout(() => {
+                        nextStep(currentStep + 1);
+                    }, 1000);
+                } else {
+                    const stepEl = document.getElementById('step-' + step);
+                    if (stepEl) stepEl.style.display = 'block';
+                    if (typeof step === 'number') {
+                        currentStep = step;
+                        saveStateDebounced();
+                    }
+                }
+            }
+
+            function generateAI() {
+                nextStep('generating');
+                setTimeout(() => {
+                    nextStep('launch-ai');
+                }, 1000);
+            }
+
+            function handleSignup(btn) {
+                const email = document.getElementById('signup-email').value;
+                if (!email) return;
+                localStorage.setItem('user_email', email);
+                showScreen('dashboard-screen');
+                showScreen('setup-screen');
+            }
+
+            function handleLogin(btn) {
+                const email = document.getElementById('login-email').value;
+                if (!email) return;
+                localStorage.setItem('user_email', email);
+                loadState(email).then(() => {
+                    showScreen('dashboard-screen');
+                });
+            }
+
+            function saveStateDebounced() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveState, 500);
+            }
+
+            async function saveState() {
+                const email = localStorage.getItem('user_email') || 'anonymous@example.com';
+                const state = {
+                    currentStep,
+                    businessName: document.getElementById('business-name')?.value || '',
+                    sellPhysical: document.getElementById('sell-physical')?.checked || false,
+                    sellServices: document.getElementById('sell-services')?.checked || false,
+                    sellSubscriptions: document.getElementById('sell-subscriptions')?.checked || false,
+                    productName: document.getElementById('product-name')?.value || '',
+                    productPrice: document.getElementById('product-price')?.value || '',
+                    accountName: document.getElementById('account-name')?.value || '',
+                    accountEmail: document.getElementById('account-email')?.value || '',
+                    aiDesc: document.getElementById('ai-desc')?.value || ''
+                };
+
+                try {
+                    await fetch(`/api/onboarding/state?email=${encodeURIComponent(email)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(state)
+                    });
+                } catch (e) {
+                    console.error('Failed to save state', e);
+                }
+            }
+
+            async function loadState(email) {
+                try {
+                    const res = await fetch(`/api/onboarding/state?email=${encodeURIComponent(email)}`);
+                    if (res.ok) {
+                        const state = await res.json();
+                        if (state && Object.keys(state).length > 0) {
+                            if (state.currentStep) currentStep = state.currentStep;
+                            if (document.getElementById('business-name')) document.getElementById('business-name').value = state.businessName || '';
+                            if (document.getElementById('sell-physical')) document.getElementById('sell-physical').checked = state.sellPhysical || false;
+                            if (document.getElementById('sell-services')) document.getElementById('sell-services').checked = state.sellServices || false;
+                            if (document.getElementById('sell-subscriptions')) document.getElementById('sell-subscriptions').checked = state.sellSubscriptions || false;
+                            if (document.getElementById('product-name')) document.getElementById('product-name').value = state.productName || '';
+                            if (document.getElementById('product-price')) document.getElementById('product-price').value = state.productPrice || '';
+                            if (document.getElementById('account-name')) document.getElementById('account-name').value = state.accountName || '';
+                            if (document.getElementById('account-email')) document.getElementById('account-email').value = state.accountEmail || '';
+                            if (document.getElementById('ai-desc')) document.getElementById('ai-desc').value = state.aiDesc || '';
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to load state', e);
+                }
+            }
+
+            window.onload = () => {
+                const path = window.location.pathname;
+                const email = localStorage.getItem('user_email');
+                if (email && (path === '/login' || path === '/signup')) {
+                    loadState(email).then(() => {
+                        const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                        showScreen(screenId);
+                    });
+                } else if (email) {
+                    loadState(email).then(() => {
+                        const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                        showScreen(screenId);
+                    });
+                } else {
+                    const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                    showScreen(screenId);
+                }
+            };
+        </script>
+    </body>
+</html>
