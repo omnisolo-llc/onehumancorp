@@ -122,14 +122,12 @@ impl DB {
                     let _ = std::fs::File::create(&db_path);
                     #[cfg(unix)]
                     {
-                        use std::os::unix::fs::PermissionsExt;
-                        if let Ok(file) = std::fs::OpenOptions::new().write(true).open(&db_path) {
-                            if let Ok(metadata) = file.metadata() {
-                                let mut perms = metadata.permissions();
-                                perms.set_mode(0o600);
-                                let _ = file.set_permissions(perms);
-                            }
-                        }
+                        use std::os::unix::fs::OpenOptionsExt;
+                        let _ = std::fs::OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .mode(0o600)
+                            .open(&db_path);
                     }
                 }
             }

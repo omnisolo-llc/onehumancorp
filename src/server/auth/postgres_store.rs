@@ -371,7 +371,7 @@ mod security_tests {
         let token = "multi-tenant-leakage-test-token".to_string();
 
         let res1 = repo.revoke_token(token.clone(), exp, "tenant-A").await;
-        assert!(res1.is_ok() || res1.is_err()); // Ensure it executes
+        assert!(res1.is_ok());
 
         // Verify isolation: tenant-B cannot see tenant-A's revoked token
         let is_revoked_b = repo.is_revoked(&token, "tenant-B").await.unwrap_or(false);
