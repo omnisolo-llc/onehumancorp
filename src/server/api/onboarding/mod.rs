@@ -28,17 +28,42 @@ async fn start_onboarding(
     }
 }
 
+use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
+use axum::extract::Query;
+
+static ONBOARDING_STATES: OnceLock<Mutex<HashMap<String, serde_json::Value>>> = OnceLock::new();
+
+#[derive(serde::Deserialize)]
+pub struct StateQuery {
+    pub user: Option<String>,
+}
+
 async fn get_state(
+    Query(query): Query<StateQuery>,
     State(_agent): State<Arc<OnboardingAgent>>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let map = ONBOARDING_STATES.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap();
+    if let Some(user) = query.user {
+        if let Some(state) = map.get(&user) {
+            return Ok(Json(serde_json::json!({ "state": state })));
+        }
+    }
     Ok(Json(serde_json::json!({
-        "state": "{}"
+        "state": {}
     })))
 }
 
 async fn save_state(
+    Query(query): Query<StateQuery>,
     State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    Ok(axum::http::StatusCode::NO_CONTENT)
+    if let Some(user) = query.user {
+        let mut map = ONBOARDING_STATES.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap();
+        map.insert(user, payload);
+        Ok(axum::http::StatusCode::NO_CONTENT)
+    } else {
+        Err(axum::http::StatusCode::BAD_REQUEST)
+    }
 }
