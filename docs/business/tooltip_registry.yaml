@@ -1,0 +1,10 @@
+tooltips:
+  help_chat_button:
+    target_id: "#global-help-chat-btn"
+    text: "Ask our AI Support Agent for help with anything, right here."
+  settings_advanced:
+    target_id: "#settings-advanced-tab"
+    text: "Advanced configurations for developers and API users."
+  agent_activate:
+    target_id: ".agent-activate-btn"
+    text: "Turn on this AI Agent to start automating your tasks."

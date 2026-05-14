@@ -15,6 +15,8 @@ toc:
     path: /docs/technical/api/index.md
   - title: Features & CUJs
     path: /docs/technical/features/index.md
+  - title: Documentation System
+    path: /docs/technical/features/documentation_system.md
   - title: KAIROS Orchestration
     path: /docs/features/kairos_orchestration.md
   - title: Operations
@@ -37,6 +39,18 @@ toc:
     path: /docs/technical/mcp/hybrid-mcp-playbook.md
   - title: Business Documentation
     path: /docs/business/index.md
+  - title: Help Center
+    path: /docs/business/help_center.md
+  - title: Tooltip Registry
+    path: /docs/business/tooltip_registry.yaml
+  - title: Interactive Walkthroughs
+    path: /docs/business/interactive_walkthroughs.md
+  - title: AI Help Chat
+    path: /docs/business/ai_help_chat.md
+  - title: Video Tutorials
+    path: /docs/business/video_tutorials.md
+  - title: API Documentation
+    path: /docs/business/api_documentation.md
   - title: Product Overview
     path: /docs/business/public/index.md
   - title: User Guide

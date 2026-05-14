@@ -1,5 +1,18 @@
 # release_notes.md
 
+## What's New - May 2026
+
+### ✨ Introducing the All-New Help Center
+We've completely redesigned our Help Center to ensure you never get stuck.
+![Help Center Overview](../desktop_help_center.png)
+- **Searchable Articles**: Find what you need instantly.
+- **AI Help Chat**: Ask our specialized Support Agent questions and get step-by-step guidance.
+- **Video Tutorials**: Watch short, 1-minute videos for common tasks directly in the app.
+
+### 🚀 Improved Agent Setup
+Setting up your AI agents is now easier with our new interactive walkthrough. The walkthrough will guide you step-by-step to hire and deploy your first agent.
+![Agent Setup](../mobile_help_center.png)
+
 ## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
 
 ### Cloud Scaling Improvements
