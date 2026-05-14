@@ -1,35 +1,35 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Agent Management', () => {
-  test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
-  });
+test.describe('AI Agent Configuration E2E', () => {
+  // Use mobile viewport for mobile-first requirement
+  test.use({ viewport: { width: 375, height: 667 } });
 
-  test('should display hire button', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
-  });
-
-  test('should show marketing agent', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.locator('text=Marketing Pro')).toBeVisible();
-  });
-});
-
-test.describe('Dashboard', () => {
-  test('should display dashboard', async ({ page }) => {
+  test('Configure agent and tune prompt', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
-  });
 
-  test('should display navigation', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
-  });
+    // Bypass login by setting local storage directly, or just login
+    await page.fill('#login-email', 'test@example.com');
+    await page.click('button:has-text("Sign In")');
+    await expect(page.locator('#dashboard-screen')).toBeVisible();
 
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' }).filter({ visible: true })).toBeVisible();
+    // Go to agents screen
+    await page.click('a:has-text("Agents")');
+    await expect(page.locator('#agents-screen')).toBeVisible();
+
+    // Select an agent
+    await page.click('text=Customer Support');
+    await expect(page.locator('#agent-config-screen')).toBeVisible();
+
+    // Click tune this agent
+    await page.click('button:has-text("Tune this agent")');
+    await expect(page.locator('#prompt-tuning-screen')).toBeVisible();
+
+    // Save tuning
+    await page.click('button:has-text("Save Tuning")');
+    await expect(page.locator('#agent-config-screen')).toBeVisible();
+
+    // Activate agent
+    await page.click('button:has-text("Activate")');
+    await expect(page.locator('#agents-screen')).toBeVisible();
   });
 });

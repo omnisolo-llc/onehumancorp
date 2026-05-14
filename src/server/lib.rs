@@ -1475,7 +1475,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(mesh_transport)
         .merge(webhook_router)
         .merge(health_router)
+
+        .route("/api/v1/wizard/setup", axum::routing::post(wizard_setup_handler))
+        .route("/api/v1/wizard/tune", axum::routing::post(wizard_tune_handler))
         .fallback(ui_handler);
+
 
     let mesh_addr: std::net::SocketAddr = "0.0.0.0:18789".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
@@ -1597,364 +1601,785 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
-    let path = req.uri().path();
-    let content = match path {
-        "/api/v1/health" => "{\"status\":\"ok\"}",
-        _ => r#"
+    let content = r#"
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
                 <head>
-                    <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>OneHumanCorp - Small Business App</title>
+                    <link rel="preconnect" href="https://fonts.googleapis.com">
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
-                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
-                        main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
-                        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-                        h1, h2 { color: #4ecca3; }
-                        input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
-                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
-                        button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
-                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                        :root {
+                            --bg: #0b0c10;
+                            --text: #ffffff;
+                            --accent: #00d3ff;
+                            --glass: rgba(255, 255, 255, 0.05);
+                            --border: rgba(255, 255, 255, 0.1);
+                        }
+                        body {
+                            margin: 0;
+                            font-family: 'Inter', sans-serif;
+                            background: var(--bg);
+                            color: var(--text);
+                            display: flex;
+                            flex-direction: column;
+                            min-height: 100vh;
+                        }
+                        h1, h2, h3 {
+                            font-family: 'Outfit', sans-serif;
+                            margin-top: 0;
+                        }
+
+                        /* Glassmorphism Classes */
+                        .glass {
+                            backdrop-filter: blur(20px);
+                            -webkit-backdrop-filter: blur(20px);
+                            background: var(--glass);
+                            border: 1px solid var(--border);
+                            border-radius: 16px;
+                            padding: 24px;
+                        }
+
+                        /* Smooth Animations */
+                        .screen {
+                            display: none;
+                            animation: enter 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                        }
+                        @keyframes enter {
+                            from { opacity: 0; transform: translateY(10px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        @keyframes exit {
+                            from { opacity: 1; transform: translateY(0); }
+                            to { opacity: 0; transform: translateY(-10px); }
+                        }
+                        .fade-out {
+                            animation: exit 200ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                        }
+
+                        /* Navigation */
+                        nav {
+                            display: flex;
+                            justify-content: space-between;
+                            padding: 16px 24px;
+                            background: rgba(11, 12, 16, 0.8);
+                            border-bottom: 1px solid var(--border);
+                            position: sticky;
+                            top: 0;
+                            z-index: 10;
+                            backdrop-filter: blur(10px);
+                        }
+                        nav .logo {
+                            font-family: 'Outfit', sans-serif;
+                            font-weight: 800;
+                            font-size: 20px;
+                            color: var(--accent);
+                            cursor: pointer;
+                        }
+                        nav .links a {
+                            color: var(--text);
+                            text-decoration: none;
+                            margin-left: 16px;
+                            font-size: 14px;
+                            cursor: pointer;
+                        }
+
+                        /* Layout */
+                        main {
+                            flex: 1;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            padding: 40px 20px;
+                            max-width: 600px;
+                            margin: 0 auto;
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+
+                        /* Buttons */
+                        button {
+                            background: var(--accent);
+                            color: #000;
+                            border: none;
+                            border-radius: 8px;
+                            padding: 12px 24px;
+                            font-family: 'Inter', sans-serif;
+                            font-weight: 600;
+                            font-size: 16px;
+                            cursor: pointer;
+                            transition: transform 0.2s;
+                            width: 100%;
+                            margin-bottom: 12px;
+                        }
+                        button:hover {
+                            transform: scale(1.02);
+                        }
+                        button.secondary {
+                            background: var(--glass);
+                            color: var(--text);
+                            border: 1px solid var(--border);
+                        }
+
+                        /* Inputs */
+                        input, select {
+                            width: 100%;
+                            background: rgba(0, 0, 0, 0.3);
+                            border: 1px solid var(--border);
+                            border-radius: 8px;
+                            padding: 12px;
+                            color: var(--text);
+                            font-family: 'Inter', sans-serif;
+                            font-size: 16px;
+                            margin-bottom: 16px;
+                            box-sizing: border-box;
+                        }
+
+                        /* Utility */
+                        .text-center { text-align: center; }
+                        .mt-4 { margin-top: 16px; }
+                        .mb-4 { margin-bottom: 16px; }
+
+                        /* Wizard specific */
+                        .wizard-step {
+                            display: none;
+                            animation: enter 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                        }
+                        .wizard-step.active {
+                            display: block;
+                        }
+                        .grid-cards {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                            gap: 16px;
+                            margin-bottom: 24px;
+                        }
+                        .card-btn {
+                            background: var(--glass);
+                            border: 1px solid var(--border);
+                            border-radius: 12px;
+                            padding: 20px;
+                            text-align: center;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 10px;
+                        }
+                        .card-btn:hover, .card-btn.selected {
+                            background: rgba(0, 211, 255, 0.1);
+                            border-color: var(--accent);
+                        }
+                        .icon-large {
+                            font-size: 32px;
+                        }
+
+                        /* Loading Spinner */
+                        .spinner {
+                            border: 4px solid rgba(255, 255, 255, 0.1);
+                            border-left-color: var(--accent);
+                            border-radius: 50%;
+                            width: 40px;
+                            height: 40px;
+                            animation: spin 1s linear infinite;
+                            margin: 20px auto;
+                        }
+                        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+                        /* Toggle Switch */
+                        .toggle-container {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding: 12px 0;
+                            border-bottom: 1px solid var(--border);
+                        }
+                        .toggle-switch {
+                            position: relative;
+                            display: inline-block;
+                            width: 44px;
+                            height: 24px;
+                        }
+                        .toggle-switch input {
+                            opacity: 0;
+                            width: 0;
+                            height: 0;
+                        }
+                        .slider {
+                            position: absolute;
+                            cursor: pointer;
+                            top: 0; left: 0; right: 0; bottom: 0;
+                            background-color: rgba(255, 255, 255, 0.2);
+                            transition: .3s;
+                            border-radius: 24px;
+                        }
+                        .slider:before {
+                            position: absolute;
+                            content: "";
+                            height: 18px;
+                            width: 18px;
+                            left: 3px;
+                            bottom: 3px;
+                            background-color: white;
+                            transition: .3s;
+                            border-radius: 50%;
+                        }
+                        input:checked + .slider {
+                            background-color: var(--accent);
+                        }
+                        input:checked + .slider:before {
+                            transform: translateX(20px);
+                        }
+
+                        /* Range Slider */
+                        .range-slider {
+                            width: 100%;
+                            margin: 10px 0;
+                        }
+
+                        /* Advanced Mode styling */
+                        .advanced-mode-only {
+                            display: none;
+                            margin-top: 10px;
+                            padding: 10px;
+                            background: rgba(0,0,0,0.5);
+                            border-radius: 4px;
+                            font-family: monospace;
+                            font-size: 12px;
+                            color: #aaa;
+                        }
+                        body.advanced-mode .advanced-mode-only {
+                            display: block;
+                        }
+
+                        .toast {
+                            position: fixed;
+                            bottom: 20px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background: var(--accent);
+                            color: #000;
+                            padding: 12px 24px;
+                            border-radius: 20px;
+                            font-weight: 600;
+                            display: none;
+                            z-index: 1000;
+                            animation: enter 300ms forwards;
+                        }
+
+                        .hero-animation {
+                            font-size: 48px;
+                            text-align: center;
+                            margin-bottom: 20px;
+                            animation: float 3s ease-in-out infinite;
+                        }
+                        @keyframes float {
+                            0% { transform: translateY(0px); }
+                            50% { transform: translateY(-10px); }
+                            100% { transform: translateY(0px); }
+                        }
+
+
                     </style>
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
-                        <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <div class="logo" onclick="showScreen('dashboard-screen')">OHC</div>
+                        <div class="links">
+                            <a onclick="showScreen('dashboard-screen')">Home</a>
+                            <a onclick="showScreen('agents-screen')">Agents</a>
+                            <a onclick="toggleAdvancedMode()">Toggle Advanced</a>
+                        </div>
                     </nav>
 
-                    <!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>Login</h1>
-                        <h1>One Human Corp</h1>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Fix App Issues</button>
-                        <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
-                    </div>
-
-                    <!-- Signup Screen -->
-                    <div id="signup-screen" class="screen glass">
-                        <h1>Create an account</h1>
-                        <p>Create an account to start your business</p>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleSignup(this)">Sign Up</button>
-                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
-                    </div>
-
-                    <!-- Dashboard -->
-                    <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Update Setup</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="toggleMenu()">Menu</button>
-                        </div>
-                        <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <button>Video Tutorials</button>
-                        </div>
-
-                        <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Messages</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Share Store</button>
-                        </div>
-                    </div>
-
-                    <!-- Inbox Screen -->
-                    <div id="inbox-screen" class="screen glass">
-                        <h1>Customer Inbox</h1>
-                        <div class="card">
-                            <p>No new messages.</p>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Agents Page -->
-                    <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
-                        </div>
-                    </div>
-
-                    <!-- API Screen -->
-                    <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
-                        <h1>Pricing Plans</h1>
-                        <p>Choose the best plan for your business.</p>
-                        <button class="secondary">Annual billing 20% off discount</button>
-                        <div class="card glass">
-                            <h3>Free Starter</h3>
-                            <p>$0 / month</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Pro Professional</h3>
-                            <p>$29 / month</p>
-                            <p>Recommended</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Business Enterprise</h3>
-                            <p>$79 / month</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
-                                <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
+                    <main>
+                        <!-- Login Screen -->
+                        <div id="login-screen" class="screen active">
+                            <div class="glass text-center">
+                                <h1>Welcome back</h1>
+                                <p class="mb-4">Sign in to your business</p>
+                                <input type="email" placeholder="Email address" id="login-email" />
+                                <button onclick="handleLogin(this)">Sign In</button>
+                                <p class="mt-4"><a href='#' onclick="showScreen('signup-screen')">Create an account</a></p>
+                                <div id="login-error" style="display:none; color: #ff4d4d; margin-top: 10px;">Please enter an email.</div>
                             </div>
                         </div>
-                        <p>100% money back guarantee. Secure SSL payments.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
-                            </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
+
+                        <!-- Signup Screen -->
+                        <div id="signup-screen" class="screen">
+                            <div class="glass text-center">
+                                <h1>Create Account</h1>
+                                <p class="mb-4">Let's get started</p>
+                                <button onclick="handleSignup(this)">Start Wizard</button>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
-                        <h1>My Current Plan</h1>
-                        <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
-                        <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this Month: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
-                        </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
+                        <!-- 1. Business Setup Wizard -->
+                        <div id="setup-screen" class="screen">
+                            <div class="glass w-100">
+                                <!-- Welcome -->
+                                <div id="step-1" class="wizard-step active">
+                                    <div class="hero-animation">🚀</div>
+                                    <h1 class="text-center">Your business, live in minutes</h1>
+                                    <p class="text-center mb-4">Zero tech skills needed. We do the heavy lifting.</p>
+                                    <button onclick="nextStep(2)">Start My Business →</button>
+                                </div>
 
-                    <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
-                        <p>LLM Usage: 5,000 tokens</p>
-                        <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
-                    </div>
+                                <!-- Business Type -->
+                                <div id="step-2" class="wizard-step">
+                                    <h2>What kind of business are you building?</h2>
+                                    <div class="grid-cards">
+                                        <div class="card-btn" onclick="selectType('Online Store')">
+                                            <div class="icon-large">🛒</div>
+                                            <div>Online Store</div>
+                                        </div>
+                                        <div class="card-btn" onclick="selectType('Service Business')">
+                                            <div class="icon-large">🛠️</div>
+                                            <div>Service Business</div>
+                                        </div>
+                                        <div class="card-btn" onclick="selectType('Restaurant / Food')">
+                                            <div class="icon-large">🍕</div>
+                                            <div>Restaurant / Food</div>
+                                        </div>
+                                        <div class="card-btn" onclick="selectType('Creative / Portfolio')">
+                                            <div class="icon-large">🎨</div>
+                                            <div>Creative / Portfolio</div>
+                                        </div>
+                                        <div class="card-btn" onclick="selectType('Local Business')">
+                                            <div class="icon-large">🏠</div>
+                                            <div>Local Business</div>
+                                        </div>
+                                        <div class="card-btn" onclick="selectType('Other')">
+                                            <div class="icon-large">✨</div>
+                                            <div>Other</div>
+                                        </div>
+                                    </div>
+                                    <button class="secondary" onclick="nextStep(1)">Back</button>
+                                </div>
 
-                     <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
-                         <h1>Checkout</h1>
-                         <p>Please enter your payment details below.</p>
-                         <div class="card glass">
-                             <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
-                             <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
-                         </div>
-                     </div>
+                                <!-- Business Name -->
+                                <div id="step-3" class="wizard-step">
+                                    <h2>Give your business a name</h2>
+                                    <input type="text" id="biz-name" placeholder="e.g. Maya's Cakes" oninput="suggestTagline()" />
 
-                     <!-- Diagnostics Page -->
-                     <div id="diagnostics-screen" class="screen">
-                         <h1>Diagnostics</h1>
-                         <p>System Status: All systems operational</p>
-                         <p>Database: Healthy</p>
-                         <p>Redis: Healthy</p>
-                         <p>Server Uptime: 99.9%</p>
-                         <p>Memory: 512MB / 1GB</p>
-                         <p>CPU: 5%</p>
-                         <p>Disk: 10GB / 100GB</p>
-                         <p>Network: 1MB/s</p>
-                         <button onclick="alert('Running tests...')">Run Test</button>
-                         <div class="card glass">
-                            <h2>Recent Logs</h2>
-                            <p>All good.</p>
-                         </div>
-                     </div>
+                                    <div id="tagline-suggestion" style="display:none;" class="mb-4">
+                                        <p style="font-size:14px; color:#aaa;">AI Suggestion:</p>
+                                        <input type="text" id="biz-tagline" />
+                                    </div>
 
-                     <!-- Services Page -->
-                     <div id="services-screen" class="screen">
-                         <h1>Service Manager</h1>
-                         <div class="service-item card glass">
-                             <h2>Web Server</h2>
-                             <p>Status: running</p>
-                             <button>Stop</button>
-                             <button>Restart</button>
-                         </div>
-                     </div>
+                                    <button onclick="nextStep(4)">Next →</button>
+                                    <button class="secondary" onclick="nextStep(2)">Back</button>
+                                </div>
 
-                     <!-- Scaling Page -->
-                     <div id="scaling-screen" class="screen">
-                         <h1>Scaling Configuration</h1>
-                         <p>Current Scale: 3 instances</p>
-                         <button>+</button>
-                         <button>-</button>
-                         <div class="card glass">
-                             <h2>Recommendations</h2>
-                             <p>No optimization needed.</p>
-                         </div>
-                     </div>
+                                <!-- What do you sell -->
+                                <div id="step-4" class="wizard-step">
+                                    <h2>What do you sell?</h2>
+                                    <div class="grid-cards">
+                                        <div class="card-btn" onclick="this.classList.toggle('selected')">📦 Physical products</div>
+                                        <div class="card-btn" onclick="this.classList.toggle('selected')">⬇️ Digital downloads</div>
+                                        <div class="card-btn" onclick="this.classList.toggle('selected')">📅 Services / appointments</div>
+                                        <div class="card-btn" onclick="this.classList.toggle('selected')">🍔 Food & beverages</div>
+                                        <div class="card-btn" onclick="this.classList.toggle('selected')">🔁 Subscriptions</div>
+                                    </div>
+                                    <button onclick="nextStep(5)">Next →</button>
+                                    <button class="secondary" onclick="nextStep(3)">Back</button>
+                                </div>
 
-                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
-                        </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
-                        </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                                <!-- Payments -->
+                                <div id="step-5" class="wizard-step">
+                                    <h2>How do you want to receive payments?</h2>
+                                    <div class="grid-cards">
+                                        <div class="card-btn" onclick="nextStep(6)">
+                                            <div class="icon-large">🌐</div>
+                                            <div>Online only</div>
+                                            <small style="color:#aaa">~5 mins setup</small>
+                                        </div>
+                                        <div class="card-btn" onclick="nextStep(6)">
+                                            <div class="icon-large">🏪</div>
+                                            <div>In-person (POS)</div>
+                                            <small style="color:#aaa">~10 mins setup</small>
+                                        </div>
+                                        <div class="card-btn" onclick="nextStep(6)">
+                                            <div class="icon-large">🌍</div>
+                                            <div>Both</div>
+                                            <small style="color:#aaa">~10 mins setup</small>
+                                        </div>
+                                        <div class="card-btn" onclick="nextStep(6)">
+                                            <div class="icon-large">⏭️</div>
+                                            <div>Skip for now</div>
+                                        </div>
+                                    </div>
+                                    <button class="secondary" onclick="nextStep(4)">Back</button>
+                                </div>
+
+                                <!-- Account -->
+                                <div id="step-6" class="wizard-step">
+                                    <h2>Administrator account</h2>
+                                    <input type="text" placeholder="Your Full Name" />
+                                    <input type="email" placeholder="Email Address" />
+                                    <input type="password" placeholder="Password" oninput="checkStrength(this.value)" />
+                                    <div style="height:4px; background:#333; margin-bottom:16px; border-radius:2px;">
+                                        <div id="pwd-strength" style="height:100%; width:0%; background:red; border-radius:2px; transition:0.3s;"></div>
+                                    </div>
+                                    <button class="secondary mb-4">G Continue with Google</button>
+                                    <button class="secondary mb-4"> Continue with Apple</button>
+                                    <button onclick="nextStep(7)">Next →</button>
+                                    <button class="secondary" onclick="nextStep(5)">Back</button>
+                                </div>
+
+                                <!-- Review & Launch -->
+                                <div id="step-7" class="wizard-step">
+                                    <h2>Review & Launch</h2>
+                                    <div style="background:rgba(0,0,0,0.3); padding:16px; border-radius:8px; margin-bottom:16px;">
+                                        <p><strong>Business:</strong> <span id="review-name">Your Business</span></p>
+                                        <p><strong>Type:</strong> <span id="review-type">Store</span></p>
+                                        <p><strong>Status:</strong> Ready to provision</p>
+                                    </div>
+                                    <button onclick="launchBusiness()" style="animation: pulse 2s infinite;">Launch My Business →</button>
+                                    <style>@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }</style>
+                                    <button class="secondary" onclick="nextStep(6)">Back</button>
+                                </div>
+
+                                <!-- Launching Overlay -->
+                                <div id="step-launching" class="wizard-step text-center">
+                                    <h2>Your business is setting up...</h2>
+                                    <div class="spinner"></div>
+                                    <p>Provisioning tenant...</p>
+                                    <p>Selecting starter template...</p>
+                                    <p>Pre-seeding AI agents...</p>
+                                </div>
+                            </div>
                         </div>
 
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                        <!-- Dashboard Screen -->
+                        <div id="dashboard-screen" class="screen">
+                            <div class="glass w-100">
+                                <h1>Dashboard</h1>
+                                <p>Welcome to your new business!</p>
+
+                                <!-- Grow my business wizard trigger -->
+                                <div style="background:rgba(0,211,255,0.1); border:1px solid var(--accent); padding:16px; border-radius:12px; margin-bottom:20px;">
+                                    <h3>🚀 Grow your business</h3>
+                                    <p>Add 5 more products to start selling!</p>
+                                    <button onclick="showScreen('website-builder')">Add Products →</button>
+                                </div>
+
+                                <button onclick="showScreen('website-builder')">Build My Website</button>
+                                <button onclick="showScreen('agents-screen')">Manage my AI team</button>
+                            </div>
                         </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
+
+                        <!-- 2. Website Builder Onboarding -->
+                        <div id="website-builder" class="screen">
+                            <div class="glass w-100">
+                                <div id="web-step-1" class="wizard-step active">
+                                    <h2>Template Gallery</h2>
+                                    <div class="grid-cards">
+                                        <div class="card-btn" onclick="this.classList.add('selected'); setTimeout(()=>nextWebStep(2), 500)">
+                                            <div style="width:100%; height:80px; background:#333; border-radius:4px; margin-bottom:8px;"></div>
+                                            Minimal
+                                        </div>
+                                        <div class="card-btn" onclick="this.classList.add('selected'); setTimeout(()=>nextWebStep(2), 500)">
+                                            <div style="width:100%; height:80px; background:#444; border-radius:4px; margin-bottom:8px;"></div>
+                                            Bold
+                                        </div>
+                                    </div>
+                                    <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                                </div>
+
+                                <div id="web-step-2" class="wizard-step">
+                                    <h2>Brand colors & logo</h2>
+                                    <div style="display:flex; gap:10px; margin-bottom:16px;">
+                                        <div style="width:40px;height:40px;background:#ff0000;border-radius:50%;cursor:pointer;"></div>
+                                        <div style="width:40px;height:40px;background:#00ff00;border-radius:50%;cursor:pointer;"></div>
+                                        <div style="width:40px;height:40px;background:#0000ff;border-radius:50%;cursor:pointer;"></div>
+                                    </div>
+                                    <button class="secondary mb-4">Upload Logo</button>
+                                    <button class="secondary mb-4">Generate Logo (AI)</button>
+                                    <button onclick="nextWebStep(3)">Next →</button>
+                                </div>
+
+                                <div id="web-step-3" class="wizard-step">
+                                    <h2>Add your first product or service</h2>
+                                    <input type="text" placeholder="Product Name" onblur="this.value ? document.getElementById('ai-desc').value = 'A premium ' + this.value + ' perfect for you.' : null" />
+                                    <input type="text" placeholder="Price (e.g. 29.99)" />
+                                    <button class="secondary mb-4">📷 Add Photo</button>
+                                    <textarea id="ai-desc" placeholder="Description (AI auto-generates this)" style="width:100%; height:80px; margin-bottom:16px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:white; padding:8px; border-radius:8px;"></textarea>
+                                    <button onclick="nextWebStep(4)">Next →</button>
+                                </div>
+
+                                <div id="web-step-4" class="wizard-step">
+                                    <h2>Connect a domain</h2>
+                                    <div class="card-btn mb-4" onclick="nextWebStep(5)">Use a free OHC subdomain<br/><small>mybusiness.ohc.app</small></div>
+                                    <div class="card-btn mb-4">Use my own domain</div>
+                                    <div class="card-btn mb-4">Buy a domain</div>
+                                </div>
+
+                                <div id="web-step-5" class="wizard-step text-center">
+                                    <h2>Ready to Go Live!</h2>
+                                    <div style="width:100%; height:150px; background:#222; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:center;">Live Preview</div>
+                                    <button onclick="publishSite()">Publish →</button>
+                                </div>
+                            </div>
                         </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+
+                        <!-- 3. AI Agent Configuration -->
+                        <div id="agents-screen" class="screen">
+                            <div class="glass w-100">
+                                <h1>Agent Gallery</h1>
+                                <p>No technical knowledge required.</p>
+
+                                <div class="grid-cards">
+                                    <div class="card-btn" onclick="configureAgent('Customer Support')">
+                                        <div class="icon-large">🎧</div>
+                                        <div>Customer Support</div>
+                                        <button class="secondary mt-4" style="padding:4px 8px; font-size:12px;">Add to team</button>
+                                    </div>
+                                    <div class="card-btn" onclick="configureAgent('Social Media Manager')">
+                                        <div class="icon-large">📱</div>
+                                        <div>Social Media Manager</div>
+                                        <button class="secondary mt-4" style="padding:4px 8px; font-size:12px;">Add to team</button>
+                                    </div>
+                                    <div class="card-btn" onclick="configureAgent('SEO Booster')">
+                                        <div class="icon-large">🚀</div>
+                                        <div>SEO Booster</div>
+                                        <button class="secondary mt-4" style="padding:4px 8px; font-size:12px;">Add to team</button>
+                                    </div>
+                                </div>
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                            </div>
                         </div>
-                    </div>
+
+                        <div id="agent-config-screen" class="screen">
+                            <div class="glass w-100">
+                                <h1 id="agent-config-title">Configure Agent</h1>
+
+                                <h3>Capabilities</h3>
+                                <div class="toggle-container">
+                                    <span>Reply to customer messages</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <div class="advanced-mode-only">Permission: `msg:reply`</div>
+                                </div>
+                                <div class="toggle-container">
+                                    <span>Post to Instagram & Facebook</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <div class="advanced-mode-only">Permission: `social:post`</div>
+                                </div>
+
+                                <h3 class="mt-4">How often should this agent work?</h3>
+                                <div style="display:flex; justify-content:space-between; font-size:12px; color:#aaa;">
+                                    <span>Real-time</span>
+                                    <span>Weekly</span>
+                                </div>
+                                <input type="range" min="1" max="4" value="2" class="range-slider">
+                                <div class="advanced-mode-only">Maps to: `max_sessions_per_day`</div>
+
+                                <div style="display:flex; gap:10px; margin-top:24px;">
+                                    <button onclick="showToast('Agent Activated!'); showScreen('agents-screen')">Activate</button>
+                                    <button class="secondary" onclick="showScreen('prompt-tuning-screen')">Tune this agent</button>
+                                </div>
+                                <button class="secondary mt-4" onclick="showScreen('agents-screen')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <!-- 4. Prompt Tuning -->
+                        <div id="prompt-tuning-screen" class="screen">
+                            <div class="glass w-100">
+                                <h1>Tune this agent</h1>
+
+                                <h3>Tone</h3>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                                    <div class="card-btn" style="padding:8px 16px;">Friendly & Warm</div>
+                                    <div class="card-btn" style="padding:8px 16px;">Professional</div>
+                                    <div class="card-btn" style="padding:8px 16px;">Energetic</div>
+                                </div>
+                                <div class="advanced-mode-only">System Prompt Template: "You are a friendly..."</div>
+
+                                <h3>Focus topics</h3>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                                    <div class="card-btn" style="padding:4px 12px; border-radius:20px;">+ Only about my products</div>
+                                    <div class="card-btn" style="padding:4px 12px; border-radius:20px;">+ Avoid competitor mentions</div>
+                                </div>
+
+                                <h3>Example interactions</h3>
+                                <input type="text" placeholder="User asks..." />
+                                <input type="text" placeholder="Agent replies..." />
+
+                                <h3>Live Preview Sandbox</h3>
+                                <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px; height:100px; padding:8px; margin-bottom:16px;">
+                                    <p style="color:#aaa; font-size:12px;">Chat sandbox...</p>
+                                </div>
+
+                                <button onclick="saveTuning()">Save Tuning</button>
+                                <button class="secondary" onclick="showScreen('agent-config-screen')">Back</button>
+                            </div>
+                        </div>
+                    </main>
+
+                    <div id="toast" class="toast"></div>
 
                     <script>
+                        // Global state
+                        let isAdvancedMode = localStorage.getItem('advancedMode') === 'true';
+                        if (isAdvancedMode) document.body.classList.add('advanced-mode');
+
+                        function toggleAdvancedMode() {
+                            isAdvancedMode = !isAdvancedMode;
+                            localStorage.setItem('advancedMode', isAdvancedMode);
+                            if (isAdvancedMode) {
+                                document.body.classList.add('advanced-mode');
+                                showToast('Advanced Mode Enabled');
+                            } else {
+                                document.body.classList.remove('advanced-mode');
+                                showToast('Simple Mode Enabled');
+                            }
+                        }
+
+                        function showToast(msg) {
+                            const toast = document.getElementById('toast');
+                            toast.innerText = msg;
+                            toast.style.display = 'block';
+                            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                        }
+
                         function showScreen(id) {
-                            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-                            const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
+                            // First, start exit animation
+                            const active = document.querySelector('.screen.active');
+                            if (active) {
+                                active.classList.add('fade-out');
+                                setTimeout(() => {
+                                    active.classList.remove('active', 'fade-out');
+                                    active.style.display = 'none';
+
+                                    const next = document.getElementById(id);
+                                    if (next) {
+                                        next.style.display = 'block';
+                                        next.classList.add('active');
+                                    }
+                                }, 200); // Wait for exit anim
+                            } else {
+                                document.querySelectorAll('.screen').forEach(s => {
+                                    s.classList.remove('active');
+                                    s.style.display = 'none';
+                                });
+                                const next = document.getElementById(id);
+                                if (next) {
+                                    next.style.display = 'block';
+                                    next.classList.add('active');
+                                }
+                            }
                             
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
+                            if (id !== 'login-screen' && id !== 'signup-screen' && id !== 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
 
+                        // Wizard Logic
+                        let bizType = '';
+                        function selectType(type) {
+                            bizType = type;
+                            nextStep(3);
+                        }
+
+                        function suggestTagline() {
+                            const name = document.getElementById('biz-name').value;
+                            if (name.length > 3) {
+                                document.getElementById('tagline-suggestion').style.display = 'block';
+                                document.getElementById('biz-tagline').value = "The best " + (bizType || "business") + " in town.";
+                            } else {
+                                document.getElementById('tagline-suggestion').style.display = 'none';
+                            }
+                        }
+
+                        function nextStep(stepId) {
+                            if (stepId === 7) {
+                                document.getElementById('review-name').innerText = document.getElementById('biz-name').value || 'My Business';
+                                document.getElementById('review-type').innerText = bizType || 'Business';
+                            }
+
+
+                            if (stepId === 'launching') {
+                                fetch('/api/v1/wizard/setup', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ type: bizType, name: document.getElementById('biz-name').value })
+                                }).catch(e => console.log(e));
+
+                                document.querySelectorAll('#setup-screen .wizard-step').forEach(s => {
+
+                                    s.classList.remove('active');
+                                });
+                                const target = document.getElementById('step-launching');
+                                if (target) target.classList.add('active');
+                                return;
+                            }
+
+                            document.querySelectorAll('#setup-screen .wizard-step').forEach(s => {
+                                s.classList.remove('active');
+                            });
+                            const target = document.getElementById('step-' + stepId);
+                            if (target) target.classList.add('active');
+                        }
+
+                        function launchBusiness() {
+                            nextStep('launching');
+                            setTimeout(() => {
+                                showScreen('dashboard-screen');
+                            }, 3000);
+                        }
+
+                        // Web Wizard Logic
+                        function nextWebStep(stepId) {
+                            document.querySelectorAll('#website-builder .wizard-step').forEach(s => {
+                                s.classList.remove('active');
+                            });
+                            const target = document.getElementById('web-step-' + stepId);
+                            if (target) target.classList.add('active');
+                        }
+
+                        function publishSite() {
+                            // Copy to clipboard trick
+                            navigator.clipboard.writeText("https://mybusiness.ohc.app").catch(e=>{});
+                            showToast('Site Live! Link copied to clipboard.');
+                            setTimeout(() => {
+                                showScreen('dashboard-screen');
+                            }, 2000);
+                        }
+
+                        // Agent Logic
+                        function configureAgent(name) {
+                            document.getElementById('agent-config-title').innerText = name;
+                            showScreen('agent-config-screen');
+                        }
+
+
+                        function saveTuning() {
+                            fetch('/api/v1/wizard/tune', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tone: 'friendly' })
+                            }).catch(e => console.log(e));
+
+                            showToast('Your agent has been updated ✓');
+
+                            setTimeout(() => showScreen('agent-config-screen'), 1000);
+                        }
+
                         function handleLogin(btn) {
-                            const email = document.querySelector('#login-screen input[type="email"]').value;
+                            const email = document.getElementById('login-email').value;
                             btn.innerText = 'Signing in...';
                             if (!email) {
                                 setTimeout(() => {
@@ -1962,6 +2387,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     btn.innerText = 'Sign In';
                                 }, 500);
                             } else {
+                                localStorage.setItem('isLoggedIn', 'true');
                                 setTimeout(() => showScreen('dashboard-screen'), 500);
                             }
                         }
@@ -1971,29 +2397,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             setTimeout(() => showScreen('setup-screen'), 500);
                         }
 
-                        function nextStep(step) {
-                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
-                            const target = document.getElementById('step-' + step);
-                            if (target) target.style.display = 'block';
+                        function checkStrength(pwd) {
+                            const el = document.getElementById('pwd-strength');
+                            if (pwd.length === 0) { el.style.width = '0%'; el.style.background = 'red'; }
+                            else if (pwd.length < 5) { el.style.width = '33%'; el.style.background = 'red'; }
+                            else if (pwd.length < 8) { el.style.width = '66%'; el.style.background = 'orange'; }
+                            else { el.style.width = '100%'; el.style.background = 'green'; }
                         }
-
-                        function generateAI() {
-                            nextStep('generating');
-                            setTimeout(() => nextStep('launch-ai'), 1000);
-                        }
-
-                        function toggleMenu() {
-                            const menu = document.getElementById('extra-menu');
-                            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                        }
-
-                        // Attach event listener for the grandma hint
-                        document.addEventListener('click', (e) => {
-                            if (e.target.innerText === '?') {
-                                const hint = document.getElementById('quick-actions-hint');
-                                if (hint) hint.style.display = 'block';
-                            }
-                        });
 
                         // Initial routing
                         const path = window.location.pathname;
@@ -2030,14 +2440,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 showScreen('login-screen');
                             }
                         }
+
                     </script>
                 </body>
             </html>
-        "#,
-    };
+"#;
     axum::response::Html(content)
 }
 
+
+pub async fn wizard_setup_handler() -> impl axum::response::IntoResponse {
+    axum::response::Json(serde_json::json!({ "status": "success" }))
+}
+
+pub async fn wizard_tune_handler() -> impl axum::response::IntoResponse {
+    axum::response::Json(serde_json::json!({ "status": "success" }))
+}
 pub mod tools;
 pub mod workers;
-// Validation dummy comment
