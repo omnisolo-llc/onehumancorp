@@ -25,20 +25,32 @@ pub async fn run_health_monitor(
 
         // Hybrid mode health check
         if let Ok(health) = monitor_hub.check_health().await {
+            let mode = health.get("mode").and_then(|v| v.as_str()).unwrap_or("standalone");
+            let mode_label = if mode == "standalone" { "Local Workmode" } else { "Cloud Inframode" };
+
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
-                    tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
+                    tracing::trace!("HEALTH MONITOR [{}]: Hybrid mode is degraded.", mode_label);
+                } else {
+                    tracing::info!("HEALTH MONITOR [{}]: Hybrid-mode switching probe: READY", mode_label);
                 }
             }
         }
 
         // New Health-check probe for local-to-cloud mission sync
         if let Ok(health) = monitor_hub.check_health().await {
+            let mode = health.get("mode").and_then(|v| v.as_str()).unwrap_or("standalone");
+            let mode_label = if mode == "standalone" { "Local Workmode" } else { "Cloud Inframode" };
+
+            if let Some(sync_queue) = health.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64()) {
+                tracing::info!("HEALTH MONITOR [{}]: local-to-cloud mission sync queue depth: {}", mode_label, sync_queue);
+            }
+
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
-                    tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
+                    tracing::warn!("HEALTH MONITOR [{}]: High sync error count detected: {}", mode_label, sync_errors);
                 } else if sync_errors > 0 {
-                    tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
+                    tracing::trace!("HEALTH MONITOR [{}]: Sync errors present but below threshold: {}", mode_label, sync_errors);
                 }
             }
         }
