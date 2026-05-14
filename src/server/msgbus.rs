@@ -196,6 +196,131 @@ pub struct IpcBus {
     subs: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>>>,
 }
 
+pub struct PgBus {
+    pool: sqlx::PgPool,
+    subs: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>>>,
+}
+
+#[allow(dead_code)]
+impl PgBus {
+    pub async fn new(db_url: &str) -> Result<Self, String> {
+        use sqlx::postgres::PgPoolOptions;
+        let pool = PgPoolOptions::new().connect(db_url).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS bus_checkpoints (
+                subscriber_id TEXT PRIMARY KEY,
+                last_id BIGINT NOT NULL
+            );"
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS bus_messages (
+                id BIGSERIAL PRIMARY KEY,
+                topic TEXT NOT NULL,
+                payload BYTEA NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );"
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS bus_locks (
+                resource TEXT PRIMARY KEY,
+                owner TEXT NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL
+            );"
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(PgBus {
+            pool,
+            subs: std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+        })
+    }
+}
+
+#[async_trait]
+impl Bus for PgBus {
+    async fn publish(&self, msg: Message) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+        let mut payload = Vec::new();
+        msg.encode(&mut payload).unwrap();
+
+        let mut retries = 0;
+        loop {
+            match sqlx::query("INSERT INTO bus_messages (topic, payload) VALUES ($1, $2)")
+                .bind(&msg.topic)
+                .bind(&payload)
+                .execute(&self.pool)
+                .await {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        if retries >= 3 {
+                            return Err(e.to_string());
+                        }
+                        retries += 1;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100 * retries)).await;
+                    }
+            }
+        }
+    }
+
+    async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let mut subs = self.subs.lock().await;
+        let tx = subs.entry(topic.clone()).or_insert_with(|| {
+            let (tx, _) = tokio::sync::broadcast::channel(100);
+            tx
+        });
+
+        let mut rx = tx.subscribe();
+
+        let worker = tokio::spawn(async move {
+            while let Ok(msg) = rx.recv().await {
+                handler(msg);
+            }
+        });
+
+        Ok(Box::new(move || {
+            worker.abort();
+        }))
+    }
+}
+
+#[async_trait]
+impl DistributedLock for PgBus {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES ($1, $2, NOW() + CAST($3 AS INTERVAL)) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at < NOW()")
+            .bind(resource)
+            .bind(owner)
+            .bind(format!("{} seconds", ttl_seconds))
+            .execute(&self.pool)
+            .await;
+
+        match res {
+            Ok(r) => Ok(r.rows_affected() > 0),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        sqlx::query("DELETE FROM bus_locks WHERE resource = $1 AND owner = $2")
+            .bind(resource)
+            .bind(owner)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
 #[allow(dead_code)]
 impl IpcBus {
     pub async fn new(db_url: &str) -> Result<Self, String> {
