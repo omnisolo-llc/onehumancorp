@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
-use crate::utils::auth_utils::set_org_context;
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -156,12 +156,27 @@ impl DB {
                 }
             }
 
-            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .acquire_timeout(std::time::Duration::from_millis(500))
-
-                .connect(&pg_url)
-                .await?;
+            let mut attempt = 0;
+            let max_attempts = 30;
+            let pool = loop {
+                match sqlx::postgres::PgPoolOptions::new()
+                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                    .acquire_timeout(std::time::Duration::from_millis(2000))
+                    .connect(&pg_url)
+                    .await
+                {
+                    Ok(p) => break p,
+                    Err(e) => {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(e.into());
+                        }
+                        tracing::warn!("Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...", attempt, max_attempts, e);
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                }
+            };
 
             let _ = GLOBAL_POOL.set(pool.clone());
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
@@ -187,10 +202,10 @@ impl DB {
                     if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
                         attempt += 1;
                         if attempt >= max_attempts {
-                            let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
+                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
                             return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
                         }
-                        let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
                     } else {

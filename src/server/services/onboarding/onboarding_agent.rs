@@ -1,5 +1,5 @@
 use serde_json::json;
-use crate::ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
 #[derive(Clone)]
 pub struct OnboardingAgent {
@@ -178,7 +178,7 @@ impl OnboardingAgent {
             "organization_id": org_id,
         });
 
-        let event = crate::ohc::orchestration::TeammateMeshEvent {
+        let event = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "system".to_string(),
             action: "ProductCreated".to_string(),
             status: "success".to_string(),
@@ -238,7 +238,7 @@ impl OnboardingAgent {
                     "organization_id": org_id,
                 });
 
-                let event = crate::ohc::orchestration::TeammateMeshEvent {
+                let event = ::server_ohc::orchestration::TeammateMeshEvent {
                     agent_id: "system".to_string(),
                     action: "ProductCreated".to_string(),
                     status: "success".to_string(),
@@ -293,7 +293,7 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use crate::db::DB;
-    use crate::ohc::orchestration::StartOnboardingRequest;
+    use ::server_ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("DATABASE_URL").ok()?;

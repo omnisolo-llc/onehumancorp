@@ -148,7 +148,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Test receiving a message from server to client (subscribe)
-        let srv_msg = crate::ohc::orchestration::TeammateMeshEvent {
+        let srv_msg = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "test".to_string(),
             action: "test_chan".to_string(),
             status: "ok".to_string(),

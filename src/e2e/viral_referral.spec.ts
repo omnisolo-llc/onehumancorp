@@ -4,17 +4,17 @@ test.describe('Viral Referral Loop', () => {
   test('should navigate to user management and interact with the viral referral loop widget', async ({ page }) => {
     // 1. start from the home page after user login with no pre-authenticated shortcuts
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
     // 2. navigate the entire feature flow by clicking UI links/buttons exactly as a real user would
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
+    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
     await usersBtn.click();
 
     // Verify we are on User Management and the new widget is there
-    await expect(page.locator('text=User Management').first()).toBeVisible();
+    await expect(page.locator('text=User Management').filter({ visible: true }).first()).toBeVisible();
     await expect(page.locator('text=Referral Program')).toBeVisible();
 
     // Check typography
@@ -37,18 +37,18 @@ test.describe('Viral Referral Loop', () => {
     await inviteUserBtn.click();
 
     // 4. assert that the final product matches the design and research docs
-    const emailInput = page.locator('input[type="email"]').first();
+    const emailInput = page.getByPlaceholder('Email or Username').filter({ visible: true }).first();
     await expect(emailInput).toBeVisible({ timeout: 5000 });
   });
 
   test('should verify widget hover state micro-animations and layout resilience', async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
+    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
     await usersBtn.click();
 
     const widgetCard = page.locator('text=Referral Program').locator('..');
@@ -70,12 +70,12 @@ test.describe('Viral Referral Loop', () => {
 
   test('should assert glassmorphism background token on referral widget', async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
+    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
     await usersBtn.click();
 
     const referralHeader = page.locator('text=Referral Program');
@@ -87,12 +87,12 @@ test.describe('Viral Referral Loop', () => {
 
   test('should assert proper typography and text colors on referral widget', async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
+    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
     await usersBtn.click();
 
     const referralHeader = page.locator('text=Referral Program');
@@ -106,17 +106,17 @@ test.describe('Viral Referral Loop', () => {
     await page.setViewportSize({ width: 375, height: 812 });
 
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').fill('password123');
-    await page.locator('button:has-text("Login")').click();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const menuBtn = page.locator('button:has-text("Menu")').first();
+    const menuBtn = page.locator('button:has-text("Menu")').filter({ visible: true }).first();
     if (await menuBtn.isVisible()) {
         await menuBtn.click();
     }
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').first();
+    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
     await usersBtn.click();
 
     await expect(page.locator('text=Referral Program')).toBeVisible();

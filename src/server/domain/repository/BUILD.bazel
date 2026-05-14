@@ -1,0 +1,9 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "models.rs",
+        "task_repo.rs",
+    ],
+    visibility = ["//src/server/domain:__pkg__"],
+)
