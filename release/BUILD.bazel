@@ -63,6 +63,7 @@ pkg_deb(
 
 pkg_rpm(
     name = "app_rpm",
+    release = "1",
     package_name = "ohc-app",
     version = "0.4.41+1",
     license = "Apache-2.0",
