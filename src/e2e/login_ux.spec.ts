@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Login Screen Visual Audit', () => {
   test('should display login page', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'One Human Corp' })).toBeVisible();
     await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
     await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
   });
