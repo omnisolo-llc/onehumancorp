@@ -83,6 +83,10 @@ spec:
                   name: {{ .Release.Name }}-backend-secret
                   key: jwtSecret
                   optional: true
+            - name: TOKIO_WORKER_THREADS
+              value: "4"
+            - name: MALLOC_ARENA_MAX
+              value: "2"
           livenessProbe:
             httpGet:
               path: /healthz

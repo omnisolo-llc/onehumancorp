@@ -161,6 +161,12 @@ kube-prometheus-stack:
     enabled: true
     env:
       GF_LOG_CONSOLE_FORMAT: "json"
+      GF_LOG_MODE: "console"
+      GF_LOG_LEVEL: "info"
+      GF_PANELS_DISABLE_SANITIZE_HTML: "true"
+    grafana.ini:
+      panels:
+        disable_sanitize_html: true
     sidecar:
       dashboards:
         enabled: true

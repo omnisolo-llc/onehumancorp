@@ -10,6 +10,13 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
   minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
   metrics:
@@ -39,6 +46,13 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
   minReplicas: {{ .Values.ohcCore.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.ohcCore.autoscaling.maxReplicas }}
   metrics:
@@ -68,6 +82,13 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-chatwoot
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
   minReplicas: {{ .Values.chatwoot.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
   metrics:
@@ -99,6 +120,13 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-powersync
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
   minReplicas: {{ .Values.powersync.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
   metrics:
