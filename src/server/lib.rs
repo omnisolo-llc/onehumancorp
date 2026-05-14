@@ -1605,10 +1605,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+                        .glass:hover { border-color: rgba(78, 204, 163, 0.3); box-shadow: 0 0 15px rgba(78, 204, 163, 0.1); }
+                        .fade-enter { animation: fade-in 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+                        .fade-exit { animation: fade-out 200ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+                        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                        @keyframes fade-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+                        .advanced-field { display: none; }
+                        .dev-mode .advanced-field { display: block; border-left: 2px solid #ffaa00; padding-left: 10px; margin-top: 10px; }
+                        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+                        .tile { padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+                        .tile.selected { border-color: #4ecca3; background: rgba(78, 204, 163, 0.1); }
+                        .tile img, .tile .icon { font-size: 32px; margin-bottom: 10px; }
+                        .slider-container { margin: 15px 0; }
+                        .slider-container input[type="range"] { width: 100%; }
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
                         nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
                         main { padding: 40px; }
@@ -1697,12 +1711,67 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Agents Page -->
-                    <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                    <div id="agents-screen" class="screen fade-enter">
+                        <h1>Manage My AI Team</h1>
+                        <p>No tech knowledge required. Build your automated team.</p>
+                        <div class="grid">
+                            <div class="card glass">
+                                <h3><span class="icon">💬</span> Customer Support</h3>
+                                <p>Replies to customer messages.</p>
+                                <label><input type="checkbox" checked onchange="toggleAgent(this)"> Add to my team</label>
+                                <br/><button class="secondary" onclick="showPromptTuning('Support')" style="margin-top:10px">Tune this agent</button>
+                            </div>
+                            <div class="card glass">
+                                <h3><span class="icon">📱</span> Social Media Manager</h3>
+                                <p>Posts to Instagram & Facebook.</p>
+                                <label><input type="checkbox" onchange="toggleAgent(this)"> Add to my team</label>
+                            </div>
+                            <div class="card glass">
+                                <h3><span class="icon">📈</span> SEO Booster</h3>
+                                <p>Writes product descriptions.</p>
+                                <label><input type="checkbox" onchange="toggleAgent(this)"> Add to my team</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="prompt-tuning-screen" class="screen fade-enter">
+                        <h1 id="tuning-title">Tune Agent</h1>
+                        <div style="display: flex; gap: 20px;">
+                            <div style="flex: 1;">
+                                <h3>Tone</h3>
+                                <div class="grid">
+                                    <div class="tile" onclick="selectTile(this)">Friendly & Warm</div>
+                                    <div class="tile" onclick="selectTile(this)">Professional</div>
+                                    <div class="tile" onclick="selectTile(this)">Energetic</div>
+                                    <div class="tile" onclick="selectTile(this)">Concise</div>
+                                </div>
+                                <h3>Focus Topics (Chips)</h3>
+                                <div>
+                                    <button class="secondary" onclick="this.classList.toggle('selected')">+ Only about my products</button>
+                                    <button class="secondary" onclick="this.classList.toggle('selected')">+ Avoid competitor mentions</button>
+                                    <button class="secondary" onclick="this.classList.toggle('selected')">+ Always reply in English</button>
+                                </div>
+                                <h3>Example Interactions</h3>
+                                <input type="text" placeholder="Q: Do you ship internationally?" />
+                                <input type="text" placeholder="A: Yes, we ship worldwide!" />
+
+                                <div class="advanced-field">
+                                    <h3>Advanced: Schedule</h3>
+                                    <input type="range" min="1" max="4" value="1" id="schedule-slider" />
+                                    <p id="schedule-val">Real-time</p>
+                                    <code>max_sessions_per_day: <span id="max-sess">unlimited</span></code>
+                                </div>
+
+                                <button onclick="saveAgentTuning()">Save Agent ✓</button>
+                                <button class="secondary" onclick="showScreen('agents-screen')">Back</button>
+                            </div>
+                            <div style="flex: 1;" class="card glass">
+                                <h3>Live Preview Sandbox</h3>
+                                <div style="height: 200px; background: rgba(0,0,0,0.2); padding: 10px; margin-bottom: 10px; overflow-y: auto;">
+                                    <p><em>Agent:</em> Hi! How can I help you today?</p>
+                                </div>
+                                <input type="text" placeholder="Test your agent..." />
+                            </div>
                         </div>
                     </div>
 
@@ -1843,82 +1912,166 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
+                    <div id="setup-screen" class="screen glass fade-enter">
+                        <!-- Setup Wizard Phase -->
+                        <div id="step-1" class="fade-enter">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" style="display: none;">
+                        <div id="step-2" style="display: none;" class="fade-enter">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <div class="grid">
+                                <div class="tile" onclick="selectTile(this); nextStep(3)">
+                                    <div class="icon">🛒</div>
+                                    <p>Online Store</p>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(3)">
+                                    <div class="icon">🛠️</div>
+                                    <p>Service Business</p>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(3)">
+                                    <div class="icon">🍕</div>
+                                    <p>Restaurant / Food</p>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(3)">
+                                    <div class="icon">🎨</div>
+                                    <p>Creative / Portfolio</p>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(3)">
+                                    <div class="icon">🏠</div>
+                                    <p>Local Business</p>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(3)">
+                                    <div class="icon">❓</div>
+                                    <p>Other</p>
+                                </div>
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
-                        <div id="step-3" style="display: none;">
+                        <div id="step-3" style="display: none;" class="fade-enter">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" id="business-name" placeholder="e.g. Maya's Cakes" oninput="autoSuggestDescription()" />
+                            <p>AI Suggested Description:</p>
+                            <textarea id="business-desc" rows="3" style="width:100%; background:rgba(255,255,255,0.1); color:white; border-radius:8px; padding:10px;" placeholder="Your description..."></textarea>
+                            <br/>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
-                        <div id="step-4" style="display: none;">
+                        <div id="step-4" style="display: none;" class="fade-enter">
                             <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+                            <div class="grid">
+                                <div class="tile" onclick="selectTile(this, true)"><div class="icon">📦</div><p>Physical products</p></div>
+                                <div class="tile" onclick="selectTile(this, true)"><div class="icon">💻</div><p>Digital downloads</p></div>
+                                <div class="tile" onclick="selectTile(this, true)"><div class="icon">📅</div><p>Services / appointments</p></div>
+                                <div class="tile" onclick="selectTile(this, true)"><div class="icon">🍔</div><p>Food & beverages</p></div>
+                                <div class="tile" onclick="selectTile(this, true)"><div class="icon">🔁</div><p>Subscriptions</p></div>
+                            </div>
+                            <br/>
+                            <button onclick="nextStep(5)">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
-                        <div id="step-5" style="display: none;">
+                        <div id="step-5" style="display: none;" class="fade-enter">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
+                            <div class="grid">
+                                <div class="tile" onclick="selectTile(this); nextStep(6)">
+                                    <p>🌐 Online only</p><small>~ 5 mins</small>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(6)">
+                                    <p>🏪 In-person (POS)</p><small>~ 10 mins</small>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(6)">
+                                    <p>🌍 Both</p><small>~ 10 mins</small>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(6)">
+                                    <p>⏭️ Skip for now</p>
+                                </div>
+                            </div>
                             <br/><button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
+                        <div id="step-6" style="display: none;" class="fade-enter">
+                            <h1>Administrator Account</h1>
+                            <input type="text" placeholder="Full Name (e.g. Maya Smith)" />
                             <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
+                            <input type="password" placeholder="Password" oninput="updateStrength(this.value)" />
+                            <div id="password-strength" style="height:4px; background:#ccc; margin-bottom:15px;"></div>
+                            <button class="secondary">Sign up with Google</button>
+                            <button class="secondary">Sign up with Apple</button>
+                            <br/><br/>
                             <button onclick="nextStep(7)">Next →</button>
+                            <button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+                        <div id="step-7" style="display: none;" class="fade-enter">
+                            <h1>Review & Launch</h1>
+                            <div class="card glass">
+                                <h3>Ready to go!</h3>
+                                <p>We've prepared your business tenant, AI agents, and storefront foundation.</p>
+                            </div>
+                            <button onclick="launchBusiness()" style="animation: pulse 2s infinite;">Launch My Business →</button>
+                            <br/><button class="secondary" onclick="nextStep(6)">Back</button>
                         </div>
-                        <div id="step-8" style="display: none;">
+                        <div id="step-launching" style="display: none;" class="fade-enter">
+                            <h1>Your business is setting up...</h1>
+                            <p>Provisioning tenant... Seeding AI agents...</p>
+                            <div class="spinner"></div>
+                        </div>
+
+                        <!-- Website Builder Onboarding Phase -->
+                        <div id="step-8" style="display: none;" class="fade-enter">
+                            <h1>Website Builder: Select a Template</h1>
+                            <div class="grid">
+                                <div class="tile" onclick="selectTile(this)"><p>✨ Modern Retail</p><button class="secondary" style="margin-top:10px" onclick="nextStep(9)">Use this template →</button></div>
+                                <div class="tile" onclick="selectTile(this)"><p>🔥 Bold Portfolio</p><button class="secondary" style="margin-top:10px" onclick="nextStep(9)">Use this template →</button></div>
+                                <div class="tile" onclick="selectTile(this)"><p>☕ Cozy Cafe</p><button class="secondary" style="margin-top:10px" onclick="nextStep(9)">Use this template →</button></div>
+                            </div>
+                        </div>
+                        <div id="step-9" style="display: none;" class="fade-enter">
+                            <h1>Brand Colors & Logo</h1>
+                            <p>Pick a palette:</p>
+                            <button class="secondary">Ocean Blue</button>
+                            <button class="secondary">Earthy Green</button>
+                            <button class="secondary">Sunset Warm</button>
+                            <p>Logo:</p>
+                            <button class="secondary">Upload Logo (AI BG Removal)</button>
+                            <button class="secondary">Generate a logo for me</button>
+                            <br/><br/>
+                            <button onclick="nextStep(10)">Next →</button>
+                        </div>
+                        <div id="step-10" style="display: none;" class="fade-enter">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
+                            <input type="text" id="prod-name" placeholder="e.g. Custom Birthday Cake" oninput="autoSuggestProdDesc()" />
+                            <button class="secondary">📷 Upload Photo</button>
+                            <input type="number" placeholder="Price (e.g. 50.00)" />
+                            <textarea id="prod-desc" rows="2" style="width:100%; background:rgba(255,255,255,0.1); color:white; border-radius:8px; padding:10px;" placeholder="Product description..."></textarea>
+                            <br/>
+                            <button onclick="nextStep(11)">Next →</button>
                         </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                        <div id="step-11" style="display: none;" class="fade-enter">
+                            <h1>Connect a Domain</h1>
+                            <div class="grid">
+                                <div class="tile" onclick="selectTile(this); nextStep(12)">
+                                    <p>🌐 Free OHC Subdomain</p><small>mybusiness.ohc.app</small>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(12)">
+                                    <p>🔗 Use my own domain</p>
+                                </div>
+                                <div class="tile" onclick="selectTile(this); nextStep(12)">
+                                    <p>🛒 Buy a domain</p>
+                                </div>
+                            </div>
                         </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                        <div id="step-12" style="display: none;" class="fade-enter">
+                            <h1>Go Live!</h1>
+                            <div class="card glass">
+                                <h3>Preview</h3>
+                                <p>Your beautiful new website is ready.</p>
+                            </div>
+                            <button onclick="publishSite()">Publish My Site →</button>
                         </div>
-                        <div id="step-100" style="display: none;">
+                        <div id="step-100" style="display: none;" class="fade-enter">
                             <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
+                            <p>Your site is now live! <a href="javascript:void(0)" id="live-link" style="color:#4ecca3" onclick="copyLink()">mybusiness.ohc.app 📋</a></p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
@@ -1970,6 +2123,92 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             btn.innerText = 'Creating account...';
                             setTimeout(() => showScreen('setup-screen'), 500);
                         }
+
+                        function selectTile(el, multi=false) {
+                            if (!multi) {
+                                Array.from(el.parentElement.children).forEach(c => c.classList.remove('selected'));
+                            }
+                            el.classList.toggle('selected');
+                        }
+
+                        function autoSuggestDescription() {
+                            const name = document.getElementById('business-name').value;
+                            if (name.length > 3) {
+                                document.getElementById('business-desc').value = `Welcome to ${name}, where we provide the best products and services for you!`;
+                            }
+                        }
+
+                        function autoSuggestProdDesc() {
+                            const name = document.getElementById('prod-name').value;
+                            if (name.length > 3) {
+                                document.getElementById('prod-desc').value = `A premium ${name} crafted with care.`;
+                            }
+                        }
+
+                        function updateStrength(val) {
+                            const strength = document.getElementById('password-strength');
+                            const w = Math.min(100, val.length * 10);
+                            strength.style.width = w + '%';
+                            strength.style.background = w > 60 ? '#4ecca3' : (w > 30 ? '#ffaa00' : '#ff4444');
+                        }
+
+                        function launchBusiness() {
+                            nextStep('launching');
+                            setTimeout(() => {
+                                // Transition to website builder
+                                nextStep(8);
+                            }, 2000);
+                        }
+
+                        function publishSite() {
+                            nextStep(100);
+                        }
+
+                        function copyLink() {
+                            alert("Copied to clipboard!");
+                        }
+
+                        function toggleDevMode(checked) {
+                            if(checked) {
+                                document.body.classList.add('dev-mode');
+                            } else {
+                                document.body.classList.remove('dev-mode');
+                            }
+                        }
+
+                        function toggleAgent(checkbox) {
+                            if(checkbox.checked) {
+                                alert("Agent activated and added to your team!");
+                            } else {
+                                alert("Agent removed.");
+                            }
+                        }
+
+                        function showPromptTuning(agentName) {
+                            document.getElementById('tuning-title').innerText = "Tune " + agentName;
+                            showScreen('prompt-tuning-screen');
+                        }
+
+                        function saveAgentTuning() {
+                            alert("Your agent has been updated ✓");
+                            showScreen('agents-screen');
+                        }
+
+                        // Schedule slider logic
+                        document.addEventListener('DOMContentLoaded', () => {
+                           const slider = document.getElementById('schedule-slider');
+                           if(slider) {
+                               slider.addEventListener('input', (e) => {
+                                   const v = parseInt(e.target.value);
+                                   const lbl = document.getElementById('schedule-val');
+                                   const sess = document.getElementById('max-sess');
+                                   if(v===1) { lbl.innerText="Real-time"; sess.innerText="unlimited"; }
+                                   if(v===2) { lbl.innerText="Hourly"; sess.innerText="24"; }
+                                   if(v===3) { lbl.innerText="Daily"; sess.innerText="1"; }
+                                   if(v===4) { lbl.innerText="Weekly"; sess.innerText="0.14"; }
+                               });
+                           }
+                        });
 
                         function nextStep(step) {
                             document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
