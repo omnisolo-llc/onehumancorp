@@ -1628,6 +1628,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin: 0; 
                             line-height: 1.5;
                         }
+                        .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+                        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
                         .glass { 
                             background: var(--card-bg); 
                             border: 1px solid var(--border); 
@@ -1750,7 +1752,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
+                            <h3>Quick Actions <button class="secondary" onclick="document.getElementById('quick-actions-hint').style.display='block'">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
@@ -1786,7 +1788,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
@@ -2030,7 +2032,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
                         <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
+                        <p>Today's Sales: $1.23</p>
                         <p>LLM Usage: 5,000 tokens</p>
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
@@ -2193,7 +2195,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="generateAI()">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
-                        <div id="step-generating" style="display: none;">
+                        <div id="step-generating" style="display: none;" class="screen glass">
+                            <div class="skeleton" style="width: 100%; height: 200px; border-radius: 8px; margin-bottom: 20px;"></div>
+                            <div class="skeleton" style="width: 80%; height: 24px; border-radius: 4px; margin-bottom: 10px;"></div>
+                            <div class="skeleton" style="width: 60%; height: 24px; border-radius: 4px;"></div>
                             <h1>Designing your storefront...</h1>
                             <p>Our AI is crafting a custom experience for your brand.</p>
                         </div>
@@ -2210,7 +2215,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Login</h1>
                         <h2>One Human Corp</h2>
                         <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <div id="login-error" class="error">We could not sign you in. Please double-check your email and password, then try again.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Login</button>
