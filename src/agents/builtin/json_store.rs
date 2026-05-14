@@ -124,6 +124,8 @@ impl LongTermMemory for NamespaceJsonStore {
 
         Ok(())
     }
+    async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> { Ok(String::new()) }
+    async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> { Ok(Vec::new()) }
 }
 
 #[cfg(test)]
