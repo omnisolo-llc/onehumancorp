@@ -291,6 +291,7 @@ mod security_tests {
     use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
 
+
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
         let database_url = match std::env::var("DATABASE_URL") {
@@ -302,31 +303,20 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();
 
         let repo = PgUserRepository::new(pool.clone());
 
-        // Since we can't reliably override the global `::server_config::get().multitenant` inline here
-        // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
+        // We expect `set_org_context` to fail if we try to use the reserved "system" org
+        // when the database is in multitenant mode. Actually `set_org_context` itself just sets
+        // the Postgres setting. Let's make sure the query goes through.
 
-        // Cloud multitenant mode should NOT allow bypassing.
-        let is_multitenant = true;
-        let org_id = "system";
-        let should_bypass = !is_multitenant && org_id == "system";
-
-        // Ensure the condition strictly evaluates to false when multitenant is true.
-        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
-
-        // Also mock testing that the API endpoints would reject
-        let req_org = "system";
-        let is_multitenant_config = true;
-        assert!(is_multitenant_config && req_org == "system", "API should reject");
-
+        // Since we don't have a full initialized config for this test, we test the query execution
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        assert!(res.is_err(), "user should not be found or unauthorized");
     }
 
     #[tokio::test]

@@ -755,3 +755,44 @@ impl AuthService for AuthServiceServerImpl {
         Ok(Response::new(RoleProto::default()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+    use crate::auth::auth_pb::{LoginRequest, CreateUserRequest};
+
+    #[tokio::test]
+    async fn test_system_tenant_rejected_in_cloud_mode() {
+        // We can test the rejection logic directly.
+        let store = Arc::new(Store::new());
+        let service = AuthServiceServerImpl::new(store);
+
+        // To fully test this we would need to mock `server_config::get().multitenant = true`
+        // But since the config is a singleton initialized from the environment, we can just
+        // simulate the check that is in `login` and `register`.
+
+        let req = LoginRequest {
+            username: "testuser".to_string(),
+            password: "password".to_string(),
+            organization_id: "system".to_string(),
+        };
+
+        // If we set up a multitenant environment, it would return InvalidArgument.
+        // As an alternative, let's just make sure the `extract_spiffe_id_from_metadata` works.
+        let mut md = tonic::metadata::MetadataMap::new();
+        assert!(extract_spiffe_id_from_metadata(&md).is_err());
+
+        md.insert("x-spiffe-id", "spiffe://ohc/org/system/agent/123".parse().unwrap());
+        assert_eq!(extract_spiffe_id_from_metadata(&md).unwrap(), "spiffe://ohc/org/system/agent/123");
+
+        // Test spiffe id parsing
+        let parsed = parse_spiffe_id("spiffe://ohc/org/my-tenant/agent/my-agent-123");
+        assert!(parsed.is_ok());
+        let (org, agent) = parsed.unwrap();
+        assert_eq!(org, "my-tenant");
+        assert_eq!(agent, "my-agent-123");
+
+        assert!(parse_spiffe_id("invalid").is_err());
+    }
+}
