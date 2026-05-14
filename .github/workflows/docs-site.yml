@@ -51,11 +51,6 @@ jobs:
             build --color=yes
             build --show_timestamps
 
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
       - name: Build docs site
         run: bazelisk run //:docs_build
 

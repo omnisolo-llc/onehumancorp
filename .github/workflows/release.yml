@@ -120,19 +120,9 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Build Android APK
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
         run: bazelisk run //release:flutter-build-android-apk
 
       - name: Build Android App Bundle
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
         run: bazelisk run //release:flutter-build-android-aab
 
       - name: Upload Android artifacts
@@ -173,11 +163,6 @@ jobs:
             build --show_timestamps
 
       - name: Build iOS (no code sign)
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
         run: bazelisk run //release:flutter-build-ios
 
       - name: Upload iOS artifacts
@@ -216,11 +201,6 @@ jobs:
             build --show_timestamps
 
       - name: Build macOS app
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
         run: bazelisk run //release:flutter-build-macos
 
       - name: Archive macOS .app
@@ -270,11 +250,6 @@ jobs:
             build --show_timestamps
 
       - name: Build Windows app
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
         run: bazelisk run //release:flutter-build-windows
 
       - name: Archive Windows build
@@ -328,11 +303,6 @@ jobs:
             libgtk-3-dev liblzma-dev libstdc++-12-dev
 
       - name: Build Linux app
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
         run: bazelisk run //release:flutter-build-linux
 
       - name: Archive Linux build
@@ -377,11 +347,6 @@ jobs:
             build --show_timestamps
 
       - name: Build Web app
-      - name: Install Bazelisk
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
         run: bazelisk run //release:flutter-build-web
 
       - name: Archive Web build
