@@ -19,22 +19,15 @@ def define_playwright_tests():
         sh_test(
             name = name,
             srcs = ["//bazel/rules/playwright:playwright_test.sh"],
-            args = ["$(rootpath {})".format(spec)],
-            data = [
-                spec,
+            args = [spec],
+            data = native.glob(["*.spec.ts"]) + [
                 "//src/server:server",
                 "//deploy:docker-compose.e2e.yml",
                 "//:playwright.config.ts",
                 "//:package.json",
-                "//:package-lock.json",
-                "@playwright//:chromium-headless-shell",
-                "@playwright//:firefox",
-                "@playwright//:webkit",
-                "@playwright//:ffmpeg",
             ],
             env = {
                 "BASE_URL": "http://localhost:18789",
-                "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
             },
             size = "large",
             timeout = "long",
@@ -42,7 +35,7 @@ def define_playwright_tests():
                 "e2e",
                 "no-remote-exec",
                 "requires-docker",
-                "no-sandbox",
+
             ],
             target_compatible_with = select({
                 "@platforms//os:linux": [],
