@@ -17,6 +17,11 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    chatwoot_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::chatwoot::provider::ChatwootClientProvider>>>,
+    calcom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calcom::provider::CalComClientProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendClientProvider>>>,
+    shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoClientProvider>>>,
+    dailyco_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::dailyco::provider::DailyCoClientProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
 }
 
@@ -41,6 +46,11 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            chatwoot_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            calcom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            dailyco_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
@@ -58,13 +68,13 @@ impl IntegrationsRegistry {
         msgs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<ChatMessage, String> {
+    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, _thread_id: &str) -> Result<ChatMessage, String> {
         let msg = ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
-            channel: channel.to_string(),
-            from_agent: from_agent.to_string(),
             content: content.to_string(),
-            thread_id: thread_id.to_string(),
+            from_agent: from_agent.to_string(),
+            thread_id: _thread_id.to_string(),
+            channel: channel.to_string(),
             timestamp_unix: Utc::now().timestamp(),
         };
 
@@ -144,6 +154,26 @@ impl IntegrationsRegistry {
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+        }
+        if integration_id == "chatwoot" {
+            let mut clients = self.chatwoot_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::chatwoot::provider::ChatwootClientProvider::new(creds.api_token.clone(), base_url.to_string())));
+        }
+        if integration_id == "calcom" {
+            let mut clients = self.calcom_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::calcom::provider::CalComClientProvider::new(creds.api_token.clone(), base_url.to_string())));
+        }
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendClientProvider::new(creds.api_token.clone(), base_url.to_string())));
+        }
+        if integration_id == "shippo" {
+            let mut clients = self.shippo_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoClientProvider::new(creds.api_token.clone(), base_url.to_string())));
+        }
+        if integration_id == "dailyco" {
+            let mut clients = self.dailyco_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::dailyco::provider::DailyCoClientProvider::new(creds.api_token.clone(), base_url.to_string())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
