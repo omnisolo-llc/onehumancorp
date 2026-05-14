@@ -16,11 +16,11 @@ backend:
     targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "100m"
+      memory: "128Mi"
     limits:
-      cpu: "1000m"
-      memory: "2Gi"
+      cpu: "250m"
+      memory: "512Mi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -37,9 +37,9 @@ resourceQuota:
     ephemeralStorage: "50Gi"
   limits:
     cpu: "60"
-    memory: "120Gi"
+    memory: "64Gi"
     ephemeralStorage: "150Gi"
-    pods: "200"
+    pods: "100"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
@@ -61,11 +61,11 @@ ohcCore:
     targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "50m"
+      cpu: "25m"
       memory: "64Mi"
     limits:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "100m"
+      memory: "128Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -105,10 +105,10 @@ chatwoot:
     targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "500m"
+      cpu: "250m"
       memory: "512Mi"
     limits:
-      cpu: "1000m"
+      cpu: "250m"
       memory: "1Gi"
   # Admin credentials used by OHC backend to auto-configure the inbox.
   adminEmail: admin@ohc.local
@@ -148,10 +148,10 @@ powersync:
     targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "50m"
+      cpu: "25m"
       memory: "512Mi"
     limits:
-      cpu: "500m"
+      cpu: "250m"
       memory: "512Mi"
 
 # Kube-Prometheus-Stack for Cloud Observability
