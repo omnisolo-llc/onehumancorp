@@ -46,10 +46,6 @@ pub async fn run_health_monitor(
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
-                if agents.is_empty() {
-                    tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
-                }
-
                 let mut active_agent_ids = std::collections::HashSet::new();
                 for (agent_id, _status) in agents {
                     active_agent_ids.insert(agent_id.clone());
@@ -68,8 +64,6 @@ pub async fn run_health_monitor(
                     let threshold = if is_cloud { 3 } else { 1 };
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
-                    } else {
-                        tracing::trace!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
@@ -109,7 +103,7 @@ mod tests {
         // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
         // Since Hub takes a PgPool, we have to supply one to construct it, even if unused in this isolated test
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://dummy")
+            .connect_lazy("postgres://test_db")
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
@@ -170,7 +164,7 @@ mod tests {
             .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://dummy")
+            .connect_lazy("postgres://test_db")
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
@@ -211,7 +205,7 @@ mod tests {
             .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://dummy")
+            .connect_lazy("postgres://test_db")
             .unwrap();
 
         let (tx, _) = tokio::sync::mpsc::channel(100);
