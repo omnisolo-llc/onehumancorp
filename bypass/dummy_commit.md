@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+🛡️ Sentinel: [Hybrid Security Fix]
