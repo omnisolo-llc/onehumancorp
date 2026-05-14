@@ -623,19 +623,37 @@ impl HealthMonitor {
             payload: buf,
         };
 
-        if let Err(e) = self.bus.publish(msg).await {
-            cancel();
-            return Err(e);
-        }
+        let msg_clone = msg.clone();
+        let publish_bus = self.bus.clone();
+        let timeout_ms = 500;
 
-        match tokio::time::timeout(tokio::time::Duration::from_millis(500), rx.recv()).await {
-            Ok(Some(_)) => {
+        let start = std::time::Instant::now();
+        let mut publish_delay = tokio::time::Duration::from_millis(50);
+
+        loop {
+            if start.elapsed().as_millis() >= timeout_ms as u128 {
                 cancel();
-                Ok(())
+                return Err("Health ping timed out waiting for ack".to_string());
             }
-            _ => {
-                cancel();
-                Err("Health ping timed out waiting for ack".to_string())
+
+            // Fire and forget (or log) publish errors to survive partitions
+            let _ = publish_bus.publish(msg_clone.clone()).await;
+
+            let remaining = std::time::Duration::from_millis(timeout_ms).saturating_sub(start.elapsed());
+            let current_delay = std::cmp::min(publish_delay, remaining);
+
+            tokio::select! {
+                res = rx.recv() => {
+                    cancel();
+                    if res.is_some() {
+                        return Ok(());
+                    } else {
+                        return Err("Channel closed".to_string());
+                    }
+                }
+                _ = tokio::time::sleep(current_delay) => {
+                    publish_delay = std::cmp::min(publish_delay * 2, tokio::time::Duration::from_millis(100));
+                }
             }
         }
     }

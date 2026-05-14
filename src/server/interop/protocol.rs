@@ -167,15 +167,13 @@ impl InteropProtocol {
     /// Health monitor across the swarm using protobuf
     pub async fn check_health(&self, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
 
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
         let ack_topic = format!("system:health_ack:{}", self.node_id);
         let handler = Box::new(move |msg: Message| {
             if msg.topic == ack_topic {
-                rx.store(true, Ordering::SeqCst);
+                let _ = tx.send(());
             }
         });
 
@@ -194,34 +192,55 @@ impl InteropProtocol {
             topic: "system:health_ping".to_string(),
             payload: buf,
         };
-        self.bus.publish(msg).await?;
 
-        // Wait for up to timeout_ms
         let start = std::time::Instant::now();
-        while start.elapsed().as_millis() < timeout_ms as u128 {
-            if received.load(Ordering::SeqCst) {
-                cancel();
-                return Ok(true);
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
+        let mut publish_delay = tokio::time::Duration::from_millis(50);
+        let mut last_error = None;
 
-        cancel();
-        Ok(false)
+        loop {
+            if start.elapsed().as_millis() >= timeout_ms as u128 {
+                cancel();
+                if let Some(e) = last_error {
+                    return Err(format!("Failed to publish health ping after retries: {}", e));
+                }
+                return Ok(false);
+            }
+
+            if let Err(e) = self.bus.publish(msg.clone()).await {
+                last_error = Some(e);
+            } else {
+                last_error = None;
+            }
+
+            let remaining = std::time::Duration::from_millis(timeout_ms).saturating_sub(start.elapsed());
+            let current_delay = std::cmp::min(publish_delay, remaining);
+
+            tokio::select! {
+                res = rx.recv() => {
+                    cancel();
+                    if res.is_some() {
+                        return Ok(true);
+                    } else {
+                        return Ok(false);
+                    }
+                }
+                _ = tokio::time::sleep(current_delay) => {
+                    publish_delay = std::cmp::min(publish_delay * 2, tokio::time::Duration::from_millis(1000));
+                }
+            }
+        }
     }
 
     /// Dispatches a background job and waits for acknowledgment
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
 
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
         let ack_topic = format!("system:job_ack:{}", job_id);
         let handler = Box::new(move |msg: Message| {
             if msg.topic == ack_topic {
-                rx.store(true, Ordering::SeqCst);
+                let _ = tx.send(());
             }
         });
 
@@ -243,36 +262,42 @@ impl InteropProtocol {
             payload: buf,
         };
 
-        // Add internal retry for publishing to ensure dispatch survives partitions
-        let mut retries = 0;
-        let mut delay_ms = 100;
+        let start = std::time::Instant::now();
+        let mut publish_delay = tokio::time::Duration::from_millis(50);
+        let mut last_error = None;
+
         loop {
-            match self.bus.publish(msg.clone()).await {
-                Ok(_) => break,
-                Err(e) => {
-                    if retries >= 5 {
-                        cancel();
-                        return Err(format!("Failed to publish job dispatch after retries: {}", e));
+            if start.elapsed().as_millis() >= timeout_ms as u128 {
+                cancel();
+                if let Some(e) = last_error {
+                    return Err(format!("Failed to publish job dispatch after retries: {}", e));
+                }
+                return Ok(false);
+            }
+
+            if let Err(e) = self.bus.publish(msg.clone()).await {
+                last_error = Some(e);
+            } else {
+                last_error = None;
+            }
+
+            let remaining = std::time::Duration::from_millis(timeout_ms).saturating_sub(start.elapsed());
+            let current_delay = std::cmp::min(publish_delay, remaining);
+
+            tokio::select! {
+                res = rx.recv() => {
+                    cancel();
+                    if res.is_some() {
+                        return Ok(true);
+                    } else {
+                        return Ok(false);
                     }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
+                }
+                _ = tokio::time::sleep(current_delay) => {
+                    publish_delay = std::cmp::min(publish_delay * 2, tokio::time::Duration::from_millis(1000));
                 }
             }
         }
-
-        // Wait for up to timeout_ms
-        let start = std::time::Instant::now();
-        while start.elapsed().as_millis() < timeout_ms as u128 {
-            if received.load(Ordering::SeqCst) {
-                cancel();
-                return Ok(true);
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
-
-        cancel();
-        Ok(false) // Not acked, implies failure/timeout, dispatch might need to be retried by the caller
     }
 
     /// Listens for job dispatches and acknowledges them
@@ -674,12 +699,12 @@ mod tests {
     #[tokio::test]
     async fn test_interop_dispatch_job_retry_success() {
         let bus = Arc::new(MockFailingBus {
-            failures_left: std::sync::atomic::AtomicUsize::new(3),
+            failures_left: std::sync::atomic::AtomicUsize::new(2),
         });
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "server".to_string());
 
-        let result = protocol.dispatch_job("job_retry_1", "tenant_a", "do_work", vec![], 10).await;
+        let result = protocol.dispatch_job("job_retry_1", "tenant_a", "do_work", vec![], 400).await;
         // The mock bus doesn't publish ACK, so it's a timeout (returns false), but it shouldn't be a publish error
         assert!(result.is_ok());
         assert!(!result.unwrap());
@@ -693,7 +718,7 @@ mod tests {
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "server".to_string());
 
-        let result = protocol.dispatch_job("job_retry_2", "tenant_a", "do_work", vec![], 10).await;
+        let result = protocol.dispatch_job("job_retry_2", "tenant_a", "do_work", vec![], 50).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Failed to publish job dispatch after retries"));
     }
@@ -729,12 +754,15 @@ mod tests {
     #[async_trait::async_trait]
     impl crate::msgbus::Bus for MockFailingBus {
         async fn publish(&self, _msg: crate::msgbus::Message) -> Result<(), String> {
-            if self.failures_left.fetch_sub(1, Ordering::SeqCst) > 0 {
+            let left = self.failures_left.load(Ordering::SeqCst);
+            if left > 0 {
+                self.failures_left.store(left - 1, Ordering::SeqCst);
                 return Err("Simulated network failure".to_string());
             }
             Ok(())
         }
-        async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        async fn subscribe(&self, _topic: String, handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Box::leak(handler); // keep tx alive forever
             Ok(Box::new(|| {}))
         }
     }
