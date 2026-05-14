@@ -9,6 +9,7 @@ pub async fn bench_queue_latency() {
 
     tracing::info!("--- Cloud Mode (Postgres) ---");
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
     if database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await;
@@ -28,6 +29,7 @@ pub async fn bench_db_query_time() {
     tracing::info!("Benchmarking Database Query Time...");
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
 
     let iterations = 1000;
 
@@ -61,6 +63,7 @@ pub async fn bench_api_response_time() {
     tracing::info!("Benchmarking API Response Time...");
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
     let iterations = 100;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -92,7 +95,7 @@ pub async fn bench_api_response_time() {
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
-    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let fallback_pg = sqlx::PgPool::connect_lazy("sqlite::memory:").unwrap();
     let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
@@ -117,6 +120,8 @@ pub async fn bench_dashboard_snapshot() {
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
+
+
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
@@ -126,7 +131,7 @@ pub async fn bench_dashboard_snapshot() {
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("sqlite::memory:").unwrap();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -327,7 +332,7 @@ mod tests {
         bench_queue("Memory_Stress", mem_queue).await;
 
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    if database_url.starts_with("postgres") {
+        if database_url.starts_with("postgres") {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;
