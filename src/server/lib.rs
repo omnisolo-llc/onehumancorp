@@ -1648,6 +1648,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button onclick="showScreen('builder-screen')">Build Website</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
@@ -1990,6 +1991,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+
+                    <!-- Builder Screen -->
+                    <div id="builder-screen" class="screen">
+                        <h1>Website & Storefront Builder</h1>
+
+                        <div id="advanced-output" style="display: none;">
+                                <p>Advanced: Local CLI command</p>
+                                <p>Developer: Raw Output Export</p>
+                            </div>
+                        <div id="builder-step-0">
+                            <h2>Choose a template</h2>
+                            <label><input type="checkbox" class="advanced-toggle-checkbox" onchange="document.getElementById('advanced-output').style.display = this.checked ? 'block' : 'none';"> Advanced Mode</label>
+                            <div class="template-card">
+                                <h3>Modern</h3>
+                                <button onclick="this.parentElement.style.border='2px solid var(--primary)'">Use this template &rarr;</button>
+                            </div>
+                            <div class="template-card">
+                                <h3>&#127963; Classic</h3>
+                                <button onclick="this.parentElement.style.border='2px solid var(--primary)'">Use this template &rarr;</button>
+                            </div>
+                            <div class="template-card">
+                                <h3>&#128293; Bold</h3>
+                                <button onclick="this.parentElement.style.border='2px solid var(--primary)'">Use this template &rarr;</button>
+                            </div>
+                            <button onclick="nextBuilderStep(1)">Next &rarr;</button>
+                        </div>
+
+                        <div id="builder-step-1" style="display: none;">
+                            <h2>Choose a vibe</h2>
+                            <button onclick="this.style.border='2px solid var(--primary)'">&#128994; Nature Green</button>
+                            <button onclick="this.style.border='2px solid var(--primary)'">&#128308; Bold Red</button>
+                            <button onclick="this.style.border='2px solid var(--primary)'">&#128309; Ocean Blue</button>
+                            <button onclick="nextBuilderStep(0)">Back</button>
+                            <button onclick="nextBuilderStep(2)">Next &rarr;</button>
+                        </div>
+
+                        <div id="builder-step-2" style="display: none;">
+                            <h2>Business Info</h2>
+                            <input type="text" id="builder-info-name" placeholder="e.g. Custom Birthday Cake" />
+                            <input type="text" id="builder-info-price" placeholder="e.g. 50.00" />
+                            <input type="text" id="builder-info-desc" placeholder="Short description" />
+                            <button onclick="generateAICopy()">Generate Description using AI</button>
+                            <p id="ai-copy-result" style="display:none; color: var(--primary)"></p>
+                            <button onclick="nextBuilderStep(1)">Back</button>
+                            <button onclick="nextBuilderStep(3)">Next &rarr;</button>
+                        </div>
+
+                        <div id="builder-step-3" style="display: none;">
+                            <h2>Choose a Domain</h2>
+                            <button onclick="this.style.border='2px solid var(--primary)'">&#127104; Use a free OHC subdomain</button>
+                            <button onclick="this.style.border='2px solid var(--primary)'">&#127757; Use my own domain</button>
+                            <button onclick="this.style.border='2px solid var(--primary)'">&#128682; Buy a domain</button>
+                            <button onclick="nextBuilderStep(2)">Back</button>
+                            <button onclick="nextBuilderStep(4)">Next &rarr;</button>
+                        </div>
+
+                        <div id="builder-step-4" style="display: none;">
+                            <h2>Review & Publish</h2>
+                            <p id="publishing-status" style="display: none;">Publishing Site...</p>
+
+                            <!-- Draft/Live state and blocks representation -->
+                            <div class="block-preview hero-block">
+                                <h3 id="hero-title">My Business</h3>
+                                <p id="hero-desc">Welcome!</p>
+                            </div>
+                            <div class="block-preview product-grid">
+                                <h3>Product Grid</h3>
+                                <p id="product-name">Product</p>
+                                <p id="product-price">$0</p>
+                            </div>
+                            <button onclick="nextBuilderStep(3)">Back</button>
+                            <button onclick="publishSite()">Publish &rarr;</button>
+                        </div>
+                    </div>
+
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
@@ -2000,7 +2076,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Fix App Issues</button>
                         <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
+                        <button onclick="handleLogin(this)">Log In</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary">Use Google or Apple</button>
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
@@ -2026,6 +2102,87 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
                             }, 500);
                         }
+
+
+
+
+                        async function generateAICopy() {
+                            const btn = document.querySelector('button[onclick="generateAICopy()"]');
+                            btn.innerText = 'Generating...';
+
+                            try {
+                                const response = await fetch('/api/v1/builder/ai-copy', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer test'
+                                    },
+                                    body: JSON.stringify({ business_name: document.getElementById('builder-info-name').value || 'My Business' })
+                                });
+                                if (!response.ok) throw new Error('Fetch failed');
+                                const data = await response.json();
+                                document.getElementById('ai-copy-result').innerText = data.copy;
+                                document.getElementById('ai-copy-result').style.display = 'block';
+                                document.getElementById('builder-info-desc').value = data.copy;
+                            } catch (e) {
+                                document.getElementById('ai-copy-result').innerText = 'Failed to fetch AI copy.';
+                                document.getElementById('ai-copy-result').style.display = 'block';
+                            }
+
+                            btn.innerText = 'Generate Description using AI';
+                        }
+
+                        async function publishSite() {
+                            document.getElementById('publishing-status').style.display = 'block';
+
+                            try {
+                                const response = await fetch('/api/v1/builder/generate', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer test'
+                                    },
+                                    body: JSON.stringify({
+                                        description: document.getElementById('hero-title').innerText + " " + document.getElementById('hero-desc').innerText
+                                    })
+                                });
+
+                                if (!response.ok) throw new Error('Generate failed');
+                                const draft = await response.json();
+
+                                const pubResponse = await fetch('/api/v1/builder/publish_draft', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer test' },
+                                    body: JSON.stringify({ domain: document.getElementById('hero-title').innerText + '.ohc.app', draft: draft })
+                                });
+
+                                if (!pubResponse.ok) throw new Error('Publish failed');
+
+                                document.getElementById('publishing-status').innerText = 'Publishing Site... Done! SEO generated.';
+                            } catch (e) {
+                                document.getElementById('publishing-status').innerText = 'Publish failed: ' + e.message;
+                            }
+                        }
+
+                        function nextBuilderStep(step) {
+                            document.querySelectorAll('div[id^="builder-step-"]').forEach(d => d.style.display = 'none');
+                            document.getElementById('builder-step-' + step).style.display = 'block';
+                            if (step === 4) {
+                                document.getElementById('hero-title').innerText = document.getElementById('builder-info-name').value || 'My Business';
+                                document.getElementById('hero-desc').innerText = document.getElementById('ai-copy-result').innerText || document.getElementById('builder-info-desc').value || 'Welcome!';
+                                document.getElementById('product-name').innerText = document.getElementById('builder-info-name').value || 'Product';
+                                document.getElementById('product-price').innerText = '$' + (document.getElementById('builder-info-price').value || '0.00');
+                            }
+                        }
+
+
+
+
+
+
+
+
+
 
                         function handleLogin(btn) {
                             const email = document.querySelector('#login-screen input[type="email"]').value;

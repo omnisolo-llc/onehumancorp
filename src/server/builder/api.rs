@@ -53,6 +53,39 @@ pub struct PublishDraftRequest {
 use super::db;
 use super::jobs;
 
+
+use crate::minimax::MinimaxClient;
+
+#[derive(Deserialize)]
+pub struct AICopyRequest {
+    pub business_name: String,
+}
+
+#[derive(Serialize)]
+pub struct AICopyResponse {
+    pub copy: String,
+}
+
+pub async fn ai_copy_handler(
+    State(_pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<AICopyRequest>,
+) -> Result<Json<AICopyResponse>, axum::http::StatusCode> {
+    let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let generated_copy = if api_key.is_empty() {
+        format!("Freshly baked goods from {} - your number one local choice!", payload.business_name)
+    } else {
+        let client = MinimaxClient::new(api_key);
+        let prompt = format!("You are the Marketing AI Agent. Generate a catchy, short, and premium description for a business named '{}'. Max 2 sentences.", payload.business_name);
+        client.reason(&prompt).await.unwrap_or_else(|_| format!("Welcome to {}! The best place for your needs.", payload.business_name))
+    };
+
+    Ok(Json(AICopyResponse { copy: generated_copy }))
+}
+
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
     Router::new()
         .route("/sites", get(list_sites).post(create_site))
@@ -63,7 +96,8 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         )
         .route("/blocks/{block_id}", put(update_block))
         .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
-        .route("/sites/{site_id}/publish", post(publish_site))
+                .route("/sites/{site_id}/publish", post(publish_site))
+        .route("/ai-copy", post(ai_copy_handler))
         .route("/generate", post(generate_storefront))
         .route("/publish_draft", post(publish_draft))
         .with_state(pool)
@@ -380,6 +414,7 @@ async fn generate_storefront(
     }))
 }
 
+
 async fn publish_draft(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
@@ -388,26 +423,39 @@ async fn publish_draft(
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
     // 1. Create Site
-    let site = db::create_site(&pool, tenant_id, payload.domain)
+    let site = db::create_site(&pool, tenant_id, payload.domain.clone())
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let client = MinimaxClient::new(api_key.clone());
+
     // 2. Iterate pages and blocks
     for draft_page in payload.draft.pages {
-        let page = db::create_page(&pool, tenant_id, site.id, draft_page.path, draft_page.title)
+        let page = db::create_page(&pool, tenant_id, site.id, draft_page.path.clone(), draft_page.title.clone())
             .await
             .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
+        // Generate real SEO metadata using Marketing Agent (Minimax)
+        let seo_html = if api_key.is_empty() {
+            format!("<title>{}</title><meta name=\"description\" content=\"{}\">", draft_page.title, payload.domain.clone().unwrap_or_default())
+        } else {
+            let prompt = format!("You are the Marketing AI Agent. Generate HTML SEO meta tags (title, description) for a page titled '{}' on domain '{}'. Output ONLY the HTML tags.", draft_page.title, payload.domain.clone().unwrap_or_default());
+            client.reason(&prompt).await.unwrap_or_else(|_| format!("<title>{}</title><meta name=\"description\" content=\"{}\">", draft_page.title, payload.domain.clone().unwrap_or_default()))
+        };
+
+        let generated_seo = serde_json::json!({ "html": seo_html });
+
         // Update SEO metadata
         sqlx::query("UPDATE builder_pages SET seo_metadata = $1 WHERE id = $2")
-            .bind(&draft_page.seo_metadata)
+            .bind(&generated_seo)
             .bind(page.id)
             .execute(&pool)
             .await
             .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
         for draft_block in draft_page.blocks {
-            db::create_block(&pool, tenant_id, page.id, draft_block.block_type, draft_block.content, draft_block.sort_order)
+            db::create_block(&pool, tenant_id, page.id, draft_block.block_type.clone(), draft_block.content.clone(), draft_block.sort_order)
                 .await
                 .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
         }
