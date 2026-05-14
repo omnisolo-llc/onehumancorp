@@ -2750,3 +2750,349 @@ mod override_tests_resolve {
         assert!(results[0].owner_override, "Winner should have inherited owner_override");
     }
 }
+
+pub struct ClusterInsight {
+    pub id: String,
+    pub tenant_id: String,
+    pub participating_agents: Vec<String>,
+    pub synthesized_content: String,
+    pub centroid_embedding: Vec<f32>,
+    pub memory_ids: Vec<String>,
+    pub significance_score: f32,
+    pub created_at: DateTime<Utc>,
+}
+
+impl VectorRepository {
+    pub async fn extract_cross_department_clusters(&self, tenant_id: &str) -> Result<Vec<ClusterInsight>, String> {
+        let memories = self.fetch_all_memories(tenant_id).await?;
+        if memories.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let tenant_id_owned = tenant_id.to_string();
+
+        let insights = tokio::task::spawn_blocking(move || {
+            let eps = 0.15; // Cosine distance threshold
+            let min_pts = 2;
+            let mut clusters: Vec<Vec<usize>> = Vec::new();
+            let mut visited = vec![false; memories.len()];
+            let mut noise = vec![false; memories.len()];
+
+            for i in 0..memories.len() {
+                if visited[i] { continue; }
+                visited[i] = true;
+
+                let neighbors = Self::static_region_query(&memories, i, eps);
+                if neighbors.len() < min_pts {
+                    noise[i] = true;
+                } else {
+                    let mut cluster = Vec::new();
+                    Self::static_expand_cluster(&memories, i, &neighbors, &mut cluster, &mut visited, &mut noise, eps, min_pts);
+                    clusters.push(cluster);
+                }
+            }
+
+            let mut insights = Vec::new();
+            for (idx, cluster_indices) in clusters.into_iter().enumerate() {
+                if cluster_indices.is_empty() { continue; }
+
+                let mut participating_agents = std::collections::HashSet::new();
+                let mut memory_ids = Vec::new();
+                let mut centroid = vec![0.0; memories[0].embedding.len()];
+                let mut combined_content = String::new();
+
+                for &i in &cluster_indices {
+                    let mem = &memories[i];
+                    participating_agents.insert(mem.agent_id.clone());
+                    memory_ids.push(mem.id.clone());
+
+                    for (j, &val) in mem.embedding.iter().enumerate() {
+                        centroid[j] += val;
+                    }
+                    combined_content.push_str(&mem.content);
+                    combined_content.push_str(" | ");
+                }
+
+                if participating_agents.len() > 1 {
+                    for val in centroid.iter_mut() {
+                        *val /= cluster_indices.len() as f32;
+                    }
+
+                    let norm: f32 = centroid.iter().map(|v| v * v).sum::<f32>().sqrt();
+                    if norm > 0.0 {
+                        for val in centroid.iter_mut() {
+                            *val /= norm;
+                        }
+                    }
+
+                    insights.push(ClusterInsight {
+                        id: format!("cluster_{}_{}", tenant_id_owned, idx),
+                        tenant_id: tenant_id_owned.clone(),
+                        participating_agents: participating_agents.into_iter().collect(),
+                        synthesized_content: combined_content,
+                        centroid_embedding: centroid,
+                        memory_ids,
+                        significance_score: cluster_indices.len() as f32 * 10.0,
+                        created_at: Utc::now(),
+                    });
+                }
+            }
+
+            insights
+        }).await.map_err(|e| e.to_string())?;
+
+        Ok(insights)
+    }
+
+    fn static_region_query(memories: &[EmbeddingRecord], point_idx: usize, eps: f32) -> Vec<usize> {
+        let mut neighbors = Vec::new();
+        let target = &memories[point_idx].embedding;
+        for (i, mem) in memories.iter().enumerate() {
+            if Self::static_cosine_distance(target, &mem.embedding) <= eps {
+                neighbors.push(i);
+            }
+        }
+        neighbors
+    }
+
+    fn static_expand_cluster(
+        memories: &[EmbeddingRecord],
+        point_idx: usize,
+        neighbors: &[usize],
+        cluster: &mut Vec<usize>,
+        visited: &mut [bool],
+        noise: &mut [bool],
+        eps: f32,
+        min_pts: usize,
+    ) {
+        cluster.push(point_idx);
+        let mut local_neighbors = neighbors.to_vec();
+        let mut i = 0;
+
+        while i < local_neighbors.len() {
+            let neighbor_idx = local_neighbors[i];
+
+            if !visited[neighbor_idx] {
+                visited[neighbor_idx] = true;
+                let next_neighbors = Self::static_region_query(memories, neighbor_idx, eps);
+                if next_neighbors.len() >= min_pts {
+                    for &nn in &next_neighbors {
+                        if !local_neighbors.contains(&nn) {
+                            local_neighbors.push(nn);
+                        }
+                    }
+                }
+            }
+
+            if !cluster.contains(&neighbor_idx) {
+                cluster.push(neighbor_idx);
+                noise[neighbor_idx] = false;
+            }
+
+            i += 1;
+        }
+    }
+
+    fn static_cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+        if a.len() != b.len() || a.is_empty() { return 1.0; }
+        let mut dot = 0.0;
+        let mut norm_a = 0.0;
+        let mut norm_b = 0.0;
+        for (va, vb) in a.iter().zip(b.iter()) {
+            dot += va * vb;
+            norm_a += va * va;
+            norm_b += vb * vb;
+        }
+        let denom = norm_a.sqrt() * norm_b.sqrt();
+        if denom == 0.0 { return 1.0; }
+        1.0 - (dot / denom)
+    }
+
+    pub async fn fetch_all_memories(&self, tenant_id: &str) -> Result<Vec<EmbeddingRecord>, String> {
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, agent_id, content, embedding::text AS embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata FROM consolidated_memory WHERE tenant_id = $1")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let mut results = Vec::new();
+                for row in rows {
+                    results.push(Self::parse_postgres_row(row)?);
+                }
+                Ok(results)
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT * FROM consolidated_memory WHERE tenant_id = ?")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let mut results = Vec::new();
+                for row in rows {
+                    results.push(Self::parse_sqlite_row(row)?);
+                }
+                Ok(results)
+            }
+        }
+    }
+
+    fn parse_postgres_row(row: sqlx::postgres::PgRow) -> Result<EmbeddingRecord, String> {
+        use sqlx::Row;
+        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
+        let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+        Ok(EmbeddingRecord {
+            id: row.get("id"),
+            tenant_id: row.get("tenant_id"),
+            agent_id: row.get::<Option<String>, _>("agent_id").unwrap_or_default(),
+            content: row.get("content"),
+            embedding,
+            source_type: row.get("source_type"),
+            created_at: row.get("created_at"),
+            last_referenced_at: row.get("last_referenced_at"),
+            reference_count: row.get("reference_count"),
+            reliability_score: row.get("reliability_score"),
+            owner_override: row.get("owner_override"),
+            metadata: row.get("metadata"),
+        })
+    }
+
+    fn parse_sqlite_row(row: sqlx::sqlite::SqliteRow) -> Result<EmbeddingRecord, String> {
+        use sqlx::Row;
+        let emb_str: String = row.get("embedding");
+        let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+        Ok(EmbeddingRecord {
+            id: row.get("id"),
+            tenant_id: row.get("tenant_id"),
+            agent_id: row.get::<Option<String>, _>("agent_id").unwrap_or_default(),
+            content: row.get("content"),
+            embedding,
+            source_type: row.get("source_type"),
+            created_at: row.get("created_at"),
+            last_referenced_at: row.get("last_referenced_at"),
+            reference_count: row.get("reference_count"),
+            reliability_score: row.get("reliability_score"),
+            owner_override: row.get("owner_override"),
+            metadata: row.get("metadata"),
+        })
+    }
+}
+
+#[cfg(test)]
+mod cluster_tests {
+    use super::*;
+    use std::str::FromStr;
+    use chrono::{Utc, Duration};
+
+    async fn setup_test_db() -> sqlx::SqlitePool {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_extract_cross_department_clusters() {
+        let pool = setup_test_db().await;
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let tenant = "tenant_xyz";
+
+        // Create 20 memories from 3 departments that form 3 distinct clusters
+        // Cluster 1: Sales & Marketing (similar embeddings)
+        let v_cluster1 = vec![0.8, 0.2, 0.0, 0.0, 0.0];
+        for i in 0..10 {
+            let mut v = v_cluster1.clone();
+            v[1] += (i as f32) * 0.01; // slight variations
+
+            repo.upsert(&EmbeddingRecord {
+                id: format!("c1_{}", i),
+                tenant_id: tenant.to_string(),
+                agent_id: if i % 2 == 0 { "sales".to_string() } else { "marketing".to_string() },
+                content: format!("Sales & Marketing collaboration {}", i),
+                embedding: v,
+                source_type: "NOTE".to_string(),
+                created_at: Utc::now(),
+                last_referenced_at: Utc::now(),
+                reference_count: 1,
+                reliability_score: 50,
+                owner_override: false,
+                metadata: None,
+            }).await.unwrap();
+        }
+
+        // Cluster 2: Only Sales (no cross-department, should NOT form an insight)
+        let v_cluster2 = vec![0.0, 0.9, 0.1, 0.0, 0.0];
+        for i in 0..5 {
+            let mut v = v_cluster2.clone();
+            v[2] += (i as f32) * 0.01;
+
+            repo.upsert(&EmbeddingRecord {
+                id: format!("c2_{}", i),
+                tenant_id: tenant.to_string(),
+                agent_id: "sales".to_string(),
+                content: format!("Sales internal {}", i),
+                embedding: v,
+                source_type: "NOTE".to_string(),
+                created_at: Utc::now(),
+                last_referenced_at: Utc::now(),
+                reference_count: 1,
+                reliability_score: 50,
+                owner_override: false,
+                metadata: None,
+            }).await.unwrap();
+        }
+
+        // Cluster 3: Support & Product (cross-department)
+        let v_cluster3 = vec![0.0, 0.0, 0.0, 0.7, 0.3];
+        for i in 0..8 {
+            let mut v = v_cluster3.clone();
+            v[4] += (i as f32) * 0.01;
+
+            repo.upsert(&EmbeddingRecord {
+                id: format!("c3_{}", i),
+                tenant_id: tenant.to_string(),
+                agent_id: if i % 3 == 0 { "support".to_string() } else { "product".to_string() },
+                content: format!("Product feedback {}", i),
+                embedding: v,
+                source_type: "NOTE".to_string(),
+                created_at: Utc::now(),
+                last_referenced_at: Utc::now(),
+                reference_count: 1,
+                reliability_score: 50,
+                owner_override: false,
+                metadata: None,
+            }).await.unwrap();
+        }
+
+        let insights = repo.extract_cross_department_clusters(tenant).await.unwrap();
+
+        // We expect exactly 2 insights: One for c1 (sales+marketing), One for c3 (support+product)
+        assert_eq!(insights.len(), 2, "Should find exactly 2 cross-department clusters");
+
+        let c1_insight = insights.iter().find(|i| i.participating_agents.contains(&"marketing".to_string())).unwrap();
+        assert!(c1_insight.participating_agents.contains(&"sales".to_string()));
+        assert_eq!(c1_insight.memory_ids.len(), 10);
+
+        let c3_insight = insights.iter().find(|i| i.participating_agents.contains(&"support".to_string())).unwrap();
+        assert!(c3_insight.participating_agents.contains(&"product".to_string()));
+        assert_eq!(c3_insight.memory_ids.len(), 8);
+    }
+}

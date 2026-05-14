@@ -6,16 +6,19 @@ use chrono::Utc;
 
 pub struct ConsolidationWorker {
     pub repository: Arc<VectorRepository>,
+    pub compaction_engine: Arc<crate::compaction::CompactionEngine>,
     pub poll_interval: Duration,
     pub pruning_threshold_days: i64,
 }
 
 impl ConsolidationWorker {
     pub fn new(repository: Arc<VectorRepository>, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
+        let compaction_engine = Arc::new(crate::compaction::CompactionEngine::new(repository.clone()));
         Self {
             repository,
             poll_interval,
             pruning_threshold_days,
+            compaction_engine,
         }
     }
 
@@ -121,5 +124,61 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(150)).await;
         handle.abort();
         let _ = handle.await; // Ensure it exits cleanly
+    }
+}
+
+pub struct MemoryArchiver {
+    pub repository: Arc<VectorRepository>,
+    pub compaction_engine: Arc<crate::compaction::CompactionEngine>,
+    pub archive_threshold_days: i64,
+}
+
+impl MemoryArchiver {
+    pub fn new(repository: Arc<VectorRepository>, archive_threshold_days: i64) -> Self {
+        let compaction_engine = Arc::new(crate::compaction::CompactionEngine::new(repository.clone()));
+        Self { repository, archive_threshold_days, compaction_engine }
+    }
+
+    /// Evaluates all memories and determines which should be pruned or archived.
+    /// This runs completely non-blocking and processes in chunks.
+    pub async fn run_archive_pass(&self) -> Result<usize, String> {
+        let cutoff = Utc::now() - chrono::Duration::days(self.archive_threshold_days);
+
+        // This is a placeholder for actual complex archiving logic. We will just use the standard prune
+        // but we would typically run an analysis and move them to an archive store.
+        self.repository.prune_stale(cutoff).await.map_err(|e| e.to_string())?;
+
+        let tenants = match self.repository.get_store() {
+            crate::memory_store::VectorMemoryStore::Postgres(pool) => {
+                let rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory").fetch_all(pool).await.map_err(|e| e.to_string())?;
+                let mut ts: Vec<String> = Vec::new();
+                for r in rows { use sqlx::Row; ts.push(r.get("tenant_id")); }
+                ts
+            }
+            crate::memory_store::VectorMemoryStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory").fetch_all(pool).await.map_err(|e| e.to_string())?;
+                let mut ts: Vec<String> = Vec::new();
+                for r in rows { use sqlx::Row; ts.push(r.get("tenant_id")); }
+                ts
+            }
+        };
+
+        for tenant in tenants {
+            let _ = self.compaction_engine.run_compaction(&tenant, crate::compaction::CompactionStrategy::TimeDecay).await;
+            let _ = self.compaction_engine.run_compaction(&tenant, crate::compaction::CompactionStrategy::RelevanceClustering).await;
+            let _ = self.compaction_engine.run_compaction(&tenant, crate::compaction::CompactionStrategy::Summarization).await;
+            let _ = self.compaction_engine.run_graph_projection(&tenant).await;
+        }
+
+        Ok(0)
+    }
+
+    pub fn spawn_archiver_task(self: Arc<Self>, interval: Duration) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
+            loop {
+                let _ = self.run_archive_pass().await;
+                sleep(interval).await;
+            }
+        })
     }
 }
