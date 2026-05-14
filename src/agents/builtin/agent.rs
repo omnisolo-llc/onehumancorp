@@ -495,6 +495,7 @@ impl Agent {
                         if llm_cfg_c.max_task_tokens > 0 && current_total > llm_cfg_c.max_task_tokens {
                             final_content = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                             has_tool_calls = false; // Prevent further tool calls
+                            return Err("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string());
                         }
 
                         let final_tool_calls = if has_tool_calls {
@@ -1391,11 +1392,11 @@ impl Agent {
             token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
 
             // Enforce Server-side token budget strictly every turn
-            if global_turn_tokens >= final_cfg.max_task_tokens {
+            if self.progress.token_count() >= final_cfg.max_task_tokens as i64 {
                 let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                 on_event(AgentEvent::TextChunk { content: msg.clone() });
                 on_event(AgentEvent::TaskComplete { content: msg.clone() });
-                return Ok(msg);
+                return Err(msg.into());
             }
 
             // Unified Cost Calculation Mechanic
@@ -1438,6 +1439,14 @@ impl Agent {
                 return Err(err_msg.into());
             }
 
+            // Heuristic detection of explicit refusal in content
+            let lower_content = resp.message.content.to_lowercase();
+            if lower_content.contains("i cannot fulfill this request") || lower_content.contains("i cannot provide") || lower_content.contains("i am unable to fulfill") {
+                let err_msg = "Terminal condition reached: Safety refusal. The model explicitly refused to fulfill the request.".to_string();
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(err_msg.into());
+            }
+
             // Text content from assistant
             if !resp.message.content.is_empty() {
                 last_assistant_content = resp.message.content.clone();
@@ -1458,7 +1467,7 @@ impl Agent {
                     let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                     on_event(AgentEvent::TextChunk { content: msg.clone() });
                     on_event(AgentEvent::TaskComplete { content: msg.clone() });
-                    return Ok(msg);
+                    return Err(msg.into());
                 }
                 if decision.action == BudgetAction::Continue {
                     // Add the budget nudge to messages and continue.
@@ -4366,7 +4375,7 @@ mod tests {
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
 
-        assert!(result.is_ok());
+        assert!(result.is_err());
 
         // Also ensure an AgentEvent::TaskComplete was emitted with the friendly prompt
         let mut found_task_complete = false;
@@ -4421,8 +4430,8 @@ mod tests {
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
 
         // In the Langgraph path, it returns Ok(String) with the last message
-        assert!(result.is_ok());
-        let msg = result.unwrap();
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
         assert!(msg.contains("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!"));
     }
 
@@ -5180,4 +5189,36 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
+
+    struct RefusalMockLlm {
+        response: Option<ChatResponse>,
     }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for RefusalMockLlm {
+        async fn chat(&self, _req: crate::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(self.response.clone().unwrap())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_safety_refusal_content_heuristic() {
+        let client = Arc::new(RefusalMockLlm {
+            response: Some(ChatResponse {
+                message: Message::assistant("I cannot fulfill this request because it violates safety guidelines."),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id".to_string()),
+            }),
+        });
+
+        let agent = Agent::new(client, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_task_tokens = 999999;
+        let mut on_event = |_| {};
+        let result = agent.run(&cfg, "Do something bad", &mut on_event).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Terminal condition reached: Safety refusal. The model explicitly refused to fulfill the request."));
+    }
+}
