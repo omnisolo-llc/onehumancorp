@@ -1,6 +1,8 @@
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use crate::integrations::google_calendar::availability::{AvailabilityCalculator, BusinessHours, AvailableSlot};
+use crate::integrations::google_calendar::sync::CalendarSyncService;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
@@ -81,6 +83,49 @@ impl BookingService {
                 return Err("Time slot overlaps with an existing booking".to_string());
             }
         }
+        Ok(())
+    }
+
+    /// Fetches available time slots for a business owner by checking their Google Calendar
+    pub async fn fetch_available_slots_from_calendar(
+        access_token: String,
+        calendar_id: &str,
+        business_hours: &BusinessHours,
+        search_start: DateTime<Utc>,
+        search_end: DateTime<Utc>,
+        slot_duration: chrono::Duration,
+    ) -> Result<Vec<AvailableSlot>, String> {
+        let sync_service = CalendarSyncService::new(access_token);
+
+        let freebusy = sync_service
+            .fetch_freebusy(vec![calendar_id.to_string()], search_start, search_end)
+            .await?;
+
+        AvailabilityCalculator::calculate_available_slots(
+            &freebusy,
+            calendar_id,
+            business_hours,
+            search_start,
+            search_end,
+            slot_duration,
+        )
+    }
+
+    /// Creates a confirmed booking event directly in the business owner's Google Calendar
+    pub async fn push_booking_to_calendar(
+        access_token: String,
+        calendar_id: &str,
+        summary: &str,
+        description: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+    ) -> Result<(), String> {
+        let sync_service = CalendarSyncService::new(access_token);
+
+        sync_service
+            .push_booking(calendar_id, summary, description, start_time, end_time)
+            .await?;
+
         Ok(())
     }
 }
