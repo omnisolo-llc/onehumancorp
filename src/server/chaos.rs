@@ -495,3 +495,18 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
+
+    #[tokio::test]
+    async fn test_chaos_mesh_transport_partition_resilience() {
+        use std::sync::Arc;
+        use crate::msgbus::{MemoryBus, HealthMonitor};
+        let bus = Arc::new(MemoryBus::new());
+        let transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+
+        let monitor = HealthMonitor::new(bus.clone(), transport);
+
+        // Ensure application logic gracefully returns error via app's timeout implementation
+        let res = monitor.ping().await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Health ping timed out waiting for ack");
+}
