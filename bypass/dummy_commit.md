@@ -1,1 +1,1 @@
-🗺️ Guide: [new onboarding feature]
+Maintainer: Zero WIP exit
