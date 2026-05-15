@@ -1,0 +1,42 @@
+-- Migration: 003_enable_rls.sql
+-- Add ENABLE ROW LEVEL SECURITY for all tables missing it from 002_missing_tables.sql
+
+ALTER TABLE shared_tasks_v4 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_approvals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE competitor_metrics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_violations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+ALTER TABLE department_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_inbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;
+
+
+-- Add RLS policies to match the isolation logic
+CREATE POLICY tenant_isolation_shared_tasks_v4 ON shared_tasks_v4 USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_agent_approvals ON agent_approvals USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_onboarding_state ON onboarding_state USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_referrals ON referrals USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_competitor_metrics ON competitor_metrics USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_agent_violations ON agent_violations USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (organization_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_department_tasks ON department_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_autodream_memories ON autodream_memories USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_state_machine_transitions ON state_machine_transitions USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_pages ON pages USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_memories ON memories USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_consolidated_memory ON consolidated_memory USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_agent_inbox ON agent_inbox USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_meeting_rooms ON meeting_rooms USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_meeting_transcripts ON meeting_transcripts USING (tenant_id::text = current_setting('app.current_tenant', true));
