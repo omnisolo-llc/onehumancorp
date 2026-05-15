@@ -1749,6 +1749,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
+
+                        <div id="grow-business-modal" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 40px;">
+                            <div class="card glass" style="max-width: 400px; margin: 0 auto; background: #222;">
+                                <h2>Grow Business</h2>
+                                <div id="grow-step-1">
+                                    <button onclick="document.getElementById('grow-step-1').style.display='none'; document.getElementById('grow-step-2').style.display='block'">Connect Instagram</button>
+                                </div>
+                                <div id="grow-step-2" style="display: none;">
+                                    <p>📸 Connect Instagram Selected</p>
+                                    <button onclick="document.getElementById('grow-step-2').style.display='none'; document.getElementById('grow-step-3').style.display='block'">Next</button>
+                                </div>
+                                <div id="grow-step-3" style="display: none;">
+                                    <button onclick="document.getElementById('grow-step-3').style.display='none'; document.getElementById('grow-step-4').style.display='block'; document.getElementById('draft-ig-post').style.display='block'">Launch Strategy</button>
+                                </div>
+                                <div id="grow-step-4" style="display: none;">
+                                    <p>Strategy launched!</p>
+                                    <button onclick="document.getElementById('grow-business-modal').style.display='none'">Return to Dashboard</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
@@ -1757,7 +1778,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
+
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+
+                            <button onclick="showScreen('email-marketing-screen')">Email Marketing</button>
+                            <button onclick="document.getElementById('upgrade-modal').style.display='block'">Upgrade Plan</button>
+
+                            <button onclick="document.getElementById('grow-business-modal').style.display='block'">Grow Business</button>
+                            <button onclick="document.getElementById('share-business-modal').style.display='block'">Share my business</button>
+
+                        <div id="share-business-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 40px;">
+                            <div class="card glass" style="max-width: 400px; margin: 0 auto; background: #222;">
+                                <h2>Share My Business</h2>
+                                <div class="card glass" style="padding: 10px; margin-bottom: 20px;">
+                                    <h4 style="margin: 0;">My Store</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #ccc;">The best products online.</p>
+                                </div>
+                                <input type="text" value="https://ohc.com/mystore" readonly style="width: 100%; margin-bottom: 10px;">
+                                <button onclick="alert('Link copied!')">Copy Link</button>
+                                <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+                                <button onclick="alert('Posting to Instagram')">Post to Instagram</button>
+                                <button onclick="alert('Posting to WhatsApp')">Post to WhatsApp</button>
+                                <button onclick="alert('Posting to X')">Post to X</button>
+                                <button class="secondary" onclick="document.getElementById('share-business-modal').style.display='none'" style="margin-top: 15px; width: 100%;">Close</button>
+                            </div>
+                        </div>
+
+
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -1766,8 +1813,76 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <div class="card glass">
+
+
+                        <!-- Upgrade Funnel Modal -->
+                        <div id="upgrade-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; padding: 40px; overflow-y: auto;">
+                            <div class="card glass" style="max-width: 600px; margin: 0 auto; background: #222;">
+                                <h2 style="text-align: center; color: #ffeb3b;">Unlock Your Potential</h2>
+                                <p style="text-align: center; margin-bottom: 30px;">You've reached the limits of the Free tier (1 AI Agent, 10 Products). Upgrade to grow faster.</p>
+
+                                <div style="display: flex; gap: 20px;">
+                                    <div class="card glass" style="flex: 1; padding: 15px;">
+                                        <h3>Free</h3>
+                                        <ul style="padding-left: 20px; font-size: 14px;">
+                                            <li>1 AI Agent</li>
+                                            <li>10 Products</li>
+                                            <li>OHC Subdomain</li>
+                                        </ul>
+                                        <button disabled>Current Plan</button>
+                                    </div>
+                                    <div class="card glass" style="flex: 1; padding: 15px; border: 1px solid #4CAF50;">
+                                        <h3>Starter</h3>
+                                        <ul style="padding-left: 20px; font-size: 14px;">
+                                            <li>3 AI Agents</li>
+                                            <li>100 Products</li>
+                                            <li>Custom Domain</li>
+                                        </ul>
+                                        <button style="background: #4CAF50; color: white;" onclick="alert('Upgraded to Starter!')">Upgrade Now</button>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 20px; margin-top: 20px;">
+                                    <div class="card glass" style="flex: 1; padding: 15px; border: 1px solid #2196F3;">
+                                        <h3>Pro</h3>
+                                        <ul style="padding-left: 20px; font-size: 14px;">
+                                            <li>10 AI Agents</li>
+                                            <li>Unlimited Products</li>
+                                            <li>Advanced Analytics</li>
+                                        </ul>
+                                        <button style="background: #2196F3; color: white;" onclick="alert('Upgraded to Pro!')">Upgrade Now</button>
+                                    </div>
+                                    <div class="card glass" style="flex: 1; padding: 15px;">
+                                        <h3>Business</h3>
+                                        <ul style="padding-left: 20px; font-size: 14px;">
+                                            <li>Unlimited Agents</li>
+                                            <li>White-glove setup</li>
+                                        </ul>
+                                        <button onclick="alert('Contacting sales...')">Contact Sales</button>
+                                    </div>
+                                </div>
+                                <button class="secondary" onclick="document.getElementById('upgrade-modal').style.display='none'" style="margin-top: 20px; width: 100%;">Maybe Later</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Operations</h3>
+                            <button id="mark-order-btn">Mark Order Ready</button>
+                        </div>
+
+                        <div id="milestone-overlay" style="display: none; position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 8px; z-index: 9999;">
+                            <h2 id="milestone-title"></h2>
+                            <p id="milestone-desc"></p>
+                            <button onclick="document.getElementById('milestone-overlay').style.display='none'">Dismiss</button>
+                        </div>
                             <h3>Agent Activity</h3>
+
                             <div id="agent-activity-feed">
+                                <div id="draft-ig-post" class="card glass" style="display: none; border-left: 4px solid #ff4500;">
+                                    <h4>Drafted Instagram Post</h4>
+                                    <p>Check out our new products!</p>
+                                    <button onclick="this.parentElement.style.display='none'">Approve & Send</button>
+                                </div>
+
                                 <p>No recent activity.</p>
                             </div>
                             <button onclick="simulateOrder()">Simulate Order</button>
@@ -1791,6 +1906,66 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
                         </nav>
+                    </div>
+
+
+
+
+                    <!-- Email Marketing Screen -->
+                    <div id="email-marketing-screen" class="screen glass">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                        <h1>Email Campaigns</h1>
+                        <div class="card glass">
+                            <h3>Select Contacts</h3>
+                            <label><input type="checkbox" checked> All Customers (1,240)</label>
+                        </div>
+                        <div class="card glass">
+                            <h3>AI Templates</h3>
+                            <button onclick="document.getElementById('email-preview').style.display='block'">New arrivals</button>
+                            <button onclick="document.getElementById('email-preview').style.display='block'">Flash sale</button>
+                            <button onclick="document.getElementById('email-preview').style.display='block'">Thank you</button>
+                        </div>
+                        <div id="email-preview" class="card glass" style="display: none; border: 1px solid #4CAF50;">
+                            <h3>Preview</h3>
+                            <p>Check out our amazing new products! Click here to shop now.</p>
+                            <button onclick="alert('Campaign sent!'); this.parentElement.style.display='none'">Send Campaign</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Analytics</h3>
+                            <p>Last Campaign: <strong style="color: #4CAF50;">45% Open Rate</strong></p>
+                        </div>
+                    </div>
+
+                    <!-- Social Posting Screen -->
+                    <div id="social-posting-screen" class="screen glass">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                        <h1>Social Media Auto-Posting</h1>
+                        <div class="card glass">
+                            <button id="fb-btn" onclick="this.innerText='Facebook Connected'">Connect Facebook</button>
+                        </div>
+                        <div class="card glass">
+                            <button onclick="document.getElementById('post-draft').value='AI Draft generated...'">Generate Post with AI</button>
+                            <textarea id="post-draft" rows="4" style="width: 100%; margin-top: 10px;"></textarea>
+                            <p style="display: none;" id="edited-post-display"></p>
+                        </div>
+                        <div class="card glass">
+                            <button onclick="alert('Scheduled!')">Schedule</button>
+                            <button onclick="alert('Approved and posted!')">Approve & Post Now</button>
+                        </div>
+                    </div>
+
+                    <!-- Users Screen -->
+                    <div id="users-screen" class="screen glass">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                        <h1>User Management</h1>
+
+                        <!-- Referral Program Widget with Glassmorphism -->
+                        <div class="card" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 24px; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                            <h2 style="font-family: 'Outfit', sans-serif;">Referral Program</h2>
+                            <p style="font-family: 'Inter', sans-serif;">Share OHC with a friend, both get 1 month free Pro.</p>
+                            <input type="email" placeholder="Email or Username" style="margin-bottom: 10px;">
+                            <button onclick="alert('Invited!')" style="width: 100%;">Invite User</button>
+                        </div>
                     </div>
 
                     <!-- Referral Dashboard -->
@@ -1909,7 +2084,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Continuing...')">Next</button>
                             <button onclick="alert('Continuing...')">Continue</button>
                         </div>
-                        <p>Built with OHC — Start your free business →</p>
+                        <a href="https://onehumancorp.com" style="color: white; text-decoration: none;">Built with OHC — Start your free business →</a>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
@@ -2233,6 +2408,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
+                            'social-posting-screen': '/social-posting',
+                            'email-marketing-screen': '/email-marketing',
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
@@ -2261,18 +2438,62 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'social-posting-screen' || id === 'email-marketing-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
 
+
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+
+
+                            let orderCount = 0;
+                            const markOrderBtn = document.getElementById('mark-order-btn');
+                            if(markOrderBtn) {
+                                markOrderBtn.addEventListener('click', () => {
+                                    orderCount++;
+                                    const overlay = document.getElementById('milestone-overlay');
+                                    const title = document.getElementById('milestone-title');
+                                    const desc = document.getElementById('milestone-desc');
+
+                                    if(orderCount === 1) {
+                                        title.innerText = 'First Sale!';
+                                        desc.innerText = 'You got your first order!';
+                                        overlay.style.display = 'block';
+                                    } else if (orderCount === 3) {
+                                        title.innerText = '🎉 3rd Order!';
+                                        desc.innerText = 'You completed 3 orders!';
+                                        overlay.style.display = 'block';
+                                    } else if (orderCount === 10) {
+                                        title.innerText = '🎉 10th Order!';
+                                        desc.innerText = 'Amazing milestone reached.';
+                                        overlay.style.display = 'block';
+                                    }
+                                });
+                            }
+
+                            setTimeout(() => {
+                                const overlay = document.getElementById('milestone-overlay');
+                                if(overlay) {
+                                    document.getElementById('milestone-title').innerText = '🚀 100 Visitors Today!';
+                                    document.getElementById('milestone-desc').innerText = 'Your storefront is going viral.';
+                                    overlay.style.display = 'block';
+                                }
+                            }, 5000);
+                            const draft = document.getElementById('post-draft');
+                            if(draft) {
+                                draft.addEventListener('input', (e) => {
+                                    document.getElementById('edited-post-display').innerText = e.target.value;
+                                    document.getElementById('edited-post-display').style.display = 'block';
+                                });
+                            }
                         };
+
                     </script>
                 </body>
             </html>
