@@ -1609,30 +1609,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <style>
                         :root {
                             --primary: #0055ff;
                             --primary-hover: #0044cc;
                             --bg: #f4f7fa;
-                            --card-bg: #ffffff;
+                            --card-bg: rgba(255, 255, 255, 0.7);
                             --text: #1a1a1b;
                             --text-secondary: #646d7b;
-                            --border: #e1e4e8;
-                            --sidebar-bg: #ffffff;
+                            --border: rgba(225, 228, 232, 0.5);
+                            --sidebar-bg: rgba(255, 255, 255, 0.8);
+                        }
+                        * {
+                            transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
                         }
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: 'Outfit', sans-serif;
+                            color: var(--text);
+                            margin-top: 0;
+                        }
                         .glass { 
-                            background: var(--card-bg); 
+                            background: var(--card-bg);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -1652,13 +1663,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-weight: 500; 
                             cursor: pointer; 
                             font-size: 14px;
-                            transition: color 0.2s;
+                            min-height: 44px;
+                            min-width: 44px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         nav a:hover {
                             color: var(--primary);
                         }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
+                        .screen { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+                        @media (min-width: 768px) {
+                            .screen { padding: 40px; }
+                        }
                         .card { 
                             background: var(--card-bg); 
                             padding: 24px; 
@@ -1669,22 +1688,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input { 
                             width: 100%; 
-                            padding: 10px 14px; 
+                            padding: 12px 14px;
+                            min-height: 44px;
                             margin-bottom: 16px; 
-                            background: #ffffff; 
+                            background: rgba(255, 255, 255, 0.9);
                             border: 1px solid var(--border); 
                             border-radius: 6px; 
                             color: var(--text); 
                             box-sizing: border-box; 
-                            font-size: 14px;
-                            transition: border-color 0.2s;
+                            font-size: 16px; /* Prevent iOS zoom */
+                            transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         input:focus {
                             outline: none;
                             border-color: var(--primary);
                         }
                         button { 
-                            padding: 10px 20px; 
+                            padding: 12px 24px;
+                            min-width: 44px;
+                            min-height: 44px;
                             background: var(--primary); 
                             border: none; 
                             border-radius: 6px; 
@@ -1694,7 +1716,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-right: 8px; 
                             margin-bottom: 8px; 
                             font-size: 14px;
-                            transition: background 0.2s;
+                            transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -1741,56 +1763,64 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Agents</button>
+                            <h2>Welcome back!</h2>
+                            <p>Here's a summary of your business today.</p>
+                            <h3 style="font-size: 2rem; margin: 10px 0;">$0.00</h3>
+                            <p style="color: var(--text-secondary);">Today's Sales</p>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Start Setup</button>
-                            <button onclick="showScreen('meetings-screen')">Agenda</button>
+                            <h3>Quick Actions <button class="secondary" onclick="document.getElementById('quick-actions-hint').style.display='block'" style="border-radius: 50%; min-width: 32px; min-height: 32px; padding: 0; width: 32px; height: 32px; text-align: center; margin-left: 8px;">?</button></h3>
+                            <p id="quick-actions-hint" style="display: none; background: rgba(0,85,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">These buttons help you quickly do the most common tasks.</p>
+                            <button onclick="showScreen('setup-screen')">Edit My Website</button>
+                            <button onclick="showScreen('agents-screen')">Manage Team</button>
+                            <button onclick="showScreen('my-plan-screen')">Billing & Upgrade</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
-                            <button onclick="toggleMenu()">Menu</button>
+                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Connect Apps</button>
                         </div>
-                        <div id="facebook-integration" class="card glass">
+                        <div id="facebook-integration" class="card glass" style="display: none;">
                             <h3>📘 Facebook</h3>
-                            <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
+                            <button onclick="alert('Connect Facebook'); showScreen('inbox-screen')">Connect my Facebook</button>
                         </div>
                         <div class="card glass">
-                            <h3>Agent Activity</h3>
+                            <h3>Recent Activity</h3>
                             <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
-                            </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
-                        </div>
-                        <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <div class="card glass">
-                                <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Video Tutorials</button>
-                                <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
+                                <div class="shimmer-wrapper" style="margin-bottom: 10px;">
+                                    <div class="shimmer" style="height: 20px; width: 60%; background: #e0e0e0; border-radius: 4px; overflow: hidden; position: relative;">
+                                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shimmer 1.5s infinite;"></div>
+                                    </div>
+                                </div>
+                                <div class="shimmer-wrapper">
+                                    <div class="shimmer" style="height: 20px; width: 80%; background: #e0e0e0; border-radius: 4px; overflow: hidden; position: relative;">
+                                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shimmer 1.5s infinite;"></div>
+                                    </div>
+                                </div>
+                                <style>
+                                    @keyframes shimmer {
+                                        0% { transform: translateX(-100%); }
+                                        100% { transform: translateX(100%); }
+                                    }
+                                </style>
+                                <p style="display: none;">No recent activity.</p>
                             </div>
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                        <nav class="glass" style="display: flex; flex-wrap: wrap; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;">
+                            <button class="nav-item" onclick="showScreen('dashboard-screen')" style="flex: 1; min-width: 60px; font-size: 12px; padding: 8px 4px; margin: 4px; background: transparent; color: var(--text-secondary); border: 1px solid transparent;">Home</button>
+                            <button class="nav-item" onclick="showScreen('inbox-screen')" style="flex: 1; min-width: 60px; font-size: 12px; padding: 8px 4px; margin: 4px; background: transparent; color: var(--text-secondary); border: 1px solid transparent;">Messages</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')" style="flex: 1; min-width: 60px; font-size: 12px; padding: 8px 4px; margin: 4px; background: transparent; color: var(--text-secondary); border: 1px solid transparent;">Add Product</button>
+                            <button class="nav-item" style="flex: 1; min-width: 60px; font-size: 12px; padding: 8px 4px; margin: 4px; background: transparent; color: var(--text-secondary); border: 1px solid transparent;">Orders</button>
+                            <button class="nav-item" style="flex: 1; min-width: 60px; font-size: 12px; padding: 8px 4px; margin: 4px; background: transparent; color: var(--text-secondary); border: 1px solid transparent;">Analytics</button>
+                            <style>
+                                .nav-item:hover, .nav-item:focus {
+                                    background: rgba(0,85,255,0.1) !important;
+                                    color: var(--primary) !important;
+                                    border-radius: 8px;
+                                }
+                            </style>
                         </nav>
+                        <div style="height: 80px;"></div>
                     </div>
 
                     <!-- Referral Dashboard -->
@@ -2210,7 +2240,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Login</h1>
                         <h2>One Human Corp</h2>
                         <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <div id="login-error" class="error">We couldn't log you in. Check your email or password.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Login</button>
