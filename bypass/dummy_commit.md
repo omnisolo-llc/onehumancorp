@@ -1,1 +1,1 @@
-🚀 Nova: [new growth feature]
+Implementer: Zero WIP exit
