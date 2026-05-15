@@ -54,9 +54,21 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
 
 async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpAddr), String> {
     let url = reqwest::Url::parse(url_str).map_err(|e| e.to_string())?;
+
     if url.scheme() != "http" && url.scheme() != "https" {
         return Err("invalid scheme".to_string());
     }
+
+    // Auth Security: Enforce HTTPS for OIDC endpoints, except for explicit localhost exceptions during testing
+    let is_localhost = url.host_str() == Some("localhost") || url.host_str() == Some("127.0.0.1") || url.host_str() == Some("[::1]");
+    if url.scheme() != "https" && (!is_localhost || cfg!(not(test))) {
+        if std::env::var("OHC_ALLOW_LOCAL_IPS").map(|v| v == "true").unwrap_or(false) && is_localhost {
+             // Fallback logic if explicit config permits HTTP locally
+        } else {
+             return Err("Auth Security Audit: OIDC endpoints must use HTTPS for secure Thin Client connectivity. HTTP is only permitted on localhost during tests or when explicit developer options are enabled.".to_string());
+        }
+    }
+
     let host = url.host_str().ok_or_else(|| "missing host".to_string())?;
     let port = url.port().unwrap_or(if url.scheme() == "https" { 443 } else { 80 });
     
