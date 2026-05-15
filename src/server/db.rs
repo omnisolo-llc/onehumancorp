@@ -1,3 +1,4 @@
+use serde::{Serialize, Deserialize};
 use sqlx::PgPool;
 use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
 use sqlx::SqlitePool;
@@ -1187,5 +1188,140 @@ mod e2e_tenant_isolation_tests {
         // If the pool initialized without the `before_acquire` hook, this is a success.
         // Discarding `DISCARD ALL` safely scopes context explicitly for each execution.
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Booking {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub service_id: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub status: String,
+    pub deposit_amount: Option<f64>,
+    pub total_amount: Option<f64>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateBookingPayload {
+    pub customer_id: String,
+    pub service_id: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub deposit_amount: Option<f64>,
+    pub total_amount: Option<f64>,
+}
+
+impl DB {
+    pub async fn create_booking(&self, payload: CreateBookingPayload) -> Result<Booking, Box<dyn std::error::Error>> {
+        let tenant_id = "system".to_string();
+        let booking_id = uuid::Uuid::new_v4().to_string();
+        let now = Utc::now();
+
+        match &self.store {
+            DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, deposit_amount, total_amount, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?)"
+                )
+                .bind(&booking_id)
+                .bind(&tenant_id)
+                .bind(&payload.customer_id)
+                .bind(&payload.service_id)
+                .bind(&payload.start_time)
+                .bind(&payload.end_time)
+                .bind(&payload.deposit_amount)
+                .bind(&payload.total_amount)
+                .bind(&now)
+                .bind(&now)
+                .execute(pool)
+                .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, deposit_amount, total_amount, created_at, updated_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, $9, $10)"
+                )
+                .bind(&booking_id)
+                .bind(&tenant_id)
+                .bind(&payload.customer_id)
+                .bind(&payload.service_id)
+                .bind(&payload.start_time)
+                .bind(&payload.end_time)
+                .bind(&payload.deposit_amount)
+                .bind(&payload.total_amount)
+                .bind(&now)
+                .bind(&now)
+                .execute(&self.pool)
+                .await?;
+            }
+        }
+
+        Ok(Booking {
+            id: booking_id,
+            tenant_id,
+            customer_id: payload.customer_id,
+            service_id: payload.service_id,
+            start_time: payload.start_time,
+            end_time: payload.end_time,
+            status: "PENDING".to_string(),
+            deposit_amount: payload.deposit_amount,
+            total_amount: payload.total_amount,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    pub async fn get_booking(&self, id: &str) -> Result<Option<Booking>, Box<dyn std::error::Error>> {
+        let tenant_id = "system".to_string();
+
+        let booking = match &self.store {
+            DbStore::Sqlite(pool) => {
+                sqlx::query_as::<_, Booking>("SELECT * FROM bookings WHERE id = ? AND tenant_id = ?")
+                    .bind(id)
+                    .bind(&tenant_id)
+                    .fetch_optional(pool)
+                    .await?
+            }
+            DbStore::Postgres => {
+                sqlx::query_as::<_, Booking>("SELECT * FROM bookings WHERE id = $1 AND tenant_id = $2")
+                    .bind(id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&self.pool)
+                    .await?
+            }
+        };
+        Ok(booking)
+    }
+
+    pub async fn update_booking_status(&self, id: &str, status: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let tenant_id = "system".to_string();
+        let now = Utc::now();
+
+        match &self.store {
+            DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE bookings SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(status)
+                    .bind(&now)
+                    .bind(id)
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query("UPDATE bookings SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
+                    .bind(status)
+                    .bind(&now)
+                    .bind(id)
+                    .bind(&tenant_id)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+        Ok(())
     }
 }
