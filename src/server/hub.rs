@@ -561,7 +561,7 @@ impl Hub {
         let redacted_raw = ::server_telemetry::redact_interface_pii(raw);
         HubEvent {
             r#type: event_type,
-            payload: redacted_raw.to_string(),
+            payload: serde_json::to_string(&redacted_raw).unwrap_or_else(|_| redacted_raw.to_string()),
             occurred_at: Utc::now(),
         }
     }
