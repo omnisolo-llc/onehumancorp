@@ -3,6 +3,21 @@ use sqlx::Row;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+/// Memory subsystem entity: `EmbeddingRecord`.
+///
+/// This struct represents a fundamental data structure within the agent's long-term
+/// or short-term memory storage mechanism. `EmbeddingRecord` is designed for efficient
+/// serialization and semantic indexing.
+///
+/// # Vector Operations
+/// If `EmbeddingRecord` interacts with an embedding space, ensure that its content
+/// payload is properly chunked to avoid exceeding the embedding model's context window.
+///
+/// # Privacy
+/// `EmbeddingRecord` data is strictly partitioned by user session or tenant ID. Under
+/// no circumstances should memory data bleed across these boundaries.
+/// Data structure representing `EmbeddingRecord`.
+/// This type is used internally for data modeling and state management.
 pub struct EmbeddingRecord {
     pub id: String,
     pub tenant_id: String,
@@ -18,25 +33,85 @@ pub struct EmbeddingRecord {
     pub metadata: Option<String>,
 }
 
+/// Enumeration defining the possible variants for `VectorMemoryStore`.
+/// Ensures type safety by restricting values to a predefined set of states.
 pub enum VectorMemoryStore {
     Postgres(sqlx::PgPool),
     Sqlite(sqlx::SqlitePool),
 }
 
+/// Memory subsystem entity: `VectorRepository`.
+///
+/// This struct represents a fundamental data structure within the agent's long-term
+/// or short-term memory storage mechanism. `VectorRepository` is designed for efficient
+/// serialization and semantic indexing.
+///
+/// # Vector Operations
+/// If `VectorRepository` interacts with an embedding space, ensure that its content
+/// payload is properly chunked to avoid exceeding the embedding model's context window.
+///
+/// # Privacy
+/// `VectorRepository` data is strictly partitioned by user session or tenant ID. Under
+/// no circumstances should memory data bleed across these boundaries.
+/// Data structure representing `VectorRepository`.
+/// This type is used internally for data modeling and state management.
 pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
 impl VectorRepository {
+/// Memory operation: `new`.
+///
+/// The `new` function handles the ingestion, retrieval, or transformation
+/// of memory payloads within the storage backend.
+///
+/// # Performance
+/// Retrieval operations within `new` utilize approximate nearest neighbor (ANN)
+/// search algorithms to ensure low latency even as the memory corpus scales.
+///
+/// # Consistency
+/// Memory writes via `new` guarantee eventual consistency. Agents should be
+/// designed to tolerate slight delays between storing a memory and it becoming
+/// available in search results.
+/// Constructs a new instance with standard defaults or provided dependencies.
     pub fn new(pool: sqlx::PgPool) -> Self {
         VectorRepository { store: VectorMemoryStore::Postgres(pool) }
     }
 
+/// Memory operation: `new_sqlite`.
+///
+/// The `new_sqlite` function handles the ingestion, retrieval, or transformation
+/// of memory payloads within the storage backend.
+///
+/// # Performance
+/// Retrieval operations within `new_sqlite` utilize approximate nearest neighbor (ANN)
+/// search algorithms to ensure low latency even as the memory corpus scales.
+///
+/// # Consistency
+/// Memory writes via `new_sqlite` guarantee eventual consistency. Agents should be
+/// designed to tolerate slight delays between storing a memory and it becoming
+/// available in search results.
+/// Executes the `new_sqlite` operation.
+/// A utility or core domain function designed to perform specific business logic.
     pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
         VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
     }
 
 
+/// Memory operation: `get_store`.
+///
+/// The `get_store` function handles the ingestion, retrieval, or transformation
+/// of memory payloads within the storage backend.
+///
+/// # Performance
+/// Retrieval operations within `get_store` utilize approximate nearest neighbor (ANN)
+/// search algorithms to ensure low latency even as the memory corpus scales.
+///
+/// # Consistency
+/// Memory writes via `get_store` guarantee eventual consistency. Agents should be
+/// designed to tolerate slight delays between storing a memory and it becoming
+/// available in search results.
+/// Retrieves data synchronously or asynchronously based on the provided identifiers.
     pub fn get_store(&self) -> &VectorMemoryStore {
         &self.store
     }
@@ -394,6 +469,21 @@ impl VectorRepository {
     }
 
     /// Determines the winner of a memory conflict between two embedding records.
+/// Memory operation: `determine_conflict_winner<'a>`.
+///
+/// The `determine_conflict_winner<'a>` function handles the ingestion, retrieval, or transformation
+/// of memory payloads within the storage backend.
+///
+/// # Performance
+/// Retrieval operations within `determine_conflict_winner<'a>` utilize approximate nearest neighbor (ANN)
+/// search algorithms to ensure low latency even as the memory corpus scales.
+///
+/// # Consistency
+/// Memory writes via `determine_conflict_winner<'a>` guarantee eventual consistency. Agents should be
+/// designed to tolerate slight delays between storing a memory and it becoming
+/// available in search results.
+/// Executes the `determine_conflict_winner<'a>` operation.
+/// A utility or core domain function designed to perform specific business logic.
     pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
         if a.owner_override != b.owner_override {
             if a.owner_override {
@@ -629,11 +719,41 @@ pub trait OHCMemory: Send + Sync {
     async fn read(&self, namespace: &str, key: &str) -> Result<Vec<u8>, String>;
 }
 
+/// Memory subsystem entity: `FileBasedMemory`.
+///
+/// This struct represents a fundamental data structure within the agent's long-term
+/// or short-term memory storage mechanism. `FileBasedMemory` is designed for efficient
+/// serialization and semantic indexing.
+///
+/// # Vector Operations
+/// If `FileBasedMemory` interacts with an embedding space, ensure that its content
+/// payload is properly chunked to avoid exceeding the embedding model's context window.
+///
+/// # Privacy
+/// `FileBasedMemory` data is strictly partitioned by user session or tenant ID. Under
+/// no circumstances should memory data bleed across these boundaries.
+/// Data structure representing `FileBasedMemory`.
+/// This type is used internally for data modeling and state management.
 pub struct FileBasedMemory {
     base_dir: std::path::PathBuf,
 }
 
 impl FileBasedMemory {
+/// Memory operation: `new<P: AsRef<std::path::Path>>`.
+///
+/// The `new<P: AsRef<std::path::Path>>` function handles the ingestion, retrieval, or transformation
+/// of memory payloads within the storage backend.
+///
+/// # Performance
+/// Retrieval operations within `new<P: AsRef<std::path::Path>>` utilize approximate nearest neighbor (ANN)
+/// search algorithms to ensure low latency even as the memory corpus scales.
+///
+/// # Consistency
+/// Memory writes via `new<P: AsRef<std::path::Path>>` guarantee eventual consistency. Agents should be
+/// designed to tolerate slight delays between storing a memory and it becoming
+/// available in search results.
+/// Executes the `new<P: AsRef<std::path::Path>>` operation.
+/// A utility or core domain function designed to perform specific business logic.
     pub fn new<P: AsRef<std::path::Path>>(base_dir: P) -> Self {
         FileBasedMemory {
             base_dir: base_dir.as_ref().to_path_buf(),
@@ -777,6 +897,21 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
+/// Memory subsystem entity: `PersistentMemoryStore`.
+///
+/// This struct represents a fundamental data structure within the agent's long-term
+/// or short-term memory storage mechanism. `PersistentMemoryStore` is designed for efficient
+/// serialization and semantic indexing.
+///
+/// # Vector Operations
+/// If `PersistentMemoryStore` interacts with an embedding space, ensure that its content
+/// payload is properly chunked to avoid exceeding the embedding model's context window.
+///
+/// # Privacy
+/// `PersistentMemoryStore` data is strictly partitioned by user session or tenant ID. Under
+/// no circumstances should memory data bleed across these boundaries.
+/// Data structure representing `PersistentMemoryStore`.
+/// This type is used internally for data modeling and state management.
 pub struct PersistentMemoryStore {
     pub repo: std::sync::Arc<VectorRepository>,
     pub tenant_id: String,
@@ -835,6 +970,21 @@ impl LongTermMemory for PersistentMemoryStore {
 /// 2) Detailed topic files (pulled on demand)
 /// 3) Raw transcripts (accessed via search only)
 #[derive(Clone)]
+/// Memory subsystem entity: `Anthropic3TierMemoryStore`.
+///
+/// This struct represents a fundamental data structure within the agent's long-term
+/// or short-term memory storage mechanism. `Anthropic3TierMemoryStore` is designed for efficient
+/// serialization and semantic indexing.
+///
+/// # Vector Operations
+/// If `Anthropic3TierMemoryStore` interacts with an embedding space, ensure that its content
+/// payload is properly chunked to avoid exceeding the embedding model's context window.
+///
+/// # Privacy
+/// `Anthropic3TierMemoryStore` data is strictly partitioned by user session or tenant ID. Under
+/// no circumstances should memory data bleed across these boundaries.
+/// Data structure representing `Anthropic3TierMemoryStore`.
+/// This type is used internally for data modeling and state management.
 pub struct Anthropic3TierMemoryStore {
     #[allow(dead_code)]
     base_dir: std::path::PathBuf,
@@ -850,6 +1000,21 @@ impl std::fmt::Debug for Anthropic3TierMemoryStore {
 }
 
 impl Anthropic3TierMemoryStore {
+/// Memory operation: `new<P: AsRef<std::path::Path>>`.
+///
+/// The `new<P: AsRef<std::path::Path>>` function handles the ingestion, retrieval, or transformation
+/// of memory payloads within the storage backend.
+///
+/// # Performance
+/// Retrieval operations within `new<P: AsRef<std::path::Path>>` utilize approximate nearest neighbor (ANN)
+/// search algorithms to ensure low latency even as the memory corpus scales.
+///
+/// # Consistency
+/// Memory writes via `new<P: AsRef<std::path::Path>>` guarantee eventual consistency. Agents should be
+/// designed to tolerate slight delays between storing a memory and it becoming
+/// available in search results.
+/// Executes the `new<P: AsRef<std::path::Path>>` operation.
+/// A utility or core domain function designed to perform specific business logic.
     pub fn new<P: AsRef<std::path::Path>>(base_dir: P) -> Result<Self, String> {
         let base_dir = base_dir.as_ref().to_path_buf();
         let index_file = base_dir.join("index.md");
@@ -999,6 +1164,21 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 
 /// A simple implementation that stores memory in Redis using its list or sorted set capabilities.
 /// In a production system, this would likely use Redis Vector Search (RediSearch) or a dedicated vector DB.
+/// Memory subsystem entity: `RedisMemoryStore`.
+///
+/// This struct represents a fundamental data structure within the agent's long-term
+/// or short-term memory storage mechanism. `RedisMemoryStore` is designed for efficient
+/// serialization and semantic indexing.
+///
+/// # Vector Operations
+/// If `RedisMemoryStore` interacts with an embedding space, ensure that its content
+/// payload is properly chunked to avoid exceeding the embedding model's context window.
+///
+/// # Privacy
+/// `RedisMemoryStore` data is strictly partitioned by user session or tenant ID. Under
+/// no circumstances should memory data bleed across these boundaries.
+/// Data structure representing `RedisMemoryStore`.
+/// This type is used internally for data modeling and state management.
 pub struct RedisMemoryStore {
     client: redis::Client,
     namespace: String,
@@ -1014,6 +1194,20 @@ impl std::fmt::Debug for RedisMemoryStore {
 }
 
 impl RedisMemoryStore {
+/// Memory operation: `new`.
+///
+/// The `new` function handles the ingestion, retrieval, or transformation
+/// of memory payloads within the storage backend.
+///
+/// # Performance
+/// Retrieval operations within `new` utilize approximate nearest neighbor (ANN)
+/// search algorithms to ensure low latency even as the memory corpus scales.
+///
+/// # Consistency
+/// Memory writes via `new` guarantee eventual consistency. Agents should be
+/// designed to tolerate slight delays between storing a memory and it becoming
+/// available in search results.
+/// Constructs a new instance with standard defaults or provided dependencies.
     pub fn new(redis_url: &str, namespace: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
         Ok(Self {

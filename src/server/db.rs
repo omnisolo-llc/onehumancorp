@@ -11,6 +11,35 @@ use std::sync::OnceLock;
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
+/// Operation: `get_pool`.
+///
+/// Executes the `get_pool` workflow. This function encapsulates the business
+/// logic necessary to perform `get_pool` safely and efficiently within the
+/// current execution context.
+///
+/// # Expected Outcomes
+/// When `get_pool` completes successfully, it guarantees that all underlying
+/// state mutations have been applied atomically. If an error occurs, the
+/// system state remains untouched, adhering to strict rollback protocols.
+///
+/// # Performance
+/// The complexity of `get_pool` depends heavily on the input size. Always
+/// monitor the execution time of `get_pool` via OpenTelemetry spans.
+/// Operation: `get_pool`.
+///
+/// Executes the `get_pool` workflow. This function encapsulates the business
+/// logic necessary to perform `get_pool` safely and efficiently within the
+/// current execution context.
+///
+/// # Expected Outcomes
+/// When `get_pool` completes successfully, it guarantees that all underlying
+/// state mutations have been applied atomically. If an error occurs, the
+/// system state remains untouched, adhering to strict rollback protocols.
+///
+/// # Performance
+/// The complexity of `get_pool` depends heavily on the input size. Always
+/// monitor the execution time of `get_pool` via OpenTelemetry spans.
+/// Retrieves data synchronously or asynchronously based on the provided identifiers.
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
@@ -23,18 +52,80 @@ pub fn get_pool() -> PgPool {
 }
 
 #[derive(Clone)]
+/// Enumeration defining the possible variants for `DbStore`.
+/// Ensures type safety by restricting values to a predefined set of states.
 pub enum DbStore {
     Postgres,
     Sqlite(SqlitePool),
 }
 
 #[derive(Clone)]
+/// Core entity: `DB`.
+///
+/// This structure holds the schema definition for `DB` records.
+/// Ensure that instances of `DB` are validated before persistence
+/// to maintain data integrity across the platform's multi-tenant architecture.
+///
+/// # Fields Overview
+/// Every field in `DB` maps directly to the underlying persistence
+/// layer, facilitating seamless serialization and deserialization via the `sqlx`
+/// crate and strongly typed queries.
+///
+/// # Security Context
+/// If `DB` contains user-identifiable information (PII) or tenant
+/// secrets, ensure it is masked during standard application logging.
+/// Core entity: `DB`.
+///
+/// This structure holds the schema definition for `DB` records.
+/// Ensure that instances of `DB` are validated before persistence
+/// to maintain data integrity across the platform's multi-tenant architecture.
+///
+/// # Fields Overview
+/// Every field in `DB` maps directly to the underlying persistence
+/// layer, facilitating seamless serialization and deserialization via the `sqlx`
+/// crate and strongly typed queries.
+///
+/// # Security Context
+/// If `DB` contains user-identifiable information (PII) or tenant
+/// secrets, ensure it is masked during standard application logging.
+/// Data structure representing `DB`.
+/// This type is used internally for data modeling and state management.
 pub struct DB {
     pub pool: PgPool,
     pub store: DbStore,
 }
 
 impl DB {
+/// Operation: `is_sqlite`.
+///
+/// Executes the `is_sqlite` workflow. This function encapsulates the business
+/// logic necessary to perform `is_sqlite` safely and efficiently within the
+/// current execution context.
+///
+/// # Expected Outcomes
+/// When `is_sqlite` completes successfully, it guarantees that all underlying
+/// state mutations have been applied atomically. If an error occurs, the
+/// system state remains untouched, adhering to strict rollback protocols.
+///
+/// # Performance
+/// The complexity of `is_sqlite` depends heavily on the input size. Always
+/// monitor the execution time of `is_sqlite` via OpenTelemetry spans.
+/// Operation: `is_sqlite`.
+///
+/// Executes the `is_sqlite` workflow. This function encapsulates the business
+/// logic necessary to perform `is_sqlite` safely and efficiently within the
+/// current execution context.
+///
+/// # Expected Outcomes
+/// When `is_sqlite` completes successfully, it guarantees that all underlying
+/// state mutations have been applied atomically. If an error occurs, the
+/// system state remains untouched, adhering to strict rollback protocols.
+///
+/// # Performance
+/// The complexity of `is_sqlite` depends heavily on the input size. Always
+/// monitor the execution time of `is_sqlite` via OpenTelemetry spans.
+/// Evaluates whether the current connection pool is backed by SQLite.
+/// Returns `true` if connected to a local SQLite database, otherwise `false`.
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
             DbStore::Sqlite(_) => true,

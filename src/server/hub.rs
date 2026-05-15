@@ -15,12 +15,44 @@ use crate::services::billing::auditor::CostAuditor;
 use ::server_pricing::calculator::CostConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Server-sent events hub model: `HubEvent`.
+///
+/// Defines the structure required to manage real-time WebSocket or SSE connections.
+/// `HubEvent` maintains a registry of active clients mapped by their tenant ID.
+///
+/// # Backpressure
+/// Handlers interacting with `HubEvent` must respect client backpressure to
+/// avoid memory exhaustion from slow consumers.
+/// Server-sent events hub model: `HubEvent`.
+///
+/// Defines the structure required to manage real-time WebSocket or SSE connections.
+/// `HubEvent` maintains a registry of active clients mapped by their tenant ID.
+///
+/// # Backpressure
+/// Handlers interacting with `HubEvent` must respect client backpressure to
+/// avoid memory exhaustion from slow consumers.
 pub struct HubEvent {
     pub r#type: String,
     pub payload: String,
     pub occurred_at: DateTime<Utc>,
 }
 
+/// Server-sent events hub model: `Hub`.
+///
+/// Defines the structure required to manage real-time WebSocket or SSE connections.
+/// `Hub` maintains a registry of active clients mapped by their tenant ID.
+///
+/// # Backpressure
+/// Handlers interacting with `Hub` must respect client backpressure to
+/// avoid memory exhaustion from slow consumers.
+/// Server-sent events hub model: `Hub`.
+///
+/// Defines the structure required to manage real-time WebSocket or SSE connections.
+/// `Hub` maintains a registry of active clients mapped by their tenant ID.
+///
+/// # Backpressure
+/// Handlers interacting with `Hub` must respect client backpressure to
+/// avoid memory exhaustion from slow consumers.
 pub struct Hub {
     telemetry_tx: tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent>,
     agents: RwLock<HashMap<String, Agent>>,
@@ -48,10 +80,38 @@ pub struct Hub {
 
 impl Hub {
 
+/// Hub connection logic: `set_db`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `set_db` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `set_db`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `set_db` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn set_db(&self, db: std::sync::Arc<crate::db::DB>) {
         *self.task_manager.db.write().unwrap() = Some(db);
     }
 
+/// Hub connection logic: `new`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `new` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `new`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `new` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
@@ -145,30 +205,114 @@ impl Hub {
         }
     }
 
+/// Hub connection logic: `get_cost_auditor`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_cost_auditor` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_cost_auditor`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_cost_auditor` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_cost_auditor(&self) -> Arc<CostAuditor> {
         self.cost_auditor.clone()
     }
 
+/// Hub connection logic: `get_telemetry_tx`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_telemetry_tx` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_telemetry_tx`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_telemetry_tx` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_telemetry_tx(&self) -> tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent> {
         self.telemetry_tx.clone()
     }
 
+/// Hub connection logic: `register_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `register_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `register_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `register_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn register_agent(&self, agent: Agent) {
         let mut agents = self.agents.write().unwrap();
         agents.insert(agent.id.clone(), agent);
         self.invalidate_agent_cache();
     }
 
+/// Hub connection logic: `get_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_agent(&self, id: &str) -> Option<Agent> {
         let agents = self.agents.read().unwrap();
         agents.get(id).cloned()
     }
 
+/// Hub connection logic: `get_agents_count`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agents_count` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_agents_count`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agents_count` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_agents_count(&self) -> usize {
         let agents = self.agents.read().unwrap();
         agents.len()
     }
 
+/// Hub connection logic: `fire_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `fire_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `fire_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `fire_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn fire_agent(&self, id: &str) {
         let mut agents = self.agents.write().unwrap();
         let mut inbox = self.inbox.write().unwrap();
@@ -178,6 +322,20 @@ impl Hub {
         self.invalidate_agent_cache();
     }
 
+/// Hub connection logic: `get_agents`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agents` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_agents`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agents` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_agents(&self) -> Arc<Vec<Agent>> {
         {
             let cache = self.agent_cache.read().unwrap();
@@ -220,6 +378,20 @@ impl Hub {
         arc
     }
 
+/// Hub connection logic: `get_agents_by_org`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agents_by_org` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_agents_by_org`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_agents_by_org` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
         let agents = self.agents.read().unwrap();
         let mut agents_vec: Vec<Agent> = agents.values()
@@ -230,6 +402,20 @@ impl Hub {
         agents_vec
     }
 
+/// Hub connection logic: `open_meeting`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `open_meeting` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `open_meeting`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `open_meeting` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
         let mut meetings = self.meetings.write().unwrap();
         let mut agents = self.agents.write().unwrap();
@@ -255,6 +441,20 @@ impl Hub {
         meeting
     }
 
+/// Hub connection logic: `publish`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `publish` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `publish`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `publish` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
         let mut inbox = self.inbox.write().unwrap();
         let mut meetings = self.meetings.write().unwrap();
@@ -337,6 +537,20 @@ impl Hub {
         Ok(())
     }
 
+/// Hub connection logic: `get_meetings`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_meetings` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_meetings`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_meetings` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
         {
             let cache = self.meetings_cache.read().unwrap();
@@ -378,11 +592,39 @@ impl Hub {
         arc
     }
 
+/// Hub connection logic: `get_inbox`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_inbox` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `get_inbox`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `get_inbox` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn get_inbox(&self, agent_id: &str) -> Vec<Message> {
         let mut inbox = self.inbox.write().unwrap();
         inbox.remove(agent_id).unwrap_or_default()
     }
 
+/// Hub connection logic: `subscribe`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `subscribe`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn subscribe(&self, agent_id: String) -> broadcast::Receiver<Message> {
         let mut subs = self.subs.write().unwrap();
         let tx = subs.entry(agent_id).or_insert_with(|| {
@@ -392,6 +634,20 @@ impl Hub {
         tx.subscribe()
     }
 
+/// Hub connection logic: `delegate_task`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `delegate_task` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `delegate_task`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `delegate_task` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn delegate_task(self: std::sync::Arc<Self>, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
         check_documentation_gate(&task.content)?;
         
@@ -408,6 +664,20 @@ impl Hub {
         self.publish(task)
     }
 
+/// Hub connection logic: `delegate_sub_task`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `delegate_sub_task` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `delegate_sub_task`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `delegate_sub_task` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn delegate_sub_task(
         self: std::sync::Arc<Self>,
         from_agent_id: &str,
@@ -475,19 +745,75 @@ impl Hub {
         Ok(format!("{} | Result: {}", sub_agent_id, k8s_result))
     }
 
+/// Hub connection logic: `minimax_api_key`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `minimax_api_key` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `minimax_api_key`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `minimax_api_key` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn minimax_api_key(&self) -> &str {
         &self.minimax_api_key
     }
 
+/// Hub connection logic: `advertise_capabilities`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `advertise_capabilities` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `advertise_capabilities`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `advertise_capabilities` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn advertise_capabilities(&self, caps: AgentCapabilities) -> Result<(), String> {
         let _ = self.caps_tx.send(caps);
         Ok(())
     }
 
+/// Hub connection logic: `subscribe_capabilities`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe_capabilities` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `subscribe_capabilities`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe_capabilities` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn subscribe_capabilities(&self) -> broadcast::Receiver<AgentCapabilities> {
         self.caps_tx.subscribe()
     }
 
+/// Hub connection logic: `publish_mesh_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `publish_mesh_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `publish_mesh_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `publish_mesh_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn publish_mesh_event(&self, event: MeshEvent) -> Result<(), String> {
         let mut mesh_events = self.mesh_events.write().unwrap();
         let tx = mesh_events.entry(event.topic.clone()).or_insert_with(|| {
@@ -498,6 +824,20 @@ impl Hub {
         Ok(())
     }
 
+/// Hub connection logic: `subscribe_mesh_events`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe_mesh_events` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `subscribe_mesh_events`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe_mesh_events` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn subscribe_mesh_events(&self, topic: String) -> broadcast::Receiver<MeshEvent> {
         let mut mesh_events = self.mesh_events.write().unwrap();
         let tx = mesh_events.entry(topic).or_insert_with(|| {
@@ -507,6 +847,20 @@ impl Hub {
         tx.subscribe()
     }
 
+/// Hub connection logic: `publish_teammate_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `publish_teammate_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `publish_teammate_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `publish_teammate_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn publish_teammate_event(&self, channel: String, event: TeammateMeshEvent) -> Result<(), String> {
         let mut teammate_events = self.teammate_events.write().unwrap();
         let tx = teammate_events.entry(channel).or_insert_with(|| {
@@ -517,6 +871,20 @@ impl Hub {
         Ok(())
     }
 
+/// Hub connection logic: `subscribe_teammate_mesh`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe_teammate_mesh` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `subscribe_teammate_mesh`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `subscribe_teammate_mesh` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn subscribe_teammate_mesh(&self, channel: String) -> broadcast::Receiver<TeammateMeshEvent> {
         let mut teammate_events = self.teammate_events.write().unwrap();
         let tx = teammate_events.entry(channel).or_insert_with(|| {
@@ -526,22 +894,92 @@ impl Hub {
         tx.subscribe()
     }
 
+/// Hub connection logic: `tracker`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `tracker` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `tracker`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `tracker` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn tracker(&self) -> &Tracker {
         &self.tracker
     }
 
+/// Hub connection logic: `task_manager`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `task_manager` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `task_manager`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `task_manager` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn task_manager(&self) -> &TaskManager {
         &self.task_manager
     }
 
+/// Hub connection logic: `scheduler`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `scheduler` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `scheduler`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `scheduler` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn scheduler(&self) -> &Scheduler {
         &self.scheduler
     }
 
+/// Hub connection logic: `log_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `log_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `log_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `log_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn log_event(&self, event: serde_json::Value) {
         let _ = self.event_log_tx.try_send(event);
     }
 
+/// Hub connection logic: `append_recent_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `append_recent_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `append_recent_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `append_recent_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn append_recent_event(&self, event: HubEvent) {
         let mut recent = self.recent_events.write().unwrap();
         recent.push(event);
@@ -550,12 +988,40 @@ impl Hub {
         }
     }
 
+/// Hub connection logic: `recent_events`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `recent_events` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `recent_events`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `recent_events` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn recent_events(&self, limit: usize) -> Vec<HubEvent> {
         let recent = self.recent_events.read().unwrap();
         let count = recent.len().min(limit);
         recent.iter().rev().take(count).cloned().collect()
     }
 
+/// Hub connection logic: `sanitize_hub_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `sanitize_hub_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `sanitize_hub_event`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `sanitize_hub_event` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn sanitize_hub_event(&self, raw: serde_json::Value) -> HubEvent {
         let event_type = raw["type"].as_str().unwrap_or("unknown").to_string();
         let redacted_raw = ::server_telemetry::redact_interface_pii(raw);
@@ -566,6 +1032,20 @@ impl Hub {
         }
     }
 
+/// Hub connection logic: `start_token_burn_rate_worker`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `start_token_burn_rate_worker` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `start_token_burn_rate_worker`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `start_token_burn_rate_worker` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn start_token_burn_rate_worker(self: std::sync::Arc<Self>) {
         if self.get_token_usage.is_none() {
             return;
@@ -618,6 +1098,20 @@ impl Hub {
         }
     }
 
+/// Hub connection logic: `tool_parameter_auto_correction`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `tool_parameter_auto_correction` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `tool_parameter_auto_correction`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `tool_parameter_auto_correction` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn tool_parameter_auto_correction(&self, event_id: &str, agent_id: &str, payload: &[u8]) -> Result<(), String> {
         let mut auto_cor_track = self.auto_cor_track.write().unwrap();
         if auto_cor_track.contains(event_id) {
@@ -660,6 +1154,20 @@ impl Hub {
         Ok(())
     }
 
+/// Hub connection logic: `fork_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `fork_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `fork_agent`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `fork_agent` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
     pub fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
         let mut agents = self.agents.write().unwrap();
         
@@ -779,6 +1287,20 @@ fn get_feature_regex() -> &'static Regex {
     REGEX.get_or_init(|| Regex::new(r"\[Feature:\s*([^\]]+)\]").unwrap())
 }
 
+/// Hub connection logic: `check_documentation_gate`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `check_documentation_gate` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
+/// Hub connection logic: `check_documentation_gate`.
+///
+/// Broadcasts payloads to connected clients or manages their lifecycle.
+///
+/// # Authentication
+/// `check_documentation_gate` relies on the initial connection handshake token and must
+/// periodically re-verify session validity if configured.
 pub fn check_documentation_gate(content: &str) -> Result<(), String> {
     let regex = get_feature_regex();
     

@@ -9,6 +9,14 @@ pub mod proto {
 }
 
 /// Interop Layer protocol for mode-switch behaviour and sync
+/// Mesh interoperability payload: `InteropProtocol`.
+///
+/// Defines a strict protobuf-compatible schema for inter-service communication
+/// within the OHC Swarm. Do not use ad-hoc JSON for `InteropProtocol` on the wire.
+/// Mesh interoperability payload: `InteropProtocol`.
+///
+/// Defines a strict protobuf-compatible schema for inter-service communication
+/// within the OHC Swarm. Do not use ad-hoc JSON for `InteropProtocol` on the wire.
 pub struct InteropProtocol {
     bus: Arc<dyn Bus>,
     lock: Arc<dyn DistributedLock>,
@@ -16,6 +24,14 @@ pub struct InteropProtocol {
 }
 
 impl InteropProtocol {
+/// Mesh routing function: `new`.
+///
+/// Handles the serialization, addressing, and dispatch of payloads across the
+/// internal service mesh.
+/// Mesh routing function: `new`.
+///
+/// Handles the serialization, addressing, and dispatch of payloads across the
+/// internal service mesh.
     pub fn new(bus: Arc<dyn Bus>, lock: Arc<dyn DistributedLock>, node_id: String) -> Self {
         Self {
             bus,

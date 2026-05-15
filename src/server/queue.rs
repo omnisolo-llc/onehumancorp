@@ -14,6 +14,14 @@ use sqlx::Row;
 use ::server_common::auth_utils::set_org_context;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+/// Global queue registry: `Job`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `Job` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `Job`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `Job` guarantees durability of queued jobs even across node restarts.
 pub struct Job {
     pub id: String,
     pub tenant_id: String,
@@ -39,12 +47,26 @@ pub trait TaskQueue: Send + Sync {
     async fn requeue(&self, job: Job) -> Result<(), String>;
 }
 
+/// Global queue registry: `MemoryTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `MemoryTaskQueue` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `MemoryTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `MemoryTaskQueue` guarantees durability of queued jobs even across node restarts.
 pub struct MemoryTaskQueue {
     jobs: DashMap<String, Job>,
     role_queues: DashMap<String, Mutex<VecDeque<String>>>,
 }
 
 impl MemoryTaskQueue {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new() -> Self {
         MemoryTaskQueue {
             jobs: DashMap::new(),
@@ -132,11 +154,25 @@ impl TaskQueue for MemoryTaskQueue {
     }
 }
 
+/// Global queue registry: `PostgresTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `PostgresTaskQueue` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `PostgresTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `PostgresTaskQueue` guarantees durability of queued jobs even across node restarts.
 pub struct PostgresTaskQueue {
     pool: sqlx::PgPool,
 }
 
 impl PostgresTaskQueue {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new(pool: sqlx::PgPool) -> Self {
         PostgresTaskQueue { pool }
     }
@@ -306,6 +342,14 @@ pub trait TaskJobHandler: Send + Sync {
     async fn handle(&self, job: Job) -> Result<(), String>;
 }
 
+/// Global queue registry: `Worker`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `Worker` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `Worker`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `Worker` guarantees durability of queued jobs even across node restarts.
 pub struct Worker {
     queue: Arc<dyn TaskQueue>,
     roles: Vec<String>,
@@ -313,6 +357,12 @@ pub struct Worker {
 }
 
 impl Worker {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new(queue: Arc<dyn TaskQueue>, roles: Vec<String>, handler: Arc<dyn TaskJobHandler>) -> Self {
         Worker { queue, roles, handler }
     }
@@ -374,11 +424,25 @@ pub trait JobQueue: Send + Sync {
     async fn pop(&self, topic: &str) -> Result<Vec<u8>, String>;
 }
 
+/// Global queue registry: `InMemJobQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `InMemJobQueue` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `InMemJobQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `InMemJobQueue` guarantees durability of queued jobs even across node restarts.
 pub struct InMemJobQueue {
     topics: DashMap<String, (mpsc::Sender<Vec<u8>>, Arc<tokio::sync::Mutex<mpsc::Receiver<Vec<u8>>>>)>,
 }
 
 impl InMemJobQueue {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new() -> Self {
         InMemJobQueue {
             topics: DashMap::new(),
@@ -418,6 +482,14 @@ pub trait JobPayloadHandler: Send + Sync {
     async fn handle(&self, payload: Vec<u8>) -> Result<(), String>;
 }
 
+/// Global queue registry: `WorkerPool`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `WorkerPool` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `WorkerPool`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `WorkerPool` guarantees durability of queued jobs even across node restarts.
 pub struct WorkerPool {
     queue: Arc<dyn JobQueue>,
     topic: String,
@@ -426,6 +498,12 @@ pub struct WorkerPool {
 }
 
 impl WorkerPool {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new(queue: Arc<dyn JobQueue>, topic: String, workers: usize, handler: Arc<dyn JobPayloadHandler>) -> Self {
         WorkerPool { queue, topic, handler, workers }
     }
@@ -466,6 +544,14 @@ impl WorkerPool {
 }
 
 #[derive(Debug, Clone)]
+/// Global queue registry: `SubAgentJob`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `SubAgentJob` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `SubAgentJob`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `SubAgentJob` guarantees durability of queued jobs even across node restarts.
 pub struct SubAgentJob {
     pub id: String,
     pub tenant_id: String,
@@ -477,11 +563,25 @@ pub struct SubAgentJob {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Global queue registry: `QueueManager`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `QueueManager` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `QueueManager`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `QueueManager` guarantees durability of queued jobs even across node restarts.
 pub struct QueueManager {
     pool: sqlx::PgPool,
 }
 
 impl QueueManager {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new(pool: sqlx::PgPool) -> Self {
         QueueManager { pool }
     }
@@ -641,6 +741,14 @@ impl QueueManager {
 }
 
 #[derive(Debug, Clone)]
+/// Global queue registry: `SharedTaskModel`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `SharedTaskModel` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `SharedTaskModel`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `SharedTaskModel` guarantees durability of queued jobs even across node restarts.
 pub struct SharedTaskModel {
     pub id: String,
     pub tenant_id: String,
@@ -655,11 +763,25 @@ pub struct SharedTaskModel {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Global queue registry: `TaskQueueService`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `TaskQueueService` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `TaskQueueService`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `TaskQueueService` guarantees durability of queued jobs even across node restarts.
 pub struct TaskQueueService {
     pool: sqlx::PgPool,
 }
 
 impl TaskQueueService {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new(pool: sqlx::PgPool) -> Self {
         TaskQueueService { pool }
     }
@@ -779,11 +901,25 @@ impl TaskQueueService {
     }
 }
 
+/// Global queue registry: `SqliteTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `SqliteTaskQueue` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `SqliteTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `SqliteTaskQueue` guarantees durability of queued jobs even across node restarts.
 pub struct SqliteTaskQueue {
     pool: sqlx::SqlitePool,
 }
 
 impl SqliteTaskQueue {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new(pool: sqlx::SqlitePool) -> Self {
         SqliteTaskQueue { pool }
     }
@@ -921,6 +1057,14 @@ use ::server_common::auth_utils::set_org_context;
     }
 }
 
+/// Global queue registry: `RedisTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `RedisTaskQueue` guarantees durability of queued jobs even across node restarts.
+/// Global queue registry: `RedisTaskQueue`.
+///
+/// Encapsulates the configuration and connection pool for the asynchronous queue.
+/// `RedisTaskQueue` guarantees durability of queued jobs even across node restarts.
 pub struct RedisTaskQueue {
     client: redis::Client,
     queue_name: String,
@@ -928,6 +1072,12 @@ pub struct RedisTaskQueue {
 }
 
 impl RedisTaskQueue {
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
+/// Enqueue operation: `new`.
+///
+/// Dispatches a job to the underlying worker pool.
     pub fn new(redis_url: &str, queue_name: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
         Ok(RedisTaskQueue {

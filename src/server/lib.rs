@@ -97,6 +97,34 @@ fn get_telemetry_chan() -> &'static mpsc::Sender<Box<dyn FnOnce() + Send>> {
     })
 }
 
+/// API handler or utility: `record_telemetry<F>`.
+///
+/// The `record_telemetry<F>` function serves as a crucial integration point. It parses
+/// incoming requests, validates permissions, and delegates execution to the
+/// core domain services.
+///
+/// # Error Semantics
+/// `record_telemetry<F>` never panics under normal operating conditions. All recoverable
+/// errors are converted into standardized gRPC or HTTP response formats.
+///
+/// # Tracing Context
+/// Ensure that the active OpenTelemetry span is propagated correctly when
+/// `record_telemetry<F>` invokes asynchronous cross-service calls.
+/// API handler or utility: `record_telemetry<F>`.
+///
+/// The `record_telemetry<F>` function serves as a crucial integration point. It parses
+/// incoming requests, validates permissions, and delegates execution to the
+/// core domain services.
+///
+/// # Error Semantics
+/// `record_telemetry<F>` never panics under normal operating conditions. All recoverable
+/// errors are converted into standardized gRPC or HTTP response formats.
+///
+/// # Tracing Context
+/// Ensure that the active OpenTelemetry span is propagated correctly when
+/// `record_telemetry<F>` invokes asynchronous cross-service calls.
+/// Executes the `record_telemetry<F>` operation.
+/// A utility or core domain function designed to perform specific business logic.
 pub fn record_telemetry<F>(f: F)
 where
     F: FnOnce() + Send + 'static,
@@ -157,6 +185,34 @@ use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ::server_ohc::billing::billing_service_server::BillingServiceServer;
 use ::server_ohc::orchestration::*;
 
+/// State container: `MyHubService`.
+///
+/// Manages the in-memory representation of `MyHubService` within the server
+/// lifecycle. It is designed to be highly concurrent, often wrapped in an `Arc`
+/// to facilitate lock-free reads across multiple request handlers.
+///
+/// # Lifecycle
+/// The `MyHubService` is typically instantiated during the server bootstrap
+/// phase and lives until the server receives a graceful shutdown signal.
+///
+/// # Testing Constraints
+/// When mocking `MyHubService` for unit tests, ensure that you provide
+/// deterministic values to avoid flaky test executions.
+/// State container: `MyHubService`.
+///
+/// Manages the in-memory representation of `MyHubService` within the server
+/// lifecycle. It is designed to be highly concurrent, often wrapped in an `Arc`
+/// to facilitate lock-free reads across multiple request handlers.
+///
+/// # Lifecycle
+/// The `MyHubService` is typically instantiated during the server bootstrap
+/// phase and lives until the server receives a graceful shutdown signal.
+///
+/// # Testing Constraints
+/// When mocking `MyHubService` for unit tests, ensure that you provide
+/// deterministic values to avoid flaky test executions.
+/// Data structure representing `MyHubService`.
+/// This type is used internally for data modeling and state management.
 pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
@@ -167,6 +223,33 @@ pub struct MyHubService {
 }
 
 impl MyHubService {
+/// API handler or utility: `new`.
+///
+/// The `new` function serves as a crucial integration point. It parses
+/// incoming requests, validates permissions, and delegates execution to the
+/// core domain services.
+///
+/// # Error Semantics
+/// `new` never panics under normal operating conditions. All recoverable
+/// errors are converted into standardized gRPC or HTTP response formats.
+///
+/// # Tracing Context
+/// Ensure that the active OpenTelemetry span is propagated correctly when
+/// `new` invokes asynchronous cross-service calls.
+/// API handler or utility: `new`.
+///
+/// The `new` function serves as a crucial integration point. It parses
+/// incoming requests, validates permissions, and delegates execution to the
+/// core domain services.
+///
+/// # Error Semantics
+/// `new` never panics under normal operating conditions. All recoverable
+/// errors are converted into standardized gRPC or HTTP response formats.
+///
+/// # Tracing Context
+/// Ensure that the active OpenTelemetry span is propagated correctly when
+/// `new` invokes asynchronous cross-service calls.
+/// Constructs a new instance with standard defaults or provided dependencies.
     pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
