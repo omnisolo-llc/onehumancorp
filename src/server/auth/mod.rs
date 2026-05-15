@@ -500,6 +500,12 @@ impl Store {
                         }
                     };
                     if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                        if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
+                            return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                        }
+                        if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
+                            return Err("token revoked".to_string());
+                        }
                         return Ok(claims);
                     }
                     Err("Invalid token".to_string())
