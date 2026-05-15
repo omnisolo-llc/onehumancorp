@@ -8,6 +8,7 @@ filegroup(
         "env_verifier.rs",
         "mod.rs",
         "onboarding_agent.rs",
+        "tests.rs",
         "preflight.rs",
         "provisioner.rs",
         "validation.rs",
