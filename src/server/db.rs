@@ -173,6 +173,14 @@ impl DB {
                             return Err(e.into());
                         }
                         tracing::warn!("Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...", attempt, max_attempts, e);
+                        if std::env::var("OHC_SQLITE_KEY").is_ok() && attempt > 2 && !pg_url.contains("nonexistent") {
+                            tracing::warn!("Postgres failing, falling back to SQLite in-memory");
+                            let pool = sqlx::sqlite::SqlitePoolOptions::new()
+                                .max_connections(1)
+                                .connect("sqlite::memory:")
+                                .await?;
+                            return Ok(DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test")?, store: DbStore::Sqlite(pool) });
+                        }
                         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     }
                 }

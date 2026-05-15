@@ -5,6 +5,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 rust_library(
     name = "server_lib",
+    compile_data = ["index.html"],
     srcs = [
         "analytics.rs",
         "autodream_sync.rs",
@@ -127,6 +128,7 @@ rust_binary(
 
 rust_test(
     name = "server_test",
+    compile_data = ["index.html"],
     size = "large",
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
