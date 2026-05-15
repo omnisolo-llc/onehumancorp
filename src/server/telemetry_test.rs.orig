@@ -440,14 +440,16 @@ mod tests {
             ],
             || {
                 let payload = serde_json::json!({
+                    "tenant_id": "tenant-abc",
                     "user_data": {
-                        "email_address": "user@example.com",
+                        "email": "user@example.com",
                         "ssn": "000-00-0000"
                     }
                 });
                 let redacted = ::server_telemetry::redact_interface_pii(payload);
                 // Check that when telemetry operates, these PII fields are redacted
-                assert_eq!(redacted["user_data"]["email_address"], "[REDACTED]");
+                assert_eq!(redacted["tenant_id"], "[REDACTED]");
+                assert_eq!(redacted["user_data"]["email"], "[REDACTED]");
                 assert_eq!(redacted["user_data"]["ssn"], "[REDACTED]");
             },
         );
