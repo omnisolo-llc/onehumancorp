@@ -1,7 +1,7 @@
-use sqlx::PgPool;
-use uuid::Uuid;
 use super::db;
+use sqlx::PgPool;
 use std::time::Duration;
+use uuid::Uuid;
 
 async fn setup_db() -> Option<(PgPool, Uuid)> {
     if std::env::var("DATABASE_URL").is_err() {
@@ -11,14 +11,28 @@ async fn setup_db() -> Option<(PgPool, Uuid)> {
     let tenant_id = Uuid::new_v4();
     let tenant_id_clone = tenant_id.clone();
 
-    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
         .acquire_timeout(Duration::from_millis(50))
         .before_acquire(move |conn, _meta| {
             let t_id = tenant_id_clone.clone();
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute(format!("SET app.current_tenant_id = '{}'", t_id).as_str()).await?;
+                conn.execute(format!("SET app.current_tenant_id = '{}'", t_id).as_str())
+                    .await?;
                 Ok(true)
             })
         })
@@ -42,40 +56,86 @@ async fn test_builder_db_crud() {
     };
     assert_eq!(site.domain.as_deref(), Some("test.com"));
 
-    let sites = db::list_sites(&pool, tenant_id).await.expect("Failed to list sites");
+    let sites = db::list_sites(&pool, tenant_id)
+        .await
+        .expect("Failed to list sites");
     assert_eq!(sites.len(), 1);
     assert_eq!(sites[0].id, site.id);
 
     // 2. Create Page
-    let page = db::create_page(&pool, tenant_id, site.id, "/home".to_string(), "Home".to_string()).await.expect("Failed to create page");
+    let page = db::create_page(
+        &pool,
+        tenant_id,
+        site.id,
+        "/home".to_string(),
+        "Home".to_string(),
+    )
+    .await
+    .expect("Failed to create page");
     assert_eq!(page.path, "/home");
     assert_eq!(page.title, "Home");
 
-    let pages = db::list_pages(&pool, tenant_id, site.id).await.expect("Failed to list pages");
+    let pages = db::list_pages(&pool, tenant_id, site.id)
+        .await
+        .expect("Failed to list pages");
     assert_eq!(pages.len(), 1);
     assert_eq!(pages[0].id, page.id);
 
     // 3. Create Blocks
-    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"text": "Hello"}), 0).await.expect("Failed to create block 1");
-    let block2 = db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({"items": []}), 1).await.expect("Failed to create block 2");
+    let block1 = db::create_block(
+        &pool,
+        tenant_id,
+        page.id,
+        "HeroBlock".to_string(),
+        serde_json::json!({"text": "Hello"}),
+        0,
+    )
+    .await
+    .expect("Failed to create block 1");
+    let block2 = db::create_block(
+        &pool,
+        tenant_id,
+        page.id,
+        "ProductGridBlock".to_string(),
+        serde_json::json!({"items": []}),
+        1,
+    )
+    .await
+    .expect("Failed to create block 2");
 
-    let blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
+    let blocks = db::list_blocks(&pool, tenant_id, page.id)
+        .await
+        .expect("Failed to list blocks");
     assert_eq!(blocks.len(), 2);
     assert_eq!(blocks[0].id, block1.id);
     assert_eq!(blocks[1].id, block2.id);
 
     // 4. Update Block
-    let updated_block1 = db::update_block(&pool, tenant_id, block1.id, serde_json::json!({"text": "Updated Hello"})).await.expect("Failed to update block");
+    let updated_block1 = db::update_block(
+        &pool,
+        tenant_id,
+        block1.id,
+        serde_json::json!({"text": "Updated Hello"}),
+    )
+    .await
+    .expect("Failed to update block");
     assert_eq!(updated_block1.content["text"], "Updated Hello");
 
     // 5. Reorder Blocks
-    db::reorder_blocks(&pool, tenant_id, page.id, vec![block2.id, block1.id]).await.expect("Failed to reorder blocks");
-    let reordered_blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
+    db::reorder_blocks(&pool, tenant_id, page.id, vec![block2.id, block1.id])
+        .await
+        .expect("Failed to reorder blocks");
+    let reordered_blocks = db::list_blocks(&pool, tenant_id, page.id)
+        .await
+        .expect("Failed to list blocks");
     assert_eq!(reordered_blocks[0].id, block2.id); // block2 should now be first
     assert_eq!(reordered_blocks[1].id, block1.id);
 
     // Clean up
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
+        .bind(site.id)
+        .execute(&pool)
+        .await;
 }
 
 #[tokio::test]
@@ -90,14 +150,21 @@ async fn test_builder_jobs() {
         Err(_) => return, // Unmigrated db handling
     };
 
-    super::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id).await.expect("Failed to enqueue job");
+    super::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id)
+        .await
+        .expect("Failed to enqueue job");
 
     // Allow spawned task some time to complete
     tokio::time::sleep(Duration::from_millis(200)).await;
 
-    let _sites = db::list_sites(&pool, tenant_id).await.expect("Failed to list sites");
+    let _sites = db::list_sites(&pool, tenant_id)
+        .await
+        .expect("Failed to list sites");
     // Ensure cleanup
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
+        .bind(site.id)
+        .execute(&pool)
+        .await;
 }
 
 #[tokio::test]
@@ -124,33 +191,40 @@ async fn test_builder_api() {
 
     let app_with_auth = axum::Router::new()
         .nest("/builder", app)
-        .layer(axum::middleware::from_fn(move |req: axum::extract::Request, next: axum::middleware::Next| {
-            let claims = claims.clone();
-            async move {
-                let mut req = req;
-                req.extensions_mut().insert(claims);
-                next.run(req).await
-            }
-        }));
+        .layer(axum::middleware::from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let claims = claims.clone();
+                async move {
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            },
+        ));
 
     // Start server on random port
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
 
     tokio::spawn(async move {
-        axum::serve(listener, app_with_auth.into_make_service()).await.unwrap();
+        axum::serve(listener, app_with_auth.into_make_service())
+            .await
+            .unwrap();
     });
 
     let client = reqwest::Client::new();
     let base_url = format!("http://127.0.0.1:{}", port);
 
     // Create Site
-    let res = match client.post(&format!("{}/builder/sites", base_url))
+    let res = match client
+        .post(&format!("{}/builder/sites", base_url))
         .json(&serde_json::json!({"domain": "api-test.com"}))
-        .send().await {
-            Ok(r) => r,
-            Err(_) => return, // Avoid panic if server fails to start
-        };
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        Err(_) => return, // Avoid panic if server fails to start
+    };
 
     if res.status() == 500 {
         return; // Early return if DB is not migrated
@@ -161,14 +235,20 @@ async fn test_builder_api() {
     assert_eq!(site.domain.as_deref(), Some("api-test.com"));
 
     // List Sites
-    let res = client.get(&format!("{}/builder/sites", base_url))
-        .send().await.unwrap();
+    let res = client
+        .get(&format!("{}/builder/sites", base_url))
+        .send()
+        .await
+        .unwrap();
     assert_eq!(res.status(), 200);
 
     // Create Page
-    let res = client.post(&format!("{}/builder/sites/{}/pages", base_url, site.id))
+    let res = client
+        .post(&format!("{}/builder/sites/{}/pages", base_url, site.id))
         .json(&serde_json::json!({"path": "/about", "title": "About"}))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(res.status(), 200);
     let page: super::api::PageResponse = res.json().await.unwrap();
     assert_eq!(page.path, "/about");
@@ -182,22 +262,28 @@ async fn test_builder_api() {
     assert_eq!(block.block_type, "HeroBlock");
 
     // Update Block
-    let res = client.put(&format!("{}/builder/blocks/{}", base_url, block.id))
+    let res = client
+        .put(&format!("{}/builder/blocks/{}", base_url, block.id))
         .json(&serde_json::json!({"content": {"text": "Updated Hero"}}))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(res.status(), 200);
 
     // Publish Site
-    let res = client.post(&format!("{}/builder/sites/{}/publish", base_url, site.id))
-        .send().await.unwrap();
+    let res = client
+        .post(&format!("{}/builder/sites/{}/publish", base_url, site.id))
+        .send()
+        .await
+        .unwrap();
     assert_eq!(res.status(), 202); // ACCEPTED
 
     // Clean up
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
+        .bind(site.id)
+        .execute(&pool)
+        .await;
 }
-
-
-
 
 #[tokio::test]
 async fn test_builder_generate_and_publish_draft() {
@@ -223,34 +309,39 @@ async fn test_builder_generate_and_publish_draft() {
 
     let app_with_auth = axum::Router::new()
         .nest("/builder", app)
-        .layer(axum::middleware::from_fn(move |req: axum::extract::Request, next: axum::middleware::Next| {
-            let claims = claims.clone();
-            async move {
-                let mut req = req;
-                req.extensions_mut().insert(claims);
-                next.run(req).await
-            }
-        }));
+        .layer(axum::middleware::from_fn(
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let claims = claims.clone();
+                async move {
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            },
+        ));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
 
     tokio::spawn(async move {
-        axum::serve(listener, app_with_auth.into_make_service()).await.unwrap();
+        axum::serve(listener, app_with_auth.into_make_service())
+            .await
+            .unwrap();
     });
 
     let client = reqwest::Client::new();
     let base_url = format!("http://127.0.0.1:{}", port);
 
     // 1. Generate Storefront
-    let res = match client.post(&format!("{}/builder/generate", base_url))
+    let res = match client
+        .post(&format!("{}/builder/generate", base_url))
         .json(&serde_json::json!({"description": "I am a handyman"}))
-        .send().await {
-            Ok(r) => r,
-            Err(_) => return,
-        };
-
-
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        Err(_) => return,
+    };
 
     assert_eq!(res.status(), 200);
     let draft: super::api::SiteDraft = res.json().await.unwrap();
@@ -260,14 +351,20 @@ async fn test_builder_generate_and_publish_draft() {
     assert_eq!(draft.pages[0].blocks[1].block_type, "ServiceBookingBlock");
 
     // 2. Publish Draft
-    let res = client.post(&format!("{}/builder/publish_draft", base_url))
+    let res = client
+        .post(&format!("{}/builder/publish_draft", base_url))
         .json(&serde_json::json!({"domain": "handyman-draft.com", "draft": draft}))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
 
     assert_eq!(res.status(), 200);
     let site: super::api::SiteResponse = res.json().await.unwrap();
     assert_eq!(site.domain.as_deref(), Some("handyman-draft.com"));
 
     // Clean up
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
+        .bind(site.id)
+        .execute(&pool)
+        .await;
 }

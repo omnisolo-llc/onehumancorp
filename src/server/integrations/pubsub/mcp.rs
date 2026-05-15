@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use ohc_builtin_agent::mesh::transport::MeshTransport;
 use ::server_ohc::orchestration::TeammateMeshEvent;
+use ohc_builtin_agent::mesh::transport::MeshTransport;
+use std::sync::Arc;
 
 pub struct PubSubManager {
     transport: Arc<dyn MeshTransport>,
@@ -28,7 +28,12 @@ impl PubSubManager {
         }
     }
 
-    pub async fn publish(&self, tenant_id: &str, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+    pub async fn publish(
+        &self,
+        tenant_id: &str,
+        topic: &str,
+        payload: Vec<u8>,
+    ) -> Result<(), String> {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
         use prost::Message as ProstMessage;
@@ -62,7 +67,9 @@ impl PubSubManager {
 
         let wrapped_handler = Box::new(move |msg: TeammateMeshEvent| {
             use prost::Message as ProstMessage;
-            if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
+            if let Ok(event) =
+                ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..])
+            {
                 let mut new_msg = msg.clone();
                 new_msg.payload = event.payload;
                 handler(new_msg);
@@ -71,29 +78,58 @@ impl PubSubManager {
             }
         });
 
-        self.transport.subscribe(&formatted_topic, wrapped_handler).await
+        self.transport
+            .subscribe(&formatted_topic, wrapped_handler)
+            .await
     }
 
-    pub async fn acquire_lock(&self, tenant_id: &str, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    pub async fn acquire_lock(
+        &self,
+        tenant_id: &str,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         let formatted_resource = self.format_topic(tenant_id, resource);
-        self.transport.acquire_lock(&formatted_resource, owner, ttl_seconds).await
+        self.transport
+            .acquire_lock(&formatted_resource, owner, ttl_seconds)
+            .await
     }
 
-    pub async fn release_lock(&self, tenant_id: &str, resource: &str, owner: &str) -> Result<(), String> {
+    pub async fn release_lock(
+        &self,
+        tenant_id: &str,
+        resource: &str,
+        owner: &str,
+    ) -> Result<(), String> {
         let formatted_resource = self.format_topic(tenant_id, resource);
-        self.transport.release_lock(&formatted_resource, owner).await
+        self.transport
+            .release_lock(&formatted_resource, owner)
+            .await
     }
 
-    pub async fn register_presence(&self, tenant_id: &str, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+    pub async fn register_presence(
+        &self,
+        tenant_id: &str,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
         let formatted_agent_id = self.format_topic(tenant_id, agent_id);
-        self.transport.register_presence(&formatted_agent_id, status, ttl_seconds).await
+        self.transport
+            .register_presence(&formatted_agent_id, status, ttl_seconds)
+            .await
     }
 
-    pub async fn get_active_agents(&self, tenant_id: &str) -> Result<Vec<(String, String)>, String> {
+    pub async fn get_active_agents(
+        &self,
+        tenant_id: &str,
+    ) -> Result<Vec<(String, String)>, String> {
         let agents = self.transport.get_active_agents().await?;
         if self.is_cloud {
             let prefix = format!("{}:", tenant_id);
-            Ok(agents.into_iter()
+            Ok(agents
+                .into_iter()
                 .filter_map(|(id, status)| {
                     if id.starts_with(&prefix) {
                         Some((id.strip_prefix(&prefix).unwrap().to_string(), status))
@@ -112,8 +148,8 @@ impl PubSubManager {
 mod tests {
     use super::*;
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]
     async fn test_pubsub_manager_standalone() {
@@ -182,33 +218,54 @@ mod tests {
         let manager_cloud = PubSubManager::new(transport.clone(), true);
 
         // Acquire lock
-        let acquired = manager_cloud.acquire_lock("tenant_a", "my_resource", "agent_1", 10).await.unwrap();
+        let acquired = manager_cloud
+            .acquire_lock("tenant_a", "my_resource", "agent_1", 10)
+            .await
+            .unwrap();
         assert!(acquired);
 
         // Same tenant/resource should fail
-        let acquired_again = manager_cloud.acquire_lock("tenant_a", "my_resource", "agent_2", 10).await.unwrap();
+        let acquired_again = manager_cloud
+            .acquire_lock("tenant_a", "my_resource", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(!acquired_again);
 
         // Different tenant should succeed
-        let acquired_tenant_b = manager_cloud.acquire_lock("tenant_b", "my_resource", "agent_2", 10).await.unwrap();
+        let acquired_tenant_b = manager_cloud
+            .acquire_lock("tenant_b", "my_resource", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(acquired_tenant_b);
 
         // Release lock
-        manager_cloud.release_lock("tenant_a", "my_resource", "agent_1").await.unwrap();
+        manager_cloud
+            .release_lock("tenant_a", "my_resource", "agent_1")
+            .await
+            .unwrap();
 
         // Can acquire after release
-        let acquired_after_release = manager_cloud.acquire_lock("tenant_a", "my_resource", "agent_2", 10).await.unwrap();
+        let acquired_after_release = manager_cloud
+            .acquire_lock("tenant_a", "my_resource", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(acquired_after_release);
 
         // Test Standalone Mode Locking
         let transport_standalone = Arc::new(MemoryTransport::new());
         let manager_standalone = PubSubManager::new(transport_standalone.clone(), false);
 
-        let acquired_sa = manager_standalone.acquire_lock("tenant_x", "my_resource", "agent_1", 10).await.unwrap();
+        let acquired_sa = manager_standalone
+            .acquire_lock("tenant_x", "my_resource", "agent_1", 10)
+            .await
+            .unwrap();
         assert!(acquired_sa);
 
         // Tenant ID doesn't matter in standalone
-        let acquired_sa_diff = manager_standalone.acquire_lock("tenant_y", "my_resource", "agent_2", 10).await.unwrap();
+        let acquired_sa_diff = manager_standalone
+            .acquire_lock("tenant_y", "my_resource", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(!acquired_sa_diff);
     }
 
@@ -217,9 +274,18 @@ mod tests {
         let transport = Arc::new(MemoryTransport::new());
         let manager_cloud = PubSubManager::new(transport.clone(), true);
 
-        manager_cloud.register_presence("tenant_a", "agent_1", "online", 10).await.unwrap();
-        manager_cloud.register_presence("tenant_a", "agent_2", "busy", 10).await.unwrap();
-        manager_cloud.register_presence("tenant_b", "agent_3", "online", 10).await.unwrap();
+        manager_cloud
+            .register_presence("tenant_a", "agent_1", "online", 10)
+            .await
+            .unwrap();
+        manager_cloud
+            .register_presence("tenant_a", "agent_2", "busy", 10)
+            .await
+            .unwrap();
+        manager_cloud
+            .register_presence("tenant_b", "agent_3", "online", 10)
+            .await
+            .unwrap();
 
         let mut agents_a = manager_cloud.get_active_agents("tenant_a").await.unwrap();
         agents_a.sort_by(|a, b| a.0.cmp(&b.0));
@@ -238,8 +304,14 @@ mod tests {
         let transport_sa = Arc::new(MemoryTransport::new());
         let manager_sa = PubSubManager::new(transport_sa.clone(), false);
 
-        manager_sa.register_presence("tenant_x", "agent_x", "online", 10).await.unwrap();
-        manager_sa.register_presence("tenant_y", "agent_y", "busy", 10).await.unwrap();
+        manager_sa
+            .register_presence("tenant_x", "agent_x", "online", 10)
+            .await
+            .unwrap();
+        manager_sa
+            .register_presence("tenant_y", "agent_y", "busy", 10)
+            .await
+            .unwrap();
 
         let agents_sa = manager_sa.get_active_agents("tenant_z").await.unwrap();
         assert_eq!(agents_sa.len(), 2);
