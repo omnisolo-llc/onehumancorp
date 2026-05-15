@@ -1900,18 +1900,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
-                    <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
 
 
                     <!-- API Screen -->
@@ -2092,79 +2080,83 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
+                            <button onclick="nextStep(2)">Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <button class="secondary" onclick="nextStep(3)">Online Store</button>
+                            <button class="secondary" onclick="nextStep(3)">Service Business</button>
+                            <button class="secondary" onclick="nextStep(3)">Restaurant / Food</button>
+                            <button class="secondary" onclick="nextStep(3)">Creative / Portfolio</button>
+                            <button class="secondary" onclick="nextStep(3)">Local Business</button>
+                            <button class="secondary" onclick="nextStep(3)">Other</button>
+                            <br/><button onclick="nextStep(3)">Next</button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
+                            <h1>What is your business called?</h1>
+                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <button onclick="nextStep(4)">Auto-suggest Description</button>
+                            <button onclick="nextStep(4)">Next</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
+                            <label><input type="checkbox"> Physical products</label>
+                            <label><input type="checkbox"> Digital downloads</label>
+                            <label><input type="checkbox"> Services / appointments</label>
+                            <label><input type="checkbox"> Food & beverages</label>
                             <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
+                            <br/><button onclick="nextStep(5)">Next</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
+                            <h1>Add your first product</h1>
                             <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="0.00" />
                             <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
+                            <button onclick="nextStep(6)">Next</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <button class="secondary" onclick="nextStep(7)">Online only</button>
+                            <button class="secondary" onclick="nextStep(7)">In-person (POS)</button>
+                            <button class="secondary" onclick="nextStep(7)">Both</button>
+                            <button class="secondary" onclick="nextStep(7)">Skip for now</button>
+                            <br/><button onclick="nextStep(7)">Next</button>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
                         <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
+                            <h1>Choose a Template</h1>
+                            <button class="secondary" onclick="nextStep(8)">Modern</button>
+                            <button class="secondary" onclick="nextStep(8)">Bold</button>
+                            <br/><button onclick="nextStep(8)">Next</button>
+                            <br/><button class="secondary" onclick="nextStep(6)">Back</button>
+                        </div>
+                        <div id="step-8" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <button class="secondary" onclick="nextStep(9)">Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(9)">Connect Custom Domain</button>
+                            <button class="secondary" onclick="nextStep(9)">Buy a domain</button>
+                            <br/><button onclick="nextStep(9)">Next</button>
+                            <br/><button class="secondary" onclick="nextStep(7)">Back</button>
+                        </div>
+                        <div id="step-9" style="display: none;">
+                            <h1>Administrator account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)">Review & Launch</button>
+                            <br/><button class="secondary" onclick="nextStep(8)">Back</button>
                         </div>
                         <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                            <h1>Almost there</h1>
+                            <button onclick="nextStep(100)">Launch!</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
+                            <h1>Onboarding Complete!</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
@@ -2238,6 +2230,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
+
+                        function nextStep(step) {
+                            document.querySelectorAll('[id^="step-"]').forEach(s => s.style.display = 'none');
+                            const target = document.getElementById('step-' + step);
+                            if (target) {
+                                target.style.display = 'block';
+                            }
+                        }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
