@@ -20,6 +20,7 @@ pub struct ComputeEvent {
     pub network_egress_bytes: i64,
 }
 
+/// Central auditor that tracks real-time usage and costs across the platform.
 pub struct CostAuditor {
     config: CostConfig,
     agent_costs: Mutex<HashMap<String, f64>>,

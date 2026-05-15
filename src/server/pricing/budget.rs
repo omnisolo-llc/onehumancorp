@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 
+/// Manages spending limits to ensure the OneHumanCorp app remains economically sustainable.
 pub struct BudgetManager {
     pub total_limit: f64,
     current: Mutex<f64>,
@@ -23,6 +24,7 @@ impl BudgetManager {
         self
     }
 
+    /// Records an expenditure against the budget, updating the remaining balance.
     pub fn record_spend(&self, amount: f64) -> Result<bool, String> {
         let mut current = self.current.lock().unwrap();
 
@@ -58,6 +60,7 @@ impl BudgetManager {
         self.total_limit - *current
     }
 
+    /// Retrieves the remaining budget in cents.
     pub fn get_remaining_cents(&self) -> i64 {
         let current = self.current.lock().unwrap();
         ((self.total_limit - *current) * 100.0).round() as i64

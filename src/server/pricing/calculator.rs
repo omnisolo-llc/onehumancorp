@@ -1,9 +1,11 @@
+/// Represents the input and output token costs for an AI model.
 pub struct ModelPricing {
     pub input_cost: f64,
     pub output_cost: f64,
     pub cached_cost: f64,
 }
 
+/// Retrieves the standard pricing parameters for a given model.
 pub fn get_pricing(model: &str) -> ModelPricing {
     match model {
         // Anthropic — Claude 3 family
@@ -68,6 +70,7 @@ pub fn calculate_cost_cents(model: &str, prompt_tokens: i64, completion_tokens: 
     (cost * 100.0).round() as i64
 }
 
+/// Configuration for customized cost calculation.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct CostConfig {
     pub cost_per_input_token: f64,
@@ -80,6 +83,7 @@ pub struct CostConfig {
     pub cost_per_network_gb: f64,
 }
 
+/// Calculates total cost including input, output, cached tokens, and embeddings with a custom configuration.
 pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> f64 {
     let input_cost = input_tokens as f64 * config.cost_per_input_token;
     let output_cost = output_tokens as f64 * config.cost_per_output_token;

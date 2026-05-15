@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 
+/// A single cached response containing text and metadata for cost calculation.
 #[derive(Clone, Debug)]
 pub struct CachedResponse {
     pub text: String,
@@ -9,6 +10,7 @@ pub struct CachedResponse {
     pub token_count: usize,
 }
 
+/// In-memory cache for LLM prompts to reduce token usage and improve efficiency.
 pub struct PromptCache {
     cache: Arc<Mutex<HashMap<String, CachedResponse>>>,
     ttl: Duration,
@@ -34,6 +36,7 @@ impl PromptCache {
         None
     }
 
+    /// Retrieves a response from the cache and calculates the estimated cost saved in cents.
     pub fn get_with_cost_cents(&self, prompt: &str) -> (Option<CachedResponse>, i64) {
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
@@ -54,6 +57,7 @@ impl PromptCache {
         });
     }
 
+    /// Clears expired entries from the cache to optimize memory utilization.
     pub fn clear_expired(&self) {
         let mut cache = self.cache.lock().unwrap();
         let now = Instant::now();

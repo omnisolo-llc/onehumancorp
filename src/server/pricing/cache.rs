@@ -9,6 +9,7 @@ pub struct CacheEntry {
     pub expires_at: Instant,
 }
 
+/// Provides in-memory caching for local embeddings.
 pub struct LocalEmbeddingCache {
     entries: DashMap<String, CacheEntry>,
     ttl: Duration,
@@ -51,6 +52,7 @@ impl LocalEmbeddingCache {
         });
     }
 
+    /// Removes expired entries from the cache.
     pub fn prune(&self) -> usize {
         let now = Instant::now();
         let expired_keys: Vec<String> = self.entries.iter()
@@ -67,6 +69,7 @@ impl LocalEmbeddingCache {
     }
 }
 
+/// A memory-efficient cache that stores embeddings using lossless compression.
 pub struct CompressedEmbeddingCache {
     entries: DashMap<String, CacheEntry>,
     ttl: Duration,
@@ -123,6 +126,7 @@ impl CompressedEmbeddingCache {
         }
     }
 
+    /// Removes expired entries from the cache.
     pub fn prune(&self) -> usize {
         let now = Instant::now();
         let expired_keys: Vec<String> = self.entries.iter()

@@ -46,6 +46,7 @@ rust_library(
     ],
     data = ["//src/server/migrations"],
     edition = "2024",
+    compile_data = ["index.html"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -134,6 +135,7 @@ rust_test(
     env = {
         "RUST_TEST_THREADS": "1",
     },
+    compile_data = ["index.html"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],

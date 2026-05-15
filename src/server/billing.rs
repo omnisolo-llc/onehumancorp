@@ -5,6 +5,7 @@ use crate::integrations::stripe::client::StripeClient;
 use redis::Client;
 use std::sync::Arc;
 
+/// A Tracker instance attached to a Hub to coordinate billing usage.
 #[derive(Clone)]
 pub struct Tracker {
     rate_limiter: Option<Arc<RedisRateLimiter>>,

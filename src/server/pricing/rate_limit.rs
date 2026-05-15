@@ -1,6 +1,7 @@
 use redis::{AsyncCommands, Client};
 use tokio::sync::OnceCell;
 
+/// Represents the billing tier of a tenant, determining their quotas for storage and AI actions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanTier {
     Free,
@@ -122,6 +123,7 @@ impl RedisRateLimiter {
         conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
     }
 
+    /// Records an AI action and returns rate limit status with a soft limit warning if exceeded.
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
