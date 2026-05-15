@@ -1627,6 +1627,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
+
+                        }
+                        @keyframes shimmer {
+                            0% { background-position: -1000px 0; }
+                            100% { background-position: 1000px 0; }
+                        }
+                        .shimmer {
+                            animation: shimmer 2s infinite linear;
+                            background: linear-gradient(to right, #eff1f3 4%, #e2e2e2 25%, #eff1f3 36%);
+                            background-size: 1000px 100%;
                         }
                         .glass { 
                             background: var(--card-bg); 
@@ -1750,8 +1760,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
+                            <h3>Quick Actions <button class="secondary" onclick="document.getElementById('quick-actions-hint').style.display = document.getElementById('quick-actions-hint').style.display === 'none' ? 'block' : 'none'">?</button></h3>
+                            <p id="quick-actions-hint" style="display: none; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 6px; font-size: 13px;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -1783,13 +1793,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="console.log('action_add_product')">Add</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="console.log('action_view_orders')">Orders</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="showScreen('inbox-screen')">Messages</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="console.log('action_view_analytics')">Analytics</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="console.log('action_share_store')">Share</button>
                         </nav>
                     </div>
 
@@ -2210,7 +2218,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Login</h1>
                         <h2>One Human Corp</h2>
                         <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <div id="login-error" class="error">We couldn't sign you in. Please check your email and password and try again.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Login</button>
@@ -2268,6 +2276,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        function simulateOrder() {
+                            const feed = document.getElementById('agent-activity-feed');
+                            const original = feed.innerHTML;
+                            feed.innerHTML = '<div class="shimmer" style="height: 20px; width: 100%; border-radius: 4px; margin-bottom: 8px;"></div><div class="shimmer" style="height: 20px; width: 80%; border-radius: 4px;"></div>';
+                            setTimeout(() => {
+                                feed.innerHTML = '<p>Order received! Processing...</p>' + original;
+                            }, 1000);
+                        }
+
+                        function handleLogin(btn) {
+                            btn.classList.add('shimmer');
+                            btn.textContent = 'Signing in...';
+                            setTimeout(() => {
+                                btn.classList.remove('shimmer');
+                                btn.textContent = 'Login';
+                                document.getElementById('login-error').style.display = 'none';
+                                showScreen('dashboard-screen');
+                            }, 500);
+                        }
+
+                        function handleSignup(btn) {
+                            btn.classList.add('shimmer');
+                            btn.textContent = 'Creating account...';
+                            setTimeout(() => {
+                                btn.classList.remove('shimmer');
+                                btn.textContent = 'Sign Up';
+                                showScreen('setup-screen');
+                            }, 500);
+                        }
+
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
@@ -2279,4 +2317,434 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         "#,
     };
     axum::response::Html(content)
+}
+
+
+
+pub mod ui_dom {
+    use std::collections::HashMap;
+    use std::fmt::Write;
+
+    #[derive(Debug, PartialEq, Clone)]
+    pub enum HtmlToken {
+        StartTag(String, HashMap<String, String>),
+        EndTag(String),
+        Text(String),
+        Comment(String),
+        Doctype(String),
+    }
+
+    pub fn tokenize_html(html: &str) -> Vec<HtmlToken> {
+        let mut tokens = Vec::new();
+        let mut chars = html.chars().peekable();
+        let mut current_text = String::new();
+
+        while let Some(&c) = chars.peek() {
+            if c == '<' {
+                if !current_text.trim().is_empty() {
+                    tokens.push(HtmlToken::Text(current_text.clone()));
+                }
+                current_text.clear();
+                chars.next(); // consume '<'
+
+                let mut current_tag = String::new();
+                let mut in_quotes = false;
+
+                while let Some(&tc) = chars.peek() {
+                    if tc == '"' || tc == '\'' {
+                        in_quotes = !in_quotes;
+                    }
+                    if tc == '>' && !in_quotes {
+                        chars.next();
+                        break;
+                    }
+                    current_tag.push(tc);
+                    chars.next();
+                }
+
+                if current_tag.starts_with("!--") {
+                    let comment = current_tag[3..current_tag.len().saturating_sub(2)].to_string();
+                    tokens.push(HtmlToken::Comment(comment));
+                } else if current_tag.to_lowercase().starts_with("!doctype") {
+                    tokens.push(HtmlToken::Doctype(current_tag[8..].trim().to_string()));
+                } else if current_tag.starts_with('/') {
+                    tokens.push(HtmlToken::EndTag(current_tag[1..].trim().to_string()));
+                } else {
+                    let mut parts = current_tag.splitn(2, |c: char| c.is_whitespace());
+                    let tag_name = parts.next().unwrap_or("").trim().to_string();
+                    let attributes_str = parts.next().unwrap_or("");
+                    let attributes = parse_attributes(attributes_str);
+                    tokens.push(HtmlToken::StartTag(tag_name, attributes));
+                }
+            } else {
+                current_text.push(c);
+                chars.next();
+            }
+        }
+        if !current_text.trim().is_empty() {
+            tokens.push(HtmlToken::Text(current_text));
+        }
+        tokens
+    }
+
+    pub fn parse_attributes(attrs: &str) -> HashMap<String, String> {
+        let mut map = HashMap::new();
+        let mut current_key = String::new();
+        let mut current_value = String::new();
+        let mut in_quotes = false;
+        let mut reading_value = false;
+        let mut quote_char = '"';
+
+        let mut chars = attrs.chars().peekable();
+        while let Some(&c) = chars.peek() {
+            match c {
+                '=' if !in_quotes => {
+                    reading_value = true;
+                    chars.next();
+                }
+                '"' | '\'' => {
+                    if !in_quotes {
+                        in_quotes = true;
+                        quote_char = c;
+                    } else if c == quote_char {
+                        in_quotes = false;
+                        if !current_key.trim().is_empty() {
+                            map.insert(current_key.trim().to_string(), current_value.clone());
+                        }
+                        current_key.clear();
+                        current_value.clear();
+                        reading_value = false;
+                    } else if reading_value {
+                        current_value.push(c);
+                    }
+                    chars.next();
+                }
+                ' ' if !in_quotes => {
+                    if !current_key.trim().is_empty() && !reading_value {
+                        map.insert(current_key.trim().to_string(), String::new());
+                        current_key.clear();
+                    }
+                    chars.next();
+                }
+                _ => {
+                    if reading_value {
+                        current_value.push(c);
+                    } else if c != ' ' {
+                        current_key.push(c);
+                    }
+                    chars.next();
+                }
+            }
+        }
+        if !current_key.trim().is_empty() {
+            map.insert(current_key.trim().to_string(), current_value);
+        }
+        map
+    }
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct HtmlNode {
+        pub tag: String,
+        pub attributes: HashMap<String, String>,
+        pub children: Vec<HtmlNode>,
+        pub text: Option<String>,
+        pub is_text_node: bool,
+    }
+
+    impl HtmlNode {
+        pub fn new_element(tag: &str) -> Self {
+            HtmlNode {
+                tag: tag.to_string(),
+                attributes: HashMap::new(),
+                children: Vec::new(),
+                text: None,
+                is_text_node: false,
+            }
+        }
+
+        pub fn new_text(text: &str) -> Self {
+            HtmlNode {
+                tag: String::new(),
+                attributes: HashMap::new(),
+                children: Vec::new(),
+                text: Some(text.to_string()),
+                is_text_node: true,
+            }
+        }
+
+        pub fn set_attr(&mut self, key: &str, value: &str) {
+            self.attributes.insert(key.to_string(), value.to_string());
+        }
+
+        pub fn get_attr(&self, key: &str) -> Option<&String> {
+            self.attributes.get(key)
+        }
+
+        pub fn append_child(&mut self, child: HtmlNode) {
+            self.children.push(child);
+        }
+
+        pub fn render(&self) -> String {
+            if self.is_text_node {
+                return self.text.clone().unwrap_or_default();
+            }
+
+            let mut out = String::new();
+            let _ = write!(out, "<{}", self.tag);
+            for (k, v) in &self.attributes {
+                if v.is_empty() {
+                    let _ = write!(out, " {}", k);
+                } else {
+                    let _ = write!(out, " {}=\"{}\"", k, v);
+                }
+            }
+
+            if is_self_closing(&self.tag) {
+                out.push_str(" />");
+                return out;
+            }
+
+            out.push('>');
+            for child in &self.children {
+                out.push_str(&child.render());
+            }
+            let _ = write!(out, "</{}>", self.tag);
+            out
+        }
+
+        pub fn query_selector(&self, selector: &str) -> Option<&HtmlNode> {
+            if selector.starts_with('.') {
+                let class_name = &selector[1..];
+                if let Some(c) = self.get_attr("class") {
+                    if c.split_whitespace().any(|x| x == class_name) {
+                        return Some(self);
+                    }
+                }
+            } else if selector.starts_with('#') {
+                let id = &selector[1..];
+                if let Some(i) = self.get_attr("id") {
+                    if i == id {
+                        return Some(self);
+                    }
+                }
+            } else if self.tag == selector {
+                return Some(self);
+            }
+
+            for child in &self.children {
+                if let Some(found) = child.query_selector(selector) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        pub fn query_selector_all(&self, selector: &str) -> Vec<&HtmlNode> {
+            let mut results = Vec::new();
+            if selector.starts_with('.') {
+                let class_name = &selector[1..];
+                if let Some(c) = self.get_attr("class") {
+                    if c.split_whitespace().any(|x| x == class_name) {
+                        results.push(self);
+                    }
+                }
+            } else if selector.starts_with('#') {
+                let id = &selector[1..];
+                if let Some(i) = self.get_attr("id") {
+                    if i == id {
+                        results.push(self);
+                    }
+                }
+            } else if self.tag == selector {
+                results.push(self);
+            }
+
+            for child in &self.children {
+                results.extend(child.query_selector_all(selector));
+            }
+            results
+        }
+    }
+
+    pub fn is_self_closing(tag: &str) -> bool {
+        let tag = tag.to_lowercase();
+        matches!(tag.as_str(), "area" | "base" | "br" | "col" | "embed" | "hr" | "img" | "input" | "link" | "meta" | "param" | "source" | "track" | "wbr")
+    }
+
+    pub fn build_dom_tree(tokens: Vec<HtmlToken>) -> Vec<HtmlNode> {
+        let mut stack: Vec<HtmlNode> = Vec::new();
+        let mut roots: Vec<HtmlNode> = Vec::new();
+
+        for token in tokens {
+            match token {
+                HtmlToken::StartTag(mut name, attrs) => {
+                    let is_closing = name.ends_with('/');
+                    if is_closing {
+                        name.pop();
+                    }
+                    let node = HtmlNode {
+                        tag: name.clone(),
+                        attributes: attrs,
+                        children: Vec::new(),
+                        text: None,
+                        is_text_node: false,
+                    };
+
+                    if is_self_closing(&name) || is_closing {
+                        if let Some(parent) = stack.last_mut() {
+                            parent.append_child(node);
+                        } else {
+                            roots.push(node);
+                        }
+                    } else {
+                        stack.push(node);
+                    }
+                }
+                HtmlToken::Text(text) => {
+                    let text_node = HtmlNode::new_text(&text);
+                    if let Some(parent) = stack.last_mut() {
+                        parent.append_child(text_node);
+                    } else {
+                        roots.push(text_node);
+                    }
+                }
+                HtmlToken::EndTag(name) => {
+                    if let Some(idx) = stack.iter().rposition(|n| n.tag == name) {
+                        let mut nodes_to_pop = stack.split_off(idx);
+                        let mut node = nodes_to_pop.remove(0); // The matching tag
+
+                        // Any unclosed tags inside are appended as children
+                        for unclosed in nodes_to_pop {
+                            node.append_child(unclosed);
+                        }
+
+                        if let Some(parent) = stack.last_mut() {
+                            parent.append_child(node);
+                        } else {
+                            roots.push(node);
+                        }
+                    }
+                }
+                _ => {} // Ignore comments and doctype for now
+            }
+        }
+        roots.append(&mut stack);
+        roots
+    }
+}
+
+#[cfg(test)]
+mod ui_dom_tests {
+    use super::ui_dom::*;
+
+    #[test]
+    fn test_tokenizer_simple() {
+        let tokens = tokenize_html("<div>Hello</div>");
+        assert_eq!(tokens.len(), 3);
+        assert!(matches!(tokens[0], HtmlToken::StartTag(ref t, _) if t == "div"));
+        assert!(matches!(tokens[1], HtmlToken::Text(ref t) if t == "Hello"));
+        assert!(matches!(tokens[2], HtmlToken::EndTag(ref t) if t == "div"));
+    }
+
+    #[test]
+    fn test_tokenizer_attributes() {
+        let tokens = tokenize_html(r#"<button class="nav-item glass" id="btn-1">Click</button>"#);
+        assert_eq!(tokens.len(), 3);
+        if let HtmlToken::StartTag(tag, attrs) = &tokens[0] {
+            assert_eq!(tag, "button");
+            assert_eq!(attrs.get("class").unwrap(), "nav-item glass");
+            assert_eq!(attrs.get("id").unwrap(), "btn-1");
+        } else {
+            panic!("Expected StartTag");
+        }
+    }
+
+    #[test]
+    fn test_tokenize_complex_attributes() {
+        let tokens = tokenize_html(r#"<div data-val="123" empty-attr disabled onclick="alert('hi')"></div>"#);
+        if let HtmlToken::StartTag(_, attrs) = &tokens[0] {
+            assert_eq!(attrs.get("data-val").unwrap(), "123");
+            assert!(attrs.contains_key("empty-attr"));
+            assert!(attrs.contains_key("disabled"));
+            assert_eq!(attrs.get("onclick").unwrap(), "alert('hi')");
+        }
+    }
+
+    #[test]
+    fn test_dom_builder_basic() {
+        let tokens = tokenize_html("<div><p>Text</p></div>");
+        let dom = build_dom_tree(tokens);
+        assert_eq!(dom.len(), 1);
+        let div = &dom[0];
+        assert_eq!(div.tag, "div");
+        assert_eq!(div.children.len(), 1);
+        let p = &div.children[0];
+        assert_eq!(p.tag, "p");
+        assert_eq!(p.children.len(), 1);
+        assert_eq!(p.children[0].text.as_deref().unwrap(), "Text");
+    }
+
+    #[test]
+    fn test_dom_builder_self_closing() {
+        let tokens = tokenize_html("<div><img src='test.png'><br/></div>");
+        let dom = build_dom_tree(tokens);
+        let div = &dom[0];
+        assert_eq!(div.children.len(), 2);
+        assert_eq!(div.children[0].tag, "img");
+        assert_eq!(div.children[1].tag, "br");
+    }
+
+    #[test]
+    fn test_dom_query_selector_id() {
+        let tokens = tokenize_html(r#"<div><span id="target">Found me</span></div>"#);
+        let dom = build_dom_tree(tokens);
+        let found = dom[0].query_selector("#target").unwrap();
+        assert_eq!(found.tag, "span");
+        assert_eq!(found.children[0].text.as_deref().unwrap(), "Found me");
+    }
+
+    #[test]
+    fn test_dom_query_selector_class() {
+        let tokens = tokenize_html(r#"<div class="container"><p class="text highlight">Hi</p></div>"#);
+        let dom = build_dom_tree(tokens);
+        let found = dom[0].query_selector(".highlight").unwrap();
+        assert_eq!(found.tag, "p");
+    }
+
+    #[test]
+    fn test_dom_query_selector_all_tag() {
+        let tokens = tokenize_html(r#"<div><p>1</p><p>2</p><span><p>3</p></span></div>"#);
+        let dom = build_dom_tree(tokens);
+        let found = dom[0].query_selector_all("p");
+        assert_eq!(found.len(), 3);
+    }
+
+    #[test]
+    fn test_render_html() {
+        let mut div = HtmlNode::new_element("div");
+        div.set_attr("class", "container");
+
+        let mut p = HtmlNode::new_element("p");
+        p.append_child(HtmlNode::new_text("Hello World"));
+
+        div.append_child(p);
+
+        let mut img = HtmlNode::new_element("img");
+        img.set_attr("src", "image.png");
+        div.append_child(img);
+
+        let rendered = div.render();
+        assert_eq!(rendered, r#"<div class="container"><p>Hello World</p><img src="image.png" /></div>"#);
+    }
+
+    #[test]
+    fn test_malformed_html_unclosed_tags() {
+        let tokens = tokenize_html("<div><p>Unclosed paragraph</div>");
+        let dom = build_dom_tree(tokens);
+        let div = &dom[0];
+        assert_eq!(div.tag, "div");
+        let p = &div.children[0];
+        assert_eq!(p.tag, "p");
+        assert_eq!(p.children[0].text.as_deref().unwrap(), "Unclosed paragraph");
+    }
 }

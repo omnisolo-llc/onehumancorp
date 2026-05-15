@@ -10,7 +10,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     // 2. Perform the exact login flow as a user would
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
 
     // 3. Wait for dashboard to load
     await page.waitForURL('**/*');
@@ -36,7 +36,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
     await page.waitForURL('**/*');
 
     const addProductBtn = page.locator('text="Add"').filter({ visible: true }).first();
@@ -52,7 +52,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
     await page.waitForURL('**/*');
 
     // Make sure we select the one in the bottom nav if there are multiple
@@ -67,7 +67,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
     await page.waitForURL('**/*');
 
     const checkMessagesBtn = page.locator('text="Messages"').filter({ visible: true }).first();
@@ -81,7 +81,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
     await page.waitForURL('**/*');
 
     const seeAnalyticsBtn = page.locator('text="Analytics"').filter({ visible: true }).first();
@@ -95,7 +95,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
+    await page.click('button:has-text("Login")');
     await page.waitForURL('**/*');
 
     const shareStoreBtn = page.locator('text="Share"').last();
