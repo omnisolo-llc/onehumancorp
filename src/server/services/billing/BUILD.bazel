@@ -4,6 +4,7 @@ filegroup(
         "auditor.rs",
         "mod.rs",
         "service.rs",
+        "service_tests.rs",
     ],
     visibility = ["//src/server/services:__pkg__"],
 )
