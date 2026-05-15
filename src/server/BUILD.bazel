@@ -45,6 +45,7 @@ rust_library(
         "//src/server/services:srcs",
     ],
     data = ["//src/server/migrations"],
+    compile_data = ["index.html"],
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
