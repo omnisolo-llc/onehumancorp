@@ -52,7 +52,7 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
     }
 }
 
-async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpAddr), String> {
+async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, u16, std::net::IpAddr), String> {
     let url = reqwest::Url::parse(url_str).map_err(|e| e.to_string())?;
     if url.scheme() != "http" && url.scheme() != "https" {
         return Err("invalid scheme".to_string());
@@ -73,7 +73,7 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
     }
     
     let ip = valid_ip.ok_or_else(|| "URL resolves to blocked IP or no IPs found".to_string())?;
-    Ok((host.to_string(), ip))
+    Ok((host.to_string(), port, ip))
 }
 
 async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
@@ -88,9 +88,12 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
 
     let disc_url = format!("{}/.well-known/openid-configuration", issuer_url.trim_end_matches('/'));
     
-    let (host, ip) = validate_url_and_get_ip(&disc_url).await?;
+    // SSRF Hardening: Validate URL and resolve IP manually, then pin the request to that IP.
+    // We also disable redirects to prevent redirect-based SSRF.
+    let (host, port, ip) = validate_url_and_get_ip(&disc_url).await?;
     let client = reqwest::Client::builder()
-        .resolve(&host, std::net::SocketAddr::new(ip, if disc_url.starts_with("https") { 443 } else { 80 }))
+        .resolve(&host, std::net::SocketAddr::new(ip, port))
+        .redirect(reqwest::redirect::Policy::none()) // Disable redirects to prevent SSRF
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -102,9 +105,10 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
         .await
         .map_err(|e| e.to_string())?;
         
-    let (jwks_host, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri).await?;
+    let (jwks_host, jwks_port, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri).await?;
     let jwks_client = reqwest::Client::builder()
-        .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, if disc.jwks_uri.starts_with("https") { 443 } else { 80 }))
+        .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, jwks_port))
+        .redirect(reqwest::redirect::Policy::none()) // Disable redirects to prevent SSRF
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -231,8 +235,9 @@ mod tests {
     async fn test_validate_url_and_get_ip_valid() {
         let res = validate_url_and_get_ip("https://google.com").await;
         assert!(res.is_ok());
-        let (host, ip) = res.unwrap();
+        let (host, port, ip) = res.unwrap();
         assert_eq!(host, "google.com");
+        assert_eq!(port, 443);
         assert!(!is_blocked_ip(ip));
     }
 

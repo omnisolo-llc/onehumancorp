@@ -4,20 +4,22 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if org_id == "system" && !::server_config::get().multitenant {
+    if org_id == "system" {
         // Elevate privileges for system-level queries.
-        // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
-        // and we cannot call execute multiple times because E is consumed.
-        // Wait, we can use `query` instead of `executor.execute`, because `query` takes `executor` which we can borrow if we used `&mut executor`, but wait, we had errors with `&mut executor` too because E doesn't implement `Executor` for `&mut E`.
-        // The right way is to use a single SQL function, or use an anonymous DO block if we want multiple statements!
-        // But DO blocks can't be used with extended query protocol either? Actually they can!
-        // Another option: "SET LOCAL ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
-        query("SET LOCAL ROLE ohc_bypassrls")
+        // In both Standalone and Cloud mode, background tasks (e.g. workers, mission cleanup)
+        // require access to cross-tenant or system-only tables.
+        // We use an anonymous DO block to set both the role and reset the tenant context
+        // in a single round-trip, which is robust against RLS policies that check current_tenant.
+        // We avoid bind parameters here to prevent runtime errors in DO blocks.
+        query("DO $$ BEGIN PERFORM set_config('app.current_tenant', '', true); SET LOCAL ROLE ohc_bypassrls; END $$")
             .execute(executor)
             .await?;
     } else {
-        // No need to RESET ROLE since SET LOCAL is transaction scoped.
-        query("SELECT set_config('app.current_tenant', $1, true)")
+        // Enforce tenant isolation by setting the current_tenant context.
+        // We also ensure we are using the default role to prevent privilege escalation.
+        // SET LOCAL ROLE DEFAULT ensures we drop any previous elevation within the transaction.
+        // We use a single query that calls set_config to allow for bind parameters.
+        query("SELECT set_config('app.current_tenant', $1, true), set_config('role', 'default', true)")
             .bind(org_id)
             .execute(executor)
             .await?;

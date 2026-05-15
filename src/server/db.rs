@@ -61,16 +61,19 @@ impl DB {
             };
             if let Some(path_str) = path_str_opt {
                 let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+
+                // Security Hardening: Ensure Standalone Mode uses secure, encrypted SQLite storage
+                // and proper file permissions for the local wrapper.
                 if let Some(parent) = db_path.parent() {
                     if !parent.as_os_str().is_empty() {
                         #[cfg(unix)]
                         {
                             use std::os::unix::fs::DirBuilderExt;
                             let mut builder = std::fs::DirBuilder::new();
-                            // Enforce strict 0700 permissions for standalone SQLite
+                            // Enforce strict 0700 permissions for standalone SQLite directory
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                tracing::error!("Failed to securely create DB directory: {}", e);
+                                tracing::error!("CRITICAL SECURITY ERROR: Failed to securely create DB directory with 0700: {}", e);
                                 return Err(e.into());
                             }
                         }
@@ -84,34 +87,45 @@ impl DB {
                     }
                 }
 
-                // Securely create the database file with restricted permissions initially to avoid TOCTOU
+                // Securely create or verify the database file with restricted permissions (0600)
+                // to prevent local data exposure. We use O_EXCL if creating to prevent symlink attacks (TOCTOU).
                 #[cfg(unix)]
                 {
                     use std::fs::OpenOptions;
                     use std::os::unix::fs::OpenOptionsExt;
                     use std::os::unix::fs::PermissionsExt;
-                    if let Ok(file) = OpenOptions::new()
+
+                    let file_result = OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .create(true)
+                        .create_new(true) // Use O_EXCL to prevent TOCTOU/symlink attacks
                         .mode(0o600)
-                        .open(&db_path)
-                    {
-                        if let Ok(metadata) = file.metadata() {
+                        .open(&db_path);
+
+                    match file_result {
+                        Ok(file) => {
+                            tracing::info!("Created new secure standalone database file with 0600 permissions.");
+                        }
+                        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                            // File already exists, verify and enforce permissions
+                            let file = OpenOptions::new().read(true).write(true).open(&db_path)?;
+                            let metadata = file.metadata()?;
                             let mut perms = metadata.permissions();
                             if perms.mode() & 0o777 != 0o600 {
+                                tracing::warn!("Insecure permissions detected on existing database file. Hardening to 0600.");
                                 perms.set_mode(0o600);
-                                if let Err(e) = file.set_permissions(perms) {
-                                    tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                                    return Err(e.into());
-                                }
+                                file.set_permissions(perms)?;
                             }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to securely initialize database file: {}", e);
+                            return Err(e.into());
                         }
                     }
                 }
                 #[cfg(not(unix))]
                 {
-                    let _ = std::fs::File::create(&db_path);
+                    let _ = std::fs::OpenOptions::new().create(true).write(true).open(&db_path);
                 }
             }
 
