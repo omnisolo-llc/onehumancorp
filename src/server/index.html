@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>OneHuman Corp - Canvas</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --primary: #0055ff;
+                --primary-hover: #0044cc;
+                --bg: #f4f7fa;
+                --card-bg: rgba(255, 255, 255, 0.85);
+                --text: #1a1a1b;
+                --text-secondary: #646d7b;
+                --border: #e1e4e8;
+                --sidebar-bg: #ffffff;
+                --success: #10b981;
+                --warning: #f59e0b;
+                --danger: #ef4444;
+            }
+            body {
+                font-family: 'Inter', sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                margin: 0;
+                line-height: 1.5;
+            }
+            h1, h2, h3, h4, h5, h6 {
+                font-family: 'Outfit', sans-serif;
+            }
+            .glass {
+                background: var(--card-bg);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                backdrop-filter: blur(20px) saturate(200%);
+            }
+            nav {
+                padding: 0 20px;
+                display: flex;
+                gap: 20px;
+                border-bottom: 1px solid var(--border);
+                background: rgba(255, 255, 255, 0.9);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                height: 60px;
+                align-items: center;
+                backdrop-filter: blur(10px);
+                overflow-x: auto;
+            }
+            nav a {
+                color: var(--text-secondary);
+                text-decoration: none;
+                font-weight: 500;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            nav a:hover, nav a.active {
+                color: var(--primary);
+            }
+            .screen {
+                display: none;
+                max-width: 1200px;
+                margin: 20px auto;
+                padding: 0 16px;
+            }
+            .card {
+                padding: 24px;
+                margin-bottom: 24px;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 24px;
+            }
+            h1 {
+                font-size: 2rem;
+                font-weight: 600;
+                margin-top: 0;
+            }
+            h2 {
+                font-size: 1.5rem;
+                font-weight: 600;
+            }
+            button {
+                background: var(--primary);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: background 0.2s, transform 0.1s;
+                font-family: 'Inter', sans-serif;
+            }
+            button:hover {
+                background: var(--primary-hover);
+            }
+            button:active {
+                transform: scale(0.98);
+            }
+            button.secondary {
+                background: white;
+                color: var(--text);
+                border: 1px solid var(--border);
+            }
+            button.secondary:hover {
+                background: #f8f9fa;
+            }
+            input, textarea {
+                width: 100%;
+                padding: 12px;
+                margin-bottom: 16px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                box-sizing: border-box;
+                font-family: 'Inter', sans-serif;
+            }
+            .badge {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+            .badge.success { background: #d1fae5; color: #065f46; }
+            .badge.warning { background: #fef3c7; color: #92400e; }
+            .badge.danger { background: #fee2e2; color: #991b1b; }
+
+            /* Responsive Utilities */
+            @media (max-width: 768px) {
+                nav { padding: 0 10px; gap: 15px; }
+                h1 { font-size: 1.5rem; }
+            }
+
+            /* Analytics Chart CSS */
+            .bar-chart {
+                display: flex;
+                align-items: flex-end;
+                height: 150px;
+                gap: 8px;
+                margin-top: 20px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid var(--border);
+            }
+            .bar {
+                flex: 1;
+                background: var(--primary);
+                border-radius: 4px 4px 0 0;
+                min-width: 20px;
+                transition: height 0.3s ease;
+            }
+            .bar:hover {
+                background: var(--primary-hover);
+            }
+
+            /* Website Preview Widget */
+            .preview-widget {
+                border: 2px solid var(--border);
+                border-radius: 12px;
+                overflow: hidden;
+                position: relative;
+            }
+            .preview-header {
+                background: #f1f5f9;
+                padding: 8px 16px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                border-bottom: 1px solid var(--border);
+            }
+            .preview-dot {
+                width: 12px; height: 12px; border-radius: 50%;
+                background: #cbd5e1;
+            }
+            .preview-content {
+                height: 300px;
+                background: white;
+                padding: 20px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            /* Activity Feed */
+            .feed-item {
+                display: flex;
+                gap: 12px;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--border);
+            }
+            .feed-item:last-child {
+                border-bottom: none;
+            }
+            .feed-icon {
+                font-size: 1.5rem;
+            }
+            .feed-content p {
+                margin: 0;
+            }
+            .feed-time {
+                font-size: 0.8rem;
+                color: var(--text-secondary);
+            }
+
+            /* Micro-animations */
+            .skeleton {
+                background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: shimmer 1.5s infinite;
+                border-radius: 4px;
+            }
+            @keyframes shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+            }
+            .confetti {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                pointer-events: none;
+                z-index: 1000;
+                text-align: center;
+                font-size: 5rem;
+                animation: pop 1s ease-out;
+            }
+            @keyframes pop {
+                0% { transform: scale(0.5); opacity: 0; }
+                50% { transform: scale(1.2); opacity: 1; }
+                100% { transform: scale(1); opacity: 0; }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="confetti" class="confetti">🎉🎊✨</div>
+
+        <nav id="main-nav" style="display: none;">
+            <a onclick="showScreen('dashboard-screen')" class="active" id="nav-dashboard">Dashboard</a>
+            <a onclick="showScreen('business-manager-screen')" id="nav-business">Business</a>
+            <a onclick="showScreen('inbox-screen')" id="nav-inbox">Inbox</a>
+            <a onclick="showScreen('analytics-screen')" id="nav-analytics">Analytics</a>
+            <a onclick="showScreen('agents-screen')" id="nav-agents">Agents</a>
+            <a onclick="logout()" id="nav-logout">Logout</a>
+        </nav>
+
+        <div id="login-screen" class="screen glass" style="max-width: 400px; margin-top: 100px; display: block;">
+            <h1>Welcome to OHC</h1>
+            <p>Sign in to manage your business</p>
+            <input type="email" id="login-email" placeholder="Email Address" />
+            <input type="password" id="login-password" placeholder="Password" />
+            <button style="width: 100%;" onclick="login()">Login</button>
+            <p style="text-align: center; margin-top: 16px;"><a href="#" style="color: var(--primary);">Forgot password?</a></p>
+        </div>
+
+        <div id="dashboard-screen" class="screen">
+            <h1>Dashboard</h1>
+
+            <div class="grid">
+                <div class="card glass">
+                    <h3 style="margin-top: 0; color: var(--text-secondary);">Today's Revenue</h3>
+                    <h1 style="font-size: 3rem; margin: 10px 0;">$420.00</h1>
+                    <p style="color: var(--success);">↑ 12% from yesterday</p>
+                </div>
+                <div class="card glass">
+                    <h3 style="margin-top: 0; color: var(--text-secondary);">New Orders</h3>
+                    <h1 style="font-size: 3rem; margin: 10px 0;">8</h1>
+                    <p>3 awaiting fulfillment</p>
+                </div>
+                <div class="card glass">
+                    <h3 style="margin-top: 0; color: var(--text-secondary);">Active AI Agents</h3>
+                    <h1 style="font-size: 3rem; margin: 10px 0;">3</h1>
+                    <p>All systems operational</p>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card glass" style="grid-column: span 2;">
+                    <h2>Website Preview</h2>
+                    <div class="preview-widget">
+                        <div class="preview-header">
+                            <div class="preview-dot"></div>
+                            <div class="preview-dot"></div>
+                            <div class="preview-dot"></div>
+                            <span style="margin-left: 10px; font-size: 0.9rem; color: #64748b;">my-business.ohc.store</span>
+                        </div>
+                        <div class="preview-content">
+                            <h2 style="margin: 0;">My Awesome Store</h2>
+                            <p>Selling the best products online.</p>
+                            <button class="secondary" style="margin-top: 20px;">Shop Now</button>
+                        </div>
+                    </div>
+                    <button style="margin-top: 16px;" onclick="alert('Opening Site Builder...')">Edit Website</button>
+                    <button class="secondary" style="margin-top: 16px;" onclick="window.open('about:blank', '_blank')">View Live</button>
+                </div>
+
+                <div class="card glass">
+                    <h2>Swarm Activity</h2>
+                    <div class="feed-item">
+                        <div class="feed-icon">✅</div>
+                        <div class="feed-content">
+                            <p><strong>Support Agent</strong> replied to Maya.</p>
+                            <span class="feed-time">2 mins ago</span>
+                        </div>
+                    </div>
+                    <div class="feed-item">
+                        <div class="feed-icon">📦</div>
+                        <div class="feed-content">
+                            <p><strong>Order Manager</strong> updated stock for "Vegan Cake".</p>
+                            <span class="feed-time">1 hour ago</span>
+                        </div>
+                    </div>
+                    <div class="feed-item">
+                        <div class="feed-icon">📈</div>
+                        <div class="feed-content">
+                            <p><strong>Marketing Agent</strong> published a new Instagram post.</p>
+                            <span class="feed-time">3 hours ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="business-manager-screen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h1 style="margin: 0;">Products</h1>
+                <button onclick="document.getElementById('add-product-modal').style.display='block'">+ Add Product</button>
+            </div>
+
+            <div class="card glass" style="padding: 0; overflow: hidden;">
+                <table>
+                    <tr style="background: #f8fafc;">
+                        <th>Product</th>
+                        <th>Status</th>
+                        <th>Inventory</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Vegan Chocolate Cake</strong></td>
+                        <td><span class="badge success">Active</span></td>
+                        <td>12 in stock</td>
+                        <td>$45.00</td>
+                        <td><button class="secondary" style="padding: 6px 12px;">Edit</button></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vanilla Cupcakes (Dozen)</strong></td>
+                        <td><span class="badge danger">Out of Stock</span></td>
+                        <td>0 in stock</td>
+                        <td>$24.00</td>
+                        <td><button class="secondary" style="padding: 6px 12px;">Edit</button></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Custom Birthday Cake</strong></td>
+                        <td><span class="badge warning">Draft</span></td>
+                        <td>-</td>
+                        <td>$80.00</td>
+                        <td><button class="secondary" style="padding: 6px 12px;">Edit</button></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Add Product Modal (Simple inline implementation for E2E) -->
+            <div id="add-product-modal" class="card glass" style="display: none; border: 2px solid var(--primary);">
+                <h2>Add New Product</h2>
+                <input type="text" id="new-product-name" placeholder="Product Name">
+                <input type="text" id="new-product-price" placeholder="Price (e.g. 10.00)">
+                <button onclick="saveProduct()">Save Product</button>
+                <button class="secondary" onclick="document.getElementById('add-product-modal').style.display='none'">Cancel</button>
+            </div>
+        </div>
+
+        <div id="inbox-screen" class="screen">
+            <h1>Customer Inbox</h1>
+            <div class="grid">
+                <div class="card glass" style="grid-column: span 1;">
+                    <div style="padding: 12px; border-bottom: 1px solid var(--border); background: #f8fafc; cursor: pointer;">
+                        <strong>Maya S.</strong> <span style="float: right; font-size: 0.8rem; color: var(--primary);">New</span>
+                        <p style="margin: 4px 0 0; font-size: 0.9rem; color: var(--text-secondary);">Do you do vegan cakes?</p>
+                    </div>
+                    <div style="padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer;">
+                        <strong>Carlos</strong>
+                        <p style="margin: 4px 0 0; font-size: 0.9rem; color: var(--text-secondary);">Can I book for next Tuesday?</p>
+                    </div>
+                </div>
+
+                <div class="card glass" style="grid-column: span 2; display: flex; flex-direction: column;">
+                    <h3 style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Maya S.</h3>
+
+                    <div style="flex: 1; padding: 20px 0;">
+                        <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; display: inline-block; max-width: 80%;">
+                            Hi! Do you happen to make vegan chocolate cakes? It's for a birthday.
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0;">✨ AI Suggested Replies:</p>
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto;">
+                            <button class="secondary" style="font-size: 0.8rem; padding: 6px 12px; white-space: nowrap;" onclick="setReply('Yes, we have a wonderful vegan chocolate cake! It is $45.')">"Yes, we have a wonderful..."</button>
+                            <button class="secondary" style="font-size: 0.8rem; padding: 6px 12px; white-space: nowrap;" onclick="setReply('We sure do! When do you need it by?')">"We sure do! When do you..."</button>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="reply-input" placeholder="Type your reply..." style="margin-bottom: 0;">
+                            <button onclick="sendReply()">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="analytics-screen" class="screen">
+            <h1>Analytics</h1>
+            <div class="card glass">
+                <h2>Revenue (Last 7 Days)</h2>
+                <div class="bar-chart">
+                    <div class="bar" style="height: 30%;" title="Mon: $120"></div>
+                    <div class="bar" style="height: 50%;" title="Tue: $200"></div>
+                    <div class="bar" style="height: 40%;" title="Wed: $160"></div>
+                    <div class="bar" style="height: 80%;" title="Thu: $320"></div>
+                    <div class="bar" style="height: 60%;" title="Fri: $240"></div>
+                    <div class="bar" style="height: 100%;" title="Sat: $400"></div>
+                    <div class="bar" style="height: 90%;" title="Sun: $360"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; color: var(--text-secondary); font-size: 0.8rem;">
+                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card glass">
+                    <h3>Top Products</h3>
+                    <ul style="padding-left: 20px;">
+                        <li>Vegan Chocolate Cake (12 sold)</li>
+                        <li>Vanilla Cupcakes (8 sold)</li>
+                        <li>Custom Birthday Cake (3 sold)</li>
+                    </ul>
+                </div>
+                <div class="card glass">
+                    <h3>Traffic Sources</h3>
+                    <ul style="padding-left: 20px;">
+                        <li>Instagram (45%)</li>
+                        <li>Direct (30%)</li>
+                        <li>Google Search (25%)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="agents-screen" class="screen">
+            <h1>My Agents</h1>
+            <div class="grid">
+                <div class="card glass" style="border-top: 4px solid var(--primary);">
+                    <h2>Support Agent</h2>
+                    <p style="color: var(--text-secondary);">Handles customer inquiries and inbox routing.</p>
+                    <p><span class="badge success">Active</span></p>
+                    <button class="secondary">Configure</button>
+                </div>
+                <div class="card glass" style="border-top: 4px solid var(--success);">
+                    <h2>Order Manager</h2>
+                    <p style="color: var(--text-secondary);">Tracks inventory and updates fulfillment status.</p>
+                    <p><span class="badge success">Active</span></p>
+                    <button class="secondary">Configure</button>
+                </div>
+                <div class="card glass" style="border-top: 4px solid var(--warning);">
+                    <h2>Marketing Co-pilot</h2>
+                    <p style="color: var(--text-secondary);">Drafts newsletters and social posts.</p>
+                    <p><span class="badge warning">Needs Attention</span></p>
+                    <button>Connect Instagram</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function showScreen(id) {
+                // Hide all screens
+                document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+
+                // Show target screen
+                const screen = document.getElementById(id);
+                if (screen) screen.style.display = 'block';
+
+                // Update navigation active state
+                document.querySelectorAll('#main-nav a').forEach(a => a.classList.remove('active'));
+                const navId = 'nav-' + id.replace('-screen', '');
+                const navItem = document.getElementById(navId);
+                if (navItem) navItem.classList.add('active');
+
+                // Handle top nav visibility
+                if (id === 'login-screen') {
+                    document.getElementById('main-nav').style.display = 'none';
+                } else {
+                    document.getElementById('main-nav').style.display = 'flex';
+                }
+            }
+
+            function login() {
+                // Trigger confetti micro-animation
+                const confetti = document.getElementById('confetti');
+                confetti.style.display = 'block';
+                setTimeout(() => confetti.style.display = 'none', 1000);
+
+                showScreen('dashboard-screen');
+            }
+
+            function logout() {
+                showScreen('login-screen');
+                document.getElementById('login-email').value = '';
+                document.getElementById('login-password').value = '';
+            }
+
+            function saveProduct() {
+                const name = document.getElementById('new-product-name').value;
+                if(name) {
+                    alert(`Product "${name}" saved successfully!`);
+                    document.getElementById('add-product-modal').style.display = 'none';
+                    document.getElementById('new-product-name').value = '';
+                    document.getElementById('new-product-price').value = '';
+                }
+            }
+
+            function setReply(text) {
+                document.getElementById('reply-input').value = text;
+            }
+
+            function sendReply() {
+                const text = document.getElementById('reply-input').value;
+                if(text) {
+                    alert("Reply sent!");
+                    document.getElementById('reply-input').value = '';
+                }
+            }
+
+            // Initialization
+            window.onload = () => {
+                showScreen('login-screen');
+            };
+        </script>
+    </body>
+</html>
