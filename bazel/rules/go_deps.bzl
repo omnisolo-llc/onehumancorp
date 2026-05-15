@@ -49,3 +49,10 @@ def go_deps():
         sum = "h1:bTLqdHv7xrGlFbvf5/TXNxy/iUwwdkjhqQTJDjW7aj0=",
         version = "v0.0.0-20260209163413-e7419c687ee4",
     )
+    go_repository(
+        name = "com_github_mattn_go_sqlite3",
+        build_file_generation = "on",
+        importpath = "github.com/mattn/go-sqlite3",
+        sum = "h1:MigqEP4ZmHw3aIdIT7T+9TLa90Z6smwcthx+Azv4Cgo=",
+        version = "v1.14.42",
+    )

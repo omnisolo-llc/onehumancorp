@@ -42,6 +42,7 @@ rust.toolchain(
 use_repo(rust, "rust_toolchains")
 
 register_toolchains("//bazel/toolchains:prost_toolchain")
+
 register_toolchains("@rust_toolchains//:all")
 
 # ── WASM bindgen support ──────────────────────────────────────────────────────

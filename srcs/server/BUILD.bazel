@@ -19,5 +19,8 @@ go_binary(
         "//srcs/server/telemetry:telemetry",
         "//srcs/server/api/mesh:mesh",
         "//srcs/server/dashboard:dashboard",
+        "//srcs/server/services/sync:sync",
+        "@io_opentelemetry_go_otel//:otel",
+        "@com_github_mutecomm_go_sqlcipher_v4//:go_sqlcipher",
     ],
 )
