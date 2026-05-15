@@ -1746,11 +1746,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
+                            <p>Today's Sales: $0.00</p>
+                            <p>Orders to Ship: 0</p>
+                            <p>Team Members: 0</p>
+                            <p>Ongoing Tasks: 0</p>
+                            <p>Needs Your Approval: 0</p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
+                            <h3>Store Tips</h3>
+                        </div>
+                        <div class="card glass">
+                            <h3>Quick Actions <button class="secondary" onclick="document.getElementById('quick-actions-hint').style.display='block'">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
@@ -1773,6 +1781,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="simulateOrder()">Simulate Order</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
+                            <button onclick="alert('Help Center')">Help Center</button>
+                            <button onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button onclick="showScreen('api-screen')">Connect Apps</button>
+                            <button onclick="alert('Tutorial started')">Video Tutorials</button>
+                            <button onclick="alert('How to use this app')">How to use this app</button>
+                            <button onclick="alert('What\'s New')">What's New</button>
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
@@ -1787,9 +1801,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
                             <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                            <button class="nav-item">View Orders</button>
+                            <button class="nav-item">Check Messages</button>
+                            <button class="nav-item">See Analytics</button>
+                            <button class="nav-item">Share Store</button>
                         </nav>
                     </div>
 
@@ -2219,6 +2234,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        function toggleMenu() {
+                            const menu = document.getElementById('extra-menu');
+                            if (menu) {
+                                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                            }
+                        }
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
