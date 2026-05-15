@@ -2749,4 +2749,6709 @@ mod override_tests_resolve {
         assert_eq!(results[0].id, "winner_a");
         assert!(results[0].owner_override, "Winner should have inherited owner_override");
     }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_1() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_1"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 50 + (1 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_2() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_2"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 2,
+            reliability_score: 50 + (2 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_3() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_3"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 3,
+            reliability_score: 50 + (3 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_4() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_4"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 4,
+            reliability_score: 50 + (4 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_5() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_5"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 5,
+            reliability_score: 50 + (5 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_6() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_6"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 6,
+            reliability_score: 50 + (6 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_7() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_7"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 7,
+            reliability_score: 50 + (7 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_8() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_8"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 8,
+            reliability_score: 50 + (8 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_9() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_9"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 9,
+            reliability_score: 50 + (9 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_10() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_10"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 10,
+            reliability_score: 50 + (10 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_11() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_11"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 11,
+            reliability_score: 50 + (11 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_12() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_12"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 12,
+            reliability_score: 50 + (12 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_13() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_13"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 13,
+            reliability_score: 50 + (13 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_14() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_14"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 14,
+            reliability_score: 50 + (14 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_15() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_15"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 15,
+            reliability_score: 50 + (15 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_16() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_16"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 16,
+            reliability_score: 50 + (16 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_17() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_17"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 17,
+            reliability_score: 50 + (17 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_18() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_18"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 18,
+            reliability_score: 50 + (18 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_19() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_19"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 19,
+            reliability_score: 50 + (19 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_20() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_20"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 20,
+            reliability_score: 50 + (20 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_21() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_21"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 21,
+            reliability_score: 50 + (21 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_22() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_22"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 22,
+            reliability_score: 50 + (22 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_23() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_23"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 23,
+            reliability_score: 50 + (23 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_24() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_24"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 24,
+            reliability_score: 50 + (24 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_25() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_25"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 25,
+            reliability_score: 50 + (25 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_26() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_26"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 26,
+            reliability_score: 50 + (26 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_27() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_27"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 27,
+            reliability_score: 50 + (27 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_28() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_28"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 28,
+            reliability_score: 50 + (28 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_29() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_29"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 29,
+            reliability_score: 50 + (29 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_30() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_30"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 30,
+            reliability_score: 50 + (30 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_31() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_31"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 31,
+            reliability_score: 50 + (31 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_32() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_32"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 32,
+            reliability_score: 50 + (32 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_33() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_33"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 33,
+            reliability_score: 50 + (33 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_34() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_34"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 34,
+            reliability_score: 50 + (34 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_35() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_35"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 35,
+            reliability_score: 50 + (35 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_36() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_36"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 36,
+            reliability_score: 50 + (36 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_37() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_37"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 37,
+            reliability_score: 50 + (37 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_38() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_38"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 38,
+            reliability_score: 50 + (38 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_39() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_39"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 39,
+            reliability_score: 50 + (39 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_40() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_40"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 40,
+            reliability_score: 50 + (40 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_41() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_41"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 41,
+            reliability_score: 50 + (41 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_42() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_42"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 42,
+            reliability_score: 50 + (42 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_43() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_43"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 43,
+            reliability_score: 50 + (43 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_44() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_44"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 44,
+            reliability_score: 50 + (44 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_45() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_45"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 45,
+            reliability_score: 50 + (45 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_46() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_46"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 46,
+            reliability_score: 50 + (46 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_47() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_47"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 47,
+            reliability_score: 50 + (47 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_48() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_48"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 48,
+            reliability_score: 50 + (48 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_49() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_49"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 49,
+            reliability_score: 50 + (49 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_50() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_50"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 50,
+            reliability_score: 50 + (50 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_51() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_51"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 51,
+            reliability_score: 50 + (51 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_52() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_52"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 52,
+            reliability_score: 50 + (52 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_53() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_53"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 53,
+            reliability_score: 50 + (53 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_54() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_54"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 54,
+            reliability_score: 50 + (54 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_55() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_55"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 55,
+            reliability_score: 50 + (55 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_56() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_56"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 56,
+            reliability_score: 50 + (56 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_57() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_57"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 57,
+            reliability_score: 50 + (57 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_58() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_58"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 58,
+            reliability_score: 50 + (58 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_59() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_59"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 59,
+            reliability_score: 50 + (59 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_60() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_60"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 60,
+            reliability_score: 50 + (60 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_61() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_61"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 61,
+            reliability_score: 50 + (61 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_62() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_62"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 62,
+            reliability_score: 50 + (62 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_63() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_63"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 63,
+            reliability_score: 50 + (63 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_64() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_64"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 64,
+            reliability_score: 50 + (64 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_65() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_65"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 65,
+            reliability_score: 50 + (65 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_66() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_66"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 66,
+            reliability_score: 50 + (66 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_67() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_67"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 67,
+            reliability_score: 50 + (67 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_68() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_68"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 68,
+            reliability_score: 50 + (68 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_69() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_69"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 69,
+            reliability_score: 50 + (69 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_70() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_70"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 70,
+            reliability_score: 50 + (70 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_71() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_71"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 71,
+            reliability_score: 50 + (71 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_72() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_72"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 72,
+            reliability_score: 50 + (72 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_73() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_73"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 73,
+            reliability_score: 50 + (73 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_74() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_74"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 74,
+            reliability_score: 50 + (74 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_75() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_75"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 75,
+            reliability_score: 50 + (75 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_76() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_76"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 76,
+            reliability_score: 50 + (76 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_77() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_77"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 77,
+            reliability_score: 50 + (77 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_78() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_78"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 78,
+            reliability_score: 50 + (78 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_79() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_79"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 79,
+            reliability_score: 50 + (79 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_80() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_80"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 80,
+            reliability_score: 50 + (80 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_81() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_81"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 81,
+            reliability_score: 50 + (81 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_82() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_82"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 82,
+            reliability_score: 50 + (82 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_83() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_83"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 83,
+            reliability_score: 50 + (83 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_84() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_84"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 84,
+            reliability_score: 50 + (84 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_85() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_85"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 85,
+            reliability_score: 50 + (85 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_86() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_86"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 86,
+            reliability_score: 50 + (86 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_87() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_87"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 87,
+            reliability_score: 50 + (87 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_88() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_88"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 88,
+            reliability_score: 50 + (88 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_89() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_89"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 89,
+            reliability_score: 50 + (89 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_90() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_90"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 90,
+            reliability_score: 50 + (90 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_91() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_91"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 91,
+            reliability_score: 50 + (91 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_92() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_92"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 92,
+            reliability_score: 50 + (92 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_93() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_93"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 93,
+            reliability_score: 50 + (93 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_94() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_94"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 94,
+            reliability_score: 50 + (94 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_95() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_95"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 95,
+            reliability_score: 50 + (95 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_96() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_96"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 96,
+            reliability_score: 50 + (96 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_97() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_97"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 97,
+            reliability_score: 50 + (97 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_98() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_98"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 98,
+            reliability_score: 50 + (98 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_99() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_99"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 99,
+            reliability_score: 50 + (99 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_100() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_100"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 100,
+            reliability_score: 50 + (100 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_101() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_101"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 101,
+            reliability_score: 50 + (101 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_102() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_102"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 102,
+            reliability_score: 50 + (102 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_103() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_103"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 103,
+            reliability_score: 50 + (103 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_104() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_104"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 104,
+            reliability_score: 50 + (104 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_105() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_105"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 105,
+            reliability_score: 50 + (105 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_106() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_106"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 106,
+            reliability_score: 50 + (106 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_107() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_107"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 107,
+            reliability_score: 50 + (107 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_108() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_108"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 108,
+            reliability_score: 50 + (108 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_109() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_109"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 109,
+            reliability_score: 50 + (109 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_110() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_110"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 110,
+            reliability_score: 50 + (110 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_111() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_111"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 111,
+            reliability_score: 50 + (111 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_112() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_112"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 112,
+            reliability_score: 50 + (112 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_113() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_113"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 113,
+            reliability_score: 50 + (113 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_114() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_114"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 114,
+            reliability_score: 50 + (114 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_115() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_115"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 115,
+            reliability_score: 50 + (115 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_116() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_116"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 116,
+            reliability_score: 50 + (116 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_117() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_117"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 117,
+            reliability_score: 50 + (117 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_118() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_118"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 118,
+            reliability_score: 50 + (118 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_119() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_119"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 119,
+            reliability_score: 50 + (119 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_120() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_120"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 120,
+            reliability_score: 50 + (120 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_121() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_121"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 121,
+            reliability_score: 50 + (121 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_122() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_122"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 122,
+            reliability_score: 50 + (122 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_123() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_123"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 123,
+            reliability_score: 50 + (123 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_124() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_124"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 124,
+            reliability_score: 50 + (124 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_125() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_125"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 125,
+            reliability_score: 50 + (125 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_126() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_126"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 126,
+            reliability_score: 50 + (126 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_127() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_127"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 127,
+            reliability_score: 50 + (127 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_128() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_128"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 128,
+            reliability_score: 50 + (128 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_129() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_129"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 129,
+            reliability_score: 50 + (129 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_130() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_130"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 130,
+            reliability_score: 50 + (130 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_131() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_131"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 131,
+            reliability_score: 50 + (131 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_132() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_132"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 132,
+            reliability_score: 50 + (132 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_133() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_133"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 133,
+            reliability_score: 50 + (133 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_134() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_134"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 134,
+            reliability_score: 50 + (134 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_135() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_135"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 135,
+            reliability_score: 50 + (135 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_136() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_136"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 136,
+            reliability_score: 50 + (136 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_137() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_137"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 137,
+            reliability_score: 50 + (137 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_138() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_138"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 138,
+            reliability_score: 50 + (138 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_139() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_139"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 139,
+            reliability_score: 50 + (139 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_140() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_140"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 140,
+            reliability_score: 50 + (140 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_141() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_141"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 141,
+            reliability_score: 50 + (141 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_142() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_142"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 142,
+            reliability_score: 50 + (142 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_143() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_143"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 143,
+            reliability_score: 50 + (143 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_144() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_144"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 144,
+            reliability_score: 50 + (144 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_145() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_145"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 145,
+            reliability_score: 50 + (145 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_146() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_146"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 146,
+            reliability_score: 50 + (146 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_147() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_147"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 147,
+            reliability_score: 50 + (147 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_148() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_148"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 148,
+            reliability_score: 50 + (148 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
+
+    #[tokio::test]
+    async fn test_auto_generated_conflict_scenario_149() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );
+        ").execute(&pool).await.unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let record = EmbeddingRecord {
+            id: format!("test_record_149"),
+            tenant_id: "org_maya".to_string(),
+            agent_id: "agent_x".to_string(),
+            content: "Maya's bakery opens at 8am".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 149,
+            reliability_score: 50 + (149 % 50),
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&record).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 0); // No conflicts with a single record
+    }
 }
