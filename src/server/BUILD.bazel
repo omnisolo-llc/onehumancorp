@@ -17,6 +17,7 @@ rust_library(
         "lib.rs",
         "minimax.rs",
         "msgbus.rs",
+        "msgbus/tests.rs",
         "pipeline.rs",
         "powersync.rs",
         "queue.rs",
