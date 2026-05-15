@@ -23,15 +23,23 @@ pub enum VectorMemoryStore {
     Sqlite(sqlx::SqlitePool),
 }
 
+/// VectorRepository acts as the core persistent memory layer for the AI agents,
+/// providing an abstraction over the underlying vector database (PostgreSQL with pgvector
+/// or SQLite with sqlite-vec). It implements context storage, semantic search, conflict resolution,
+/// and stale context pruning.
 pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
 impl VectorRepository {
+    /// Creates a new VectorRepository using a PostgreSQL connection pool.
+    /// Used primarily in Cloud mode.
     pub fn new(pool: sqlx::PgPool) -> Self {
         VectorRepository { store: VectorMemoryStore::Postgres(pool) }
     }
 
+    /// Creates a new VectorRepository using a SQLite connection pool.
+    /// Used primarily in Standalone mode.
     pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
         VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
     }
@@ -41,6 +49,9 @@ impl VectorRepository {
         &self.store
     }
 
+    /// Upserts an `EmbeddingRecord` into the database. If a record with the same ID already exists,
+    /// it updates the existing record with the new values. This ensures that context memories
+    /// are kept up to date without duplicating identical knowledge entries.
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
 
@@ -110,10 +121,16 @@ impl VectorRepository {
         Ok(())
     }
 
+    /// Searches for relevant context across all departments within the organization by
+    /// looking up records via `tenant_id` without filtering by `agent_id`. This prevents siloed memory
+    /// and allows cross-department context sharing.
     pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         self.semantic_search(tenant_id, query_embedding, limit).await
     }
 
+    /// Performs a semantic similarity search using cosine distance between the query embedding
+    /// and the embeddings stored in the database. When a record is matched and retrieved, its
+    /// `last_referenced_at` timestamp is updated to current time and its `reference_count` is incremented.
     pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
@@ -777,6 +794,9 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
+/// PersistentMemoryStore integrates the `VectorRepository` with an LLM client to provide
+/// a high-level `LongTermMemory` interface. It automatically handles text embedding generation
+/// during storage and retrieval, and scopes all operations strictly to the provided `tenant_id`.
 pub struct PersistentMemoryStore {
     pub repo: std::sync::Arc<VectorRepository>,
     pub tenant_id: String,

@@ -4,6 +4,9 @@ use tokio::time::sleep;
 use std::time::Duration;
 use chrono::Utc;
 
+/// ConsolidationWorker runs in the background to continuously maintain the Persistent Memory Layer.
+/// It runs conflict resolution to merge overlapping or contradicting knowledge,
+/// and stale context pruning to clean up outdated memory without blocking AI request paths.
 pub struct ConsolidationWorker {
     pub repository: Arc<VectorRepository>,
     pub poll_interval: Duration,
@@ -11,6 +14,9 @@ pub struct ConsolidationWorker {
 }
 
 impl ConsolidationWorker {
+    /// Initializes a new ConsolidationWorker with the given repository, poll interval,
+    /// and a threshold representing the maximum age (in days) a memory record can be inactive
+    /// before it is considered stale and pruned.
     pub fn new(repository: Arc<VectorRepository>, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
         Self {
             repository,
@@ -19,7 +25,9 @@ impl ConsolidationWorker {
         }
     }
 
-    /// Run a single consolidation pass manually. Useful for testing.
+    /// Run a single consolidation pass manually. This resolves conflicts using deterministic
+    /// rules (owner override, reliability score, recency) and then performs stale context pruning.
+    /// Useful for testing or manual triggers.
     pub async fn run_once(&self) -> Result<(usize, bool), String> {
         let conflicts_resolved = self.repository.auto_resolve_conflicts().await?;
 
@@ -29,7 +37,9 @@ impl ConsolidationWorker {
         Ok((conflicts_resolved, pruning_success))
     }
 
-    /// Spawns a background task that continuously runs consolidation.
+    /// Spawns an async background task that continuously runs the consolidation pass
+    /// in an infinite loop separated by the `poll_interval`. Errors are ignored
+    /// so the background process stays alive independently of the main AI traffic.
     /// Returns a JoinHandle that can be used to wait for or abort the worker.
     pub fn spawn_background_task(self: Arc<Self>) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
