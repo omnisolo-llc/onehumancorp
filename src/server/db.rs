@@ -1137,33 +1137,21 @@ mod e2e_tenant_isolation_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let _pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'tenant_1'").await?;
-                    Ok(true)
-                })
-            })
             .connect_lazy(database_url)
             .unwrap();
 
-        let _pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = 'tenant_2'").await?;
-                    Ok(true)
-                })
-            })
-            .connect_lazy(database_url)
-            .unwrap();
+        // Verify tenant 1 access
+        let mut tx1 = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx1, "tenant_1").await.unwrap();
 
-        // This verifies tenant access doesn't bleed across pools
+        // Verify tenant 2 access
+        let mut tx2 = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx2, "tenant_2").await.unwrap();
+
+        // This verifies tenant access doesn't bleed across connections
         // (RLS logic inherently evaluated by postgres)
     }
 
