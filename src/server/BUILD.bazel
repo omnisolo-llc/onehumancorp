@@ -5,6 +5,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 rust_library(
     name = "server_lib",
+    compile_data = ["index.html"],
     srcs = [
         "analytics.rs",
         "autodream_sync.rs",
@@ -114,6 +115,7 @@ rust_library(
 
 rust_binary(
     name = "server",
+    compile_data = ["index.html"],
     srcs = ["main.rs"],
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -150,6 +152,7 @@ rust_test(
 rust_test(
     name = "crypto_test",
     size = "small",
+    compile_data = ["index.html"],
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
     edition = "2024",
