@@ -1,0 +1,9 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "daemon.rs",
+        "daemon_test.rs",
+    ],
+    visibility = ["//src/server/orchestration:__pkg__"],
+)
