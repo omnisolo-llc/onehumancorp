@@ -1,5 +1,4 @@
-issue_category: cleanup
-debt_report:
-  description: "Bump version to v0.4.41"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+role: General Mission Worker & Taskmaster (L5)
+category: IMPLEMENTER
+status: completed
+details: Zero WIP safe exit
