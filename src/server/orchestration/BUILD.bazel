@@ -4,6 +4,7 @@ filegroup(
         "chaos_test.rs",
         "handoff.rs",
         "health.rs",
+        "health_tests.rs",
         "hierarchical.rs",
         "hub.rs",
         "mesh.rs",
