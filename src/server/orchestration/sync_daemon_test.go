@@ -81,7 +81,7 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 
 	expectedState := map[string]bool{
 		"mission-1": true,
-		"mission-2": true, // BURSTING should be synced
+		"mission-2": true,  // BURSTING should be synced
 		"mission-3": false, // Status was COMPLETED, not synced
 		"mission-4": true,  // Already synced
 	}
@@ -102,10 +102,10 @@ func TestHybridMCPRAGDaemon_SyncPendingMissions(t *testing.T) {
 		}
 	}
 }
+
 // We rely on the internal syncToCloud mock rather than an HTTP mock because
 // syncToCloud returns nil by default. We can mock it here if needed, but since it returns nil,
 // it automatically succeeds.
-
 
 func TestHybridMCPRAGDaemon_SyncPendingMissions_Cooldown(t *testing.T) {
 	ClearSemaphore()

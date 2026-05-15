@@ -11,15 +11,15 @@ var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syn
 // HybridMCPRAGDaemon handles the synchronization of local agent_missions
 // marked for CLOUD_ESCALATION to the remote orchestration cloud.
 type HybridMCPRAGDaemon struct {
-	db          *sql.DB
-	remoteURL   string
+	db        *sql.DB
+	remoteURL string
 }
 
 // NewHybridMCPRAGDaemon creates a new instance of HybridMCPRAGDaemon
 func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 	return &HybridMCPRAGDaemon{
-		db:          db,
-		remoteURL:   remoteURL,
+		db:        db,
+		remoteURL: remoteURL,
 	}
 }
 
