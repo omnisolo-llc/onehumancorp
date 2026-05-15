@@ -39,11 +39,11 @@ pub trait TaskQueue: Send + Sync {
     async fn requeue(&self, job: Job) -> Result<(), String>;
 }
 
-include!("queue/memory.rs");
+include!("./queue/memory.rs");
 
 
 
-include!("queue/postgres.rs");
+include!("./queue/postgres.rs");
 
 
 
@@ -52,7 +52,7 @@ pub trait TaskJobHandler: Send + Sync {
     async fn handle(&self, job: Job) -> Result<(), String>;
 }
 
-include!("queue/worker.rs");
+include!("./queue/worker.rs");
 
 
 #[async_trait]
@@ -61,7 +61,7 @@ pub trait JobQueue: Send + Sync {
     async fn pop(&self, topic: &str) -> Result<Vec<u8>, String>;
 }
 
-include!("queue/inmem.rs");
+include!("./queue/inmem.rs");
 
 
 
@@ -72,21 +72,21 @@ pub trait JobPayloadHandler: Send + Sync {
 
 
 
-include!("queue/subagent.rs");
+include!("./queue/subagent.rs");
 
-include!("queue/manager.rs");
-
-
-include!("queue/shared.rs");
-
-include!("queue/service.rs");
+include!("./queue/manager.rs");
 
 
-include!("queue/sqlite.rs");
+include!("./queue/shared.rs");
+
+include!("./queue/service.rs");
+
+
+include!("./queue/sqlite.rs");
 
 
 
-include!("queue/redis.rs");
+include!("./queue/redis.rs");
 
 
 
