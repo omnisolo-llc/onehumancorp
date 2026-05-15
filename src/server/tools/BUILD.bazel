@@ -2,6 +2,8 @@ filegroup(
     name = "srcs",
     srcs = [
         "ingest_arch.rs",
+        "validation.rs",
+        "validation/validation_test.rs",
         "mod.rs",
         "//src/server/tools/fsmcp:srcs",        "//src/server/tools/local_proxy:srcs",        "//src/server/tools/hybridfsmcp:srcs",
     ],

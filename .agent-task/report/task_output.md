@@ -1,0 +1,131 @@
+# OHC Tool Integration Research Report
+
+## 1. Social Media Integration
+### Problem Statement
+Small business owners (SBOs) like Fatima miss sales because messages are scattered across Instagram DMs, Facebook Messenger, and WhatsApp. They need a unified inbox that requires zero technical setup.
+### Research Report
+- **Meta Graph API (Instagram/FB/WhatsApp)**: High barrier to entry (requires App Review, business verification). Native, reliable, but complex for raw API usage.
+- **ManyChat**: Great visual builder, but can be expensive and is focused on automation/bots rather than a simple unified inbox.
+- **Ayrshare**: Good API for developers, handles multiple networks, but focuses more on posting than direct messaging.
+- **Recommendation**: Native Meta Graph API integration wrapped by OHC to shield the user from OAuth complexity, prioritizing Instagram DMs and WhatsApp Business.
+### Design Doc
+- **Trigger**: User connects "Social Media" from the OHC Settings page via a single "Connect Facebook/Instagram" button.
+- **Action**: OHC sets up webhooks for messages and pulls historical threads.
+- **User Experience**: All incoming DMs and WhatsApp messages appear in a new "Inbox" tab inside OHC. The SBO can reply directly from OHC, and the message routes back to the correct platform.
+### Implementation Prompt
+Implement a unified "Inbox" view that securely connects to the user's Meta Business account. Users should be able to read and reply to Instagram and WhatsApp messages from one central UI within OHC. Success means a non-technical user can authorize the app in 3 clicks and start receiving messages immediately.
+### Priority
+P0
+### Estimated Scope
+Large
+
+## 2. Calendar & Scheduling
+### Problem Statement
+Service-based SBOs waste hours going back and forth with clients to find meeting times, often double-booking themselves.
+### Research Report
+- **Google Calendar API**: Ubiquitous, but requires users to manage their own booking pages.
+- **Calendly**: Industry standard, easy to use, but adding it means another subscription for the SBO.
+- **Cal.com**: Open-source, developer-friendly API, white-label options.
+- **Recommendation**: Deep integration with Google Calendar combined with a native OHC booking page generator (reducing the need for a Calendly subscription).
+### Design Doc
+- **Trigger**: User enables "Booking Page" in OHC and signs in with Google.
+- **Action**: OHC syncs free/busy times and generates a public booking URL (`ohc.app/book/[business]`).
+- **User Experience**: SBO shares the link. Clients book times. OHC automatically adds it to the SBO's Google Calendar and sends a confirmation email.
+### Implementation Prompt
+Create a one-click Google Calendar sync that powers a natively generated OHC booking page. The booking page should display the SBO's available times and automatically block out conflicts.
+### Priority
+P1
+### Estimated Scope
+Medium
+
+## 3. Email Marketing
+### Problem Statement
+SBOs want to announce promotions or updates to past customers, but moving customer lists to tools like Mailchimp is tedious and expensive.
+### Research Report
+- **Mailchimp**: Well-known but gets very expensive quickly as the list grows. Overly complex for simple announcements.
+- **Resend**: Developer-focused, extremely reliable, clean API. Great for transactional emails and simple broadcasts.
+- **Listmonk**: Self-hosted, powerful, but too much overhead for standalone mode.
+- **Recommendation**: Integrate Resend for sending capabilities, while managing the audience and templates entirely within OHC.
+### Design Doc
+- **Trigger**: User clicks "Send Update" from the Customers list.
+- **Action**: OHC compiles the selected customers and sends a broadcast via Resend API.
+- **User Experience**: SBO types a plain-text or simple rich-text message and clicks send. OHC handles the unsubscribes and delivery tracking in the background.
+### Implementation Prompt
+Build a simple "Broadcast" feature that allows users to select customers from their OHC database and send them a beautifully formatted email update without needing a third-party email marketing tool interface.
+### Priority
+P2
+### Estimated Scope
+Medium
+
+## 4. Payment Processing
+### Problem Statement
+SBOs outside the US need reliable payment gateways that their local customers trust, as Stripe is not ubiquitous globally.
+### Research Report
+- **Mercado Pago**: Essential for LATAM. High trust, supports local payment methods (e.g., PIX in Brazil, OXXO in Mexico).
+- **Razorpay**: Dominant in India. Supports UPI, NetBanking, and local wallets.
+- **Recommendation**: Support a plug-and-play architecture for regional gateways, starting with Mercado Pago for LATAM.
+### Design Doc
+- **Trigger**: User selects their country during onboarding.
+- **Action**: OHC suggests the dominant local gateway (e.g., Mercado Pago) instead of defaulting to Stripe.
+- **User Experience**: SBO enters their gateway credentials or uses OAuth. Invoices generated by OHC include a "Pay Now" link powered by the local gateway.
+### Implementation Prompt
+Implement a regional payment gateway selector. For LATAM users, provide a seamless Mercado Pago integration that allows them to generate payment links for their invoices directly from OHC.
+### Priority
+P1
+### Estimated Scope
+Large
+
+## 5. Shipping & Logistics
+### Problem Statement
+Product-based SBOs struggle with calculating shipping costs accurately and manually copying addresses to generate shipping labels.
+### Research Report
+- **Shippo**: Good API, straightforward pricing, reliable label generation.
+- **EasyPost**: Extremely robust, developer-first, supports hundreds of carriers globally.
+- **Recommendation**: EasyPost integration to abstract away carrier complexities and offer real-time rates.
+### Design Doc
+- **Trigger**: An order is marked "Paid".
+- **Action**: OHC requests a shipping label from EasyPost using the customer's address and default package dimensions.
+- **User Experience**: SBO sees a "Print Label" button next to the order. Clicking it downloads a PDF label ready for their printer.
+### Implementation Prompt
+Integrate a shipping API (like EasyPost) to allow users to generate and print shipping labels directly from the OHC order dashboard with one click.
+### Priority
+P2
+### Estimated Scope
+Large
+
+## 6. SMS & Notifications
+### Problem Statement
+Email open rates are low. SBOs need to send instant, reliable notifications (like appointment reminders or order updates) directly to customers' phones.
+### Research Report
+- **Twilio**: The industry standard, highly reliable, global reach.
+- **MessageBird**: Strong international presence, good omnichannel capabilities.
+- **Recommendation**: Twilio integration for automated transactional SMS.
+### Design Doc
+- **Trigger**: A predefined event occurs (e.g., appointment tomorrow, order shipped).
+- **Action**: OHC triggers a templated SMS via Twilio API to the customer's phone number.
+- **User Experience**: SBO toggles on "Send SMS Reminders". OHC handles the rest transparently.
+### Implementation Prompt
+Build an automated SMS notification system for key customer events (appointments, order updates). Ensure compliance with opt-out mechanisms (STOP replies) is handled seamlessly.
+### Priority
+P1
+### Estimated Scope
+Medium
+
+## 7. Video Conferencing
+### Problem Statement
+Consultants, tutors, and remote service providers spend too much time manually creating and sharing meeting links for every booking.
+### Research Report
+- **Zoom API**: Widespread use, but the OAuth flow and API can be clunky.
+- **Google Meet**: Integrated with Google Workspace, easy if the user already uses Google Calendar.
+- **Whereby**: Embedded video rooms, zero installation required for clients, excellent API.
+- **Recommendation**: Whereby for embedded browser-based meetings, or Google Meet as a default fallback.
+### Design Doc
+- **Trigger**: A new virtual appointment is booked.
+- **Action**: OHC generates a unique video meeting link via Whereby or Google Meet.
+- **User Experience**: The confirmation email and calendar invite automatically include the "Join Video Call" link. Neither the SBO nor the client needs to manually create a link.
+### Implementation Prompt
+Automate video meeting link generation for virtual bookings. When an online service is booked, seamlessly attach a unique video conference URL to the appointment details.
+### Priority
+P2
+### Estimated Scope
+Small
