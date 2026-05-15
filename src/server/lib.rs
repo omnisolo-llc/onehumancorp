@@ -1738,6 +1738,99 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
+
+                    <!-- Help Center Screen -->
+                    <div id="help-center-screen" class="screen glass">
+                        <h1>Help Center</h1>
+                        <input type="text" id="help-search" placeholder="Search for help..." onkeyup="searchHelp()">
+
+                        <div class="card glass">
+                            <h2>Topics</h2>
+                            <button class="secondary" onclick="showHelpCategory('getting-started')">Getting Started</button>
+                            <button class="secondary" onclick="showHelpCategory('my-store')">My Store</button>
+                            <button class="secondary" onclick="showHelpCategory('payments')">Payments</button>
+                            <button class="secondary" onclick="showHelpCategory('ai-agents')">AI Agents</button>
+                            <button class="secondary" onclick="showHelpCategory('marketing')">Marketing</button>
+                            <button class="secondary" onclick="showHelpCategory('account')">Account & Billing</button>
+                        </div>
+
+                        <div id="help-content" class="card glass">
+                            <p>Select a category or search to view articles.</p>
+                        </div>
+
+                        <div class="card glass">
+                            <h2>Video Tutorials</h2>
+                            <div style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;">
+                                <div style="min-width: 150px; text-align: center; cursor: pointer;" onclick="playTutorial('setup')">
+                                    <div style="width: 100%; height: 200px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 30px;"><svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="var(--primary)"><path d="M8 5v14l11-7z"/></svg>️</div>
+                                    <p style="margin: 5px 0 0 0; font-size: 14px;">Set up store</p>
+                                </div>
+                                <div style="min-width: 150px; text-align: center; cursor: pointer;" onclick="playTutorial('payments')">
+                                    <div style="width: 100%; height: 200px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 30px;"><svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="var(--primary)"><path d="M8 5v14l11-7z"/></svg>️</div>
+                                    <p style="margin: 5px 0 0 0; font-size: 14px;">Accept payments</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="video-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 20000; justify-content: center; align-items: center; flex-direction: column;">
+                            <div style="background: #000; width: 90%; max-width: 400px; aspect-ratio: 9/16; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; position: relative;">
+                                <video id="tutorial-video" controls style="width: 100%; height: 100%; border-radius: 12px; object-fit: cover;">
+                                    <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                                </video>
+                                <button onclick="document.getElementById('video-modal').style.display='none'; document.getElementById('tutorial-video').pause();" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; display: flex; justify-content: center; align-items: center;">✖</button>
+                            </div>
+                        </div>
+
+                        <script>
+                            function playTutorial(id) {
+                                document.getElementById('video-modal').style.display = 'flex';
+                                document.getElementById('tutorial-video').play();
+                            }
+                        </script>
+
+                    </div>
+
+                    <!-- API Docs Screen -->
+                    <div id="api-docs-screen" class="screen glass">
+                        <h1>Advanced API Documentation</h1>
+                        <p>For custom connections and advanced setups.</p>
+                        <div id="swagger-ui"></div>
+                        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
+                        <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-bundle.js" crossorigin></script>
+                        <script>
+                            function loadSwagger() {
+                                const spec = {
+                                    openapi: "3.0.0",
+                                    info: { title: "OHC API", version: "1.0.0" },
+                                    paths: {
+                                        "/api/v1/products": {
+                                            get: { summary: "List products", responses: { "200": { description: "OK" } } }
+                                        },
+                                        "/api/v1/orders": {
+                                            post: { summary: "Create order", responses: { "200": { description: "OK" } } }
+                                        }
+                                    }
+                                };
+                                window.ui = SwaggerUIBundle({
+                                    spec: spec,
+                                    dom_id: '#swagger-ui',
+                                });
+                            }
+                        </script>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <!-- Release Notes Screen -->
+                    <div id="release-notes-screen" class="screen glass">
+                        <h1>What's New</h1>
+                        <div class="card glass">
+                            <h2>Latest Update</h2>
+                            <p>We've added a new Help Center to make running your business even easier!</p>
+                            <button onclick="window.open('https://onehumancorp.com/changelog', '_blank')">View full changelog</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
@@ -1759,6 +1852,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
+                            <button onclick="showScreen('help-center-screen')">Help</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="facebook-integration" class="card glass">
@@ -1770,10 +1864,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="agent-activity-feed">
                                 <p>No recent activity.</p>
                             </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
+                            <button data-tooltip-key="dashboard-sim-btn" onclick="simulateOrder()">Simulate Order</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button onclick="showScreen('api-docs-screen')">API Docs (Advanced)</button>
+                            <button onclick="showScreen('release-notes-screen')">What's New</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
                                 <button onclick="alert('Tutorial started')">Video Tutorials</button>
@@ -1786,7 +1881,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" data-tooltip-key="add-product-btn" onclick="console.log('action_add_product')">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
@@ -1895,7 +1990,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <button data-tooltip-key="hire-agent-btn">Hire Agent</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
@@ -2219,7 +2314,241 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+                        // Help Center Logic
+                                                const helpArticles = {
+                            'getting-started': [
+                                { title: 'How to set up your store', content: 'Follow our easy setup wizard... <br><button onclick="showScreen(\'dashboard-screen\'); setTimeout(() => startTour(\'setup-store\'), 100);" style="margin-top:10px;">Start Interactive Tour</button>' },
+                                { title: 'Adding your first product', content: 'Go to the Add Product menu and fill in the details.' }
+                            ],
+                            'my-store': [
+                                { title: 'Changing your store theme', content: 'You can change your theme in Settings.' }
+                            ],
+                            'payments': [
+                                { title: 'Accepting your first payment', content: 'You need to set up a payment provider. <br><button onclick="showScreen(\'dashboard-screen\'); setTimeout(() => startTour(\'accept-payment\'), 100);" style="margin-top:10px;">Start Interactive Tour</button>' }
+                            ],
+                            'ai-agents': [
+                                { title: 'Activate your AI Support Agent', content: 'Hire agents to handle tasks automatically. <br><button onclick="showScreen(\'dashboard-screen\'); setTimeout(() => startTour(\'activate-ai\'), 100);" style="margin-top:10px;">Start Interactive Tour</button>' }
+                            ]
+                        };
+
+                        function showHelpCategory(category) {
+                            const contentDiv = document.getElementById('help-content');
+                            contentDiv.innerHTML = `<h3>${category.replace('-', ' ').toUpperCase()}</h3>`;
+                            if (helpArticles[category]) {
+                                helpArticles[category].forEach(article => {
+                                    contentDiv.innerHTML += `
+                                        <div style="margin-bottom: 15px;">
+                                            <h4>${article.title}</h4>
+                                            <p>${article.content}</p>
+                                        </div>
+                                    `;
+                                });
+                            } else {
+                                contentDiv.innerHTML += '<p>Coming soon...</p>';
+                            }
+                        }
+
+                        function searchHelp() {
+                            const query = document.getElementById('help-search').value.toLowerCase();
+                            const contentDiv = document.getElementById('help-content');
+                            contentDiv.innerHTML = `<h3>Search Results</h3>`;
+                            let found = false;
+
+                            Object.values(helpArticles).forEach(cat => {
+                                cat.forEach(article => {
+                                    if (article.title.toLowerCase().includes(query) || article.content.toLowerCase().includes(query)) {
+                                        contentDiv.innerHTML += `
+                                            <div style="margin-bottom: 15px;">
+                                                <h4>${article.title}</h4>
+                                                <p>${article.content}</p>
+                                            </div>
+                                        `;
+                                        found = true;
+                                    }
+                                });
+                            });
+
+                            if (!found && query) {
+                                contentDiv.innerHTML += '<p>No results found.</p>';
+                            } else if (!query) {
+                                contentDiv.innerHTML = '<p>Select a category or search to view articles.</p>';
+                            }
+                        }
+
+                        function toggleHelpChat() {
+                            const chat = document.getElementById('floating-chat-window');
+                            chat.style.display = chat.style.display === 'none' ? 'flex' : 'none';
+                        }
+
+                        function sendHelpMessage() {
+                            const input = document.getElementById('help-chat-input');
+                            const msg = input.value;
+                            if (!msg) return;
+
+                            const msgs = document.getElementById('help-chat-messages');
+                            msgs.innerHTML += '<p style="text-align: right;"><strong>You:</strong> ' + msg + '</p>';
+                            input.value = '';
+
+                            setTimeout(() => {
+                                msgs.innerHTML += "<p><strong>Agent:</strong> I can help with that! <a href='#' onclick='showScreen(&quot;help-center-screen&quot;); toggleHelpChat(); return false;'>Read the full article →</a></p>";
+                                msgs.scrollTop = msgs.scrollHeight;
+                            }, 1000);
+                        }
+
+                        // Tooltips Logic
+                        const tooltipRegistry = {
+                            'dashboard-sim-btn': 'Test a fake customer order to see how it works.',
+                            'add-product-btn': 'Create a new item to sell in your store.',
+                            'hire-agent-btn': 'Get an AI helper for your team.'
+                        };
+
+                        function initTooltips() {
+                            const tooltipDiv = document.createElement('div');
+                            tooltipDiv.id = 'dynamic-tooltip';
+                            tooltipDiv.style.cssText = 'position: absolute; display: none; background: #333; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 12px; z-index: 10000; pointer-events: none; max-width: 200px;';
+                            document.body.appendChild(tooltipDiv);
+
+                            document.querySelectorAll('[data-tooltip-key]').forEach(el => {
+                                const key = el.getAttribute('data-tooltip-key');
+                                const text = tooltipRegistry[key] || 'No help text available.';
+
+                                el.addEventListener('mouseenter', e => {
+                                    tooltipDiv.textContent = text;
+                                    tooltipDiv.style.display = 'block';
+                                    tooltipDiv.style.left = e.pageX + 10 + 'px';
+                                    tooltipDiv.style.top = e.pageY + 10 + 'px';
+                                });
+
+                                el.addEventListener('mousemove', e => {
+                                    tooltipDiv.style.left = e.pageX + 10 + 'px';
+                                    tooltipDiv.style.top = e.pageY + 10 + 'px';
+                                });
+
+                                el.addEventListener('mouseleave', () => {
+                                    tooltipDiv.style.display = 'none';
+                                });
+
+                                // Mobile long-press
+                                let pressTimer;
+                                el.addEventListener('touchstart', e => {
+                                    pressTimer = window.setTimeout(() => {
+                                        tooltipDiv.textContent = text;
+                                        tooltipDiv.style.display = 'block';
+                                        tooltipDiv.style.left = e.touches[0].pageX + 10 + 'px';
+                                        tooltipDiv.style.top = e.touches[0].pageY + 10 + 'px';
+                                    }, 500);
+                                });
+                                el.addEventListener('touchend', () => {
+                                    clearTimeout(pressTimer);
+                                    setTimeout(() => tooltipDiv.style.display = 'none', 1500);
+                                });
+                            });
+                        }
+
+
+                        // Walkthroughs
+                        const walkthroughs = {
+                            'setup-store': [
+                                { selector: '[data-tooltip-key="add-product-btn"]', text: 'Step 1: Click here to add your first product.' },
+                                { selector: 'button.nav-item:nth-child(6)', text: 'Step 2: Check your orders here once customers start buying.' }
+                            ],
+                            'accept-payment': [
+                                { selector: 'button[onclick="showScreen(\'pricing-screen\')"]', text: 'Step 1: Upgrade to accept live payments.' },
+                                { selector: 'button[onclick="showScreen(\'checkout-screen\')"]', text: 'Step 2: Set up your checkout settings.' }
+                            ],
+                            'activate-ai': [
+                                { selector: '[data-tooltip-key="hire-agent-btn"]', text: 'Step 1: Hire your first AI agent here.' },
+                                { selector: 'button[onclick="showScreen(\'agents-screen\')"]', text: 'Step 2: Manage your AI team.' }
+                            ]
+                        };
+
+                        let currentTour = null;
+                        let currentStepIndex = 0;
+                        let tourOverlay = null;
+
+                        function startTour(flowName) {
+                            if (!walkthroughs[flowName]) return;
+                            currentTour = walkthroughs[flowName];
+                            currentStepIndex = 0;
+
+                            if (!tourOverlay) {
+                                tourOverlay = document.createElement('div');
+                                tourOverlay.id = 'tour-speech-bubble';
+                                tourOverlay.style.cssText = 'position: absolute; background: var(--primary); color: #fff; padding: 15px; border-radius: 8px; font-size: 14px; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 10px; max-width: 250px; transition: all 0.3s ease;';
+                                document.body.appendChild(tourOverlay);
+                            }
+
+                            showTourStep();
+                        }
+
+                        function showTourStep() {
+                            if (!currentTour || currentStepIndex >= currentTour.length) {
+                                endTour();
+                                return;
+                            }
+
+                            const step = currentTour[currentStepIndex];
+                            const target = document.querySelector(step.selector);
+
+                            if (target) {
+                                const rect = target.getBoundingClientRect();
+                                tourOverlay.style.display = 'flex';
+                                tourOverlay.style.top = (rect.bottom + window.scrollY + 10) + 'px';
+                                tourOverlay.style.left = (rect.left + window.scrollX) + 'px';
+
+                                tourOverlay.innerHTML = `
+                                    <p style="margin: 0;">${step.text}</p>
+                                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                                        <button onclick="endTour()" style="background: transparent; border: 1px solid rgba(255,255,255,0.5); padding: 5px 10px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px;">Skip</button>
+                                        <button onclick="nextTourStep()" style="background: #fff; color: var(--primary); border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Next →</button>
+                                    </div>
+                                `;
+
+                                // Highlight the element
+                                document.querySelectorAll('.tour-highlight').forEach(el => {
+                                    el.classList.remove('tour-highlight');
+                                    el.style.boxShadow = '';
+                                    el.style.position = '';
+                                    el.style.zIndex = '';
+                                });
+                                target.classList.add('tour-highlight');
+                                target.style.boxShadow = '0 0 0 4px rgba(0, 85, 255, 0.5)';
+                                target.style.position = 'relative';
+                                target.style.zIndex = '10000';
+                            } else {
+                                nextTourStep(); // Skip if element not found
+                            }
+                        }
+
+                        function nextTourStep() {
+                            currentStepIndex++;
+                            showTourStep();
+                        }
+
+                        function endTour() {
+                            currentTour = null;
+                            if (tourOverlay) tourOverlay.style.display = 'none';
+                            document.querySelectorAll('.tour-highlight').forEach(el => {
+                                el.classList.remove('tour-highlight');
+                                el.style.boxShadow = '';
+                                el.style.position = '';
+                                el.style.zIndex = '';
+                            });
+                        }
+
+
+                        // Initialize on load along with other stuff
+                        const oldOnLoad = window.onload;
+                        window.onload = () => {
+                            if (oldOnLoad) oldOnLoad();
+                            initTooltips();
+                        };
+
                         const pathMap = {
+                            'help-center-screen': '/help',
+                            'api-docs-screen': '/docs/api',
+                            'release-notes-screen': '/whats-new',
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
@@ -2261,7 +2590,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'api-docs-screen' && window.ui === undefined) loadSwagger();
+                            if (id === 'help-center-screen' || id === 'api-docs-screen' || id === 'release-notes-screen' || id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -2274,6 +2604,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             showScreen(screenId);
                         };
                     </script>
+
+        <!-- Floating Help Chat -->
+        <div id="floating-chat-btn" onclick="toggleHelpChat()" style="position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000; font-size: 24px;">
+            ?
+        </div>
+
+        <div id="floating-chat-window" class="card glass" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px; z-index: 1000; flex-direction: column;">
+            <div style="background: var(--primary); color: white; padding: 10px; border-radius: 6px 6px 0 0; font-weight: bold; display: flex; justify-content: space-between;">
+                <span>Help Assistant</span>
+                <span style="cursor: pointer;" onclick="toggleHelpChat()">✖</span>
+            </div>
+            <div id="help-chat-messages" style="flex: 1; overflow-y: auto; padding: 10px; background: #fff;">
+                <p><strong>Agent:</strong> Hi! How can I help you today?</p>
+            </div>
+            <div style="display: flex; padding: 10px; border-top: 1px solid var(--border);">
+                <input type="text" id="help-chat-input" placeholder="Ask anything..." style="margin-bottom: 0; flex: 1; border-radius: 6px 0 0 6px;">
+                <button onclick="sendHelpMessage()" style="margin-bottom: 0; margin-right: 0; border-radius: 0 6px 6px 0;">Send</button>
+            </div>
+        </div>
+
                 </body>
             </html>
         "#,
