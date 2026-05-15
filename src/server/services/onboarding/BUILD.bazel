@@ -12,6 +12,8 @@ filegroup(
         "provisioner.rs",
         "validation.rs",
         "wizard.rs",
+        "unified_models.rs",
+        "conversational.rs",
     ],
     visibility = ["//src/server/services:__pkg__"],
 )

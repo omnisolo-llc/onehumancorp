@@ -1910,7 +1910,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Continuing...')">Continue</button>
                         </div>
                         <p>Built with OHC — Start your free business →</p>
+                        <button class="primary" onclick="showScreen('conversational-onboarding-screen'); initChat();">Start AI Conversational Onboarding</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <!-- Conversational Onboarding Screen (Mobile-First 375px) -->
+                    <div id="conversational-onboarding-screen" class="screen" style="max-width: 375px; margin: 0 auto;">
+                        <h1>AI Assistant Setup</h1>
+                        <div id="chat-messages" class="card glass" style="height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="chat-input" placeholder="Type your message..." style="flex-grow: 1;">
+                            <button onclick="sendChatMessage()">Send</button>
+                        </div>
+                        <button class="secondary" style="margin-top: 10px; width: 100%;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
 
@@ -2230,6 +2243,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
                             'setup-screen': '/website-builder',
+                            'conversational-onboarding-screen': '/chat-setup',
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
@@ -2261,11 +2275,74 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'conversational-onboarding-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
+                        }
+
+                        let chatSession = null;
+
+                        async function initChat() {
+                            const container = document.getElementById('chat-messages');
+                            container.innerHTML = '';
+                            try {
+                                const res = await fetch('/api/onboarding/chat/start', { method: 'POST' });
+                                if (res.ok) {
+                                    chatSession = await res.json();
+                                    renderChat();
+                                }
+                            } catch (e) { console.error(e); }
+                        }
+
+                        function renderChat() {
+                            const container = document.getElementById('chat-messages');
+                            container.innerHTML = '';
+                            if (!chatSession || !chatSession.messages) return;
+                            chatSession.messages.forEach(msg => {
+                                const el = document.createElement('div');
+                                el.style.padding = '8px';
+                                el.style.borderRadius = '8px';
+                                el.style.maxWidth = '80%';
+                                if (msg.role === 'user') {
+                                    el.style.alignSelf = 'flex-end';
+                                    el.style.background = 'rgba(255, 255, 255, 0.2)';
+                                } else {
+                                    el.style.alignSelf = 'flex-start';
+                                    el.style.background = 'rgba(0, 0, 0, 0.2)';
+                                }
+                                el.textContent = msg.content;
+                                container.appendChild(el);
+                            });
+                            container.scrollTop = container.scrollHeight;
+                        }
+
+                        async function sendChatMessage() {
+                            const input = document.getElementById('chat-input');
+                            const message = input.value.trim();
+                            if (!message || !chatSession) return;
+
+                            input.value = '';
+
+                            const originalSession = JSON.parse(JSON.stringify(chatSession));
+
+                            // Optimistic update
+                            chatSession.messages.push({ role: 'user', content: message });
+                            renderChat();
+
+                            try {
+                                const res = await fetch('/api/onboarding/chat/message', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    // Send the session BEFORE the optimistic push to prevent backend duplication
+                                    body: JSON.stringify({ session: originalSession, message })
+                                });
+                                if (res.ok) {
+                                    chatSession = await res.json();
+                                    renderChat();
+                                }
+                            } catch (e) { console.error(e); }
                         }
 
                         window.onload = () => {
