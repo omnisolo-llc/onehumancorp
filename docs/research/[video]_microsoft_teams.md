@@ -1,12 +1,12 @@
-# Multi-Carrier Shipping Labels via EasyPost
+# Auto-Generate Microsoft Teams Meeting Links
 
 ## 1. Problem Statement
-Users need a programmatic way to generate shipping labels without leaving the OHC dashboard, rather than using a heavy third-party tool like ShipStation for low volumes.
+For B2B consultants and service providers, manually creating a Microsoft Teams meeting and pasting the link into every new calendar invite is a tedious, repetitive chore that looks unprofessional if forgotten. Clients expect a frictionless joining experience, and scrambling to send a link two minutes before the meeting starts damages the business's credibility.
 
 This issue represents a significant friction point for our core demographic. The inability to seamlessly manage this aspect of their business leads to tangible revenue loss and operational inefficiency. Small business owners are not IT administrators; they expect their tools to communicate flawlessly without requiring manual intervention or complex configuration screens.
 
 ## 2. Research Report
-EasyPost API provides rates and label generation for dozens of carriers via a single API. Great for built-in, lightweight shipping features.
+Microsoft Teams is heavily used in the corporate and B2B sector. When a customer books an online consultation through OHC, automatically generating a unique Teams meeting link and embedding it in the confirmation email saves the business owner time and provides a frictionless experience for the client. The integration uses the Microsoft Graph API. It is highly valuable for professional services. Works in Cloud and Standalone modes. Token refresh logic is the trickiest part of this integration.
 
 ### Market Validation
 Our market analysis confirms that competitors either lack this integration entirely or place it behind expensive enterprise tiers. By offering this seamlessly within OHC, we create a strong competitive moat. It directly appeals to businesses scaling past their first phase of growth who are beginning to feel the pain of fragmented systems.
@@ -16,17 +16,17 @@ The third-party APIs required to support this are generally stable and well-docu
 
 
 ### Pricing & Deployment
-- **Pricing Estimate:** Freemium tier available; standard API usage rates apply thereafter.
+- **Pricing Estimate:** Requires the business owner to hold a paid subscription with the provider (e.g. $15/mo).
 - **Deployment Compatibility:** Fully functional in both Cloud (multi-tenant) and Standalone (local instance) modes.
 
 ## 3. Design Document
-Users configure package sizes and buy labels directly on the Order details page. The tracking number is automatically saved.
+In the Service creation menu, under 'Location', the user can select 'Online Meeting (Microsoft Teams)'. Once they have linked their Microsoft account, every time this service is booked, a unique Teams link is generated. Both the business owner and the customer will see a prominent 'Join Meeting' button on their respective appointment details pages. The interface will also allow copying the link manually if needed.
 
 ### User Experience Considerations
 The 'Grandmother Test' is critical here. The connection flow must avoid technical jargon. We cannot ask users to configure 'webhooks' or 'callback URLs'. The entire process must be a simple OAuth click-through or a very well-guided wizard with clear screenshots and tooltips.
 
 ## 4. Implementation Prompt
-Build a 'Buy Shipping Label' modal on the order page that fetches rates from EasyPost and generates a printable PDF.
+Update the Service creation flow to include 'Microsoft Teams' as a dynamic location option. Design the appointment details view to prominently feature a friendly, clickable 'Join Meeting' button that handles the transition to the Teams app smoothly. Add fallback text instructions if the user doesn't have the Teams client installed.
 
 ### Acceptance Criteria
 1. The user can initiate and complete the connection flow in under 3 minutes.
@@ -35,6 +35,5 @@ Build a 'Buy Shipping Label' modal on the order page that fetches rates from Eas
 4. The feature passes all Playwright E2E tests for the core happy path.
 
 ## 5. Metadata
-- **Priority**: P2
-- **Estimated Scope**: Large
-
+- **Priority**: P1
+- **Estimated Scope**: Small
