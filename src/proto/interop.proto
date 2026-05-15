@@ -75,3 +75,22 @@ message JobStatusUpdate {
   bytes details_payload = 4;
   int64 timestamp_ms = 5;
 }
+
+message ResourceLockRequest {
+  string resource = 1;
+  string owner = 2;
+  int64 ttl_seconds = 3;
+}
+
+message ResourceLockResponse {
+  bool success = 1;
+}
+
+message ResourceUnlockRequest {
+  string resource = 1;
+  string owner = 2;
+}
+
+message ResourceUnlockResponse {
+  bool success = 1;
+}

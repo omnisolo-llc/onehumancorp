@@ -1304,3 +1304,55 @@ mod tests {
         cancel();
     }
 }
+
+use crate::proto::interop::{StateHandoff, HealthPing, HealthAck, JobDispatch};
+
+#[async_trait]
+pub trait ExtendedMeshTransport: Send + Sync {
+    async fn publish_reliable(&self, topic: &str, message: Message) -> Result<(), String>;
+    async fn acquire_hybrid_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+}
+
+#[async_trait]
+impl ExtendedMeshTransport for MemoryTransport {
+    async fn publish_reliable(&self, topic: &str, message: Message) -> Result<(), String> {
+        self.publish(topic, message).await
+    }
+
+    async fn acquire_hybrid_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.acquire_lock(resource, owner, ttl_seconds).await
+    }
+}
+
+#[async_trait]
+impl ExtendedMeshTransport for RedisTransport {
+    async fn publish_reliable(&self, topic: &str, message: Message) -> Result<(), String> {
+        self.publish(topic, message).await
+    }
+
+    async fn acquire_hybrid_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.acquire_lock(resource, owner, ttl_seconds).await
+    }
+}
+
+#[async_trait]
+impl ExtendedMeshTransport for SqliteTransport {
+    async fn publish_reliable(&self, topic: &str, message: Message) -> Result<(), String> {
+        self.publish(topic, message).await
+    }
+
+    async fn acquire_hybrid_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.acquire_lock(resource, owner, ttl_seconds).await
+    }
+}
+
+#[async_trait]
+impl ExtendedMeshTransport for PgTransport {
+    async fn publish_reliable(&self, topic: &str, message: Message) -> Result<(), String> {
+        self.publish(topic, message).await
+    }
+
+    async fn acquire_hybrid_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.acquire_lock(resource, owner, ttl_seconds).await
+    }
+}
