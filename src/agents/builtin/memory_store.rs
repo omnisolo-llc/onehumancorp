@@ -346,7 +346,7 @@ impl VectorRepository {
         Ok(())
     }
 
-    #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
+        pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
@@ -836,7 +836,7 @@ impl LongTermMemory for PersistentMemoryStore {
 /// 3) Raw transcripts (accessed via search only)
 #[derive(Clone)]
 pub struct Anthropic3TierMemoryStore {
-    #[allow(dead_code)]
+
     base_dir: std::path::PathBuf,
     index_file: std::path::PathBuf,
     topics_dir: std::path::PathBuf,

@@ -231,6 +231,7 @@ impl DB {
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
+                        tenant_id TEXT DEFAULT 'system',
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,
                         context_data TEXT NOT NULL,
@@ -255,6 +256,7 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
+                        tenant_id TEXT DEFAULT 'system',
                         memory_id TEXT PRIMARY KEY,
                         context TEXT NOT NULL,
                         embedding BLOB,
@@ -314,6 +316,7 @@ impl DB {
                     );
 
                     CREATE TABLE IF NOT EXISTS swarm_tasks (
+                        tenant_id TEXT DEFAULT 'system',
                         id TEXT PRIMARY KEY,
                         mission_id TEXT NOT NULL,
                         parent_plan_id TEXT,
