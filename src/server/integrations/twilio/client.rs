@@ -25,14 +25,15 @@ impl RealTwilioClient {
 #[async_trait]
 impl TwilioClientWrapper for RealTwilioClient {
     async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
-        let url = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", self.account_sid);
-        let res = self.http_client.post(&url)
+        let url = format!(
+            "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
+            self.account_sid
+        );
+        let res = self
+            .http_client
+            .post(&url)
             .basic_auth(&self.account_sid, Some(&self.auth_token))
-            .form(&[
-                ("To", to),
-                ("From", from),
-                ("Body", body),
-            ])
+            .form(&[("To", to), ("From", from), ("Body", body)])
             .send()
             .await;
 
@@ -43,8 +44,9 @@ impl TwilioClientWrapper for RealTwilioClient {
                         &crate::db::get_pool(),
                         "unknown",
                         "twilio_send_sms",
-                        0.05
-                    ).await;
+                        0.05,
+                    )
+                    .await;
                     Ok(())
                 } else {
                     Err(format!("Twilio API error: {}", resp.status()))
