@@ -1,17 +1,31 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+# Twilio - SMS & Notifications
+
+## Problem Statement
+SMS is critical for reaching customers instantly, especially for appointment reminders or urgent updates, and is often preferred by demographics with lower email usage.
+
+## Research Report
+Twilio is the industry standard for programmatic SMS and voice communication.
+- **Ease of Use for SMBs**: High (from the UI perspective). OHC handles all the API complexity.
+- **Pricing**: Pay-per-message. Can become expensive at high volumes, but reasonable for typical SMB use cases.
+- **Reputation**: Highly reliable globally.
+- **Competitive Analysis**: The most robust global network, despite complex regulatory compliance (like 10DLC in the US).
+
+## Design Doc
+**Trigger**: A high-priority event occurs (e.g., upcoming appointment) or business owner sends an SMS blast.
+**Actions**:
+- OHC formats the message and sends it via Twilio API.
+- Twilio delivers the SMS to the customer's phone.
+**User Experience**: Business owner can configure SMS notifications in settings or send direct SMS messages to customers from the CRM.
+
+## Implementation Prompt
+**User-facing Outcome**: A business owner can reliably send SMS notifications and messages to their customers globally.
+**Acceptance Criteria**:
+- System can send automated SMS reminders (e.g., for appointments).
+- Business owner can send manual SMS messages to customers.
+- OHC handles necessary compliance and opt-out logic (STOP messages).
+
+## Priority
+P1 (High)
+
+## Estimated Scope
+Medium

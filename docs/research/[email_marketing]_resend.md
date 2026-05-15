@@ -1,21 +1,31 @@
-## [Email Marketing] Issue Brief: AI-Generated Customer Broadcasts
+# Resend - Email Marketing & Notifications
 
-**Title**: Scout 🔍: Integrate Resend for AI-Powered Email Marketing
-**Problem Statement**:
-Business owners like Priya want to notify their existing customers about new stock or holiday sales. Traditional tools like Mailchimp are too complex and require manual template design, list management, and campaign scheduling.
-**Research Report**:
-- **Tool**: Resend.
-- **Evaluation**: Resend provides a developer-friendly, reliable email API. Instead of giving users a complex drag-and-drop builder, OHC can use the "Marketing" AI agent to generate beautiful HTML emails based on a simple text prompt from the user.
-- **Ease of Use**: Zero-friction. The user types "Tell my customers about the new summer dress collection," and the AI generates the subject line, body, and inserts product photos automatically.
-- **Pricing**: Resend charges around $20/mo for up to 50k emails, very economical to bundle into an OHC premium tier.
-- **Cloud vs. Standalone**: Cloud mode uses OHC's centralized Resend account. Standalone mode requires the user to input their own SMTP credentials.
-**Design Doc**:
-- "Marketing" tab -> "Send a Broadcast".
-- User provides a 1-sentence prompt.
-- The AI Agent generates a responsive HTML email preview.
-- User clicks "Send to all customers".
-- The system chunks the customer list and sends via the Resend API.
-**Implementation Prompt**:
-Create a feature where the user can prompt the AI to draft an email blast. Use the business's product catalog to enrich the email. Provide a preview UI. Once approved, queue the emails to be sent out via the Resend API to all opted-in customers, handling rate limits and basic bounce tracking.
-**Priority**: P2
-**Estimated Scope**: Medium
+## Problem Statement
+Business owners need to easily reach out to their customer lists with promotions, updates, or automated receipts without wrestling with complex templates or dealing with severe spam delivery issues.
+
+## Research Report
+Resend is a modern, developer-friendly email API platform.
+- **Ease of Use for SMBs**: High. Business owners use an intuitive UI in OHC to compose emails, while Resend handles the backend delivery.
+- **Pricing**: Generous free tier and reasonable pricing for scaling up.
+- **Reputation**: High deliverability rates and modern developer experience.
+- **Competitive Analysis**: Better developer experience and deliverability out-of-the-box compared to legacy tools like SendGrid or Mailgun.
+
+## Design Doc
+**Trigger**: Business owner clicks "Send Email Campaign" or system triggers a transactional email.
+**Actions**:
+- OHC formats the email content and sends it via Resend API.
+- Resend handles delivery, bounces, and complaints.
+**User Experience**: A simple email composer in the OHC dashboard.
+
+## Implementation Prompt
+**User-facing Outcome**: A business owner can easily send transactional emails and simple marketing campaigns to their customers with high deliverability.
+**Acceptance Criteria**:
+- System can send transactional emails (e.g., receipts) reliably.
+- Business owner can compose and send a broadcast email to their customer list.
+- Bounce and complaint handling is implemented.
+
+## Priority
+P2 (Medium)
+
+## Estimated Scope
+Medium
