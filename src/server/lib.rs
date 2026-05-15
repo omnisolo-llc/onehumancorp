@@ -1783,13 +1783,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
+                            <button class="nav-item" onclick="console.log('action_add_product'); showScreen('setup-screen')">Add</button>
+                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Orders</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Analytics</button>
+                            <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         </nav>
                     </div>
 
