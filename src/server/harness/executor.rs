@@ -1,7 +1,7 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
-use crate::telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency};
+use super::telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency};
 
 pub struct LocalShellTask {
     manager: SandboxManager,
