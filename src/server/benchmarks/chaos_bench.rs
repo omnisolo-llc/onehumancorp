@@ -137,7 +137,7 @@ mod tests {
     #[tokio::test]
     async fn test_caching_strategy_resilience() {
         // Simulates caching strategy behavior ensuring it doesn't break when Redis is unavailable.
-        let mut retries = 0;
+        let retries = 0;
         let mut success = false;
         while retries < 3 {
             // Emulate hitting memory cache

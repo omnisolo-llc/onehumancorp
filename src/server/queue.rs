@@ -858,7 +858,7 @@ impl TaskQueue for SqliteTaskQueue {
 
         if let Some(row) = row {
             use sqlx::Row;
-use ::server_common::auth_utils::set_org_context;
+// use ::server_common::auth_utils::set_org_context;
             let id: String = row.get("id");
             let tenant_id: String = row.get("tenant_id");
             let task_id: String = row.get("task_id");
