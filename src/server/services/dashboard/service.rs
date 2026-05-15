@@ -406,14 +406,18 @@ impl DashboardService for MyDashboardService {
         let mut final_agents = _filtered_agents
             .into_iter()
             .map(|a| {
-                let compressed_name = a.name
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+                let compressed_name = if req.mobile_optimized {
+                    String::new()
+                } else {
+                    a.name
+                        .split_whitespace()
+                        .filter(|word| {
+                            let clean_word = word.to_lowercase();
+                            !stop_words.contains(clean_word.as_str())
+                        })
+                        .collect::<Vec<&str>>()
+                        .join(" ")
+                };
 
                 ::server_ohc::agent::Agent {
                     id: a.id,
@@ -424,12 +428,6 @@ impl DashboardService for MyDashboardService {
                 }
             })
             .collect::<Vec<_>>();
-
-        if req.mobile_optimized {
-            for agent in final_agents.iter_mut() {
-                agent.name = String::new();
-            }
-        }
 
         let org = if req.mobile_optimized {
             org.map(|mut o| {
