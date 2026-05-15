@@ -1,15 +1,21 @@
-pub mod catalog;
-pub mod registry;
-pub mod chat;
-pub mod chatwoot;
-pub mod githubissues;
-pub mod imessage;
-pub mod jira;
-pub mod obsidian;
-pub mod pubsub;
-pub mod nats;
-pub mod stripe;
-pub mod twilio;
-pub mod mcp_gateway;
-pub mod mercadopago;
-pub mod chromadb;
+pub mod social_media {
+    pub mod meta;
+}
+pub mod calendar {
+    pub mod cal_com;
+}
+pub mod email {
+    pub mod resend;
+}
+pub mod payments {
+    pub mod mercado_pago;
+}
+pub mod shipping {
+    pub mod easy_post;
+}
+pub mod sms {
+    pub mod twilio;
+}
+pub mod video {
+    pub mod zoom;
+}
