@@ -5,6 +5,7 @@ pub mod billing_webhook;
 #[cfg(test)]
 pub mod billing_webhook_test;
 pub mod health;
+pub mod docs_handler;
 pub mod agents;
 pub mod onboarding;
 pub mod growth;
