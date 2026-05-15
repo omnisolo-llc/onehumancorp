@@ -14,9 +14,45 @@ pub struct LocalBlobProvider {
 
 impl LocalBlobProvider {
     pub fn new() -> Self {
-        Self {
-            base_dir: "/var/tmp/ohc/blobs".to_string(),
+        let base_dir = "/var/tmp/ohc/blobs".to_string();
+        let base_dir_clone = base_dir.clone();
+
+        let is_standalone = env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true";
+        if is_standalone {
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+                loop {
+                    interval.tick().await;
+                    Self::cleanup_old_files(PathBuf::from(&base_dir_clone), std::time::Duration::from_secs(86400 * 7)).await;
+                }
+            });
         }
+
+        Self {
+            base_dir,
+        }
+    }
+
+    pub fn cleanup_old_files(dir: std::path::PathBuf, max_age: std::time::Duration) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(async move {
+            if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
+                while let Ok(Some(entry)) = entries.next_entry().await {
+                    if let Ok(metadata) = entry.metadata().await {
+                        if metadata.is_file() {
+                            if let Ok(modified) = metadata.modified() {
+                                if let Ok(elapsed) = modified.elapsed() {
+                                    if elapsed > max_age {
+                                        let _ = tokio::fs::remove_file(entry.path()).await;
+                                    }
+                                }
+                            }
+                        } else if metadata.is_dir() {
+                            Self::cleanup_old_files(entry.path(), max_age).await;
+                        }
+                    }
+                }
+            }
+        })
     }
 
     fn resolve_path(&self, path: &str) -> std::io::Result<PathBuf> {
@@ -177,5 +213,23 @@ mod tests {
         // Test standalone overrides multitenant
         env::set_var("OHC_STANDALONE", "true");
         let _provider_st = create_blob_provider();
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_old_files() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("old_file.txt");
+        fs::write(&file_path, "test").await.unwrap();
+
+        // Ensure file exists
+        assert!(file_path.exists());
+
+        // Wait briefly (we don't wait 7 days in unit test, we just set max age to 0 to simulate old files)
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        LocalBlobProvider::cleanup_old_files(dir.path().to_path_buf(), tokio::time::Duration::from_secs(0)).await;
+
+        // Ensure file was deleted
+        assert!(!file_path.exists());
     }
 }
