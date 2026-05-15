@@ -3223,7 +3223,7 @@
           "REPO_MAPPING:rules_rust+,bazel_tools bazel_tools",
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
-          "FILE:@@//Cargo.lock 9a02a29db611938be417d670b3ae95fc025c2854ae698126fc4268de71dabc74",
+          "FILE:@@//Cargo.lock 3a2a092cfc6d842f997ee5c1b4b0549e8d40fb07c47bc696c60bbbcd84fb7de6",
           "FILE:@@//Cargo.toml 0a653829c918a3f9cb7c36114e4ccc9776d03637cb4d8e2e87e29f85d79f9a5a",
           "FILE:@@//src/ui/tauri/Cargo.toml 1f23c55a26d02f1036bbd8253c32e15ee47f578936b6bb71e0c3dd979114e8ba"
         ],
