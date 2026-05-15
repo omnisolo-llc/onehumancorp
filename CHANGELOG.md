@@ -5,6 +5,14 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Scaled up the AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
+
+### Privacy/Offline Improvements
+- Implemented offline-first local vector embeddings cache for the OHC Swarm.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
