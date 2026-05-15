@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Scaling improvements for Cloud server pods.
+
+### Privacy/Offline Improvements
+- Privacy and offline improvements for Standalone desktop builds.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
