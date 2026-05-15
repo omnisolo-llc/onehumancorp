@@ -112,7 +112,6 @@ Services:
 | `server` | 8080 | Rust API server, auth endpoints, and optional embedded UI |
 | `postgres` | 5432 | PostgreSQL |
 | `redis` | 6379 | Redis |
-| `chatwoot` | 3002 | Chat platform |
 | `prometheus` | 9090 | Metrics |
 | `grafana` | 3000 | Dashboards |
 

@@ -141,7 +141,6 @@ helm upgrade --install "${RELEASE_NAME}" "${REPO_ROOT}/deploy/helm/ohc" \
   --set cnpg.enabled=false \
   --set backend.autoscaling.enabled=false \
   --set ohcCore.autoscaling.enabled=false \
-  --set chatwoot.autoscaling.enabled=false \
   --set powersync.autoscaling.enabled=false \
   --set "backend.env.REDIS_ADDR=redis-master:6379" \
   --wait --timeout 180s

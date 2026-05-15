@@ -50,32 +50,6 @@ spec:
           memory: {{ .Values.ohcCore.resources.limits.memory | quote }}
 {{- end }}
 ---
-{{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: {{ include "ohc.fullname" . }}-chatwoot-vpa
-  labels:
-    {{- include "ohc.labels" . | nindent 4 }}
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "ohc.fullname" . }}-chatwoot
-  updatePolicy:
-    updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: chatwoot
-        controlledResources: ["cpu", "memory"]
-        minAllowed:
-          cpu: {{ .Values.chatwoot.resources.requests.cpu | quote }}
-          memory: {{ .Values.chatwoot.resources.requests.memory | quote }}
-        maxAllowed:
-          cpu: {{ .Values.chatwoot.resources.limits.cpu | quote }}
-          memory: {{ .Values.chatwoot.resources.limits.memory | quote }}
-{{- end }}
----
 {{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
