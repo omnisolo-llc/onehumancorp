@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use crate::memory_store::LongTermMemory;
+use crate::memory::LongTermMemory;
 
 /// Memory: Long-term (OpenAI/LangGraph): Sessions backed by namespace-organized JSON Stores.
 #[derive(Debug, Clone, Serialize, Deserialize)]

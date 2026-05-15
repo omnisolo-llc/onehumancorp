@@ -71,7 +71,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
-    pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub long_term_memory: Option<Arc<dyn crate::memory::LongTermMemory>>,
 }
 
 impl Default for AgentRunConfig {
@@ -248,7 +248,7 @@ pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
-    pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub memory_store: Option<Arc<dyn crate::memory::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
 }
@@ -268,7 +268,7 @@ impl Agent {
         }
     }
 
-    pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
+    pub fn with_memory_store(mut self, store: Arc<dyn crate::memory::LongTermMemory>) -> Self {
         self.memory_store = Some(store);
         self
     }

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use ohc_builtin_agent::memory_store::VectorRepository;
+use ohc_builtin_agent::memory::VectorRepository;
 use chrono::Utc;
 
 /// MemoryConsolidationWorker is responsible for periodically pruning stale context
@@ -109,7 +109,7 @@ mod tests {
         let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
         // Insert a stale record that should be pruned
-        let stale_record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let stale_record = ohc_builtin_agent::memory::EmbeddingRecord {
             id: "stale_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -176,7 +176,7 @@ mod tests {
         let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
         // Insert a stale record
-        let stale_record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let stale_record = ohc_builtin_agent::memory::EmbeddingRecord {
             id: "stale_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -192,7 +192,7 @@ mod tests {
         };
 
         // Insert two conflicting records
-        let conflict_loser = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let conflict_loser = ohc_builtin_agent::memory::EmbeddingRecord {
             id: "conflict_loser".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -207,7 +207,7 @@ mod tests {
             metadata: None,
         };
 
-        let conflict_winner = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let conflict_winner = ohc_builtin_agent::memory::EmbeddingRecord {
             id: "conflict_winner".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),

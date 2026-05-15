@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
 use crate::db::DbStore;
-use ohc_builtin_agent::memory_store::VectorRepository;
+use ohc_builtin_agent::memory::VectorRepository;
 use opentelemetry::global;
 use opentelemetry::KeyValue;
 use crate::orchestration::mesh::TeammateMesh;
@@ -387,7 +387,7 @@ impl DepartmentOrchestrator {
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
-    pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
+    pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
 }

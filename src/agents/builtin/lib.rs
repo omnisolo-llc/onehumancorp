@@ -19,7 +19,7 @@ pub mod agent;
 pub mod service;
 pub mod departments;
 pub mod guardrails;
-pub mod memory_store;
+pub mod memory;
 pub mod json_store;
 pub mod autogen;
 pub mod ralph_loop;

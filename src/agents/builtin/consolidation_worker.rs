@@ -1,4 +1,4 @@
-use crate::memory_store::VectorRepository;
+use crate::memory::VectorRepository;
 use std::sync::Arc;
 use tokio::time::sleep;
 use std::time::Duration;
@@ -45,7 +45,7 @@ impl ConsolidationWorker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory_store::EmbeddingRecord;
+    use crate::memory::EmbeddingRecord;
     use std::str::FromStr;
 
     async fn setup_sqlite_repo() -> Arc<VectorRepository> {

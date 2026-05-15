@@ -36,7 +36,7 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
     s
 }
 
-use crate::memory_store::{VectorRepository, EmbeddingRecord};
+use crate::memory::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -73,7 +73,7 @@ pub struct AgentServiceImpl {
     cfg: AgentConfig,
     auth: AuthMode,
     memory: Option<Arc<VectorRepository>>,
-    pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
+    pub anthropic_memory: Option<Arc<crate::memory::Anthropic3TierMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
@@ -166,7 +166,7 @@ impl AgentServiceImpl {
     pub async fn init_memory(&mut self) {
         if std::env::var("OHC_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR").unwrap_or_else(|_| ".agent-memory".to_string());
-            if let Ok(store) = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir) {
+            if let Ok(store) = crate::memory::Anthropic3TierMemoryStore::new(&base_dir) {
                 self.anthropic_memory = Some(Arc::new(store));
             } else {
                 tracing::warn!("Failed to initialize Anthropic3TierMemoryStore");
@@ -334,17 +334,17 @@ impl AgentServiceImpl {
             inject_memories_into_prompt(&memories, &req.system_prompt)
         };
 
-        let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
+        let long_term_memory: Option<Arc<dyn crate::memory::LongTermMemory>> = if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR").unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
             Some(Arc::new(crate::json_store::NamespaceJsonStore::new(&base_dir)))
         } else {
             self.memory.as_ref().map(|repo| {
-                Arc::new(crate::memory_store::PersistentMemoryStore {
+                Arc::new(crate::memory::PersistentMemoryStore {
                     repo: repo.clone(),
                     tenant_id: org_id.clone(),
                     agent_id: self.agent_id.clone(),
                     llm: llm.clone(),
-                }) as Arc<dyn crate::memory_store::LongTermMemory>
+                }) as Arc<dyn crate::memory::LongTermMemory>
             })
         };
 
@@ -495,7 +495,7 @@ impl AgentService for AgentServiceImpl {
         // Inject memory accessor if using Anthropic3TierMemoryStore
         let anthropic_memory = self.anthropic_memory.clone();
         let accessor = if let Some(mem) = &anthropic_memory {
-            use crate::memory_store::LongTermMemory;
+            use crate::memory::LongTermMemory;
             mem.as_anthropic_accessor()
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
@@ -1112,7 +1112,7 @@ mod memory_tests {
         assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");
         let mem = service.anthropic_memory.as_ref().unwrap();
 
-        use crate::memory_store::LongTermMemory;
+        use crate::memory::LongTermMemory;
         let accessor = mem.as_anthropic_accessor();
         assert!(accessor.is_some(), "Should return the anthropic memory accessor");
 
