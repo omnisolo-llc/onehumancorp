@@ -163,6 +163,13 @@ impl SipDB {
     /// into sub-agent payloads at the moment of creation, achieving hermetic,
     /// zero-latency Bazel-native context routing.
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let _permit = if is_standalone {
+            Some(get_sqlite_limiter().acquire().await.unwrap())
+        } else {
+            None
+        };
+
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
         let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {

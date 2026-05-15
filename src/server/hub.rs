@@ -567,10 +567,6 @@ impl Hub {
     }
 
     pub fn start_token_burn_rate_worker(self: std::sync::Arc<Self>) {
-        if self.get_token_usage.is_none() {
-            return;
-        }
-        
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
             loop {
@@ -581,31 +577,46 @@ impl Hub {
     }
 
     async fn calculate_token_burn_rate(&self) {
-        if let Some(ref get_usage) = self.get_token_usage {
-            let usages = get_usage();
+        let rows_res = sqlx::query(
+            "SELECT labels_json->>'organization_id' as org_id, SUM(value) as total
+             FROM telemetry_buffer
+             WHERE metric_name = 'ohc_token_usage_total'
+             GROUP BY labels_json->>'organization_id'"
+        )
+        .fetch_all(&self.pool)
+        .await;
+
+        if let Ok(rows) = rows_res {
             let mut forecasts_to_record = Vec::new();
             
             {
                 let mut history = self.token_usage_history.write().unwrap();
                 let mut active_orgs = HashMap::new();
 
-                for (org_id, total_tokens) in usages {
-                    active_orgs.insert(org_id.clone(), true);
-                    if total_tokens > 0 {
-                        let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
-                        hist.push(total_tokens);
+                for row in rows {
+                    use sqlx::Row;
+                    let org_id: Option<String> = row.get("org_id");
+                    let total_tokens: Option<f64> = row.get("total");
 
-                        if hist.len() > 5 {
-                            hist.remove(0);
-                        }
+                    if let (Some(org_id), Some(total_tokens)) = (org_id, total_tokens) {
+                        let total_tokens = total_tokens as i64;
+                        active_orgs.insert(org_id.clone(), true);
+                        if total_tokens > 0 {
+                            let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
+                            hist.push(total_tokens);
 
-                        if hist.len() > 1 {
-                            let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                            let forecast = hist.last().unwrap() + (rate * 43200.0) as i64;
-                            forecasts_to_record.push((org_id.clone(), forecast as f32));
+                            if hist.len() > 5 {
+                                hist.remove(0);
+                            }
+
+                            if hist.len() > 1 {
+                                let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
+                                let forecast = hist.last().unwrap() + (rate * 43200.0) as i64;
+                                forecasts_to_record.push((org_id.clone(), forecast as f32));
+                            }
+                        } else {
+                            history.remove(&org_id);
                         }
-                    } else {
-                        history.remove(&org_id);
                     }
                 }
 
@@ -617,7 +628,6 @@ impl Hub {
             }
         }
     }
-
     pub fn tool_parameter_auto_correction(&self, event_id: &str, agent_id: &str, payload: &[u8]) -> Result<(), String> {
         let mut auto_cor_track = self.auto_cor_track.write().unwrap();
         if auto_cor_track.contains(event_id) {
@@ -1019,4 +1029,24 @@ mod tests {
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
     }
+
+    #[tokio::test]
+    async fn test_calculate_token_burn_rate() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool.clone()));
+
+        hub.calculate_token_burn_rate().await;
+    }
+
 }

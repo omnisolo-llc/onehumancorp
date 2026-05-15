@@ -159,10 +159,12 @@ pub async fn buffer_metric(
     value: f32,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
+    // In standalone mode, always buffer locally so that when online, it can sync.
+    // Sync Daemon will decide whether to push or not.
+    let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" || std::env::var("STANDALONE_MODE").unwrap_or_default() == "true";
     let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
 
-    if !is_telemetry_enabled {
+    if !is_telemetry_enabled && !is_standalone {
         return Ok(());
     }
 
