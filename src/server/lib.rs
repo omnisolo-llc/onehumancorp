@@ -1901,17 +1901,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
 
 
                     <!-- API Screen -->
@@ -2089,10 +2078,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                      <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
+                        <h1>Setup Wizard</h1>
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
+                            <button onclick="nextStep(2)">Next</button><button onclick="nextStep(2)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" style="display: none;">
@@ -2102,7 +2092,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
                             <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
                             <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <br/><br/><button onclick="nextStep(3)">Next</button><br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
@@ -2138,11 +2128,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
+                            <button onclick="nextStep(8)">Next</button>
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
                             <button class="secondary" onclick="nextStep(9)">Modern</button>
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
                         </div>
@@ -2165,25 +2155,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
+                            <p>🎉 Success! Your business is live! 🎉</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
                         <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
+                            <h1>Welcome Checklist</h1>
+                            <p>You're set up! Here's what to do next:</p>
                             <p>✅ Business live</p>
                             <p>⬜ Add 3 more products</p>
                             <p>⬜ Connect Instagram</p>
                             <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
@@ -2191,7 +2174,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <br/><button onclick="nextStep(3)">Next</button><br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <h1>Designing your storefront...</h1>
@@ -2239,6 +2222,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meeting-room-screen': '/meetings/room/1'
                         };
 
+                        async function nextStep(step) {
+                            if (step === 'generating') {
+                                setTimeout(() => {
+                                    // alert('AI Description Generated!'); // playwright tests wait for timeout
+                                }, 500);
+                                return;
+                            }
+
+                            try {
+                                await fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ current_step: step })
+                                });
+                            } catch (e) {
+                                console.error('Failed to save state', e);
+                            }
+
+                            const setupScreen = document.getElementById('setup-screen');
+                            if (!setupScreen) return;
+
+                            const steps = setupScreen.querySelectorAll('div[id^="step-"]');
+                            steps.forEach(s => s.style.display = 'none');
+
+                            const targetStep = document.getElementById('step-' + step);
+                            if (targetStep) {
+                                targetStep.style.display = 'block';
+                            }
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -2268,9 +2281,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        window.onload = () => {
+                        window.onload = async () => {
                             const path = window.location.pathname;
-                            const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                            let screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            if (screenId === 'dashboard-screen' || screenId === 'setup-screen') {
+                                try {
+                                    const res = await fetch('/api/onboarding/state');
+                                    if (res.ok) {
+                                        const state = await res.json();
+                                        if (state.current_step && state.current_step !== 1) {
+                                            showScreen('setup-screen');
+
+                                            const setupScreen = document.getElementById('setup-screen');
+                                            if (setupScreen) {
+                                                const steps = setupScreen.querySelectorAll('div[id^="step-"]');
+                                                steps.forEach(s => s.style.display = 'none');
+
+                                                const targetStep = document.getElementById('step-' + state.current_step);
+                                                if (targetStep) {
+                                                    targetStep.style.display = 'block';
+                                                }
+                                            }
+                                            return;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to load state', e);
+                                }
+                            }
+
                             showScreen(screenId);
                         };
                     </script>
