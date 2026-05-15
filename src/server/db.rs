@@ -891,19 +891,9 @@ pub async fn insert_autodream_memory(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+#[path = "db_tests_file.rs"]
+mod tests;
 
-    #[test]
-    fn test_db_new_fails_without_server() {
-        temp_env::with_vars(vec![("DATABASE_URL", Some("postgres://localhost:54321/nonexistent"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let db = DB::new().await;
-                assert!(db.is_err());
-            });
-        });
-    }
-}
 
 #[cfg(test)]
 mod autodream_db_tests {
