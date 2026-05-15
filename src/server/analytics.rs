@@ -10,7 +10,7 @@ impl Tracker {
     pub fn sanitize_props(&self, props: HashMap<String, String>) -> HashMap<String, String> {
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
-            if ::server_telemetry::is_sensitive_key(k) {
+            if ::server_telemetry::is_sensitive_key(k, ::server_config::get().multitenant) {
                 *v = "[REDACTED]".to_string();
             } else if ::server_telemetry::is_email(v) {
                 *v = "[EMAIL_REDACTED]".to_string();

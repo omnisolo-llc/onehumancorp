@@ -14,7 +14,7 @@ mod tests {
 
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
-            if ::server_telemetry::is_sensitive_key(k) {
+            if ::server_telemetry::is_sensitive_key(k, false) {
                 *v = "[REDACTED]".to_string();
             } else if ::server_telemetry::is_email(v) {
                 *v = "[EMAIL_REDACTED]".to_string();
@@ -50,7 +50,7 @@ mod tests {
                 "admin_key": "[REDACTED]"
             }
         });
-        assert_eq!(redact_interface_pii(input), expected);
+        assert_eq!(redact_interface_pii(input, false), expected);
     }
 
     #[test]
@@ -63,7 +63,7 @@ mod tests {
             "contact": "[EMAIL_REDACTED]",
             "other": "not-an-email"
         });
-        assert_eq!(redact_interface_pii(input), expected);
+        assert_eq!(redact_interface_pii(input, false), expected);
     }
 
     #[test]
@@ -76,7 +76,7 @@ mod tests {
             {"token": "[REDACTED]"},
             {"user": "maya"}
         ]);
-        assert_eq!(redact_interface_pii(input), expected);
+        assert_eq!(redact_interface_pii(input, false), expected);
     }
 
     #[tokio::test]
@@ -537,7 +537,7 @@ fn test_redact_interface_pii_malicious_payloads() {
         "another_safe": 123
     });
 
-    let redacted = ::server_telemetry::redact_interface_pii(payload);
+    let redacted = ::server_telemetry::redact_interface_pii(payload, false);
 
     // Verify root level safe fields
     assert_eq!(redacted["safe_field"], "This should not be redacted");
@@ -560,4 +560,51 @@ fn test_redact_interface_pii_malicious_payloads() {
     assert_eq!(redacted["array_of_evil"][0]["email"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
+}
+
+
+#[test]
+fn test_multitenant_pii_leakage_guardrail() {
+    let payload = serde_json::json!({
+        "tenant_id": "tenant-123",
+        "organization_id": "org-456",
+        "email": "user@example.com",
+        "credit_card": "4111-1111-1111-1111",
+        "password": "supersecretpassword",
+        "session_id": "session-789"
+    });
+
+    // In multitenant mode (is_multitenant = true), tenant_id and organization_id should NOT be redacted.
+    let redacted = ::server_telemetry::redact_interface_pii(payload, true);
+
+    assert_eq!(redacted["tenant_id"], "tenant-123");
+    assert_eq!(redacted["organization_id"], "org-456");
+
+    // Real PII and credentials must still be redacted!
+    assert_eq!(redacted["email"], "[REDACTED]");
+    assert_eq!(redacted["credit_card"], "[REDACTED]");
+    assert_eq!(redacted["password"], "[REDACTED]");
+    assert_eq!(redacted["session_id"], "[REDACTED]");
+}
+
+#[test]
+fn test_standalone_pii_leakage_guardrail() {
+    let payload = serde_json::json!({
+        "tenant_id": "tenant-123",
+        "organization_id": "org-456",
+        "email": "user@example.com",
+        "credit_card": "4111-1111-1111-1111",
+        "password": "supersecretpassword",
+        "session_id": "session-789"
+    });
+
+    // In standalone mode (is_multitenant = false), EVERYTHING including tenant_id is aggressively redacted.
+    let redacted = ::server_telemetry::redact_interface_pii(payload, false);
+
+    assert_eq!(redacted["tenant_id"], "[REDACTED]");
+    assert_eq!(redacted["organization_id"], "[REDACTED]");
+    assert_eq!(redacted["email"], "[REDACTED]");
+    assert_eq!(redacted["credit_card"], "[REDACTED]");
+    assert_eq!(redacted["password"], "[REDACTED]");
+    assert_eq!(redacted["session_id"], "[REDACTED]");
 }

@@ -166,7 +166,8 @@ pub async fn buffer_metric(
         return Ok(());
     }
 
-    let redacted_labels = redact_interface_pii(labels);
+    let is_multitenant = ::server_config::get().multitenant;
+    let redacted_labels = redact_interface_pii(labels, is_multitenant);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
     query(
@@ -184,21 +185,21 @@ pub async fn buffer_metric(
     Ok(())
 }
 
-pub fn redact_interface_pii(val: Value) -> Value {
+pub fn redact_interface_pii(val: Value, is_multitenant: bool) -> Value {
     match val {
         Value::Object(map) => {
             let mut new_map = Map::new();
             for (k, v) in map {
-                if is_sensitive_key(&k) {
+                if is_sensitive_key(&k, is_multitenant) {
                     new_map.insert(k, Value::String("[REDACTED]".to_string()));
                 } else {
-                    new_map.insert(k, redact_interface_pii(v));
+                    new_map.insert(k, redact_interface_pii(v, is_multitenant));
                 }
             }
             Value::Object(new_map)
         }
         Value::Array(arr) => {
-            let new_arr = arr.into_iter().map(redact_interface_pii).collect();
+            let new_arr = arr.into_iter().map(|v| redact_interface_pii(v, is_multitenant)).collect();
             Value::Array(new_arr)
         }
         Value::String(s) => {
@@ -212,7 +213,7 @@ pub fn redact_interface_pii(val: Value) -> Value {
     }
 }
 
-pub fn is_sensitive_key(key: &str) -> bool {
+pub fn is_sensitive_key(key: &str, is_multitenant: bool) -> bool {
     let k = key.to_lowercase();
     k.contains("password") ||
     k.contains("secret") ||
@@ -227,8 +228,7 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("address") ||
     k.contains("name") ||
     k.contains("pii") ||
-    k.contains("tenant_id") ||
-    k.contains("organization_id") ||
+    (!is_multitenant && (k.contains("tenant_id") || k.contains("organization_id") || k.contains("org_id"))) ||
     k.contains("session_id") ||
     k.contains("payload") ||
     k.contains("credit") ||
@@ -280,7 +280,7 @@ mod tests {
             "API_KEY": "sk-123456"
         });
 
-        let redacted_json = redact_interface_pii(original_json);
+        let redacted_json = redact_interface_pii(original_json, false);
 
         assert_eq!(redacted_json["safe_field"], "safe_value");
         assert_eq!(redacted_json["nested"]["password"], "[REDACTED]");
