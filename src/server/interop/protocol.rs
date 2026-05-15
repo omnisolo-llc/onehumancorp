@@ -70,502 +70,7 @@ impl InteropProtocol {
             return Err(e.to_string());
         }
 
-        let msg = Message {
-            action: "system:state_handoff".to_string(),
-            payload: buf,
-        };
-
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        let result = loop {
-            match self.mesh.publish(&msg.action, msg.payload.clone()).await {
-                Ok(_) => break Ok(()),
-                Err(e) => {
-                    if retries >= 5 {
-                        break Err(format!("Failed to publish state handoff after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
-            }
-        };
-
-        if result.is_err() {
-            // Failed to publish, release idempotency lock so it can be retried
-            let _ = self.mesh.release_lock(&idempotency_lock_resource, &attempt_owner).await.map_err(|e| e.to_string());
-        }
-
-        let _ = self.mesh.release_lock(&lock_resource, &self.node_id).await.map_err(|e| e.to_string());
-
-        result
-    }
-
-    /// Resumes a mission after a mode switch
-    pub async fn resume_mission(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
-        // Handoff uses the same mechanism to synchronize state
-        self.handoff(mission_id, tenant_id, state_payload).await
-    }
-
-    /// Listens for state handoff updates
-    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
-                    handler(decoded);
-                }
-            }
-        });
-
-        self.mesh.subscribe(&"system:state_handoff".to_string(), handler).await.map_err(|e| e.to_string())
-    }
-
-    /// Listens for HealthPings and sends HealthAcks
-    pub async fn listen_for_pings(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let node_id = self.node_id.clone();
-        let mesh_clone = self.mesh.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
-                    let ack = proto::HealthAck {
-                        source_node_id: node_id.clone(),
-                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
-                        target_node_id: decoded.source_node_id.clone(),
-                    };
-                    let mut buf = Vec::new();
-                    if ack.encode(&mut buf).is_ok() {
-                        let ack_msg = Message {
-                            topic: format!("system:health_ack:{}", decoded.source_node_id),
-                            payload: buf,
-                        };
-                        let mesh_clone2 = mesh_clone.clone();
-                        tokio::spawn(async move {
-                            let mut retries = 0;
-                            let mut delay_ms = 50;
-                            while retries < 5 {
-                                if mesh_clone2.publish(&ack_topic_clone, ack_payload).await.is_ok() {
-                                    break;
-                                }
-                                retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                delay_ms *= 2; // Exponential backoff
-                            }
-                        });
-                    }
-                }
-            }
-        });
-
-        self.mesh.subscribe(&"system:health_ping".to_string(), handler).await.map_err(|e| e.to_string())
-    }
-
-    /// Health monitor across the swarm using protobuf
-    pub async fn check_health(&self, timeout_ms: u64) -> Result<bool, String> {
-        use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
-
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
-
-        let ack_topic = format!("system:health_ack:{}", self.node_id);
-        let handler = Box::new(move |msg: Message| {
-            if msg.action == ack_topic {
-                rx.store(true, Ordering::SeqCst);
-            }
-        });
-
-        let cancel = self.mesh.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
-
-        let ping = proto::HealthPing {
-            current_mode: 0,
-            timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            source_node_id: self.node_id.clone(),
-        };
-
-        let mut buf = Vec::new();
-        ping.encode(&mut buf).map_err(|e| e.to_string())?;
-
-        let msg = Message {
-            action: "system:health_ping".to_string(),
-            payload: buf,
-        };
-        self.mesh.publish("dummy_topic", vec![]).await?;
-
-        // Wait for up to timeout_ms
-        let start = std::time::Instant::now();
-        while start.elapsed().as_millis() < timeout_ms as u128 {
-            if received.load(Ordering::SeqCst) {
-                cancel();
-                return Ok(true);
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
-
-        cancel();
-        Ok(false)
-    }
-
-    /// Dispatches a background job and waits for acknowledgment
-    pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
-        use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
-
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
-
-        let ack_topic = format!("system:job_ack:{}", job_id);
-        let handler = Box::new(move |msg: Message| {
-            if msg.action == ack_topic {
-                rx.store(true, Ordering::SeqCst);
-            }
-        });
-
-        let cancel = self.mesh.subscribe(format!("system:job_ack:{}", job_id), handler).await?;
-
-        let dispatch = proto::JobDispatch {
-            job_id: job_id.to_string(),
-            tenant_id: tenant_id.to_string(),
-            action_name: action_name.to_string(),
-            payload: payload,
-            timestamp_ms: chrono::Utc::now().timestamp_millis(),
-        };
-
-        let mut buf = Vec::new();
-        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
-
-        let msg = Message {
-            topic: format!("system:job_dispatch:{}", tenant_id),
-            payload: buf,
-        };
-
-        // Add internal retry for publishing to ensure dispatch survives partitions
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        loop {
-            match self.mesh.publish(&msg.action, msg.payload.clone()).await {
-                Ok(_) => break,
-                Err(e) => {
-                    if retries >= 5 {
-                        cancel();
-                        return Err(format!("Failed to publish job dispatch after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
-            }
-        }
-
-        // Wait for up to timeout_ms
-        let start = std::time::Instant::now();
-        while start.elapsed().as_millis() < timeout_ms as u128 {
-            if received.load(Ordering::SeqCst) {
-                cancel();
-                return Ok(true);
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
-
-        cancel();
-        Ok(false) // Not acked, implies failure/timeout, dispatch might need to be retried by the caller
-    }
-
-    /// Listens for job dispatches and acknowledges them
-    pub async fn listen_for_jobs(&self, tenant_id: &str) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let node_id = self.node_id.clone();
-        let mesh_clone = self.mesh.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
-                    // In a real implementation, we would process the job here or send it to a worker pool
-                    // Here, we just acknowledge receipt
-                    let ack = proto::JobAck {
-                        job_id: decoded.job_id.clone(),
-                        node_id: node_id.clone(),
-                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
-                    };
-                    let mut buf = Vec::new();
-                    if ack.encode(&mut buf).is_ok() {
-                        let ack_msg = Message {
-                            topic: format!("system:job_ack:{}", decoded.job_id),
-                            payload: buf,
-                        };
-                        let mesh_clone2 = mesh_clone.clone();
-                        tokio::spawn(async move {
-                            // Retry mechanism to ensure ACK reaches the dispatcher
-                            let mut retries = 0;
-                            let mut delay_ms = 50;
-                            while retries < 5 {
-                                if mesh_clone2.publish(&ack_topic_clone, ack_payload).await.is_ok() {
-                                    break;
-                                }
-                                retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                delay_ms *= 2; // Exponential backoff
-                            }
-                        });
-                    }
-                }
-            }
-        });
-
-        self.mesh.subscribe(format!("system:job_dispatch:{}", tenant_id), handler).await
-    }
-
-    /// Reports job status back to the main server
-    pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
-        use prost::Message as ProstMessage;
-
-        let update = proto::JobStatusUpdate {
-            job_id: job_id.to_string(),
-            tenant_id: tenant_id.to_string(),
-            status: status.to_string(),
-            details_payload: details,
-            timestamp_ms: chrono::Utc::now().timestamp_millis(),
-        };
-
-        let mut buf = Vec::new();
-        update.encode(&mut buf).unwrap();
-
-        let msg = Message {
-            topic: format!("system:job_status:{}", job_id),
-            payload: buf,
-        };
-
-        // Add internal retry for publishing to ensure reporting survives partitions
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        loop {
-            match self.mesh.publish(&msg.action, msg.payload.clone()).await {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    if retries >= 5 {
-                        return Err(format!("Failed to publish job status update after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
-            }
-        }
-    }
-
-    /// Listens for job status updates for a specific job
-    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
-                    handler(decoded);
-                }
-            }
-        });
-
-        self.mesh.subscribe(format!("system:job_status:{}", job_id), handler).await
-    }
-
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::msgbus::MemoryBus;
-    use std::sync::atomic::{AtomicBool, Ordering};
-
-    #[tokio::test]
-    async fn test_interop_handoff_memory() {
-        let transport = Arc::new(MemoryTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
-
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                use prost::Message as ProstMessage;
-                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
-                if decoded.mission_id == "mission_1" {
-                    rx.store(true, Ordering::SeqCst);
-                }
-            }
-        });
-
-        let _cancel = mesh.subscribe(&"system:state_handoff".to_string(), handler).await.map_err(|e| e.to_string()).unwrap();
-
-        protocol.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
-        sleep(Duration::from_millis(100)).await;
-
-        assert!(received.load(Ordering::SeqCst));
-    }
-
-    #[tokio::test]
-    async fn test_interop_health_memory() {
-        let transport = Arc::new(MemoryTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        let protocol1 = InteropProtocol::new(mesh.clone(), "node1".to_string());
-        let protocol2 = InteropProtocol::new(mesh.clone(), "node2".to_string());
-
-        // node2 listens for pings
-        let _cancel2 = protocol2.listen_for_pings().await.unwrap();
-
-        // node1 checks health with timeout
-        let is_healthy = protocol1.check_health(500).await.unwrap();
-
-        assert!(is_healthy);
-    }
-
-    #[tokio::test]
-    async fn test_interop_job_dispatch() {
-        let transport = Arc::new(MemoryTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        let protocol_server = InteropProtocol::new(mesh.clone(), "server".to_string());
-        let protocol_agent = InteropProtocol::new(mesh.clone(), "agent".to_string());
-
-        // agent listens for jobs on tenant "tenant_a"
-        let _cancel_jobs = protocol_agent.listen_for_jobs("tenant_a").await.unwrap();
-
-        // server dispatches job to tenant "tenant_a"
-        let is_acked = protocol_server.dispatch_job("job_1", "tenant_a", "do_work", vec![42], 500).await.unwrap();
-
-        assert!(is_acked);
-    }
-
-    #[tokio::test]
-    async fn test_interop_resume_mission() {
-        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
-
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                use prost::Message as ProstMessage;
-                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
-                if decoded.mission_id == "mission_resume_1" {
-                    rx.store(true, Ordering::SeqCst);
-                }
-            }
-        });
-
-        let _cancel = mesh.subscribe(&"system:state_handoff".to_string(), handler).await.map_err(|e| e.to_string()).unwrap();
-
-        protocol.resume_mission("mission_resume_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
-        sleep(Duration::from_millis(100)).await;
-
-        assert!(received.load(Ordering::SeqCst));
-    }
-
-    #[tokio::test]
-    async fn test_interop_handoff_idempotency_simulation() {
-        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
-
-        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let rx = received_count.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                rx.fetch_add(1, Ordering::SeqCst);
-            }
-        });
-
-        let _cancel = mesh.subscribe(&"system:state_handoff".to_string(), handler).await.map_err(|e| e.to_string()).unwrap();
-
-        // Simulate identical payload handoffs to ensure we process gracefully
-        protocol.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
-
-        // Wait briefly for the lock to be fully acquired in the mock environment
-        sleep(Duration::from_millis(50)).await;
-
-        // Try the same handoff again, it should immediately return Ok() due to lock idempotency check.
-        let protocol2 = InteropProtocol::new(mesh.clone(), "node2".to_string());
-        protocol2.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
-
-        sleep(Duration::from_millis(100)).await;
-
-        assert_eq!(received_count.load(Ordering::SeqCst), 1);
-    }
-
-    #[tokio::test]
-    async fn test_interop_listen_for_state_handoff() {
-        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
-
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
-
-        let handler = Box::new(move |msg: proto::StateHandoff| {
-            if msg.mission_id == "mission_2" {
-                rx.store(true, Ordering::SeqCst);
-            }
-        });
-        let _cancel = protocol.listen_for_state_handoff(handler).await.unwrap();
-        protocol.handoff("mission_2", "tenant_2", vec![1, 2, 3]).await.unwrap();
-        sleep(Duration::from_millis(50)).await;
-        assert!(received.load(Ordering::SeqCst));
-    }
-
-    #[tokio::test]
-    async fn test_interop_dispatch_job_timeout() {
-        let transport = Arc::new(MemoryTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        let protocol_server = InteropProtocol::new(mesh.clone(), "server".to_string());
-
-        // server dispatches job but NO AGENT IS LISTENING
-        // We expect it to return false (timeout), but not fail the retry publish loop
-        let is_acked = protocol_server.dispatch_job("job_timeout", "tenant_a", "do_work", vec![42], 100).await.unwrap();
-
-        assert!(!is_acked);
-    }
-
-    #[tokio::test]
-    async fn test_interop_listen_for_pings() {
-        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-
-
-        let protocol_listener = InteropProtocol::new(mesh.clone(), "listener_node".to_string());
-
-        let _cancel = protocol_listener.listen_for_pings().await.unwrap();
-
-        let received = Arc::new(AtomicBool::new(false));
-        let rx = received.clone();
-
-        // Subscribe to the ACK
-        let ack_topic = format!("system:health_ack:sender_node");
-        let ack_topic_clone = ack_topic.clone();
-        let handler = Box::new(move |msg: Message| {
-            if true {
-                rx.store(true, Ordering::SeqCst);
-            }
-        });
-        let _cancel_ack = mesh.subscribe(&ack_topic, handler).await.map_err(|e| e.to_string()).unwrap();
-
-        // Publish a ping
-        use prost::Message as ProstMessage;
-        let ping = proto::HealthPing {
-            current_mode: 0,
-            timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            source_node_id: "sender_node".to_string(),
-        };
-
-        let mut buf = Vec::new();
-        ping.encode(&mut buf).unwrap();
-
-        let msg = Message {
-            action: "system:health_ping".to_string(),
-            payload: buf,
-        };
-        mesh.publish("dummy_topic", vec![]).await.unwrap();
+        mesh.publish(&"system:state_handoff".to_string(), buf)("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(100)).await;
 
@@ -586,7 +91,7 @@ mod tests {
 
         // Subscribe to the ACK
         let ack_topic = format!("system:job_ack:job_123");
-        let ack_topic_clone = ack_topic.clone();
+        let ack_action_clone = ack_topic.clone();
         let handler = Box::new(move |msg: Message| {
             if true {
                 rx.store(true, Ordering::SeqCst);
@@ -607,11 +112,7 @@ mod tests {
         let mut buf = Vec::new();
         dispatch.encode(&mut buf).unwrap();
 
-        let msg = Message {
-            action: "system:job_dispatch:tenant_x".to_string(),
-            payload: buf,
-        };
-        mesh.publish("dummy_topic", vec![]).await.unwrap();
+        mesh.publish(&"system:job_dispatch:tenant_x".to_string(), buf)("dummy_topic", vec![]).await.unwrap();
 
         sleep(Duration::from_millis(200)).await; // longer sleep for retry publish mechanism
 
@@ -625,7 +126,7 @@ mod tests {
         let protocol1 = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         // Acquire lock manually to simulate another process holding it
-        assert!(lock.acquire_lock("handoff:mission_locked", "node_other", 10).await.unwrap());
+        assert!(mesh.acquire_lock("handoff:mission_locked", "node_other", 10).await.unwrap());
 
         // This should timeout instead of deadlocking, because of our new timeout semantics
         let result = protocol1.handoff("mission_locked", "tenant_1", vec![1, 2, 3]).await;
@@ -634,7 +135,7 @@ mod tests {
         assert_eq!(result.unwrap_err(), "Timeout waiting for lock");
 
         // Release
-        let _ = lock.release_lock("handoff:mission_locked", "node_other").await;
+        let _ = mesh.release_lock("handoff:mission_locked", "node_other").await;
     }
 
     #[tokio::test]
@@ -670,8 +171,7 @@ mod tests {
         let bus = Arc::new(MockFailingBus {
             failures_left: std::sync::atomic::AtomicUsize::new(3),
         });
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "server".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "server".to_string());
 
         let result = protocol.dispatch_job("job_retry_1", "tenant_a", "do_work", vec![], 10).await;
         // The mock bus doesn't publish ACK, so it's a timeout (returns false), but it shouldn't be a publish error
@@ -684,8 +184,7 @@ mod tests {
         let bus = Arc::new(MockFailingBus {
             failures_left: std::sync::atomic::AtomicUsize::new(10), // More than max retries
         });
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "server".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "server".to_string());
 
         let result = protocol.dispatch_job("job_retry_2", "tenant_a", "do_work", vec![], 10).await;
         assert!(result.is_err());
@@ -697,8 +196,7 @@ mod tests {
         let bus = Arc::new(MockFailingBus {
             failures_left: std::sync::atomic::AtomicUsize::new(3),
         });
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let result = protocol.handoff("mission_retry_1", "tenant_1", vec![1, 2, 3]).await;
         assert!(result.is_ok());
@@ -709,8 +207,7 @@ mod tests {
         let bus = Arc::new(MockFailingBus {
             failures_left: std::sync::atomic::AtomicUsize::new(10),
         });
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let result = protocol.handoff("mission_retry_2", "tenant_1", vec![1, 2, 3]).await;
         assert!(result.is_err());
@@ -722,14 +219,7 @@ mod tests {
     }
     #[async_trait::async_trait]
     impl crate::msgbus::Bus for MockFailingBus {
-        async fn publish(&self, _msg: crate::msgbus::Message) -> Result<(), String> {
-            if self.failures_left.fetch_sub(1, Ordering::SeqCst) > 0 {
-                return Err("Simulated network failure".to_string());
-            }
-            Ok(())
-        }
-        async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-            Ok(Box::new(|| {}))
+            mesh.publish(&"system".to_string(), buf.clone()).await.unwrap();
         }
     }
 
@@ -738,8 +228,8 @@ mod tests {
         let bus = Arc::new(MockFailingBus {
             failures_left: std::sync::atomic::AtomicUsize::new(3),
         });
-        let lock = Arc::new(MemoryBus::new()); // dummy lock
-        let protocol = InteropProtocol::new(mesh.clone(), "agent".to_string());
+        let lock = Arc::new(MemoryTransport::new()); // dummy lock
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "agent".to_string());
 
         let result = protocol.report_job_status("job_retry_1", "tenant_a", "FAILED", vec![]).await;
         assert!(result.is_ok());
@@ -750,8 +240,7 @@ mod tests {
         let bus = Arc::new(MockFailingBus {
             failures_left: std::sync::atomic::AtomicUsize::new(10), // More than max retries
         });
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "agent".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "agent".to_string());
 
         let result = protocol.report_job_status("job_retry_2", "tenant_a", "FAILED", vec![]).await;
         assert!(result.is_err());
@@ -762,7 +251,7 @@ mod tests {
     async fn test_interop_health_timeout() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
 
-        let protocol = InteropProtocol::new(mesh.clone(), "node_timeout".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node_timeout".to_string());
 
         // Do not set up a listener to acknowledge the ping
         let is_healthy = protocol.check_health(50).await.unwrap();
@@ -774,7 +263,7 @@ mod tests {
     async fn test_interop_listen_for_state_handoff_malformed() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
 
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
@@ -786,11 +275,7 @@ mod tests {
         let _cancel = protocol.listen_for_state_handoff(handler).await.unwrap();
 
         // Send a malformed message
-        let msg = Message {
-            action: "system:state_handoff".to_string(),
-            payload: vec![255, 255, 255], // Invalid protobuf
-        };
-        mesh.publish("dummy_topic", vec![]).await.unwrap();
+        mesh.publish(&"system:state_handoff".to_string(), vec![255]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -816,11 +301,7 @@ mod tests {
         let _cancel_ack = mesh.subscribe(&ack_topic, handler).await.map_err(|e| e.to_string()).unwrap();
 
         // Send a malformed ping
-        let msg = Message {
-            action: "system:health_ping".to_string(),
-            payload: vec![255, 255, 255], // Invalid protobuf
-        };
-        mesh.publish("dummy_topic", vec![]).await.unwrap();
+        mesh.publish(&"system:health_ping".to_string(), vec![255]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -846,11 +327,7 @@ mod tests {
         let _cancel_ack = mesh.subscribe(&ack_topic, handler).await.map_err(|e| e.to_string()).unwrap();
 
         // Send a malformed job dispatch
-        let msg = Message {
-            action: "system:job_dispatch:tenant_x".to_string(),
-            payload: vec![255, 255, 255], // Invalid protobuf
-        };
-        mesh.publish("dummy_topic", vec![]).await.unwrap();
+        mesh.publish(&"system:job_dispatch:tenant_x".to_string(), vec![255]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -874,11 +351,7 @@ mod tests {
         let _cancel = protocol_server.listen_for_job_status("job_status_123", handler).await.unwrap();
 
         // Send a malformed job status
-        let msg = Message {
-            action: "system:job_status:job_status_123".to_string(),
-            payload: vec![255, 255, 255], // Invalid protobuf
-        };
-        mesh.publish("dummy_topic", vec![]).await.unwrap();
+        mesh.publish(&"system:job_status:job_status_123".to_string(), vec![255]).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
@@ -891,8 +364,7 @@ mod tests {
     #[tokio::test]
     async fn test_interop_listen_for_state_handoff() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
@@ -926,8 +398,7 @@ mod tests {
     #[tokio::test]
     async fn test_interop_listen_for_pings() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let _cancel_ping = protocol.listen_for_pings().await.unwrap();
 
@@ -961,8 +432,7 @@ mod tests {
     #[tokio::test]
     async fn test_interop_listen_for_jobs() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let _cancel_jobs = protocol.listen_for_jobs("t1").await.unwrap();
 
@@ -998,10 +468,9 @@ mod tests {
     #[tokio::test]
     async fn test_interop_check_health_success() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
-        let mesh_clone2 = mesh_clone.clone();
+        let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone2 = mesh_clone.clone();
         let _cancel = mesh.subscribe("system:health_ping", Box::new(move |msg| {
             use prost::Message as ProstMessage;
             if let Ok(ping) = proto::HealthPing::decode(&msg.payload[..]) {
@@ -1012,12 +481,9 @@ mod tests {
                 };
                 let mut buf = Vec::new();
                 ack.encode(&mut buf).unwrap();
-                let b = bus_clone.clone();
+                let b = mesh.clone();
                 tokio::spawn(async move {
-                    b.publish(crate::msgbus::Message {
-                        topic: format!("system:health_ack:{}", ping.source_node_id),
-                        payload: buf,
-                    }).await.unwrap();
+            mesh.publish(&"system".to_string(), buf.clone()).await.unwrap();
                 });
             }
         })).await.unwrap();
@@ -1029,10 +495,9 @@ mod tests {
     #[tokio::test]
     async fn test_interop_dispatch_job_success() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
-        let mesh_clone2 = mesh_clone.clone();
+        let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone = mesh.clone(); let mesh_clone2 = mesh_clone.clone();
         let _cancel = mesh.subscribe("system:job_dispatch:t1", Box::new(move |msg| {
             use prost::Message as ProstMessage;
             if let Ok(dispatch) = proto::JobDispatch::decode(&msg.payload[..]) {
@@ -1043,12 +508,9 @@ mod tests {
                 };
                 let mut buf = Vec::new();
                 ack.encode(&mut buf).unwrap();
-                let b = bus_clone.clone();
+                let b = mesh.clone();
                 tokio::spawn(async move {
-                    b.publish(crate::msgbus::Message {
-                        topic: format!("system:job_ack:{}", dispatch.job_id),
-                        payload: buf,
-                    }).await.unwrap();
+            mesh.publish(&"system".to_string(), buf.clone()).await.unwrap();
                 });
             }
         })).await.unwrap();
@@ -1060,8 +522,7 @@ mod tests {
     #[tokio::test]
     async fn test_interop_handoff_success() {
         let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport));
-        let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
+        let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let transport = Arc::new(MemoryTransport::new()); let mesh = Arc::new(CentrifugeNode::new(transport)); let protocol = InteropProtocol::new(mesh.clone(), "node1".to_string());
 
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
