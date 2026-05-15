@@ -1,6 +1,6 @@
 use std::time::Instant;
 use std::sync::Arc;
-use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
+use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue, SqliteTaskQueue};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -20,9 +20,26 @@ pub async fn bench_queue_latency() {
         }
     }
 
+
+
+
+    tracing::info!("--- Standalone Mode (SQLite) ---");
+    let pool_res = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:").await;
+
+    if let Ok(sqlite_pool) = pool_res {
+        // Use the actual init method for schema
+        let sqlite_queue = Arc::new(SqliteTaskQueue::new(sqlite_pool));
+        sqlite_queue.init().await.unwrap();
+        bench_queue("AI Job Dispatch Latency Standalone Mode (SQLite)", sqlite_queue).await;
+    }
+
     tracing::info!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
     bench_queue("AI Job Dispatch Latency Standalone Mode (Memory)", mem_queue).await;
+
+
+
 }
 
 pub async fn bench_db_query_time() {

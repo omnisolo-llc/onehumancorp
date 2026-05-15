@@ -282,7 +282,9 @@ impl DashboardService for MyDashboardService {
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
+            let mut participants = Vec::new();
             if !req.mobile_optimized {
+                participants = m.participants.clone();
                 for msg in &m.transcript {
                     transcript.push(::server_ohc::agent::AgentMessage {
                         id: msg.id.clone(),
@@ -297,7 +299,7 @@ impl DashboardService for MyDashboardService {
             }
             out_meetings.push(::server_ohc::app::MeetingRoom {
                 id: m.id.clone(),
-                participants: m.participants.clone(),
+                participants,
                 transcript,
             });
         }
