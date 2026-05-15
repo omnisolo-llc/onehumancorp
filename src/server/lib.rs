@@ -1758,7 +1758,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <button onclick="showScreen('marketing-screen')">Marketing</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
+                            <button onclick="showScreen('business-share-screen')">Share My Business</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="facebook-integration" class="card glass">
@@ -1795,7 +1797,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
-                        <h1>Referral Dashboard</h1>
+                        <h1>Referral Program</h1>
+                        <p style="text-align: center; color: #4CAF50; font-weight: bold; margin-bottom: 20px;">Share OHC with a friend, both get 1 month free Pro!</p>
                         <div class="card glass">
                             <h3>Your Referral Link</h3>
                             <p id="referral-link">ohc://join?ref=DEFAULT</p>
@@ -1900,6 +1903,73 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
+                    </div>
+
+                    <!-- Business Share Screen -->
+                    <div id="business-share-screen" class="screen glass">
+                        <h1>Share My Business</h1>
+                        <div class="card glass" style="text-align: center;">
+                            <h2>My Awesome Store</h2>
+                            <p>The best products in town.</p>
+                            <img src="https://via.placeholder.com/300x150" alt="Storefront Preview" style="border-radius: 8px; margin: 10px 0;">
+                            <p>ohc.app/b/my-awesome-store</p>
+                        </div>
+                        <div class="card glass">
+                            <h3>Share To</h3>
+                            <button onclick="alert('Shared to Instagram!')">📷 Instagram</button>
+                            <button onclick="alert('Shared to WhatsApp!')">💬 WhatsApp</button>
+                            <button onclick="alert('Shared to X!')">🐦 X (Twitter)</button>
+                            <button onclick="alert('Link copied to clipboard!')">📋 Copy Link</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Marketing / Social Posting Screen -->
+                    <div id="marketing-screen" class="screen glass">
+                        <h1>Marketing & Social Media</h1>
+                        <div class="card glass">
+                            <h3>Auto-Posting Agent</h3>
+                            <p>Status: Active</p>
+                            <button class="secondary">Connect Facebook</button>
+                            <button class="secondary">Connect Instagram</button>
+                            <button class="secondary">Connect X</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Draft Posts</h3>
+                            <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                                <p><strong>New Arrival: Vegan Cupcakes!</strong> 🧁 Stop by today and try our new recipe.</p>
+                                <button onclick="alert('Post scheduled!')">Approve & Schedule</button>
+                                <button class="secondary">Edit</button>
+                            </div>
+                        </div>
+                        <div class="card glass">
+                            <h3>Email Marketing</h3>
+                            <button onclick="showScreen('email-campaign-screen')">Create New Campaign</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Email Campaign Screen -->
+                    <div id="email-campaign-screen" class="screen glass">
+                        <h1>New Email Campaign</h1>
+                        <div class="card glass">
+                            <label>Template</label>
+                            <select style="width: 100%; padding: 10px; margin-bottom: 10px;">
+                                <option>Flash Sale</option>
+                                <option>New Arrivals</option>
+                                <option>Thank You</option>
+                            </select>
+                            <label>Audience</label>
+                            <select style="width: 100%; padding: 10px; margin-bottom: 10px;">
+                                <option>All Customers (150)</option>
+                                <option>Recent Buyers (30)</option>
+                            </select>
+                            <button onclick="alert('Previewing campaign...')">Preview</button>
+                            <button class="primary" onclick="alert('Campaign sending!'); showScreen('marketing-screen')">Send Campaign</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('marketing-screen')">Cancel</button>
+                    </div>
+
                     <!-- Setup Page -->
                     <div id="setup-screen" class="screen">
                         <h1>Business Setup</h1>
@@ -1923,6 +1993,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Read Product List</p>
                         <p>Manage your custom software connections here.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Pricing Screen (Upgrade Funnel) -->
+                    <div id="pricing-screen" class="screen glass">
+                        <h1>Choose Your Plan</h1>
+                        <p style="text-align: center; margin-bottom: 20px;">Unlock more agents, higher limits, and custom domains.</p>
+                        <div class="card glass" style="margin-bottom: 10px;">
+                            <h2>Free</h2>
+                            <p>1 AI Agent, 10 Products, OHC Subdomain</p>
+                            <button class="secondary">Current Plan</button>
+                        </div>
+                        <div class="card glass" style="margin-bottom: 10px;">
+                            <h2>Starter - $19/mo</h2>
+                            <p>3 AI Agents, 100 Products, Custom Domain</p>
+                            <button class="primary" onclick="alert('Upgrading to Starter...'); showScreen('dashboard-screen')">Upgrade to Starter</button>
+                        </div>
+                        <div class="card glass" style="margin-bottom: 10px;">
+                            <h2>Pro - $49/mo</h2>
+                            <p>Unlimited Agents, Unlimited Products, Advanced Analytics</p>
+                            <button class="primary" onclick="alert('Upgrading to Pro...'); showScreen('dashboard-screen')">Upgrade to Pro</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Upgrade Prompt (Soft Paywall) -->
+                    <div id="upgrade-prompt-screen" class="screen glass">
+                        <h1>You've hit a limit!</h1>
+                        <div class="card glass" style="text-align: center;">
+                            <h2>Upgrade your plan to keep growing</h2>
+                            <p>You've reached the 10 product limit on the Free plan. Upgrade to Starter or Pro to add unlimited products, connect a custom domain, and hire more AI agents to help you sell.</p>
+                            <button class="primary" onclick="showScreen('pricing-screen')">View Plans</button>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">Not right now</button>
+                        </div>
                     </div>
 
                     <!-- Settings Screen -->
@@ -2200,6 +2303,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <h2>AI Store</h2>
+                            <p style="text-align: center; margin-top: 20px;">
+                                <a href='#' style="color: #666; text-decoration: none; font-size: 0.9em;">Built with OHC — Start your free business →</a>
+                            </p>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
@@ -2234,6 +2340,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
+                            'business-share-screen': '/share',
+                            'marketing-screen': '/marketing',
+                            'email-campaign-screen': '/marketing/email',
+                            'upgrade-prompt-screen': '/upgrade',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
@@ -2261,7 +2371,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'business-share-screen' || id === 'marketing-screen' || id === 'email-campaign-screen' || id === 'upgrade-prompt-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -2272,6 +2382,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+
+                            // Success Milestones Notifications Simulation
+                            setTimeout(() => {
+                                if(document.getElementById('dashboard-screen').style.display !== 'none') {
+                                    alert("🎉 You just got your 10th order! Keep it up!");
+                                }
+                            }, 5000);
+                            setTimeout(() => {
+                                if(document.getElementById('dashboard-screen').style.display !== 'none') {
+                                    alert("🚀 Your store has 100 visitors today!");
+                                }
+                            }, 15000);
                         };
                     </script>
                 </body>
