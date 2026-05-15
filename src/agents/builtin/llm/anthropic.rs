@@ -1,10 +1,10 @@
 use async_trait::async_trait;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use reqwest::Client;
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use super::LlmClient;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -64,7 +64,6 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
 
-
 pub struct AnthropicClient {
     api_key: String,
     client: Client,
@@ -80,16 +79,148 @@ impl AnthropicClient {
                 .unwrap(),
         }
     }
+
+    pub(crate) fn build_payload(req: &ChatRequest) -> AnthropicRequest {
+        let mut messages: Vec<AnthropicMessage> = Vec::new();
+
+        for m in &req.messages {
+            if m.role == Role::System {
+                continue;
+            }
+            let role = if m.role == Role::Tool {
+                "user".to_string()
+            } else {
+                m.role.to_string()
+            };
+
+            let mut content_blocks: Vec<AnthropicContent> = Vec::new();
+
+            for tr in &m.tool_results {
+                let (text, is_error) = if !tr.error.is_empty() {
+                    (format!("Error: {}", tr.error), Some(true))
+                } else {
+                    (tr.content.clone(), None)
+                };
+                content_blocks.push(AnthropicContent {
+                    r#type: "tool_result".to_string(),
+                    text: None,
+                    id: None,
+                    name: None,
+                    input: None,
+                    tool_use_id: Some(tr.tool_call_id.clone()),
+                    content: Some(Value::String(text)),
+                    is_error,
+                    cache_control: None,
+                });
+            }
+
+            for tc in &m.tool_calls {
+                content_blocks.push(AnthropicContent {
+                    r#type: "tool_use".to_string(),
+                    text: None,
+                    id: Some(tc.id.clone()),
+                    name: Some(tc.name.clone()),
+                    input: Some(tc.arguments.clone()),
+                    tool_use_id: None,
+                    content: None,
+                    is_error: None,
+                    cache_control: None,
+                });
+            }
+
+            if !m.content.is_empty() {
+                content_blocks.push(AnthropicContent {
+                    r#type: "text".to_string(),
+                    text: Some(m.content.clone()),
+                    id: None,
+                    name: None,
+                    input: None,
+                    tool_use_id: None,
+                    content: None,
+                    is_error: None,
+                    cache_control: None,
+                });
+            }
+
+            if content_blocks.is_empty() {
+                content_blocks.push(AnthropicContent {
+                    r#type: "text".to_string(),
+                    text: Some(String::new()),
+                    id: None,
+                    name: None,
+                    input: None,
+                    tool_use_id: None,
+                    content: None,
+                    is_error: None,
+                    cache_control: None,
+                });
+            }
+
+            messages.push(AnthropicMessage {
+                role,
+                content: content_blocks,
+            });
+        }
+
+        if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user") {
+            if let Some(last_content) = last_user.content.last_mut() {
+                last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
+            }
+        }
+
+        let system = if req.system.is_empty() {
+            vec![]
+        } else {
+            vec![AnthropicSystem {
+                r#type: "text",
+                text: req.system.clone(),
+                cache_control: Some(AnthropicCacheControl { r#type: "ephemeral" }),
+            }]
+        };
+
+        let num_tools = req.tools.len();
+        let tools: Vec<AnthropicToolDef> = req
+            .tools
+            .iter()
+            .enumerate()
+            .map(|(i, t)| AnthropicToolDef {
+                name: t.name.clone(),
+                description: t.description.clone(),
+                input_schema: t.parameters.clone(),
+                cache_control: if i == num_tools - 1 && num_tools > 0 {
+                    Some(AnthropicCacheControl { r#type: "ephemeral" })
+                } else {
+                    None
+                },
+            })
+            .collect();
+
+        let max_tokens = if req.max_tokens == 0 {
+            2048
+        } else if req.max_tokens > 4096 {
+            4096
+        } else {
+            req.max_tokens
+        };
+
+        AnthropicRequest {
+            model: req.model.clone(),
+            max_tokens,
+            system,
+            messages,
+            tools,
+        }
+    }
 }
 
 // ── Wire types ────────────────────────────────────────────────────────────────
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct AnthropicCacheControl {
     r#type: &'static str,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct AnthropicSystem {
     r#type: &'static str,
     text: String,
@@ -97,13 +228,13 @@ struct AnthropicSystem {
     cache_control: Option<AnthropicCacheControl>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct AnthropicMessage {
     role: String,
     content: Vec<AnthropicContent>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct AnthropicContent {
     r#type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -124,7 +255,7 @@ struct AnthropicContent {
     cache_control: Option<AnthropicCacheControl>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct AnthropicToolDef {
     name: String,
     description: String,
@@ -133,7 +264,7 @@ struct AnthropicToolDef {
     cache_control: Option<AnthropicCacheControl>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct AnthropicRequest {
     model: String,
     max_tokens: i32,
@@ -185,140 +316,7 @@ impl LlmClient for AnthropicClient {
         }
 
         let req = super::minify_chat_request(req);
-        let mut messages: Vec<AnthropicMessage> = Vec::new();
-
-        for m in &req.messages {
-            if m.role == Role::System {
-                continue;
-            }
-            let role = if m.role == Role::Tool {
-                "user".to_string()
-            } else {
-                m.role.to_string()
-            };
-
-            // Build content blocks
-            let mut content_blocks: Vec<AnthropicContent> = Vec::new();
-
-            // Tool results
-            for tr in &m.tool_results {
-                let (text, is_error) = if !tr.error.is_empty() {
-                    (format!("Error: {}", tr.error), Some(true))
-                } else {
-                    (tr.content.clone(), None)
-                };
-                content_blocks.push(AnthropicContent {
-                    r#type: "tool_result".to_string(),
-                    text: None,
-                    id: None,
-                    name: None,
-                    input: None,
-                    tool_use_id: Some(tr.tool_call_id.clone()),
-                    content: Some(Value::String(text)),
-                    is_error,
-                    cache_control: None,
-                });
-            }
-
-            // Tool calls (from assistant)
-            for tc in &m.tool_calls {
-                content_blocks.push(AnthropicContent {
-                    r#type: "tool_use".to_string(),
-                    text: None,
-                    id: Some(tc.id.clone()),
-                    name: Some(tc.name.clone()),
-                    input: Some(tc.arguments.clone()),
-                    tool_use_id: None,
-                    content: None,
-                    is_error: None,
-                    cache_control: None,
-                });
-            }
-
-            // Text content
-            if !m.content.is_empty() {
-                content_blocks.push(AnthropicContent {
-                    r#type: "text".to_string(),
-                    text: Some(m.content.clone()),
-                    id: None,
-                    name: None,
-                    input: None,
-                    tool_use_id: None,
-                    content: None,
-                    is_error: None,
-                    cache_control: None,
-                });
-            }
-
-            if content_blocks.is_empty() {
-                content_blocks.push(AnthropicContent {
-                    r#type: "text".to_string(),
-                    text: Some(String::new()),
-                    id: None,
-                    name: None,
-                    input: None,
-                    tool_use_id: None,
-                    content: None,
-                    is_error: None,
-                    cache_control: None,
-                });
-            }
-
-            messages.push(AnthropicMessage {
-                role,
-                content: content_blocks,
-            });
-        }
-
-        // Prompt caching: cache the last user message
-        if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user") {
-            if let Some(last_content) = last_user.content.last_mut() {
-                last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
-            }
-        }
-
-        let system = if req.system.is_empty() {
-            vec![]
-        } else {
-            vec![AnthropicSystem {
-                r#type: "text",
-                text: req.system.clone(),
-                cache_control: Some(AnthropicCacheControl { r#type: "ephemeral" }),
-            }]
-        };
-
-        let num_tools = req.tools.len();
-        let tools: Vec<AnthropicToolDef> = req
-            .tools
-            .iter()
-            .enumerate()
-            .map(|(i, t)| AnthropicToolDef {
-                name: t.name.clone(),
-                description: t.description.clone(),
-                input_schema: t.parameters.clone(),
-                cache_control: if i == num_tools - 1 {
-                    Some(AnthropicCacheControl { r#type: "ephemeral" })
-                } else {
-                    None
-                },
-            })
-            .collect();
-
-        let max_tokens = if req.max_tokens == 0 {
-            2048
-        } else if req.max_tokens > 4096 {
-            4096
-        } else {
-            req.max_tokens
-        };
-
-        let payload = AnthropicRequest {
-            model: req.model.clone(),
-            max_tokens,
-            system,
-            messages,
-            tools,
-        };
+        let payload = Self::build_payload(&req);
 
         let resp = self
             .client
@@ -345,7 +343,6 @@ impl LlmClient for AnthropicClient {
         }
         let result = result.unwrap();
         cb.record_success();
-
 
         // Extract content + tool calls from response
         let mut text_content = String::new();
@@ -382,7 +379,7 @@ impl LlmClient for AnthropicClient {
                 response_id: result.id.clone(),
                 previous_response_id: None,
             },
-                        usage: Usage {
+            usage: Usage {
                 input_tokens: result.usage.input_tokens,
                 output_tokens: result.usage.output_tokens,
                 cache_creation_input_tokens: result.usage.cache_creation_input_tokens,
@@ -391,5 +388,35 @@ impl LlmClient for AnthropicClient {
             stop_reason,
             response_id: result.id.clone(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::ChatRequest;
+
+    #[test]
+    fn test_anthropic_build_payload_clamps_max_tokens_zero() {
+        let mut req = ChatRequest::default();
+        req.max_tokens = 0;
+        let payload = AnthropicClient::build_payload(&req);
+        assert_eq!(payload.max_tokens, 2048);
+    }
+
+    #[test]
+    fn test_anthropic_build_payload_clamps_max_tokens_large() {
+        let mut req = ChatRequest::default();
+        req.max_tokens = 10000;
+        let payload = AnthropicClient::build_payload(&req);
+        assert_eq!(payload.max_tokens, 4096);
+    }
+
+    #[test]
+    fn test_anthropic_build_payload_preserves_valid_tokens() {
+        let mut req = ChatRequest::default();
+        req.max_tokens = 3000;
+        let payload = AnthropicClient::build_payload(&req);
+        assert_eq!(payload.max_tokens, 3000);
     }
 }

@@ -125,3 +125,39 @@ impl LlmClient for OllamaClient {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::ChatRequest;
+
+    #[test]
+    fn test_ollama_build_payload_clamps_max_tokens_zero() {
+        let req = ChatRequest {
+            max_tokens: 0,
+            ..Default::default()
+        };
+        let payload = OllamaClient::build_payload(&req);
+        assert_eq!(payload.options.unwrap().num_predict, 2048);
+    }
+
+    #[test]
+    fn test_ollama_build_payload_clamps_max_tokens_large() {
+        let req = ChatRequest {
+            max_tokens: 10000,
+            ..Default::default()
+        };
+        let payload = OllamaClient::build_payload(&req);
+        assert_eq!(payload.options.unwrap().num_predict, 4096);
+    }
+
+    #[test]
+    fn test_ollama_build_payload_preserves_valid_tokens() {
+        let req = ChatRequest {
+            max_tokens: 3000,
+            ..Default::default()
+        };
+        let payload = OllamaClient::build_payload(&req);
+        assert_eq!(payload.options.unwrap().num_predict, 3000);
+    }
+}

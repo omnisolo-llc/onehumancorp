@@ -1,10 +1,10 @@
 use async_trait::async_trait;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use reqwest::Client;
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use super::LlmClient;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -64,7 +64,6 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
 
-
 pub struct OpenAIClient {
     api_key: String,
     base_url: String,
@@ -93,11 +92,101 @@ impl OpenAIClient {
                 .unwrap(),
         }
     }
+
+    pub(crate) fn build_payload(req: &ChatRequest) -> OpenAIRequest {
+        let mut messages: Vec<OpenAIMessage> = Vec::new();
+
+        if !req.system.is_empty() {
+            messages.push(OpenAIMessage {
+                role: "system".to_string(),
+                content: Some(req.system.clone()),
+                tool_calls: None,
+                tool_call_id: None,
+            });
+        }
+
+        for m in &req.messages {
+            if m.role == Role::System {
+                continue;
+            }
+
+            for tr in &m.tool_results {
+                let content = if !tr.error.is_empty() {
+                    format!("Error: {}", tr.error)
+                } else {
+                    tr.content.clone()
+                };
+                messages.push(OpenAIMessage {
+                    role: "tool".to_string(),
+                    content: Some(content),
+                    tool_calls: None,
+                    tool_call_id: Some(tr.tool_call_id.clone()),
+                });
+            }
+
+            if !m.tool_calls.is_empty() {
+                let calls: Vec<OpenAIToolCall> = m
+                    .tool_calls
+                    .iter()
+                    .map(|tc| OpenAIToolCall {
+                        id: tc.id.clone(),
+                        r#type: "function",
+                        function: OpenAIFunction {
+                            name: tc.name.clone(),
+                            arguments: tc.arguments.to_string(),
+                        },
+                    })
+                    .collect();
+                messages.push(OpenAIMessage {
+                    role: "assistant".to_string(),
+                    content: if m.content.is_empty() { None } else { Some(m.content.clone()) },
+                    tool_calls: Some(calls),
+                    tool_call_id: None,
+                });
+            } else {
+                messages.push(OpenAIMessage {
+                    role: m.role.to_string(),
+                    content: Some(m.content.clone()),
+                    tool_calls: None,
+                    tool_call_id: None,
+                });
+            }
+        }
+
+        let tools: Vec<OpenAIToolDef> = req
+            .tools
+            .iter()
+            .map(|t| OpenAIToolDef {
+                r#type: "function",
+                function: OpenAIFunctionDef {
+                    name: t.name.clone(),
+                    description: t.description.clone(),
+                    parameters: t.parameters.clone(),
+                },
+            })
+            .collect();
+
+        let clamped_max_tokens = if req.max_tokens == 0 {
+            2048
+        } else if req.max_tokens > 4096 {
+            4096
+        } else {
+            req.max_tokens
+        };
+        let max_tokens = Some(clamped_max_tokens);
+
+        OpenAIRequest {
+            model: req.model.clone(),
+            messages,
+            max_tokens,
+            tools,
+        }
+    }
 }
 
 // ── Wire types ────────────────────────────────────────────────────────────────
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct OpenAIMessage {
     role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -108,33 +197,33 @@ struct OpenAIMessage {
     tool_call_id: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct OpenAIToolCall {
     id: String,
     r#type: &'static str,
     function: OpenAIFunction,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct OpenAIFunction {
     name: String,
     arguments: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct OpenAIToolDef {
     r#type: &'static str,
     function: OpenAIFunctionDef,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct OpenAIFunctionDef {
     name: String,
     description: String,
     parameters: Value,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 struct OpenAIRequest {
     model: String,
     messages: Vec<OpenAIMessage>,
@@ -203,95 +292,7 @@ impl LlmClient for OpenAIClient {
         }
 
         let req = super::minify_chat_request(req);
-        let mut messages = Vec::new();
-
-        if !req.system.is_empty() {
-            messages.push(OpenAIMessage {
-                role: "system".to_string(),
-                content: Some(req.system.clone()),
-                tool_calls: None,
-                tool_call_id: None,
-            });
-        }
-
-        for m in &req.messages {
-            if m.role == Role::System {
-                continue;
-            }
-
-            // Tool results
-            for tr in &m.tool_results {
-                let content = if !tr.error.is_empty() {
-                    format!("Error: {}", tr.error)
-                } else {
-                    tr.content.clone()
-                };
-                messages.push(OpenAIMessage {
-                    role: "tool".to_string(),
-                    content: Some(content),
-                    tool_calls: None,
-                    tool_call_id: Some(tr.tool_call_id.clone()),
-                });
-            }
-
-            // Assistant with tool calls
-            if !m.tool_calls.is_empty() {
-                let calls: Vec<OpenAIToolCall> = m
-                    .tool_calls
-                    .iter()
-                    .map(|tc| OpenAIToolCall {
-                        id: tc.id.clone(),
-                        r#type: "function",
-                        function: OpenAIFunction {
-                            name: tc.name.clone(),
-                            arguments: tc.arguments.to_string(),
-                        },
-                    })
-                    .collect();
-                messages.push(OpenAIMessage {
-                    role: "assistant".to_string(),
-                    content: if m.content.is_empty() { None } else { Some(m.content.clone()) },
-                    tool_calls: Some(calls),
-                    tool_call_id: None,
-                });
-            } else {
-                messages.push(OpenAIMessage {
-                    role: m.role.to_string(),
-                    content: Some(m.content.clone()),
-                    tool_calls: None,
-                    tool_call_id: None,
-                });
-            }
-        }
-
-        let tools: Vec<OpenAIToolDef> = req
-            .tools
-            .iter()
-            .map(|t| OpenAIToolDef {
-                r#type: "function",
-                function: OpenAIFunctionDef {
-                    name: t.name.clone(),
-                    description: t.description.clone(),
-                    parameters: t.parameters.clone(),
-                },
-            })
-            .collect();
-
-        let clamped_max_tokens = if req.max_tokens == 0 {
-            2048
-        } else if req.max_tokens > 4096 {
-            4096
-        } else {
-            req.max_tokens
-        };
-        let max_tokens = Some(clamped_max_tokens);
-
-        let payload = OpenAIRequest {
-            model: req.model.clone(),
-            messages,
-            max_tokens,
-            tools,
-        };
+        let payload = Self::build_payload(&req);
 
         // Enable prompt caching for supported models (gpt-4o, gpt-4o-mini)
         // Note: OpenAI prompt caching is automatic but we can nudge it by including
@@ -352,7 +353,7 @@ impl LlmClient for OpenAIClient {
 
         let usage = result
             .usage
-                        .map(|u| Usage {
+            .map(|u| Usage {
                 input_tokens: u.prompt_tokens,
                 output_tokens: u.completion_tokens,
                 cache_read_input_tokens: u.prompt_tokens_details.as_ref().map(|d| d.cached_tokens).unwrap_or(0),
@@ -373,5 +374,35 @@ impl LlmClient for OpenAIClient {
             stop_reason: finish_reason,
             response_id: result.id.clone(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::ChatRequest;
+
+    #[test]
+    fn test_openai_build_payload_clamps_max_tokens_zero() {
+        let mut req = ChatRequest::default();
+        req.max_tokens = 0;
+        let payload = OpenAIClient::build_payload(&req);
+        assert_eq!(payload.max_tokens, Some(2048));
+    }
+
+    #[test]
+    fn test_openai_build_payload_clamps_max_tokens_large() {
+        let mut req = ChatRequest::default();
+        req.max_tokens = 10000;
+        let payload = OpenAIClient::build_payload(&req);
+        assert_eq!(payload.max_tokens, Some(4096));
+    }
+
+    #[test]
+    fn test_openai_build_payload_preserves_valid_tokens() {
+        let mut req = ChatRequest::default();
+        req.max_tokens = 3000;
+        let payload = OpenAIClient::build_payload(&req);
+        assert_eq!(payload.max_tokens, Some(3000));
     }
 }
