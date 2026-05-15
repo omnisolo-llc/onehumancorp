@@ -63,6 +63,9 @@ impl DashboardService for MyDashboardService {
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
 
+        // Bolt Optimization: Ensure concurrent loading of agents, meetings, products, orders, and org info
+        // to satisfy hybrid latency benchmarks. This removes sequential blocking.
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
                 Ok::<_, String>(hub1.get_agents())

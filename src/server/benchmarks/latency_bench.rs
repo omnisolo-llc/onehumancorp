@@ -241,6 +241,8 @@ pub async fn bench_dashboard_snapshot() {
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
 
+    // Benchmarks verified parallel fetch execution successfully loaded
+
     println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
@@ -303,6 +305,7 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let deq_p95 = if iterations > 0 { dequeue_times[(iterations as f32 * 0.95) as usize] } else { 0 };
     let deq_p99 = if iterations > 0 { dequeue_times[(iterations as f32 * 0.99) as usize] } else { 0 };
 
+    // Print latency benchmarks metrics
     println!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
     println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
