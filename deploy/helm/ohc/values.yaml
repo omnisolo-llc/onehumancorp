@@ -167,3 +167,10 @@ kube-prometheus-stack:
         label: grafana_dashboard
         labelValue: "1"
 
+
+
+# K8s Policies
+global:
+  namespaceIsolation: true
+  networkPolicy:
+    enabled: true

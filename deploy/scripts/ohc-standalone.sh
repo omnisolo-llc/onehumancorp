@@ -21,12 +21,13 @@ export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=1
 export MALLOC_ARENA_MAX=1
-export RAYON_NUM_THREADS=2
+export RAYON_NUM_THREADS=1
+export MALLOC_TRIM_THRESHOLD_=65536
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
 export RUST_LOG="info"
-export OHC_RUNTIME_DIR=".ohc/runtime"
+export OHC_RUNTIME_DIR="${HOME}/.ohc/runtime"
 export OHC_MEMORY_DIR="${OHC_RUNTIME_DIR}/memory"
 export OHC_STATUS_DIR="${OHC_RUNTIME_DIR}/status"
 
@@ -49,6 +50,9 @@ if [ -z "$OHC_LOCAL_DB_KEY" ]; then
   fi
   export OHC_LOCAL_DB_KEY="$(cat "$KEY_FILE")"
 fi
+
+export OHC_SQLITE_KEY="${OHC_LOCAL_DB_KEY}"
+
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 

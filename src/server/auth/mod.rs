@@ -479,6 +479,10 @@ impl Store {
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
                         return Err("Invalid token: empty claims".to_string());
                     }
+                    if data.claims.exp < chrono::Utc::now().timestamp() {
+                        return Err("token expired".to_string());
+                    }
+
                     if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
