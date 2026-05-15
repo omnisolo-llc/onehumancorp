@@ -31,7 +31,7 @@ mod tests {
         assert!(link.starts_with("ohc://join?ref="));
         assert!(link.contains("utm_source=standalone_desktop"));
         assert!(link.contains("inviter=user123"));
-        
+
         let err = generate_referral_link("").unwrap_err();
         assert_eq!(err, "userID cannot be empty");
     }

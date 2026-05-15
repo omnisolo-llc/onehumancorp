@@ -1,14 +1,14 @@
+use crate::hub::Hub;
 use axum::{
+    Extension, Json, Router,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router, Extension,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use sqlx::PgPool;
-use crate::hub::Hub;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
@@ -106,9 +106,7 @@ async fn handle_track_visitor(
     Json(TrackVisitorResponse { tracked: true })
 }
 
-async fn handle_check_milestones(
-    Extension(_state): Extension<GrowthState>,
-) -> impl IntoResponse {
+async fn handle_check_milestones(Extension(_state): Extension<GrowthState>) -> impl IntoResponse {
     let milestones = vec![
         Milestone {
             id: "1".to_string(),

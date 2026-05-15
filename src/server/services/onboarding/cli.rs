@@ -6,7 +6,11 @@ pub fn run_cli(mut writer: impl Write, is_cloud: bool) -> Result<(), String> {
     let wizard = InteractiveWizard::new();
     let config = wizard.run_interactive_setup(is_cloud)?;
 
-    let mode = if is_cloud { "Cloud-native" } else { "Standalone" };
+    let mode = if is_cloud {
+        "Cloud-native"
+    } else {
+        "Standalone"
+    };
 
     writeln!(writer, "OHC Interactive Setup ({})", mode).map_err(|e| e.to_string())?;
     writeln!(writer, "Configuration Options:").map_err(|e| e.to_string())?;

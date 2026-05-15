@@ -1,8 +1,8 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::billing::*;
+use crate::services::billing::auditor::{AuditEvent, CostAuditor};
 use ::server_ohc::billing::billing_service_server::BillingService;
-use crate::services::billing::auditor::{CostAuditor, AuditEvent};
+use ::server_ohc::billing::*;
 use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
 pub struct MyBillingService {
     auditor: Arc<CostAuditor>,
@@ -46,8 +46,14 @@ impl BillingService for MyBillingService {
         let total_tokens = self.auditor.get_total_tokens();
 
         let mut agents = Vec::new();
-        for (agent_id, cost, token_used, roi, eff, storage_bytes) in self.auditor.get_agent_costs_snapshot() {
-            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+        for (agent_id, cost, token_used, roi, eff, storage_bytes) in
+            self.auditor.get_agent_costs_snapshot()
+        {
+            let pct = if total_cost > 0.0 {
+                (cost / total_cost) as f32
+            } else {
+                0.0
+            };
             agents.push(AgentCostSummary {
                 agent_id,
                 cost_usd: cost,

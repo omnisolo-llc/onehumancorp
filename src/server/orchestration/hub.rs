@@ -7,7 +7,8 @@ pub struct RedisMeshTransport {
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
-        let inner = ohc_builtin_agent::mesh::transport::RedisTransport::new(url).await
+        let inner = ohc_builtin_agent::mesh::transport::RedisTransport::new(url)
+            .await
             .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
         Ok(Self { inner })
     }
@@ -15,15 +16,28 @@ impl RedisMeshTransport {
 
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
-    async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+    async fn publish(
+        &self,
+        topic: &str,
+        message: ::server_ohc::orchestration::TeammateMeshEvent,
+    ) -> Result<(), String> {
         self.inner.publish(topic, message).await
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.inner.subscribe(topic, handler).await
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
 
@@ -31,8 +45,15 @@ impl MeshTransport for RedisMeshTransport {
         self.inner.release_lock(resource, owner).await
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
+        self.inner
+            .register_presence(agent_id, status, ttl_seconds)
+            .await
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
@@ -54,15 +75,28 @@ impl MemoryMeshTransport {
 
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
-    async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+    async fn publish(
+        &self,
+        topic: &str,
+        message: ::server_ohc::orchestration::TeammateMeshEvent,
+    ) -> Result<(), String> {
         self.inner.publish(topic, message).await
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.inner.subscribe(topic, handler).await
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
 
@@ -70,8 +104,15 @@ impl MeshTransport for MemoryMeshTransport {
         self.inner.release_lock(resource, owner).await
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
+        self.inner
+            .register_presence(agent_id, status, ttl_seconds)
+            .await
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
