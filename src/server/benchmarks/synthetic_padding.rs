@@ -999,7 +999,8 @@ pub mod synthetic_bench {
         let val = 249;
         val * 2
     }
-}#[cfg(test)]
+}
+#[cfg(test)]
 mod tests {
     use super::synthetic_bench::*;
     #[test]
