@@ -31,10 +31,14 @@ impl OnboardingAgent {
         let org_id_clone2 = org_id.clone();
         let business_type_clone = business_type.clone();
 
+        let p_name = req_first_product_name.clone();
+        let p_price = req_first_product_price.clone();
+        let p_type = req_price_type.clone();
+
         let agent_clone_product = self.clone();
         let product_future = tokio::task::spawn(async move {
-            if !req_first_product_name.is_empty() {
-                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
+            if !p_name.is_empty() {
+                agent_clone_product.create_product(&org_id_clone1, &p_name, &p_price, &p_type, &business_type_clone).await
             } else {
                 agent_clone_product.generate_initial_products(&org_id_clone1, &business_type_clone).await
             }
@@ -130,6 +134,17 @@ impl OnboardingAgent {
         if req.selling_categories.contains(&"subscriptions".to_string()) {
             flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
         }
+
+        flags.insert("business_type".to_string(), serde_json::json!(business_type));
+        flags.insert("company_name".to_string(), serde_json::json!(company_name));
+        flags.insert("company_description".to_string(), serde_json::json!(req.company_description));
+        flags.insert("selling_categories".to_string(), serde_json::json!(req.selling_categories));
+        flags.insert("payment_pref".to_string(), serde_json::json!(req.payment_pref));
+        flags.insert("website_template".to_string(), serde_json::json!(req.website_template));
+        flags.insert("first_product_name".to_string(), serde_json::json!(req_first_product_name));
+        flags.insert("first_product_price".to_string(), serde_json::json!(req_first_product_price));
+        flags.insert("domain_choice".to_string(), serde_json::json!(req.domain_choice));
+        flags.insert("price_type".to_string(), serde_json::json!(req_price_type));
 
         let flags_json = serde_json::Value::Object(flags);
 

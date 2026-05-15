@@ -42,14 +42,52 @@ impl InteractiveWizard {
     }
 
 
-    pub fn save_onboarding_state(&self, _org_id: &str, _user_id: &str, _step: i32, _state_json: &str) -> Result<(), String> {
-        // Here we would use sqlx to persist to the onboarding_state table
+    pub fn save_onboarding_state(&self, org_id: &str, user_id: &str, step: i32, state_json: &str) -> Result<(), String> {
+        let org_id = org_id.to_string();
+        let user_id = user_id.to_string();
+        let state_json_parsed = state_json.to_string();
+
+        tokio::task::block_in_place(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+                let pool = sqlx::AnyPool::connect(&db_url).await.unwrap();
+                let _ = sqlx::query(
+                    "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5) ON CONFLICT(organization_id) DO UPDATE SET current_step = EXCLUDED.current_step, state_json = EXCLUDED.state_json"
+                )
+                .bind(&org_id)
+                .bind(&org_id)
+                .bind(&user_id)
+                .bind(step)
+                .bind(&state_json_parsed)
+                .execute(&pool)
+                .await;
+            })
+        });
         Ok(())
     }
 
-    pub fn get_onboarding_state(&self, _org_id: &str) -> Result<String, String> {
-        // Return dummy json for now
-        Ok(r#"{"step": 0}"#.to_string())
+    pub fn get_onboarding_state(&self, org_id: &str) -> Result<String, String> {
+        let org_id = org_id.to_string();
+        let res = tokio::task::block_in_place(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+                let pool = sqlx::AnyPool::connect(&db_url).await.unwrap();
+                use sqlx::Row;
+                let row = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+                    .bind(&org_id)
+                    .fetch_one(&pool)
+                    .await;
+
+                match row {
+                    Ok(r) => {
+                        let val: String = r.try_get("state_json").unwrap_or_else(|_| r#"{"step": 0}"#.to_string());
+                        Ok(val)
+                    },
+                    Err(_) => Ok(r#"{"step": 0}"#.to_string()),
+                }
+            })
+        });
+        res
     }
 
     pub fn reset_environment(&self, is_cloud: bool) -> Result<(), String> {

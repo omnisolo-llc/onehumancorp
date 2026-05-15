@@ -1,0 +1,14 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+filegroup(
+    name = "next_files",
+    srcs = glob(["**/*"]),
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "onboarding_e2e_tests",
+    srcs = ["run_e2e.sh"],
+    data = glob(["**/*"]) + ["//:package.json"],
+    tags = ["e2e", "local"],
+)
