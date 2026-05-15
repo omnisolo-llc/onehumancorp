@@ -2,6 +2,76 @@
 mod tests {
 
     #[test]
+    fn test_local_sovereignty_audit() {
+        // Audit the Standalone wrapper to ensure no non-consented telemetry or data exfiltration.
+        temp_env::with_vars(
+            [
+                ("OHC_STANDALONE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", None::<&str>), // Crucial: no explicit opt in or out
+            ],
+            || {
+                let config = crate::config::load().unwrap();
+                assert_eq!(config.telemetry_enabled, false, "Local Sovereignty Violation: Telemetry must be disabled in standalone by default");
+            },
+        );
+    }
+
+
+    #[test]
+    fn test_hybrid_privacy_audit() {
+        // Enforce hybrid privacy audit: Contrast data handling in Cloud vs Standalone
+        // We simulate a cloud environment and then a standalone environment
+        // to verify that telemetry sync behavior correctly respects the boundaries.
+
+        // Simulate Cloud (Standar)
+        temp_env::with_vars(
+            [
+                ("OHC_STANDALONE", Some("false")),
+                ("OHC_TELEMETRY_ENABLED", Some("true")),
+            ],
+            || {
+                let config = crate::config::load().unwrap();
+                assert_eq!(config.telemetry_enabled, true);
+            }
+        );
+
+        // Simulate Standalone
+        temp_env::with_vars(
+            [
+                ("OHC_STANDALONE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", None::<&str>), // No explicit opt-in
+            ],
+            || {
+                let config = crate::config::load().unwrap();
+                // We assume default configuration handles OHC_STANDALONE correctly
+                // by defaulting telemetry to false if not explicitly true
+                // Let's assert that OHC_STANDALONE alone forces it or default is false.
+                assert_eq!(config.telemetry_enabled, false);
+            }
+        );
+    }
+
+    #[test]
+    fn test_compliance_guardrails_multi_tenant() {
+        // Implement automated checks for PII leakage in multi-tenant environments
+        let payload = serde_json::json!({
+            "event": "user_login",
+            "data": {
+                "organization_id": "org-xyz",
+                "email": "user@example.com",
+                "ip_address": "192.168.1.1"
+            }
+        });
+
+        let redacted = crate::telemetry::redact_interface_pii(payload);
+
+        assert_eq!(redacted["data"]["organization_id"], "[REDACTED]");
+        assert_eq!(redacted["data"]["email"], "[REDACTED]");
+        assert_eq!(redacted["data"]["ip_address"], "[REDACTED]");
+    }
+
+
+    #[test]
     fn test_analytics_pii_redaction() {
         let mut props = std::collections::HashMap::new();
         props.insert("username".to_string(), "maya".to_string());
