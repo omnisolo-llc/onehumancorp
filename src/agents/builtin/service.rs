@@ -312,7 +312,7 @@ impl AgentServiceImpl {
                     embedding: None,
                     source_plugin: Some(r.source_type),
                     created_at: r.created_at,
-                    organization_id: r.tenant_id,
+                    organization_id: r.organization_id,
                 }).collect::<Vec<_>>()
             }).unwrap_or_default()
         } else {
@@ -341,7 +341,7 @@ impl AgentServiceImpl {
             self.memory.as_ref().map(|repo| {
                 Arc::new(crate::memory_store::PersistentMemoryStore {
                     repo: repo.clone(),
-                    tenant_id: org_id.clone(),
+                    organization_id: org_id.clone(),
                     agent_id: self.agent_id.clone(),
                     llm: llm.clone(),
                 }) as Arc<dyn crate::memory_store::LongTermMemory>
@@ -656,7 +656,7 @@ impl AgentService for AgentServiceImpl {
                 let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
                 let record = EmbeddingRecord {
                     id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: org_id,
+                    organization_id: org_id,
                     agent_id: "agent".to_string(),
                     content: content.clone(),
                     embedding: vec![],

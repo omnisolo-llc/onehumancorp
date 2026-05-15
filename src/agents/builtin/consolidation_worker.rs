@@ -53,9 +53,9 @@ mod tests {
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -85,7 +85,7 @@ mod tests {
 
         let prune_me = EmbeddingRecord {
             id: "prune_1".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "test".to_string(),
             content: "old stuff".to_string(),
             embedding: v1.clone(),

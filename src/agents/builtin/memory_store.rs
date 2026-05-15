@@ -5,7 +5,7 @@ use async_trait::async_trait;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EmbeddingRecord {
     pub id: String,
-    pub tenant_id: String,
+    pub organization_id: String,
     pub agent_id: String,
     pub content: String,
     pub embedding: Vec<f32>,
@@ -47,7 +47,7 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
+                    "INSERT INTO autodream_memories_master (id, organization_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
                      ON CONFLICT(id) DO UPDATE SET \
                          content=excluded.content, \
@@ -60,7 +60,7 @@ impl VectorRepository {
                          metadata=excluded.metadata"
                 )
                 .bind(&record.id)
-                .bind(&record.tenant_id)
+                .bind(&record.organization_id)
                 .bind(&record.agent_id)
                 .bind(&record.content)
                 .bind(&emb_str)
@@ -77,7 +77,7 @@ impl VectorRepository {
             }
             VectorMemoryStore::Sqlite(pool) => {
                 sqlx::query(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
+                    "INSERT INTO autodream_memories_master (id, organization_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
                      ON CONFLICT(id) DO UPDATE SET \
                          content=excluded.content, \
@@ -90,7 +90,7 @@ impl VectorRepository {
                          metadata=excluded.metadata"
                 )
                 .bind(&record.id)
-                .bind(&record.tenant_id)
+                .bind(&record.organization_id)
                 .bind(&record.agent_id)
                 .bind(&record.content)
                 .bind(&emb_str)
@@ -110,11 +110,11 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
-        self.semantic_search(tenant_id, query_embedding, limit).await
+    pub async fn cross_department_search(&self, organization_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        self.semantic_search(organization_id, query_embedding, limit).await
     }
 
-    pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+    pub async fn semantic_search(&self, organization_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
@@ -122,13 +122,13 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                     FROM consolidated_memory \
-                     WHERE tenant_id = $1 \
+                    "SELECT id, organization_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                     FROM autodream_memories_master \
+                     WHERE organization_id = $1 \
                      ORDER BY embedding <=> $2::vector \
                      LIMIT $3"
                 )
-                .bind(tenant_id)
+                .bind(organization_id)
                 .bind(emb_str)
                 .bind(limit)
                 .fetch_all(pool)
@@ -140,7 +140,7 @@ impl VectorRepository {
                 for row in rows {
                     let id: String = row.get("id");
                     ids_to_update.push(id.clone());
-                    let tenant_id: String = row.get("tenant_id");
+                    let organization_id: String = row.get("organization_id");
                     let agent_id: String = row.get("agent_id");
                     let content: String = row.get("content");
                     let emb_str_res: String = row.get("embedding");
@@ -156,7 +156,7 @@ impl VectorRepository {
 
                     results.push(EmbeddingRecord {
                         id,
-                        tenant_id,
+                        organization_id,
                         agent_id,
                         content,
                         embedding,
@@ -172,7 +172,7 @@ impl VectorRepository {
 
                 if !ids_to_update.is_empty() {
                     let _ = sqlx::query(
-                        "UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id = ANY($1)"
+                        "UPDATE autodream_memories_master SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id = ANY($1)"
                     )
                     .bind(&ids_to_update)
                     .execute(pool)
@@ -187,13 +187,13 @@ impl VectorRepository {
 
                 if has_vec_extension {
                     let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                         FROM consolidated_memory \
-                         WHERE tenant_id = ? \
+                        "SELECT id, organization_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM autodream_memories_master \
+                         WHERE organization_id = ? \
                          ORDER BY vec_distance_cosine(embedding, ?) \
                          LIMIT ?"
                     )
-                    .bind(tenant_id)
+                    .bind(organization_id)
                     .bind(&emb_str)
                     .bind(limit)
                     .fetch_all(pool)
@@ -205,7 +205,7 @@ impl VectorRepository {
                     for row in rows {
                         let id: String = row.get("id");
                         ids_to_update.push(id.clone());
-                        let tenant_id: String = row.get("tenant_id");
+                        let organization_id: String = row.get("organization_id");
                         let agent_id: String = row.get("agent_id");
                         let content: String = row.get("content");
                         let emb_str_res: String = row.get("embedding");
@@ -221,7 +221,7 @@ impl VectorRepository {
 
                         results.push(EmbeddingRecord {
                             id,
-                            tenant_id,
+                            organization_id,
                             agent_id,
                             content,
                             embedding,
@@ -237,7 +237,7 @@ impl VectorRepository {
 
                     if !ids_to_update.is_empty() {
                         let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                        let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
+                        let query = format!("UPDATE autodream_memories_master SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
                         let mut q = sqlx::query(&query);
                         for id in ids_to_update {
                             q = q.bind(id);
@@ -246,12 +246,12 @@ impl VectorRepository {
                     }
                 } else {
                     let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                         FROM consolidated_memory \
-                         WHERE tenant_id = ? \
+                        "SELECT id, organization_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM autodream_memories_master \
+                         WHERE organization_id = ? \
                          LIMIT 1000"
                     )
-                    .bind(tenant_id)
+                    .bind(organization_id)
                     .fetch_all(pool)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -263,7 +263,7 @@ impl VectorRepository {
 
                         let record = EmbeddingRecord {
                             id: row.get("id"),
-                            tenant_id: row.get("tenant_id"),
+                            organization_id: row.get("organization_id"),
                             agent_id: row.get("agent_id"),
                             content: row.get("content"),
                             embedding,
@@ -309,7 +309,7 @@ impl VectorRepository {
                     if !results.is_empty() {
                         let ids_to_update: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
                         let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                        let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
+                        let query = format!("UPDATE autodream_memories_master SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
                         let mut q = sqlx::query(&query);
                         for id in ids_to_update {
                             q = q.bind(id);
@@ -329,14 +329,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM autodream_memories_master WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM autodream_memories_master WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -349,14 +349,14 @@ impl VectorRepository {
     #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
+                sqlx::query("DELETE FROM autodream_memories_master WHERE id = $1")
                     .bind(id)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE id = ?")
+                sqlx::query("DELETE FROM autodream_memories_master WHERE id = ?")
                     .bind(id)
                     .execute(pool)
                     .await
@@ -426,11 +426,11 @@ impl VectorRepository {
             VectorMemoryStore::Postgres(pool) => {
                 let query = "
                     SELECT
-                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
-                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
-                    FROM consolidated_memory a
-                    JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                    WHERE a.embedding <=> b.embedding < 0.05
+                        a.id AS a_id, a.organization_id AS a_organization_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
+                        b.id AS b_id, b.organization_id AS b_organization_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                    FROM autodream_memories_master a
+                    JOIN autodream_memories_master b ON a.organization_id = b.organization_id AND a.id < b.id
+                    WHERE a.embedding <=> b.embedding < 0.10
                     LIMIT 10
                 ";
                 let rows = sqlx::query(query)
@@ -447,7 +447,7 @@ impl VectorRepository {
 
                     let a = EmbeddingRecord {
                         id: row.get("a_id"),
-                        tenant_id: row.get("a_tenant_id"),
+                        organization_id: row.get("a_organization_id"),
                         agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
                         content: row.get("a_content"),
                         embedding: a_embedding,
@@ -462,7 +462,7 @@ impl VectorRepository {
 
                     let b = EmbeddingRecord {
                         id: row.get("b_id"),
-                        tenant_id: row.get("b_tenant_id"),
+                        organization_id: row.get("b_organization_id"),
                         agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
                         content: row.get("b_content"),
                         embedding: b_embedding,
@@ -488,11 +488,11 @@ impl VectorRepository {
                 if has_vec_extension {
                     let query = "
                         SELECT
-                            a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
-                            b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
-                        FROM consolidated_memory a
-                        JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
+                            a.id AS a_id, a.organization_id AS a_organization_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
+                            b.id AS b_id, b.organization_id AS b_organization_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                        FROM autodream_memories_master a
+                        JOIN autodream_memories_master b ON a.organization_id = b.organization_id AND a.id < b.id
+                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.10
                         LIMIT 10
                     ";
                     let rows = sqlx::query(query)
@@ -509,7 +509,7 @@ impl VectorRepository {
 
                         let a = EmbeddingRecord {
                             id: row.get("a_id"),
-                            tenant_id: row.get("a_tenant_id"),
+                            organization_id: row.get("a_organization_id"),
                             agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
                             content: row.get("a_content"),
                             embedding: a_embedding,
@@ -524,7 +524,7 @@ impl VectorRepository {
 
                         let b = EmbeddingRecord {
                             id: row.get("b_id"),
-                            tenant_id: row.get("b_tenant_id"),
+                            organization_id: row.get("b_organization_id"),
                             agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
                             content: row.get("b_content"),
                             embedding: b_embedding,
@@ -543,8 +543,8 @@ impl VectorRepository {
                     // Fallback for tests environments without sqlite-vec loaded:
                     let query = "
                         SELECT
-                            id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
-                        FROM consolidated_memory LIMIT 1000
+                            id, organization_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                        FROM autodream_memories_master LIMIT 1000
                     ";
                     let rows = sqlx::query(query)
                         .fetch_all(pool)
@@ -558,7 +558,7 @@ impl VectorRepository {
 
                         let record = EmbeddingRecord {
                             id: row.get("id"),
-                            tenant_id: row.get("tenant_id"),
+                            organization_id: row.get("organization_id"),
                             agent_id: row.get::<Option<String>, _>("agent_id").unwrap_or_default(),
                             content: row.get("content"),
                             embedding,
@@ -597,11 +597,11 @@ impl VectorRepository {
                         for j in (i + 1)..all_records.len() {
                             let a = &all_records[i];
                             let b = &all_records[j];
-                            if a.tenant_id == b.tenant_id {
+                            if a.organization_id == b.organization_id {
                                 // Ensure a consistent ordering to avoid duplicate pairs in different orders
                                 let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
                                 let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
-                                if distance < 0.05 {
+                                if distance < 0.10 {
                                     conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
                                     if match_count >= 10 {
@@ -683,7 +683,7 @@ mod tests {
         let now = Utc.with_ymd_and_hms(2026, 4, 26, 0, 0, 0).unwrap();
         let record = EmbeddingRecord {
             id: "rec1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "Hello world".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -779,7 +779,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
 
 pub struct PersistentMemoryStore {
     pub repo: std::sync::Arc<VectorRepository>,
-    pub tenant_id: String,
+    pub organization_id: String,
     pub agent_id: String,
     pub llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
 }
@@ -787,7 +787,7 @@ pub struct PersistentMemoryStore {
 impl std::fmt::Debug for PersistentMemoryStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PersistentMemoryStore")
-            .field("tenant_id", &self.tenant_id)
+            .field("organization_id", &self.organization_id)
             .field("agent_id", &self.agent_id)
             .finish()
     }
@@ -797,7 +797,7 @@ impl std::fmt::Debug for PersistentMemoryStore {
 impl LongTermMemory for PersistentMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
-        let records = self.repo.semantic_search(&self.tenant_id, &embedding, limit as i64).await?;
+        let records = self.repo.semantic_search(&self.organization_id, &embedding, limit as i64).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
@@ -814,7 +814,7 @@ impl LongTermMemory for PersistentMemoryStore {
 
         let record = EmbeddingRecord {
             id,
-            tenant_id: self.tenant_id.clone(),
+            organization_id: self.organization_id.clone(),
             agent_id: self.agent_id.clone(),
             content: content.to_string(),
             embedding,
@@ -1080,9 +1080,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1100,7 +1100,7 @@ mod get_conflicts_tests {
         let now = chrono::Utc::now();
         let r1 = EmbeddingRecord {
             id: "rec1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world".to_string(),
             embedding: vec![1.0, 1.0, 1.0],
@@ -1114,7 +1114,7 @@ mod get_conflicts_tests {
         };
         let r2 = EmbeddingRecord {
             id: "rec2".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world too".to_string(),
             embedding: vec![1.0, 1.0, 1.0],
@@ -1133,7 +1133,7 @@ mod get_conflicts_tests {
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
         assert_eq!(resolved, 1);
 
-        let query = "SELECT id, owner_override FROM consolidated_memory";
+        let query = "SELECT id, owner_override FROM autodream_memories_master";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
         assert_eq!(rows.len(), 1);
         use sqlx::Row;
@@ -1154,9 +1154,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1175,7 +1175,7 @@ mod get_conflicts_tests {
 
         let winner = EmbeddingRecord {
             id: "winner".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "winner data".to_string(),
             embedding: vec![0.5, 0.5],
@@ -1190,7 +1190,7 @@ mod get_conflicts_tests {
 
         let loser = EmbeddingRecord {
             id: "loser".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent2".to_string(),
             content: "loser data".to_string(),
             embedding: vec![0.5, 0.5],
@@ -1208,7 +1208,7 @@ mod get_conflicts_tests {
 
         repo.resolve_conflict(&winner, &loser).await.unwrap();
 
-        let rows = sqlx::query("SELECT id, reference_count FROM consolidated_memory")
+        let rows = sqlx::query("SELECT id, reference_count FROM autodream_memories_master")
             .fetch_all(&pool)
             .await
             .unwrap();
@@ -1231,9 +1231,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1253,7 +1253,7 @@ mod get_conflicts_tests {
         // 1. Conflict resolved by owner_override
         let r1 = EmbeddingRecord {
             id: "rec1_a".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1267,7 +1267,7 @@ mod get_conflicts_tests {
         };
         let r2 = EmbeddingRecord {
             id: "rec1_b".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world override".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1283,7 +1283,7 @@ mod get_conflicts_tests {
         // 2. Conflict resolved by reliability_score
         let r3 = EmbeddingRecord {
             id: "rec2_a".to_string(),
-            tenant_id: "org2".to_string(),
+            organization_id: "org2".to_string(),
             agent_id: "agent1".to_string(),
             content: "foo bar".to_string(),
             embedding: vec![0.5, 0.5, 0.5],
@@ -1297,7 +1297,7 @@ mod get_conflicts_tests {
         };
         let r4 = EmbeddingRecord {
             id: "rec2_b".to_string(),
-            tenant_id: "org2".to_string(),
+            organization_id: "org2".to_string(),
             agent_id: "agent1".to_string(),
             content: "foo bar low".to_string(),
             embedding: vec![0.5, 0.5, 0.5],
@@ -1314,7 +1314,7 @@ mod get_conflicts_tests {
         let older = now - chrono::Duration::hours(1);
         let r5 = EmbeddingRecord {
             id: "rec3_a".to_string(),
-            tenant_id: "org3".to_string(),
+            organization_id: "org3".to_string(),
             agent_id: "agent1".to_string(),
             content: "baz".to_string(),
             embedding: vec![0.1, 0.1, 0.1],
@@ -1328,7 +1328,7 @@ mod get_conflicts_tests {
         };
         let r6 = EmbeddingRecord {
             id: "rec3_b".to_string(),
-            tenant_id: "org3".to_string(),
+            organization_id: "org3".to_string(),
             agent_id: "agent1".to_string(),
             content: "baz newer".to_string(),
             embedding: vec![0.1, 0.1, 0.1],
@@ -1351,7 +1351,7 @@ mod get_conflicts_tests {
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
         assert_eq!(resolved, 3); // 3 conflicts resolved
 
-        let query = "SELECT id, reference_count FROM consolidated_memory";
+        let query = "SELECT id, reference_count FROM autodream_memories_master";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
         let mut results = std::collections::HashMap::new();
@@ -1381,9 +1381,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1404,7 +1404,7 @@ mod get_conflicts_tests {
         // Record 1: Old enough, source_type is TASK_SUMMARY, reference_count < 5 -> Should be pruned
         let record1 = EmbeddingRecord {
             id: "rec1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world 1".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1420,7 +1420,7 @@ mod get_conflicts_tests {
         // Record 2: Old enough, source_type is TASK_SUMMARY, but owner_override = TRUE -> Should be kept
         let record2 = EmbeddingRecord {
             id: "rec2".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world 2".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1436,7 +1436,7 @@ mod get_conflicts_tests {
         // Record 3: Old enough, source_type is TASK_SUMMARY, but reference_count >= 5 -> Should be kept
         let record3 = EmbeddingRecord {
             id: "rec3".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world 3".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1452,7 +1452,7 @@ mod get_conflicts_tests {
         // Record 4: Old enough, but source_type is NOT TASK_SUMMARY -> Should be kept
         let record4 = EmbeddingRecord {
             id: "rec4".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world 4".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1474,7 +1474,7 @@ mod get_conflicts_tests {
         repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
 
         // Verify prune
-        let query = "SELECT id FROM consolidated_memory";
+        let query = "SELECT id FROM autodream_memories_master";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
         assert_eq!(rows.len(), 3, "Three records should remain");
@@ -1495,9 +1495,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1517,7 +1517,7 @@ mod get_conflicts_tests {
         // Conflict resolved by fallback (same override, reliability, timestamp)
         let r1 = EmbeddingRecord {
             id: "rec4_a".to_string(),
-            tenant_id: "org4".to_string(),
+            organization_id: "org4".to_string(),
             agent_id: "agent1".to_string(),
             content: "identical 1".to_string(),
             embedding: vec![0.9, 0.9, 0.9],
@@ -1531,7 +1531,7 @@ mod get_conflicts_tests {
         };
         let r2 = EmbeddingRecord {
             id: "rec4_b".to_string(),
-            tenant_id: "org4".to_string(),
+            organization_id: "org4".to_string(),
             agent_id: "agent1".to_string(),
             content: "identical 2".to_string(),
             embedding: vec![0.9, 0.9, 0.9],
@@ -1550,7 +1550,7 @@ mod get_conflicts_tests {
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
         assert_eq!(resolved, 1);
 
-        let query = "SELECT id, reference_count FROM consolidated_memory WHERE tenant_id = 'org4'";
+        let query = "SELECT id, reference_count FROM autodream_memories_master WHERE organization_id = 'org4'";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
         assert_eq!(rows.len(), 1);
@@ -1572,9 +1572,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1595,7 +1595,7 @@ mod get_conflicts_tests {
 
         let record1 = EmbeddingRecord {
             id: "rec1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1610,7 +1610,7 @@ mod get_conflicts_tests {
 
         let record2 = EmbeddingRecord {
             id: "rec2".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world 2".to_string(),
             embedding: vec![3.0, 2.0, 1.0],
@@ -1630,7 +1630,7 @@ mod get_conflicts_tests {
         repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
 
         // Verify prune
-        let query = "SELECT id FROM consolidated_memory";
+        let query = "SELECT id FROM autodream_memories_master";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
         assert_eq!(rows.len(), 1, "Only one record should remain");
@@ -1652,9 +1652,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1673,7 +1673,7 @@ mod get_conflicts_tests {
 
         let record1 = EmbeddingRecord {
             id: "rec1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -1688,13 +1688,13 @@ mod get_conflicts_tests {
 
         repo.upsert(&record1).await.unwrap();
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories_master WHERE id = 'rec1'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count.0, 1);
 
         repo.delete("rec1").await.unwrap();
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories_master WHERE id = 'rec1'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count.0, 0);
     }
@@ -1708,9 +1708,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -1729,7 +1729,7 @@ mod get_conflicts_tests {
 
         let record1 = EmbeddingRecord {
             id: "rec1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "vegan cake orders".to_string(),
             embedding: vec![0.9, 0.1, 0.1],
@@ -1744,7 +1744,7 @@ mod get_conflicts_tests {
 
         let record2 = EmbeddingRecord {
             id: "rec2".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "unrelated data".to_string(),
             embedding: vec![0.1, 0.9, 0.1],
@@ -1767,7 +1767,7 @@ mod get_conflicts_tests {
         // Either the results come back ordered by created_at or vec_distance_cosine.
         // We just make sure it returns something.
         assert!(!results.is_empty());
-        assert_eq!(results[0].tenant_id, "org1");
+        assert_eq!(results[0].organization_id, "org1");
     }
 
     #[tokio::test]
@@ -1779,9 +1779,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1800,7 +1800,7 @@ mod get_conflicts_tests {
 
         let record_dept_a = EmbeddingRecord {
             id: "dept_a_rec".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent_a".to_string(),
             content: "dept A data".to_string(),
             embedding: vec![1.0, 0.0],
@@ -1815,7 +1815,7 @@ mod get_conflicts_tests {
 
         let record_dept_b = EmbeddingRecord {
             id: "dept_b_rec".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent_b".to_string(),
             content: "dept B data".to_string(),
             embedding: vec![1.0, 0.0],
@@ -1830,7 +1830,7 @@ mod get_conflicts_tests {
 
         let record_other_tenant = EmbeddingRecord {
             id: "other_tenant_rec".to_string(),
-            tenant_id: "org2".to_string(),
+            organization_id: "org2".to_string(),
             agent_id: "agent_a".to_string(),
             content: "other tenant data".to_string(),
             embedding: vec![1.0, 0.0],
@@ -1855,7 +1855,7 @@ mod get_conflicts_tests {
         let mut found_a = false;
         let mut found_b = false;
         for r in results {
-            assert_eq!(r.tenant_id, "org1");
+            assert_eq!(r.organization_id, "org1");
             if r.agent_id == "agent_a" { found_a = true; }
             if r.agent_id == "agent_b" { found_b = true; }
         }
@@ -1872,9 +1872,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1893,7 +1893,7 @@ mod get_conflicts_tests {
 
         let record1 = EmbeddingRecord {
             id: "dept_a_rec".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "sales_agent".to_string(),
             content: "customer unhappy with pricing".to_string(),
             embedding: vec![0.5, 0.5, 0.5],
@@ -1943,9 +1943,9 @@ mod get_conflicts_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding VECTOR(1536),
@@ -1963,7 +1963,7 @@ mod get_conflicts_tests {
         let llm = Arc::new(MockLlm);
         let store = PersistentMemoryStore {
             repo: repo.clone(),
-            tenant_id: "tenant1".to_string(),
+            organization_id: "tenant1".to_string(),
             agent_id: "agent1".to_string(),
             llm: llm.clone(),
         };
@@ -2025,9 +2025,9 @@ mod anthropic_memory_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -2045,7 +2045,7 @@ mod anthropic_memory_tests {
 
         let cs_record = EmbeddingRecord {
             id: "cs_1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "customer_success".to_string(),
             content: "Customer is unhappy with the vegan cake orders delay.".to_string(),
             embedding: vec![0.5, 0.5, 0.5],
@@ -2060,7 +2060,7 @@ mod anthropic_memory_tests {
 
         let advisory_record = EmbeddingRecord {
             id: "advisory_1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "business_advisory".to_string(),
             content: "Vegan cakes are highly profitable but production is slow.".to_string(),
             embedding: vec![0.6, 0.4, 0.5],
@@ -2081,7 +2081,7 @@ mod anthropic_memory_tests {
         // Testing the fallback behavior if vec_distance_cosine doesn't exist
         // or just the generic semantic search logic. We just make sure it returns something.
         assert!(!results.is_empty());
-        assert_eq!(results[0].tenant_id, "org1");
+        assert_eq!(results[0].organization_id, "org1");
     }
 
     #[tokio::test]
@@ -2095,9 +2095,9 @@ mod anthropic_memory_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -2119,7 +2119,7 @@ mod anthropic_memory_tests {
 
         let old_record = super::EmbeddingRecord {
             id: "old_rec".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "old data".to_string(),
             embedding: vec![1.0],
@@ -2134,7 +2134,7 @@ mod anthropic_memory_tests {
 
         let new_record = super::EmbeddingRecord {
             id: "new_rec".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "new data".to_string(),
             embedding: vec![1.0],
@@ -2153,7 +2153,7 @@ mod anthropic_memory_tests {
         repo.prune_stale(threshold).await.unwrap();
 
         use sqlx::Row;
-        let query = "SELECT id FROM consolidated_memory";
+        let query = "SELECT id FROM autodream_memories_master";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
         assert_eq!(rows.len(), 1, "Only one record should remain");
@@ -2172,9 +2172,9 @@ mod anthropic_memory_tests {
         };
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -2194,7 +2194,7 @@ mod anthropic_memory_tests {
 
         let record1 = super::EmbeddingRecord {
             id: "rec_override".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "override data".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
@@ -2214,7 +2214,7 @@ mod anthropic_memory_tests {
 
         // Verify it was NOT deleted
         use sqlx::Row;
-        let query = "SELECT id FROM consolidated_memory";
+        let query = "SELECT id FROM autodream_memories_master";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
         assert_eq!(rows.len(), 1, "The record should remain due to owner_override = true");
@@ -2235,7 +2235,7 @@ mod determine_conflict_winner_tests {
     ) -> EmbeddingRecord {
         EmbeddingRecord {
             id: id.to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "test".to_string(),
             embedding: vec![1.0],
@@ -2304,9 +2304,9 @@ mod e2e_consolidation_tests {
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -2335,7 +2335,7 @@ mod e2e_consolidation_tests {
 
         let cs_record = EmbeddingRecord {
             id: "cs_e2e_1".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "customer_success".to_string(),
             content: "Customer unhappy about vegan cake delivery.".to_string(),
             embedding: v1.clone(),
@@ -2350,7 +2350,7 @@ mod e2e_consolidation_tests {
 
         let advisory_record = EmbeddingRecord {
             id: "adv_e2e_1".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "business_advisory".to_string(),
             content: "Vegan cakes have high margin.".to_string(),
             embedding: v2.clone(),
@@ -2384,11 +2384,11 @@ mod e2e_consolidation_tests {
         let mut v1 = vec![0.0; 10];
         v1[0] = 1.0;
         let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99; // < 0.05 distance to trigger conflict
+        v2[0] = 0.99; // < 0.10 distance to trigger conflict
 
         let record_a = EmbeddingRecord {
             id: "conflict_a".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "sales".to_string(),
             content: "Cake price is 50".to_string(),
             embedding: v1.clone(),
@@ -2403,7 +2403,7 @@ mod e2e_consolidation_tests {
 
         let record_b = EmbeddingRecord {
             id: "conflict_b".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "sales".to_string(),
             content: "Cake price is 55".to_string(), // newer, better score
             embedding: v2.clone(),
@@ -2439,7 +2439,7 @@ mod e2e_consolidation_tests {
 
         let record_maya = EmbeddingRecord {
             id: "maya_1".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "sales".to_string(),
             content: "Maya's confidential sales data".to_string(),
             embedding: v1.clone(),
@@ -2454,7 +2454,7 @@ mod e2e_consolidation_tests {
 
         let record_bob = EmbeddingRecord {
             id: "bob_1".to_string(),
-            tenant_id: "org_bob".to_string(),
+            organization_id: "org_bob".to_string(),
             agent_id: "sales".to_string(),
             content: "Bob's confidential sales data".to_string(),
             embedding: v1.clone(),
@@ -2472,12 +2472,12 @@ mod e2e_consolidation_tests {
 
         let maya_results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
         assert_eq!(maya_results.len(), 1);
-        assert_eq!(maya_results[0].tenant_id, "org_maya");
+        assert_eq!(maya_results[0].organization_id, "org_maya");
         assert_eq!(maya_results[0].id, "maya_1");
 
         let bob_results = repo.cross_department_search("org_bob", &v1, 10).await.unwrap();
         assert_eq!(bob_results.len(), 1);
-        assert_eq!(bob_results[0].tenant_id, "org_bob");
+        assert_eq!(bob_results[0].organization_id, "org_bob");
         assert_eq!(bob_results[0].id, "bob_1");
 
         let unknown_results = repo.cross_department_search("org_unknown", &v1, 10).await.unwrap();
@@ -2500,7 +2500,7 @@ mod e2e_consolidation_tests {
         // Old, no override, low ref count -> Prune
         let prune_me = EmbeddingRecord {
             id: "prune_1".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "test".to_string(),
             content: "old stuff".to_string(),
             embedding: v1.clone(),
@@ -2516,7 +2516,7 @@ mod e2e_consolidation_tests {
         // Old, owner override -> Keep
         let keep_override = EmbeddingRecord {
             id: "keep_1".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "test".to_string(),
             content: "important rule".to_string(),
             embedding: v2.clone(),
@@ -2532,7 +2532,7 @@ mod e2e_consolidation_tests {
         // Newer -> Keep
         let keep_new = EmbeddingRecord {
             id: "keep_2".to_string(),
-            tenant_id: "org_maya".to_string(),
+            organization_id: "org_maya".to_string(),
             agent_id: "test".to_string(),
             content: "new stuff".to_string(),
             embedding: v1.clone(),
@@ -2575,7 +2575,7 @@ mod e2e_consolidation_tests {
 
         let record_a = EmbeddingRecord {
             id: "edge_a".to_string(),
-            tenant_id: "org_edge".to_string(),
+            organization_id: "org_edge".to_string(),
             agent_id: "test".to_string(),
             content: "Same stats".to_string(),
             embedding: v1.clone(),
@@ -2590,7 +2590,7 @@ mod e2e_consolidation_tests {
 
         let record_b = EmbeddingRecord {
             id: "edge_b".to_string(),
-            tenant_id: "org_edge".to_string(),
+            organization_id: "org_edge".to_string(),
             agent_id: "test".to_string(),
             content: "Same stats too".to_string(),
             embedding: v2.clone(),
@@ -2627,9 +2627,9 @@ mod additional_tests {
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -2648,7 +2648,7 @@ mod additional_tests {
         let v1 = vec![0.5; 1536];
         let record = EmbeddingRecord {
             id: "rec_cross_1".to_string(),
-            tenant_id: "org1".to_string(),
+            organization_id: "org1".to_string(),
             agent_id: "agent_sales".to_string(),
             content: "Sales context".to_string(),
             embedding: v1.clone(),
@@ -2680,9 +2680,9 @@ mod override_tests_resolve {
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            "CREATE TABLE IF NOT EXISTS autodream_memories_master (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
                 embedding TEXT,
@@ -2708,7 +2708,7 @@ mod override_tests_resolve {
         // record_a is winner, but has NO owner_override
         let record_a = EmbeddingRecord {
             id: "winner_a".to_string(),
-            tenant_id: "org_override".to_string(),
+            organization_id: "org_override".to_string(),
             agent_id: "test".to_string(),
             content: "Newer info".to_string(),
             embedding: v1.clone(),
@@ -2724,7 +2724,7 @@ mod override_tests_resolve {
         // record_b is loser, but HAS owner_override
         let record_b = EmbeddingRecord {
             id: "loser_b".to_string(),
-            tenant_id: "org_override".to_string(),
+            organization_id: "org_override".to_string(),
             agent_id: "test".to_string(),
             content: "Older info".to_string(),
             embedding: v2.clone(),

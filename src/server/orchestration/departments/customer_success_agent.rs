@@ -29,7 +29,7 @@ impl Department for CustomerSuccessAgent {
         if event.event_type == "tenant.message.received" {
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
-                tenant_id: event.tenant_id.clone(),
+                organization_id: event.organization_id.clone(),
                 agent_id: self.agent_id(),
                 content: "Customer requested a quote for a vegan cake.".to_string(),
                 embedding: vec![0.5, 0.5, 0.5],
@@ -45,7 +45,7 @@ impl Department for CustomerSuccessAgent {
 
             let follow_up = DepartmentEvent {
                 id: uuid::Uuid::new_v4().to_string(),
-                tenant_id: event.tenant_id.clone(),
+                organization_id: event.organization_id.clone(),
                 event_type: "tenant.quote.requested".to_string(),
                 payload: event.payload.clone(),
             };
@@ -53,7 +53,7 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        let config = self.get_config(&event.tenant_id);
+        let config = self.get_config(&event.organization_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
                 ActionRisk::AutoExecute
@@ -67,25 +67,25 @@ impl Department for CustomerSuccessAgent {
         self.orchestrator.execute_action(
             DepartmentType::CustomerSuccess,
             "Send personalized thank you & shipping ETA".to_string(),
-            event.tenant_id.clone(),
+            event.organization_id.clone(),
             risk,
             event.payload.clone(),
         ).await.map(|_| ())
     }
 
-    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
+    fn get_config(&self, _organization_id: &str) -> Option<DepartmentConfig> {
         None
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
+    fn set_config(&mut self, _organization_id: String, _config: DepartmentConfig) {
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(&self, description: String, organization_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
+        self.orchestrator.execute_action(self.department_type(), description.clone(), organization_id.clone(), risk, serde_json::json!({})).await
     }
 }
 

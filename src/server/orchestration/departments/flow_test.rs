@@ -29,18 +29,18 @@ mod tests {
         orchestrator.register_department(cs_agent).await;
         orchestrator.register_department(sales_agent).await;
 
-        let tenant_id = "test-tenant-123".to_string();
+        let organization_id = "test-tenant-123".to_string();
 
         match &db.store {
             DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
-                    .bind(&tenant_id)
+                let _ = sqlx::query("INSERT INTO tenants (organization_id, ai_budget) VALUES ($1, 100) ON CONFLICT (organization_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&organization_id)
                     .execute(&db.pool)
                     .await;
             }
             DbStore::Sqlite(pool) => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
-                    .bind(&tenant_id)
+                let _ = sqlx::query("INSERT INTO tenants (organization_id, ai_budget) VALUES (?, 100) ON CONFLICT (organization_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&organization_id)
                     .execute(pool)
                     .await;
             }
@@ -48,7 +48,7 @@ mod tests {
 
         let event = DepartmentEvent {
             id: Uuid::new_v4().to_string(),
-            tenant_id: tenant_id.clone(),
+            organization_id: organization_id.clone(),
             event_type: "tenant.message.received".to_string(),
             payload: serde_json::json!({"message": "Do you make vegan cakes? How much?"}),
         };
@@ -60,7 +60,7 @@ mod tests {
         let mut has_quote = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+            let pending = orchestrator.get_pending_approvals(&organization_id).await;
             if pending.iter().any(|req| req.description.contains("Quote generated for review")) {
                 has_quote = true;
                 break;

@@ -49,7 +49,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
                 topic,
                 sync_status,
                 last_sync_at
-            FROM autodream_memories
+            FROM autodream_memories_master
             WHERE sync_status = 'pending'
             LIMIT $1
             "#
@@ -85,7 +85,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
             let id = uuid::Uuid::parse_str(&record.id).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             sqlx::query(
                 r#"
-                INSERT INTO autodream_memories
+                INSERT INTO autodream_memories_master
                 (id, organization_id, agent_id, task_id, content, embedding, source_type, topic, sync_status, last_sync_at)
                 VALUES ($1::uuid, $2, $3, $4, $5, $6::vector, $7, $8, 'synced', $9)
                 ON CONFLICT (id) DO UPDATE SET
@@ -125,7 +125,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
             let id = uuid::Uuid::parse_str(&id_str).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             sqlx::query(
                 r#"
-                UPDATE autodream_memories
+                UPDATE autodream_memories_master
                 SET sync_status = 'synced', last_sync_at = $1
                 WHERE id = $2::uuid
                 "#

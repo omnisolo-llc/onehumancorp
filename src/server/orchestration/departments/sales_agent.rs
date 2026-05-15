@@ -25,35 +25,35 @@ impl Department for SalesAgent {
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         // Query memory context
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
-        let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
+        let _context = self.orchestrator.query_long_term_memory(&event.organization_id, &query_embedding, 5).await?;
 
         let risk = ActionRisk::DraftForReview;
 
         self.orchestrator.execute_action(
             DepartmentType::Sales,
             "Quote generated for review".to_string(),
-            event.tenant_id.clone(),
+            event.organization_id.clone(),
             risk,
             event.payload.clone(),
         ).await.map(|_| ())
     }
 
-    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
+    fn get_config(&self, _organization_id: &str) -> Option<DepartmentConfig> {
         None
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
+    fn set_config(&mut self, _organization_id: String, _config: DepartmentConfig) {
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         let embedding = vec![0.5, 0.5, 0.5];
-        // Note: We need a tenant_id here, but the trait signature doesn't provide one.
+        // Note: We need a organization_id here, but the trait signature doesn't provide one.
         // We'll pass a dummy one or extract it if available.
         self.orchestrator.query_long_term_memory("default_tenant", &embedding, 5).await
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(&self, description: String, organization_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
+        self.orchestrator.execute_action(self.department_type(), description.clone(), organization_id.clone(), risk, serde_json::json!({})).await
     }
 }
 

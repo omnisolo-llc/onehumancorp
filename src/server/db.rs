@@ -490,9 +490,9 @@ impl DB {
                         department TEXT,
                         interaction_data TEXT DEFAULT '{}'
                     );
-                    CREATE TABLE IF NOT EXISTS autodream_memories (
+                    CREATE TABLE IF NOT EXISTS autodream_memories_master (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
                         agent_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
                         content TEXT NOT NULL,
@@ -734,7 +734,7 @@ pub async fn insert_autodream_memory(
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO autodream_memories_master (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -746,7 +746,7 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO autodream_memories_master (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)

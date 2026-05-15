@@ -211,9 +211,9 @@ CREATE TABLE IF NOT EXISTS department_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS autodream_memories (
+CREATE TABLE IF NOT EXISTS autodream_memories_master (
     id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
+    organization_id TEXT NOT NULL,
     agent_id TEXT NOT NULL,
     task_id TEXT NOT NULL,
     content TEXT NOT NULL,

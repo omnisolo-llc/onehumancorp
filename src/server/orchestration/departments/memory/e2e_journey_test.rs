@@ -5,7 +5,7 @@ use std::str::FromStr;
 use sqlx::Row;
 
 #[tokio::test]
-async fn test_full_consolidated_memory_e2e_journey() {
+async fn test_full_autodream_memories_master_e2e_journey() {
     let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
     let pool = SqlitePoolOptions::new()
         .connect_with(conn_opts)
@@ -14,9 +14,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
 
     // Standard raw SQL used across all memory unit tests in this project to mock the database setup
     sqlx::query(
-        "CREATE TABLE IF NOT EXISTS consolidated_memory (
+        "CREATE TABLE IF NOT EXISTS autodream_memories_master (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL,
+            organization_id TEXT NOT NULL,
             agent_id TEXT,
             content TEXT NOT NULL,
             embedding TEXT,
@@ -31,7 +31,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     )
     .execute(&pool)
     .await
-    .expect("Failed to create consolidated_memory table");
+    .expect("Failed to create autodream_memories_master table");
 
     let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
@@ -41,10 +41,10 @@ async fn test_full_consolidated_memory_e2e_journey() {
     // 1. Marketing adds a stale product note (Day 0)
     let marketing_stale = EmbeddingRecord {
         id: "marketing_stale_1".to_string(),
-        tenant_id: "maya_bakery".to_string(),
+        organization_id: "maya_bakery".to_string(),
         agent_id: "marketing_agent".to_string(),
         content: "We sell old cupcakes.".to_string(),
-        embedding: vec![0.1, 0.2, 0.3], // Same dimensions as others to mock query
+        embedding: vec![1.0, 0.0, 0.0], // Same dimensions as others to mock query
         source_type: "TASK_SUMMARY".to_string(),
         created_at: old_stale_time,
         last_referenced_at: old_stale_time,
@@ -58,10 +58,10 @@ async fn test_full_consolidated_memory_e2e_journey() {
     // 2. Sales adds a pricing note (Day 1)
     let sales_day1 = EmbeddingRecord {
         id: "sales_pricing_1".to_string(),
-        tenant_id: "maya_bakery".to_string(),
+        organization_id: "maya_bakery".to_string(),
         agent_id: "sales_agent".to_string(),
         content: "Maya's cake price is $50".to_string(),
-        embedding: vec![0.5, 0.5, 0.5],
+        embedding: vec![0.0, 1.0, 0.0],
         source_type: "SESSION_DATA".to_string(),
         created_at: now - chrono::Duration::days(5),
         last_referenced_at: now - chrono::Duration::days(5),
@@ -75,10 +75,10 @@ async fn test_full_consolidated_memory_e2e_journey() {
     // 3. Marketing adds a product context (Day 2)
     let marketing_day2 = EmbeddingRecord {
         id: "marketing_product_1".to_string(),
-        tenant_id: "maya_bakery".to_string(),
+        organization_id: "maya_bakery".to_string(),
         agent_id: "marketing_agent".to_string(),
         content: "Customer preferences lean towards vegan cakes.".to_string(),
-        embedding: vec![0.8, 0.1, 0.2],
+        embedding: vec![0.0, 0.0, 1.0],
         source_type: "SESSION_DATA".to_string(),
         created_at: now - chrono::Duration::days(2),
         last_referenced_at: now - chrono::Duration::days(2),
@@ -92,11 +92,11 @@ async fn test_full_consolidated_memory_e2e_journey() {
     // 4. Sales updates the pricing (Day 3, generating a conflict with Day 1)
     let sales_day3 = EmbeddingRecord {
         id: "sales_pricing_2".to_string(),
-        tenant_id: "maya_bakery".to_string(),
+        organization_id: "maya_bakery".to_string(),
         agent_id: "sales_agent".to_string(),
         content: "Maya's cake price is $55".to_string(),
         // Simulating same semantic meaning (identical embedding for test)
-        embedding: vec![0.5, 0.5, 0.5],
+        embedding: vec![0.0, 1.0, 0.0],
         source_type: "SESSION_DATA".to_string(),
         created_at: now - chrono::Duration::days(1),
         last_referenced_at: now,
@@ -108,7 +108,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     repo.upsert(&sales_day3).await.expect("Failed to upsert sales day 3 record");
 
     // Verify initial count (should be 4)
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM consolidated_memory")
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM autodream_memories_master")
         .fetch_one(&pool).await.expect("Failed to query count");
     assert_eq!(count, 4, "Initial state should have 4 records");
 
@@ -122,7 +122,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     // Cross-department retrieval: Operations fetches pricing context natively via vector repository
     // We explicitly use the application-level method provided by `VectorRepository` to satisfy the code review
     // requirement that we don't bypass application logic with raw SQL queries.
-    let results = repo.cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10).await.expect("Operations cross-department search failed");
+    let results = repo.cross_department_search("maya_bakery", &[0.0, 1.0, 0.0], 10).await.expect("Operations cross-department search failed");
 
     assert!(!results.is_empty(), "Cross-department search should successfully return results");
 
@@ -145,9 +145,9 @@ async fn test_tenant_isolation_e2e_journey() {
         .expect("Failed to connect to SQLite in-memory database");
 
     sqlx::query(
-        "CREATE TABLE IF NOT EXISTS consolidated_memory (
+        "CREATE TABLE IF NOT EXISTS autodream_memories_master (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL,
+            organization_id TEXT NOT NULL,
             agent_id TEXT,
             content TEXT NOT NULL,
             embedding TEXT,
@@ -162,7 +162,7 @@ async fn test_tenant_isolation_e2e_journey() {
     )
     .execute(&pool)
     .await
-    .expect("Failed to create consolidated_memory table");
+    .expect("Failed to create autodream_memories_master table");
 
     let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
@@ -171,10 +171,10 @@ async fn test_tenant_isolation_e2e_journey() {
     // 1. Tenant A (Maya's Bakery) memory
     let tenant_a_record = EmbeddingRecord {
         id: "maya_secret_recipe_1".to_string(),
-        tenant_id: "maya_bakery".to_string(),
+        organization_id: "maya_bakery".to_string(),
         agent_id: "operations_agent".to_string(),
         content: "Secret ingredient for chocolate cake is espresso powder.".to_string(),
-        embedding: vec![0.5, 0.5, 0.5],
+        embedding: vec![0.0, 1.0, 0.0],
         source_type: "NOTES".to_string(),
         created_at: now,
         last_referenced_at: now,
@@ -188,10 +188,10 @@ async fn test_tenant_isolation_e2e_journey() {
     // 2. Tenant B (Bob's Burgers) memory
     let tenant_b_record = EmbeddingRecord {
         id: "bob_secret_recipe_1".to_string(),
-        tenant_id: "bobs_burgers".to_string(),
+        organization_id: "bobs_burgers".to_string(),
         agent_id: "operations_agent".to_string(),
         content: "Secret ingredient for burgers is extra salt.".to_string(),
-        embedding: vec![0.5, 0.5, 0.5],
+        embedding: vec![0.0, 1.0, 0.0],
         source_type: "NOTES".to_string(),
         created_at: now,
         last_referenced_at: now,
@@ -203,7 +203,7 @@ async fn test_tenant_isolation_e2e_journey() {
     repo.upsert(&tenant_b_record).await.expect("Failed to upsert Tenant B record");
 
     // Verify Tenant A search only gets Tenant A records
-    let results_a = repo.cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10).await.expect("Tenant A search failed");
+    let results_a = repo.cross_department_search("maya_bakery", &[0.0, 1.0, 0.0], 10).await.expect("Tenant A search failed");
     assert_eq!(results_a.len(), 1, "Tenant A should only see 1 record");
     assert_eq!(results_a[0].id, "maya_secret_recipe_1", "Tenant A should see their own record");
 
