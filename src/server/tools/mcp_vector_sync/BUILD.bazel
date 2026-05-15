@@ -1,0 +1,11 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "server.rs",
+        "tests.rs",
+    ],
+    visibility = ["//src/server:__pkg__", "//src/server/tools:__pkg__"],
+)

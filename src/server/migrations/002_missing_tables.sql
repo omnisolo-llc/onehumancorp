@@ -306,3 +306,17 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     content TEXT NOT NULL DEFAULT '',
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS vector_embeddings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    embedding VECTOR(1536),
+    source_type TEXT NOT NULL,
+    last_synced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE vector_embeddings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_vector_embeddings ON vector_embeddings USING (tenant_id::text = current_setting('app.current_tenant', true));
