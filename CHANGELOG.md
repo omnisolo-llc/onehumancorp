@@ -5,6 +5,13 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+### Cloud Scaling Improvements
+- Bumped Cloud and Standalone version tags.
+
+### Privacy/Offline Improvements
+- Bumped Cloud and Standalone version tags.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
