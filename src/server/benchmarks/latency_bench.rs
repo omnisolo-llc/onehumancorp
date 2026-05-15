@@ -379,3 +379,5 @@ mod tests {
         assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
 }
+
+// Forced rebuild
