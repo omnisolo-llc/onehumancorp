@@ -1,0 +1,15 @@
+--- a/src/server/BUILD.bazel
++++ b/src/server/BUILD.bazel
+@@ -44,7 +44,11 @@
+         "//src/server/domain:srcs",
+         "//src/server/services:srcs",
+     ],
+-    data = ["//src/server/migrations"],
++    data = [
++        "//src/server/migrations",
++        "index.html",
++    ],
++    compile_data = ["index.html"],
+     edition = "2024",
+     proc_macro_deps = [
+         "@crates//:async-trait",

@@ -12,7 +12,50 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub }
     }
 
-    pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+
+    pub async fn get_state(&self) -> Result<serde_json::Value, String> {
+        let tenant_id = "default_tenant";
+        let org_id = "default_org";
+
+        let row = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2")
+            .bind(tenant_id)
+            .bind(org_id)
+            .fetch_optional(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(row) = row {
+            use sqlx::Row;
+            let state_json: serde_json::Value = row.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            Ok(state_json)
+        } else {
+            Ok(serde_json::json!({}))
+        }
+    }
+
+    pub async fn save_state(&self, payload: serde_json::Value) -> Result<(), String> {
+        let tenant_id = "default_tenant";
+        let org_id = "default_org";
+        let user_id = "default_user";
+
+        let current_step = payload.get("current_step").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json)              VALUES ($1, $2, $3, $4, $5)              ON CONFLICT (tenant_id, organization_id) DO UPDATE              SET state_json = EXCLUDED.state_json, current_step = EXCLUDED.current_step, updated_at = NOW()"
+        )
+        .bind(tenant_id)
+        .bind(org_id)
+        .bind(user_id)
+        .bind(current_step)
+        .bind(payload)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
         let business_type = req.business_type.clone();
