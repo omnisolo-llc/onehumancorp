@@ -1628,7 +1628,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin: 0; 
                             line-height: 1.5;
                         }
-                        .glass { 
+                        .glass { backdrop-filter: blur(20px) saturate(200%);
                             background: var(--card-bg); 
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
@@ -1695,6 +1695,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-bottom: 8px; 
                             font-size: 14px;
                             transition: background 0.2s;
+                            min-width: 44px;
+                            min-height: 44px;
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -1750,7 +1752,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
+                            <h3>Quick Actions <button class="secondary" style="min-width: 44px; min-height: 44px;" onclick="document.getElementById('quick-actions-hint').style.display='block'">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
@@ -1783,13 +1785,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="console.log('action_add_product')">Add</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;">Orders</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="showScreen('inbox-screen')">Messages</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;">Analytics</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;">Share</button>
                         </nav>
                     </div>
 
