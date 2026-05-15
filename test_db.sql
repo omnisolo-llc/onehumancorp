@@ -21,3 +21,8 @@ SET status = 'blocked',
 - No specific issue, bug, feature request, or concrete task to implement was described.
 - As an Implementer, I require a defined mission to execute.'
 WHERE id = 'm_handoff';
+CREATE TABLE IF NOT EXISTS distributed_locks (
+    key VARCHAR(255) PRIMARY KEY,
+    owner VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL
+);

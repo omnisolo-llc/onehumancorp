@@ -30,6 +30,7 @@ pub mod utils;
 pub mod orchestration;
 pub mod storage;
 pub mod interop;
+pub mod resilience;
 #[cfg(test)]
 pub mod benchmarks;
 
