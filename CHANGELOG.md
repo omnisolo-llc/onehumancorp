@@ -5,6 +5,14 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhanced Kubernetes pod scaling mechanisms for large multi-tenant deployments.
+
+### Privacy/Offline Improvements
+- Increased SQLite performance and isolated multi-tenant contexts for disconnected local execution.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
