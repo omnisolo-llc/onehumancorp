@@ -8,6 +8,7 @@ exports_files([
     "app.proto",
     "billing.proto",
     "common.proto",
+    "docs.proto",
     "hub.proto",
     "model.proto",
     "organization.proto",
@@ -197,5 +198,20 @@ proto_library(
 proto_rust_library(
     name = "interop",
     proto = ":interop_proto",
+    visibility = ["//visibility:public"],
+)
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "docs_proto",
+    srcs = ["docs.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "docs",
+    proto = ":docs_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )
