@@ -7,8 +7,8 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio::process::Command;
 use std::process::Stdio;
 use tracing::{info, warn, error};
-use super::blob::{create_blob_provider, BlobProvider};
 use std::sync::Arc;
+use super::blob::{create_blob_provider, BlobProvider};
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
@@ -26,15 +26,15 @@ impl LocalProxyClient {
         Self {
             client: McpReverseTunnelServiceClient::new(channel),
             spiffe_id,
-            blob_provider: create_blob_provider(),
+            blob_provider: create_blob_provider().await,
         }
     }
 
-    pub fn new_with_channel(client: McpReverseTunnelServiceClient<Channel>, spiffe_id: String) -> Self {
+    pub async fn new_with_channel(client: McpReverseTunnelServiceClient<Channel>, spiffe_id: String) -> Self {
         Self {
             client,
             spiffe_id,
-            blob_provider: create_blob_provider(),
+            blob_provider: create_blob_provider().await,
         }
     }
 

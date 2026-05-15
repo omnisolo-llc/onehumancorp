@@ -13,6 +13,8 @@ name = "server"
 path = "src/server/main.rs"
 
 [dependencies]
+aws-config = "1.1.7"
+aws-sdk-s3 = "1.21.0"
 tokio = { workspace = true, features = ["full"] }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }
@@ -85,5 +87,8 @@ prost-types = "0.13"
 futures = "0.3"
 
 [dev-dependencies]
+aws-smithy-runtime = { version = "1", features = ["test-util"] }
+aws-smithy-types = "1"
+http = "1"
 temp-env = "0.3.6"
 futures-util = "0.3.32"

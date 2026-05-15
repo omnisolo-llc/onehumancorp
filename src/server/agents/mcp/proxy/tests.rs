@@ -33,7 +33,7 @@ async fn test_proxy_tunnel() {
     let channel = endpoint.connect().await.unwrap();
     let grpc_client = McpReverseTunnelServiceClient::new(channel);
 
-    let mut client = LocalProxyClient::new_with_channel(grpc_client, "spiffe://test".to_string());
+    let mut client = LocalProxyClient::new_with_channel(grpc_client, "spiffe://test".to_string()).await;
 
     let _ = client.start().await;
 
