@@ -48,3 +48,16 @@ pub fn record_bubblewrap_execution_latency(latency: f64) {
 pub fn record_bubblewrap_violation() {
     get_bubblewrap_violation_total().add(1, &[]);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_telemetry_singletons() {
+        // Just verify these don't panic on init
+        let _ = get_bubblewrap_spawn_total();
+        let _ = get_bubblewrap_execution_latency();
+        let _ = get_bubblewrap_violation_total();
+    }
+}

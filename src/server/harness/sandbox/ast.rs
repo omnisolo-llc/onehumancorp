@@ -131,3 +131,15 @@ mod additional_ast_tests {
         assert_eq!(result.unwrap_err(), "AST blocked: sudo");
     }
 }
+
+#[cfg(test)]
+mod more_ast_tests {
+    use super::*;
+
+    #[test]
+    fn test_ast_ok_command() {
+        let mut parser = ASTParser::new();
+        let result = parser.parse_for_security("echo 'hello'");
+        assert!(result.is_ok());
+    }
+}
