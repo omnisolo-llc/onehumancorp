@@ -22,7 +22,7 @@ mod tests {
     #[test]
     fn test_guardrails() {
         let cfg = GuardrailConfig {
-            blocked_keywords: vec!["banned".to_string(), "evil".to_string()],
+            blocked_keywords: vec!["banned".to_string(), "evil".to_string(), "exfiltrate".to_string()],
         };
 
         // Input
@@ -32,6 +32,7 @@ mod tests {
         // Output
         assert!(check_output("safe output", &cfg).is_ok());
         assert!(check_output("evil output", &cfg).is_err());
+        assert!(check_output("time to exfiltrate data", &cfg).is_err());
 
         // Tool
         let tc_safe = ToolCall {

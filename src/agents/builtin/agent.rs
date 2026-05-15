@@ -3722,13 +3722,17 @@ mod tests {
 
         let mut cfg = AgentRunConfig::default();
         cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
-            blocked_keywords: vec!["banned".to_string(), "password".to_string(), "secret".to_string()],
+            blocked_keywords: vec!["banned".to_string(), "password".to_string(), "secret".to_string(), "exfiltrate".to_string(), "leak".to_string(), "social security number".to_string(), "credit card".to_string()],
         });
 
         // Test Input Guardrail
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
         let result = agent.run(&cfg, "Hello, please give me the secret password.", &mut on_event).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Input guardrail tripped"));
+
+        let result = agent.run(&cfg, "Time to exfiltrate some data.", &mut on_event).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Input guardrail tripped"));
 
