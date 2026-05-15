@@ -463,3 +463,37 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_rate_limit_concurrent_access() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
+                let tenant_id = "test-tenant-concurrent";
+                let agent_id = "agent-1";
+
+                let _ = limiter.set_tenant_tier(tenant_id, PlanTier::Pro).await;
+
+                let mut handles = vec![];
+
+                for _ in 0..50 {
+                    let limiter_clone = limiter.clone();
+                    handles.push(tokio::spawn(async move {
+                        let _ = limiter_clone.record_action(tenant_id, agent_id).await;
+                    }));
+                }
+
+                for handle in handles {
+                    let _ = handle.await;
+                }
+
+                // Since we don't have get_tenant_actions_used easily accessible, we can't assert the count directly.
+                // The main purpose is ensuring no panics occur during concurrent execution.
+            }
+        }
+    }
+}

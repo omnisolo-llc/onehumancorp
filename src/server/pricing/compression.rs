@@ -131,3 +131,36 @@ mod tests {
         assert_eq!(minify_json_prompt(invalid), invalid);
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_compression_lossless_roundtrip_large_strings() {
+        let mut large_string = String::new();
+        for _ in 0..10000 {
+            large_string.push_str("A very long repetitive string that should compress extremely well. ");
+        }
+
+        let compressed = compress_lossless(&large_string).unwrap();
+        assert!(compressed.len() < large_string.len());
+
+        let decompressed = decompress_lossless(&compressed).unwrap();
+        assert_eq!(decompressed, large_string);
+    }
+
+    #[test]
+    fn test_compress_empty_string() {
+        let compressed = compress_lossless("").unwrap();
+        let decompressed = decompress_lossless(&compressed).unwrap();
+        assert_eq!(decompressed, "");
+    }
+
+    #[test]
+    fn test_decompress_invalid_base64() {
+        let invalid_compressed = format!("{}invalid_base64!", COMPRESSION_PREFIX);
+        let res = decompress_lossless(&invalid_compressed);
+        assert!(res.is_err());
+    }
+}

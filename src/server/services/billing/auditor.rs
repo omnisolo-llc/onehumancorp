@@ -36,6 +36,7 @@ pub struct CostAuditor {
     llm_cost_counter: Counter<f64>,
     storage_savings_counter: Counter<f64>,
     compute_cost_counter: Counter<f64>,
+    payment_savings: Mutex<f64>,
 }
 
 impl CostAuditor {
@@ -61,7 +62,26 @@ impl CostAuditor {
             llm_cost_counter,
             storage_savings_counter,
             compute_cost_counter,
+            payment_savings: Mutex::new(0.0),
         }
+    }
+
+    pub fn record_payment_transaction(
+        &self,
+        amount: f64,
+        actual_method: ::server_pricing::transaction_optimizer::PaymentMethod,
+        fallback_method: ::server_pricing::transaction_optimizer::PaymentMethod,
+    ) -> f64 {
+        let optimizer = ::server_pricing::transaction_optimizer::TransactionOptimizer::new();
+        let actual_fee = optimizer.calculate_fee(amount, &actual_method);
+        let fallback_fee = optimizer.calculate_fee(amount, &fallback_method);
+
+        let saved = fallback_fee - actual_fee;
+        let saved = if saved > 0.0 { saved } else { 0.0 };
+
+        let mut savings = self.payment_savings.lock().unwrap();
+        *savings += saved;
+        saved
     }
 
     pub fn set_telemetry_tx(&mut self, tx: tokio::sync::mpsc::UnboundedSender<AuditEvent>) {
@@ -231,9 +251,11 @@ impl CostAuditor {
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
 
+        let payment_savings = self.payment_savings.lock().unwrap();
         let mut report = format!("Total Cost: ${:.4}\n", *total_cost);
         report += &format!("Total Savings via Caching: ${:.4}\n", *caching_savings);
         report += &format!("Total Savings via Storage Compression: ${:.4}\n", *storage_savings);
+        report += &format!("Total Savings via Payment Optimization: ${:.4}\n", *payment_savings);
         report += &format!("Total Compute Cost: ${:.4}\n", *total_compute_cost);
         report += &format!("Total Network Cost: ${:.4}\n", *total_network_cost);
         report += "Agent Costs:\n";
@@ -356,5 +378,27 @@ mod tests {
         let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_total_storage_savings(), 0.1);
+    }
+
+    #[test]
+    fn test_record_payment_transaction() {
+        let config = CostConfig::default();
+        let auditor = CostAuditor::new(config);
+
+        // $100 transaction.
+        // Fallback (CC): (100 * 0.029) + 0.30 = 2.9 + 0.30 = 3.20
+        // Actual (ACH): 100 * 0.008 = 0.80
+        // Savings = 3.20 - 0.80 = 2.40
+
+        let saved = auditor.record_payment_transaction(
+            100.0,
+            ::server_pricing::transaction_optimizer::PaymentMethod::ACH,
+            ::server_pricing::transaction_optimizer::PaymentMethod::CreditCard,
+        );
+
+        assert!((saved - 2.40).abs() < 1e-9);
+
+        let report = auditor.generate_report();
+        assert!(report.contains("Total Savings via Payment Optimization: $2.4000"));
     }
 }

@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_pricing",
@@ -10,6 +10,7 @@ rust_library(
         "mod.rs",
         "prompt_caching.rs",
         "rate_limit.rs",
+        "transaction_optimizer.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -31,5 +32,14 @@ rust_library(
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "server_pricing_test",
+    crate = ":server_pricing",
+    deps = [
+        "@crates//:tokio",
+        "@crates//:redis",
     ],
 )

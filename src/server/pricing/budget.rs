@@ -95,3 +95,41 @@ mod tests {
         assert_eq!(manager.get_remaining_cents(), 4000);
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use std::thread;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_budget_manager_concurrent_spends() {
+        let manager = Arc::new(BudgetManager::new(100.0));
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let manager_clone = manager.clone();
+            handles.push(thread::spawn(move || {
+                let _ = manager_clone.record_spend(5.0);
+            }));
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        assert_eq!(manager.get_remaining(), 50.0);
+    }
+
+    #[test]
+    fn test_budget_manager_edge_case_amounts() {
+        let manager = BudgetManager::new(10.0);
+
+        // Exact spend
+        assert!(manager.record_spend(10.0).is_ok());
+        assert_eq!(manager.get_remaining(), 0.0);
+
+        // Exceeding by tiny amount
+        assert!(manager.record_spend(0.0001).is_err());
+    }
+}

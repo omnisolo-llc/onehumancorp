@@ -210,3 +210,52 @@ mod tests {
         assert_eq!(efficiency, 25.0); // 250 / 10
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_cost_with_all_models_table_driven() {
+        let test_cases = vec![
+            ("claude-3-opus", 1000, 500, 0, (15.00 * 1000.0 / 1_000_000.0) + (75.00 * 500.0 / 1_000_000.0)),
+            ("gpt-4o", 2000, 1000, 500, (5.00 * 2000.0 / 1_000_000.0) + (15.00 * 1000.0 / 1_000_000.0) + (2.50 * 500.0 / 1_000_000.0)),
+            ("gemini-2.5-flash", 5000, 2000, 1000, (0.15 * 5000.0 / 1_000_000.0) + (0.60 * 2000.0 / 1_000_000.0) + (0.0 * 1000.0 / 1_000_000.0)),
+            ("minimax-m2.7-turbo", 10000, 5000, 0, (0.50 * 10000.0 / 1_000_000.0) + (0.50 * 5000.0 / 1_000_000.0)),
+        ];
+
+        for (model, prompt, completion, cached, expected_cost) in test_cases {
+            let actual = calculate_cost(model, prompt, completion, cached);
+            assert!((actual - expected_cost).abs() < f64::EPSILON, "Mismatch for model: {}", model);
+        }
+    }
+
+    #[test]
+    fn test_roi_and_efficiency_extreme_values() {
+        let roi = calculate_roi(0.000001, 1000.0);
+        assert!(roi > 0.0);
+
+        let eff = calculate_efficiency(0.000001, 10_000_000);
+        assert!(eff > 0.0);
+    }
+
+    #[test]
+    fn test_storage_savings_table_driven() {
+        let config = CostConfig {
+            cost_per_gb_month: 0.10,
+            ..Default::default()
+        };
+
+        let cases = vec![
+            // Original, Compressed, Expected Savings
+            (2_147_483_648, 1_073_741_824, 0.10), // 2GB to 1GB
+            (1_073_741_824, 2_147_483_648, 0.0), // Compressed is larger! Should return 0
+            (1_073_741_824, 1_073_741_824, 0.0), // Same size
+        ];
+
+        for (orig, comp, expected) in cases {
+            let savings = calculate_storage_savings(orig, comp, &config);
+            assert!((savings - expected).abs() < f64::EPSILON);
+        }
+    }
+}
