@@ -1,1 +1,1 @@
-🎨 Canvas: [feature name]
+Maintainer: Zero WIP exit
