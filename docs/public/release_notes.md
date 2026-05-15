@@ -1,10 +1,5 @@
 # release_notes.md
 
-## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
-
-### Cloud Scaling Improvements
-- ✍️ Scribe: Implemented the In-App Help Center & Contextual Tooltip API, enabling non-technical users to access step-by-step guides, onboarding walkthroughs, and plain-language assistance directly within the app.
-
 ## v0.4.38 (Cloud) / v0.4.38+1 (Standalone)
 
 ### Cloud Scaling Improvements
