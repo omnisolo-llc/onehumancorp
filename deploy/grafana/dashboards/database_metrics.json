@@ -15,12 +15,27 @@
   "panels": [
     {
       "type": "text",
+      "title": "OHC Premium CSS",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 2
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>\n.panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.05) !important;\n    border-radius: 16px !important;\n    border: 1px solid rgba(255, 255, 255, 0.1) !important;\n}\n</style>"
+      },
+      "transparent": true
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "options": {
         "mode": "html",
@@ -35,7 +50,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 4
       },
       "datasource": {
         "type": "prometheus",
@@ -80,7 +95,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 2
+        "y": 4
       },
       "datasource": {
         "type": "prometheus",
@@ -125,7 +140,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 12
       },
       "datasource": {
         "type": "prometheus",
@@ -181,7 +196,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 20
       },
       "datasource": {
         "type": "prometheus",
