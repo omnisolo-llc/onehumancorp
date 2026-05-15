@@ -160,6 +160,7 @@ pub async fn buffer_metric(
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
+    // We explicitly check this flag before any processing to ensure privacy by design.
     let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
 
     if !is_telemetry_enabled {
@@ -243,11 +244,31 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("billing") ||
     k.contains("ip_address") ||
     k.contains("mac_address") ||
-    k.contains("geolocation")
+    k.contains("geolocation") ||
+    k.contains("zip") ||
+    k.contains("postcode") ||
+    k.contains("lat") ||
+    k.contains("long") ||
+    k.contains("username")
 }
 
 pub fn is_email(s: &str) -> bool {
-    s.contains('@') && s.contains('.')
+    let s = s.trim();
+    if s.is_empty() || s.len() < 5 {
+        return false;
+    }
+    let parts: Vec<&str> = s.split('@').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+    let user_part = parts[0];
+    let domain = parts[1];
+
+    if user_part.is_empty() || domain.is_empty() {
+        return false;
+    }
+
+    domain.contains('.') && !domain.starts_with('.') && !domain.ends_with('.')
 }
 
 #[cfg(test)]
