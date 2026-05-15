@@ -193,7 +193,7 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('button', { name: '🌐 Free OHC Domain' }).click();
 
     // 11. Launch
-    await page.getByRole('button', { name: 'Publish my business →' }).click();
+    await page.getByRole('button', { name: 'Launch!' }).click();
     await expect(page.locator('text="Your business is now live!"')).toBeVisible({ timeout: 10000 });
 
     // Screenshot

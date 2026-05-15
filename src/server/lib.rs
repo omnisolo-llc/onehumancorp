@@ -1459,6 +1459,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
+        .route("/api/wizard/state", axum::routing::post(wizard_state_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
@@ -1600,6 +1601,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+async fn wizard_state_handler(axum::Json(_payload): axum::Json<serde_json::Value>) -> impl axum::response::IntoResponse {
+    (axum::http::StatusCode::OK, "State saved")
+}
+
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
     let content = match path {
@@ -1740,7 +1746,54 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1>Dashboard</h1>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 14px;">Simple Mode</span>
+                                <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                                    <input type="checkbox" id="mode-toggle" onchange="
+                                        const isAdvanced = this.checked;
+                                        if (isAdvanced) {
+                                            document.body.classList.add('advanced-mode');
+                                            localStorage.setItem('ohc_advanced_mode', 'true');
+                                        } else {
+                                            document.body.classList.remove('advanced-mode');
+                                            localStorage.setItem('ohc_advanced_mode', 'false');
+                                        }
+                                        fetch('/api/wizard/state', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ step: 'advanced_mode_toggle', data: { advanced: isAdvanced } })
+                                        }).catch(e => console.error(e));
+                                    " style="opacity: 0; width: 0; height: 0;">
+                                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px;"></span>
+                                    <span class="slider-btn" style="position: absolute; content: ''; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%;"></span>
+                                </label>
+                                <span style="font-size: 14px; color: var(--text-secondary);">Advanced Mode</span>
+                            </div>
+                        </div>
+                        <style>
+                            .advanced-mode .advanced-only { display: block !important; }
+                            .advanced-only { display: none !important; }
+                            input:checked + span { background-color: var(--primary-color); }
+                            input:checked + span + .slider-btn { transform: translateX(20px); }
+                        </style>
+                        <div class="card glass" style="margin-bottom: 24px;">
+                            <h2>Welcome back, Human.</h2>
+                            <p>Your business is looking great today. Let's keep growing!</p>
+                            <button onclick="document.getElementById('grow-wizard').style.display='block';">🚀 Grow my business</button>
+                        </div>
+                        <div id="grow-wizard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; flex-direction: column;">
+                            <div class="card glass" style="max-width: 400px; width: 100%;">
+                                <h2>Grow Your Business</h2>
+                                <p>Here are a few quick things you can do today:</p>
+                                <button style="width: 100%; margin-bottom: 8px;" onclick="alert('Adding products...'); this.parentElement.parentElement.style.display='none';">+ Add 5 more products</button>
+                                <button style="width: 100%; margin-bottom: 8px;" onclick="alert('Connecting Instagram...'); this.parentElement.parentElement.style.display='none';">📸 Connect Instagram</button>
+                                <button style="width: 100%; margin-bottom: 8px;" onclick="alert('Starting email campaign...'); this.parentElement.parentElement.style.display='none';">📧 Run your first email campaign</button>
+                                <button class="secondary" style="width: 100%;" onclick="this.parentElement.parentElement.style.display='none';">Close</button>
+                            </div>
+                        </div>
+
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
@@ -1890,27 +1943,164 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Agents Page -->
-                    <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
 
-                    <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
+                    <div id="agents-screen" class="screen glass" style="backdrop-filter: blur(20px);">
+                        <h1 class="wizard-h1">AI Agents</h1>
+
+                        <div id="agents-gallery">
+                            <p class="wizard-p">Manage your AI team</p>
+                            <div class="card-grid">
+                                <div class="card-tile">
+                                    <h3 style="font-size: 24px;">💬</h3>
+                                    <h3>Customer Support</h3>
+                                    <p>Handles basic queries.</p>
+                                    <button style="margin-top: 12px; width: 100%;" onclick="openAgentWizard('Customer Support')">Add to my team</button>
+                                </div>
+                                <div class="card-tile">
+                                    <h3 style="font-size: 24px;">📸</h3>
+                                    <h3>Social Media Manager</h3>
+                                    <p>Posts automatically.</p>
+                                    <button style="margin-top: 12px; width: 100%;" onclick="openAgentWizard('Social Media Manager')">Add to my team</button>
+                                </div>
+                                <div class="card-tile">
+                                    <h3 style="font-size: 24px;">🚀</h3>
+                                    <h3>SEO Booster</h3>
+                                    <p>Improves search ranking.</p>
+                                    <button style="margin-top: 12px; width: 100%;" onclick="openAgentWizard('SEO Booster')">Add to my team</button>
+                                </div>
+                            </div>
+                            <h2 style="margin-top: 32px;">Active Agents</h2>
+                            <div class="card glass" style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="margin-bottom: 4px;">Marketing Pro <span style="color: #4caf50; font-size: 12px;">● Active</span></h3>
+                                    <p style="margin: 0; color: var(--text-secondary); font-size: 12px;">Writing product descriptions</p>
+                                </div>
+                                <div>
+                                    <button class="secondary" onclick="openAgentTuning('Marketing Pro')">Tune this agent</button>
+                                    <button class="secondary" style="color: #f44336;" onclick="document.getElementById('fix-wizard').style.display='block'">Help me fix this</button>
+                                </div>
+                            </div>
+                            <button class="secondary" style="margin-top: 24px;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+
+                        <!-- Agent Configuration Wizard -->
+                        <div id="agent-wizard" style="display: none;">
+                            <h2 id="aw-title">Configure Agent</h2>
+                            <div style="margin-bottom: 24px;">
+                                <h3>Capabilities</h3>
+                                <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer;">
+                                    <input type="checkbox" checked style="margin-right: 12px;"> Reply to customer messages
+                                </label>
+                                <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer;">
+                                    <input type="checkbox" style="margin-right: 12px;"> Post to Instagram & Facebook
+                                </label>
+                                <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer;">
+                                    <input type="checkbox" checked style="margin-right: 12px;"> Write product descriptions
+                                </label>
+                            </div>
+                            <div style="margin-bottom: 24px;">
+                                <h3>How often should this agent work?</h3>
+                                <input type="range" min="1" max="4" value="2" style="width: 100%;">
+                                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+                                    <span>Real-time</span><span>Hourly</span><span>Daily</span><span>Weekly</span>
+                                </div>
+                            </div>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="document.getElementById('agent-wizard').style.display='none'; document.getElementById('agents-gallery').style.display='block';">Cancel</button>
+                                <button onclick="alert('Agent Activated!'); document.getElementById('agent-wizard').style.display='none'; document.getElementById('agents-gallery').style.display='block';">Activate</button>
+                            </div>
+                        </div>
+
+                        <!-- Prompt Tuning Wizard -->
+                        <div id="agent-tuning" style="display: none; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px;">
+                            <h2>Tune this agent</h2>
+                            <div style="display: flex; gap: 24px;">
+                                <div style="flex: 1;">
+                                    <div style="margin-bottom: 16px;">
+                                        <h3>Tone</h3>
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                            <label><input type="radio" name="tone" checked> Friendly & Warm</label>
+                                            <label><input type="radio" name="tone"> Professional</label>
+                                            <label><input type="radio" name="tone"> Energetic</label>
+                                            <label><input type="radio" name="tone"> Concise</label>
+                                        </div>
+                                    </div>
+                                    <div style="margin-bottom: 16px;">
+                                        <h3>Focus Topics</h3>
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                            <span style="padding: 4px 12px; background: rgba(255,255,255,0.1); border-radius: 16px; font-size: 12px; cursor: pointer;">+ Only about my products</span>
+                                            <span style="padding: 4px 12px; background: rgba(255,255,255,0.1); border-radius: 16px; font-size: 12px; cursor: pointer;">+ Avoid competitor mentions</span>
+                                            <span style="padding: 4px 12px; background: rgba(255,255,255,0.1); border-radius: 16px; font-size: 12px; cursor: pointer;">+ Always reply in Spanish</span>
+                                        </div>
+                                    </div>
+                                    <div style="margin-bottom: 16px;">
+                                        <h3>Example Interactions (Optional)</h3>
+                                        <textarea placeholder="Q: Do you offer refunds?
+A: Absolutely! We offer a 30-day money back guarantee..." style="width: 100%; height: 80px;"></textarea>
+                                    </div>
+                                    <div class="wizard-actions">
+                                        <button class="secondary" onclick="document.getElementById('agent-tuning').style.display='none'; document.getElementById('agents-gallery').style.display='block';">Cancel</button>
+                                        <button onclick="document.getElementById('tuning-toast').style.display='block'; setTimeout(() => document.getElementById('tuning-toast').style.display='none', 3000); document.getElementById('agent-tuning').style.display='none'; document.getElementById('agents-gallery').style.display='block';">Save</button>
+                                    </div>
+                                </div>
+                                <div style="flex: 1; background: #000; border-radius: 8px; padding: 16px;">
+                                    <h3>Live Preview</h3>
+                                    <div style="height: 200px; overflow-y: auto; color: #ccc; font-size: 12px; font-family: monospace; margin-bottom: 12px;">
+                                        > Hello! I'm your Marketing Pro agent. How can I help?
+                                    </div>
+                                    <input type="text" placeholder="Test your agent..." style="width: 100%; padding: 8px;" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tuning-toast" style="display: none; position: fixed; bottom: 20px; right: 20px; background: #4caf50; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000;">
+                            Your agent has been updated ✓
+                        </div>
+
+
+                        <div id="fix-wizard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; flex-direction: column;">
+                            <div class="card glass" style="max-width: 400px; width: 100%;">
+                                <h2>Help me fix this</h2>
+                                <p>It looks like this agent is having trouble writing product descriptions. Let's fix it in 3 simple steps.</p>
+
+                                <div id="fix-step-1">
+                                    <h3>Step 1: Clarify Product Specs</h3>
+                                    <p style="font-size: 14px;">The agent needs more context about your newest product.</p>
+                                    <textarea placeholder="Tell the agent more about the product..." style="width: 100%; margin-bottom: 12px;"></textarea>
+                                    <button onclick="document.getElementById('fix-step-1').style.display='none'; document.getElementById('fix-step-2').style.display='block';">Next →</button>
+                                </div>
+
+                                <div id="fix-step-2" style="display: none;">
+                                    <h3>Step 2: Adjust Tone</h3>
+                                    <p style="font-size: 14px;">Should it be more descriptive or concise?</p>
+                                    <button class="secondary" style="margin-right: 8px;" onclick="this.style.background='rgba(255,255,255,0.2)'">Descriptive</button>
+                                    <button class="secondary" onclick="this.style.background='rgba(255,255,255,0.2)'">Concise</button>
+                                    <div style="margin-top: 16px;">
+                                        <button onclick="document.getElementById('fix-step-2').style.display='none'; document.getElementById('fix-step-3').style.display='block';">Next →</button>
+                                    </div>
+                                </div>
+
+                                <div id="fix-step-3" style="display: none;">
+                                    <h3>Step 3: Review & Apply</h3>
+                                    <p style="font-size: 14px;">The agent is ready to resume its duties.</p>
+                                    <button onclick="alert('Agent Fixed!'); document.getElementById('fix-wizard').style.display='none';">Apply Fix ✓</button>
+                                </div>
+
+                                <button class="secondary" style="width: 100%; margin-top: 16px;" onclick="document.getElementById('fix-wizard').style.display='none'">Cancel</button>
+                            </div>
+                        </div>
+
+                        <script>
+                            function openAgentWizard(name) {
+                                document.getElementById('agents-gallery').style.display = 'none';
+                                document.getElementById('agent-wizard').style.display = 'block';
+                                document.getElementById('aw-title').innerText = 'Configure ' + name;
+                            }
+                            function openAgentTuning(name) {
+                                document.getElementById('agents-gallery').style.display = 'none';
+                                document.getElementById('agent-tuning').style.display = 'block';
+                            }
+                        </script>
                     </div>
 
 
@@ -2009,24 +2199,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
-                        <h1>My Current Plan</h1>
-                        <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
-                        <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
-                        </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
                         <h1>Cost & AI Usage</h1>
@@ -2087,123 +2259,236 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
+
+                    <!-- Setup Wizard -->
+                    <div id="setup-screen" class="screen glass" style="backdrop-filter: blur(20px); font-family: 'Inter', sans-serif;">
+                        <style>
+                            .wizard-h1 { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+                            .wizard-p { color: var(--text-secondary); margin-bottom: 24px; font-size: 16px; }
+                            .wizard-step { display: none; }
+                            .wizard-step.active { display: block; }
+                            .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+                            .card-tile { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px; cursor: pointer; text-align: center; transition: all 0.2s; }
+                            .card-tile:hover { background: rgba(255, 255, 255, 0.1); }
+                            .card-tile.selected { border-color: var(--primary-color); background: rgba(var(--primary-color-rgb), 0.1); }
+                            .card-tile h3 { font-size: 16px; margin-bottom: 4px; }
+                            .card-tile p { font-size: 12px; color: var(--text-secondary); margin: 0; }
+                            .wizard-actions { display: flex; justify-content: space-between; margin-top: 32px; }
+                            .password-strength { height: 4px; border-radius: 2px; background: #333; margin-top: 8px; overflow: hidden; }
+                            .password-strength-bar { height: 100%; width: 0; transition: width 0.3s; }
+                        </style>
+
+                        <div id="step-1" class="wizard-step active">
+                            <h1 class="wizard-h1">Your business, live in minutes.</h1>
+                            <p class="wizard-p">Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+
+                        <div id="step-2" class="wizard-step">
+                            <h1 class="wizard-h1">What kind of business are you building?</h1>
+                            <div class="card-grid">
+                                <button class="secondary card-tile" onclick="nextStep(3)">🛒 Online Store</button>
+                                <button class="secondary card-tile" onclick="nextStep(3)">🛠️ Service Business</button>
+                                <button class="secondary card-tile" onclick="nextStep(3)">🍽️ Restaurant / Food</button>
+                                <button class="secondary card-tile" onclick="nextStep(3)">🎨 Creative / Portfolio</button>
+                                <button class="secondary card-tile" onclick="nextStep(3)">🏪 Local Business</button>
+                                <button class="secondary card-tile" onclick="nextStep(3)">Other</button>
+                            </div>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(1)">Back</button>
+                            </div>
                         </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+
+                        <div id="step-3" class="wizard-step">
+                            <h1 class="wizard-h1">Give your business a name</h1>
+                            <p class="wizard-p">Don't worry, you can change this later.</p>
+                            <input type="text" id="biz-name" placeholder="e.g. Maya's Cakes" />
+                            <textarea id="biz-desc" placeholder="A short description of what you do..." rows="3"></textarea>
+                            <button class="secondary" onclick="document.getElementById('biz-desc').value = 'AI generated description for ' + document.getElementById('biz-name').value">Auto-suggest Description</button>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(2)">Back</button>
+                                <button onclick="nextStep(4)">Next →</button>
+                            </div>
                         </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+
+                        <div id="step-4" class="wizard-step">
+                            <h1 class="wizard-h1">What do you sell?</h1>
+                            <div class="card-grid">
+                                <button class="secondary card-tile multi-select" onclick="this.classList.toggle('selected')">📦 Physical products</button>
+                                <button class="secondary card-tile multi-select" onclick="this.classList.toggle('selected')">📥 Digital downloads</button>
+                                <button class="secondary card-tile multi-select" onclick="this.classList.toggle('selected')">📅 Services / appointments</button>
+                                <button class="secondary card-tile multi-select" onclick="this.classList.toggle('selected')">🍕 Food & beverages</button>
+                                <button class="secondary card-tile multi-select" onclick="this.classList.toggle('selected')">🔁 Subscriptions</button>
+                            </div>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(3)">Back</button>
+                                <button onclick="nextStep(5)">Next →</button>
+                            </div>
                         </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+
+                        <div id="step-5" class="wizard-step">
+                            <h1 class="wizard-h1">How do you want to receive payments?</h1>
+                            <div class="card-grid">
+                                <button class="secondary card-tile" onclick="nextStep(6)">
+                                    <h3>🌐 Online only</h3>
+                                    <p>Ready in 5 mins</p>
+                                </button>
+                                <button class="secondary card-tile" onclick="nextStep(6)">
+                                    <h3>🤝 In-person</h3>
+                                    <p>POS app - Ready in 10 mins</p>
+                                </button>
+                                <button class="secondary card-tile" onclick="nextStep(6)">
+                                    <h3>Both</h3>
+                                    <p>Omnichannel</p>
+                                </button>
+                                <button class="secondary card-tile" onclick="nextStep(6)">
+                                    <h3>Skip for now</h3>
+                                </button>
+                            </div>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(4)">Back</button>
+                            </div>
                         </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
+
+                        <div id="step-6" class="wizard-step">
+                            <h1 class="wizard-h1">Create your account</h1>
+                            <p class="wizard-p">Administrator account</p>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
+                            <input type="password" placeholder="Password" oninput="
+                                let strength = this.value.length > 8 ? (this.value.match(/[!@#$%^&*]/) ? 'Strong' : 'Medium') : 'Weak';
+                                document.getElementById('pwd-strength-text').innerText = 'Strength: ' + strength;
+                                document.getElementById('pwd-strength-bar').style.width = strength === 'Strong' ? '100%' : (strength === 'Medium' ? '66%' : '33%');
+                                document.getElementById('pwd-strength-bar').style.background = strength === 'Strong' ? '#4caf50' : (strength === 'Medium' ? '#ff9800' : '#f44336');
+                            " />
+                            <div class="password-strength"><div id="pwd-strength-bar" class="password-strength-bar"></div></div>
+                            <p id="pwd-strength-text" style="font-size: 12px; margin-top: 4px;">Strength: </p>
+                            <button class="secondary" style="margin-top: 16px;">Sign up with Google</button>
+                            <button class="secondary" style="margin-top: 8px;">Sign up with Apple</button>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(5)">Back</button>
+                                <button onclick="nextStep(7)">Next →</button>
+                            </div>
                         </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+
+                        <div id="step-7" class="wizard-step">
+                            <h1 class="wizard-h1">Choose a Template</h1>
+                            <div class="card-grid">
+                                <button class="secondary card-tile" onclick="nextStep('7_5')">✨ Modern</button>
+                                <button class="secondary card-tile" onclick="nextStep('7_5')">🔥 Bold</button>
+                            </div>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(6)">Back</button>
+                            </div>
                         </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
+
+
+                        <div id="step-7_5" class="wizard-step">
+                            <h1 class="wizard-h1">Brand colors & logo</h1>
+                            <p class="wizard-p">Pick a color palette for your brand</p>
+                            <div class="card-grid">
+                                <button class="secondary card-tile" style="background: linear-gradient(to right, #ff9a9e, #fecfef)" onclick="this.classList.toggle('selected')">Sunset</button>
+                                <button class="secondary card-tile" style="background: linear-gradient(to right, #a18cd1, #fbc2eb)" onclick="this.classList.toggle('selected')">Twilight</button>
+                                <button class="secondary card-tile" style="background: linear-gradient(to right, #84fab0, #8fd3f4)" onclick="this.classList.toggle('selected')">Ocean</button>
+                            </div>
+                            <p class="wizard-p">Add your logo</p>
+                            <button class="secondary" style="margin-bottom: 8px;">Upload Logo</button>
+                            <button class="secondary" onclick="alert('Generating...')">✨ Generate a logo for me</button>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(7)">Back</button>
+                                <button onclick="nextStep(8)">Next →</button>
+                            </div>
                         </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+
+                        <div id="step-8" class="wizard-step">
+                            <h1 class="wizard-h1">Add your first product or service</h1>
+                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
+                            <input type="text" placeholder="e.g. 50.00" />
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep('7_5')">Back</button>
+                                <button onclick="nextStep(9)">Next →</button>
+                            </div>
                         </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+
+                        <div id="step-9" class="wizard-step">
+                            <h1 class="wizard-h1">Choose a Domain</h1>
+                            <button class="secondary card-tile" style="width: 100%; margin-bottom: 8px;" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary card-tile" style="width: 100%;" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep('7_5')">Back</button>
+                            </div>
                         </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
+
+                        <div id="step-10" class="wizard-step">
+                            <div style="text-align: center;">
+                                <h1 class="wizard-h1">Almost there!</h1>
+                                <div style="padding: 24px; background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 24px;">
+                                    <h3 style="margin-bottom: 16px;">Review & Launch</h3>
+                                    <p>Your business is ready to be configured.</p>
+                                </div>
+                                <button onclick="document.getElementById('launch-overlay').style.display='flex'; setTimeout(() => nextStep(100), 2000);">Review & Launch</button>
+                                <button onclick="document.getElementById('launch-overlay').style.display='flex'; setTimeout(() => nextStep(100), 2000);">Launch!</button>
+                            </div>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(9)">Back</button>
+                            </div>
+                        </div>
+
+                        <div id="step-100" class="wizard-step">
+                            <h1 class="wizard-h1">CONFETTI SUCCESS</h1>
+                            <p>Onboarding Complete!</p>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                        <div id="step-ai" class="wizard-step">
+                            <h1 class="wizard-h1">Describe your business in a sentence</h1>
+                            <input type="text" id="ai-bio" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
+                            <button onclick="if(document.getElementById('ai-bio').value) { nextStep('generating'); setTimeout(() => nextStep('launch-ai'), 2000); }">Generate Storefront →</button>
+                            <div class="wizard-actions">
+                                <button class="secondary" onclick="nextStep(1)">Back</button>
+                            </div>
                         </div>
 
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                        <div id="step-generating" class="wizard-step">
+                            <h1 class="wizard-h1">Designing your storefront...</h1>
+                            <p class="wizard-p">Our AI is crafting a custom experience for your brand.</p>
                         </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
+
+                        <div id="step-launch-ai" class="wizard-step">
+                            <h1 class="wizard-h1">Your live storefront!</h1>
                             <h2>AI Store</h2>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
+
+                        <div id="launch-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; flex-direction: column;">
+                            <h2 style="color: white; font-family: 'Outfit';">Your business is setting up...</h2>
+                            <div style="width: 50px; height: 50px; border: 3px solid transparent; border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+                        </div>
+
+                        <script>
+                            function saveWizardState(stepId) {
+                                fetch('/api/wizard/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ step: stepId, data: {} })
+                                }).catch(e => console.error(e));
+                            }
+                            function nextStep(step) {
+                                document.querySelectorAll('#setup-screen .wizard-step').forEach(s => s.classList.remove('active'));
+                                const nextStepEl = document.getElementById('step-' + step);
+                                if (nextStepEl) {
+                                    nextStepEl.classList.add('active');
+                                    saveWizardState(step);
+                                }
+                            }
+                        </script>
                     </div>
+
 
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
@@ -2269,11 +2554,48 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         window.onload = () => {
+                            const advancedMode = localStorage.getItem('ohc_advanced_mode') === 'true';
+                            if (advancedMode) {
+                                document.body.classList.add('advanced-mode');
+                                const toggle = document.getElementById('mode-toggle');
+                                if (toggle) toggle.checked = true;
+                            }
+
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
                     </script>
+
+                    <!-- My Plan Screen -->
+                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(20px);">
+                        <h1>Billing & Credits</h1>
+                        <p class="wizard-p">What does this cost?</p>
+                        <div class="card glass" style="margin-bottom: 24px;">
+                            <h2>Current Usage</h2>
+                            <p>You have used 15 AI agent hours this month.</p>
+                            <div style="height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: 8px; overflow: hidden;">
+                                <div style="height: 100%; width: 30%; background: var(--primary-color);"></div>
+                            </div>
+                            <p style="font-size: 12px; color: var(--text-secondary);">Projected cost: $12.50 / mo</p>
+                        </div>
+                        <button onclick="document.getElementById('billing-wizard').style.display='flex'">Add credits</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+
+                        <div id="billing-wizard" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; flex-direction: column;">
+                            <div class="card glass" style="max-width: 400px; width: 100%;">
+                                <h2>Add Credits</h2>
+                                <p>Select an amount to top up your account.</p>
+                                <div class="card-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                                    <button class="secondary card-tile" onclick="alert('Added $10'); document.getElementById('billing-wizard').style.display='none'">$10</button>
+                                    <button class="secondary card-tile" onclick="alert('Added $25'); document.getElementById('billing-wizard').style.display='none'">$25</button>
+                                    <button class="secondary card-tile" onclick="alert('Added $50'); document.getElementById('billing-wizard').style.display='none'">$50</button>
+                                </div>
+                                <button class="secondary" style="width: 100%; margin-top: 16px;" onclick="document.getElementById('billing-wizard').style.display='none'">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
                 </body>
             </html>
         "#,
