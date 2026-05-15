@@ -14,5 +14,6 @@ rust_library(
         "@crates//:chrono",
         "@crates//:tracing",
         "//src/server/common:server_common",
+        "//src/server/config:server_config",
     ],
 )

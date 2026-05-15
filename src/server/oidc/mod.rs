@@ -125,6 +125,15 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
     Ok(keys.keys)
 }
 
+
+pub fn extract_organization_id(raw: &serde_json::Value) -> Option<String> {
+    raw.get("organization_id")
+        .or_else(|| raw.get("org_id"))
+        .or_else(|| raw.get("tenant_id"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
 pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Claims, String> {
     if !cfg.enabled {
         return Err("OIDC not configured".to_string());
@@ -159,6 +168,19 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         return Err("OIDC token missing expiration".to_string());
     }
     
+
+    let organization_id = extract_organization_id(&serde_json::Value::Object(raw.clone()));
+
+    if ::server_config::get().multitenant {
+        if let Some(org_id) = &organization_id {
+            if org_id.trim().is_empty() {
+                return Err("organization_id is required in cloud mode to maintain tenant isolation".to_string());
+            }
+        } else {
+            return Err("organization_id is required in cloud mode to maintain tenant isolation".to_string());
+        }
+    }
+
     let mut roles = Vec::new();
     if let Some(r) = raw.get("roles") {
         if let Some(arr) = r.as_array() {
@@ -195,7 +217,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         email: raw.get("email").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         roles,
-        organization_id: None,
+        organization_id,
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
@@ -225,6 +247,32 @@ mod tests {
         
         // Public IP
         assert!(!is_blocked_ip("8.8.8.8".parse().unwrap()));
+    }
+
+
+    #[test]
+    fn test_extract_organization_id_from_raw() {
+        use serde_json::json;
+
+        let raw_val = json!({
+            "organization_id": "test-org-1",
+            "sub": "user-1",
+            "exp": 1234567890
+        });
+        assert_eq!(extract_organization_id(&raw_val), Some("test-org-1".to_string()));
+
+        let raw_val2 = json!({
+            "org_id": "test-org-2",
+            "sub": "user-2",
+            "exp": 1234567890
+        });
+        assert_eq!(extract_organization_id(&raw_val2), Some("test-org-2".to_string()));
+
+        let raw_val3 = json!({
+            "sub": "user-3",
+            "exp": 1234567890
+        });
+        assert_eq!(extract_organization_id(&raw_val3), None);
     }
 
     #[tokio::test]
