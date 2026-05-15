@@ -12,6 +12,10 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub }
     }
 
+    pub fn db(&self) -> &std::sync::Arc<crate::db::DB> {
+        &self.db
+    }
+
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
