@@ -26,7 +26,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority TEXT NOT NULL DEFAULT 'P2',
 			payload TEXT,
 			parent_plan_id TEXT,
@@ -87,18 +87,19 @@ func TestSyncLocalToCloud(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").WithArgs(savedLocalMission.OrganizationID).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery(`INSERT INTO shared_tasks`).
 		WithArgs(
+			savedLocalMission.ID,
 			savedLocalMission.OrganizationID,
+			savedLocalMission.ParentPlanID,
 			savedLocalMission.Title,
 			savedLocalMission.Description,
 			savedLocalMission.Status,
-			savedLocalMission.AgentID,
+			savedLocalMission.AssignedAgentID,
+			depsBytes,
 			savedLocalMission.Priority,
 			sanitizedPayloadBytes,
-			savedLocalMission.ParentPlanID,
-			depsBytes,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
-			AddRow(savedLocalMission.ID, time.Now(), time.Now()))
+		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).
+			AddRow(time.Now(), time.Now()))
 	mock.ExpectCommit()
 
 	// 6. Execute Sync

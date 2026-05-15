@@ -22,7 +22,7 @@ func (f *faultInjectingCloudDB) CreateTask(ctx context.Context, task *SharedTask
 	return nil
 }
 
-func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string) (*SharedTask, error) {
+func (f *faultInjectingCloudDB) GetTask(ctx context.Context, id string, organizationID string) (*SharedTask, error) {
 	if f.fails {
 		return nil, errors.New("simulated network failure")
 	}
@@ -45,7 +45,7 @@ func TestChaosSyncDaemonNetworkFailure(t *testing.T) {
 
 	task := &SharedTask{
 		ID:             "task-chaos-1",
-		OrganizationID: "org-chaos",
+		OrganizationID: "org-stress",
 		Title:          "Chaos Task",
 		Status:         "CLOUD_ESCALATION",
 	}
@@ -61,7 +61,7 @@ func TestChaosSyncDaemonNetworkFailure(t *testing.T) {
 	assert.NoError(t, err) // Should not cascade failure, just log and continue
 
 	// Verify local task status hasn't changed to CLOUD_PROCESSING because the cloud push failed
-	localTask, err := localStore.GetTask(context.Background(), "task-chaos-1", "org-1")
+	localTask, err := localStore.GetTask(context.Background(), "task-chaos-1", "org-stress")
 	assert.NoError(t, err)
 	assert.Equal(t, "CLOUD_ESCALATION", localTask.Status)
 }
@@ -75,7 +75,7 @@ func TestChaosSyncDaemonDegradation(t *testing.T) {
 
 	task := &SharedTask{
 		ID:             "task-chaos-2",
-		OrganizationID: "org-chaos",
+		OrganizationID: "org-stress",
 		Title:          "Chaos Task 2",
 		Status:         "CLOUD_PROCESSING",
 	}
@@ -91,7 +91,7 @@ func TestChaosSyncDaemonDegradation(t *testing.T) {
 	assert.NoError(t, err) // circuit breaking prevents error bubble up
 
 	// Verify local task status hasn't changed
-	localTask, err := localStore.GetTask(context.Background(), "task-chaos-2", "org-1")
+	localTask, err := localStore.GetTask(context.Background(), "task-chaos-2", "org-stress")
 	assert.NoError(t, err)
 	assert.Equal(t, "CLOUD_PROCESSING", localTask.Status)
 }
@@ -134,14 +134,14 @@ func TestChaosStressVerification(t *testing.T) {
 
     // Assert tasks successfully synced
     for i := 0; i < 100; i++ {
-        task, err := localStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i), "org-1")
+        task, err := localStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i), "org-stress")
         assert.NoError(t, err)
         if task != nil {
              assert.Equal(t, "CLOUD_PROCESSING", task.Status) // Assuming sync daemon successfully processed and marked them
         }
 
         // Ensure Cloud Store also received them
-        cloudTask, err := cloudStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i), "org-1")
+        cloudTask, err := cloudStore.GetTask(context.Background(), fmt.Sprintf("task-stress-%d", i), "org-stress")
         assert.NoError(t, err)
         if cloudTask != nil {
             assert.Equal(t, "PENDING", cloudTask.Status)

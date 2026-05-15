@@ -27,7 +27,7 @@ func TestParityNullHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Nil(t, fetched.Description)
-	assert.Nil(t, fetched.AgentID)
+	assert.Nil(t, fetched.AssignedAgentID)
 	assert.Nil(t, fetched.ParentPlanID)
 	assert.Nil(t, fetched.Payload)
 	_, err = db.Exec(`

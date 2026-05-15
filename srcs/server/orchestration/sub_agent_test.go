@@ -51,7 +51,7 @@ func setupTestDBForSubAgent(t *testing.T) *sql.DB {
 			title TEXT,
 			description TEXT,
 			status TEXT,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority TEXT,
 			payload JSON,
 			parent_plan_id TEXT,
@@ -287,7 +287,7 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	cancel() // Stop the worker
 
 	// Ensure task was processed
-	fetchedTask, _ := store.GetTask(context.Background(), "worker-delegated-1", "org-1")
+	fetchedTask, _ := store.GetTask(context.Background(), "worker-delegated-1", "")
 	assert.Equal(t, "ASSIGNED", fetchedTask.Status)
 }
 
