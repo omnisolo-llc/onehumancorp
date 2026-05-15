@@ -1711,12 +1711,50 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
                         /* Login screen specific */
+
                         #login-screen {
                             max-width: 400px;
                             margin-top: 100px;
                         }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+
+                        /* Bottom Nav */
+                        #bottom-nav {
+                            display: none;
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            height: 60px;
+                            background: rgba(255, 255, 255, 0.7);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            border-top: 1px solid var(--border);
+                            z-index: 1000;
+                            justify-content: space-around;
+                            align-items: center;
+                            padding-bottom: env(safe-area-inset-bottom);
+                        }
+                        #bottom-nav button {
+                            background: transparent;
+                            color: var(--text-secondary);
+                            border: none;
+                            font-size: 12px;
+                            min-width: 44px;
+                            min-height: 44px;
+                            padding: 8px;
+                            margin: 0;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        #bottom-nav button:hover, #bottom-nav button.active {
+                            color: var(--primary);
+                            background: transparent;
+                        }
+
                     </style>
                 </head>
                 <body>
@@ -1781,16 +1819,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
-                        <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
-                        </nav>
+
                     </div>
 
                     <!-- Referral Dashboard -->
@@ -2218,6 +2247,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
+                    <!-- Bottom Navigation -->
+                    <nav id="bottom-nav">
+                        <button class="nav-item" onclick="showScreen('add-product-screen')">Add</button>
+                        <button class="nav-item" onclick="showScreen('orders-screen')">Orders</button>
+                        <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
+                        <button class="nav-item" onclick="showScreen('analytics-screen')">Analytics</button>
+                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
+                    </nav>
+
+                    <!-- Add Product Placeholder -->
+                    <div id="add-product-screen" class="screen glass">
+                        <h1>Add Product</h1>
+                        <input type="text" placeholder="Product Name" />
+                        <button onclick="showScreen('dashboard-screen')">Save</button>
+                    </div>
+
+                    <!-- Orders Placeholder -->
+                    <div id="orders-screen" class="screen glass">
+                        <h1>Orders</h1>
+                        <p>No orders yet.</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <!-- Analytics Placeholder -->
+                    <div id="analytics-screen" class="screen glass">
+                        <h1>Analytics</h1>
+                        <p>No data available yet.</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
                     <script>
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
@@ -2236,7 +2295,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
-                            'meeting-room-screen': '/meetings/room/1'
+                                                        'meeting-room-screen': '/meetings/room/1',
+                            'add-product-screen': '/add-product',
+                            'orders-screen': '/orders',
+                            'analytics-screen': '/analytics'
                         };
 
                         function showScreen(id) {
@@ -2249,7 +2311,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (id !== 'dashboard-screen') {
                                 navButtons.forEach(btn => {
                                     if (!btn.dataset.text) btn.dataset.text = btn.textContent;
-                                    btn.textContent = '---';
+                                    btn.textContent = btn.dataset.text;
                                 });
                             } else {
                                 navButtons.forEach(btn => {
@@ -2257,14 +2319,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                             }
 
-                            if (pathMap[id]) {
+                                                        if (pathMap[id]) {
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            // Show main nav on desktop if logged in
+                            const publicScreens = ['login-screen', 'signup-screen'];
+                            if (!publicScreens.includes(id)) {
                                 document.getElementById('main-nav').style.display = 'flex';
+                                document.getElementById('bottom-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
+                                document.getElementById('bottom-nav').style.display = 'none';
                             }
                         }
 

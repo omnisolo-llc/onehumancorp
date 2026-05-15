@@ -42,10 +42,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     const addProductBtn = page.locator('text="Add"').filter({ visible: true }).first();
     await expect(addProductBtn).toBeVisible();
     await addProductBtn.click();
-
-    // Verify it triggers action - standard response might be a toast, we look for success indication or UI reaction
-    // Wait for network idle or any indication of reaction
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('heading', { name: 'Add Product' })).toBeVisible();
   });
 
   test('Clicking View Orders in bottom nav completes action', async ({ page }) => {
@@ -59,8 +56,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     const viewOrdersBtn = page.locator('text="Orders"').last();
     await expect(viewOrdersBtn).toBeVisible();
     await viewOrdersBtn.click();
-
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
   });
 
   test('Clicking Check Messages in bottom nav completes action', async ({ page }) => {
@@ -73,8 +69,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     const checkMessagesBtn = page.locator('text="Messages"').filter({ visible: true }).first();
     await expect(checkMessagesBtn).toBeVisible();
     await checkMessagesBtn.click();
-
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
   });
 
   test('Clicking See Analytics in bottom nav completes action', async ({ page }) => {
@@ -87,8 +82,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     const seeAnalyticsBtn = page.locator('text="Analytics"').filter({ visible: true }).first();
     await expect(seeAnalyticsBtn).toBeVisible();
     await seeAnalyticsBtn.click();
-
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
   });
 
   test('Clicking Share Store in bottom nav completes action', async ({ page }) => {
@@ -101,7 +95,6 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     const shareStoreBtn = page.locator('text="Share"').last();
     await expect(shareStoreBtn).toBeVisible();
     await shareStoreBtn.click();
-
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('heading', { name: 'Referral Dashboard' })).toBeVisible();
   });
 });
