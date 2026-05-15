@@ -2164,13 +2164,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(100)">Publish my business →</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
+                            <h1>🎉 Success! Your business is live! 🎉</h1>
+                            <h2>Your business is now live!</h2>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen">
+                        <div id="checklist-screen" class="screen" style="display: none;">
+                            <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
                             <p>⬜ Add 3 more products</p>
@@ -2219,6 +2220,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+                        function nextStep(step) {
+                            // Hide all steps
+                            document.querySelectorAll('[id^="step-"]').forEach(el => {
+                                el.style.display = 'none';
+                            });
+                            // Show target step
+                            const target = document.getElementById('step-' + step);
+                            if (target) {
+                                target.style.display = 'block';
+                            }
+
+                            // Save state
+                            localStorage.setItem('ohc_setup_step', step);
+                        }
+
+                        function generateAI() {
+                            nextStep('generating');
+                            setTimeout(() => {
+                                nextStep('launch-ai');
+                            }, 1000);
+                        }
+
+                        function handleLogin(btn) {
+                            const step = localStorage.getItem('ohc_setup_step');
+                            if (step && step !== '100' && step !== '101' && step !== 'launch-ai') {
+                                showScreen('setup-screen');
+                                nextStep(step);
+                            } else {
+                                showScreen('setup-screen');
+                            }
+                        }
+
+                        function handleSignup(btn) {
+                            showScreen('dashboard-screen');
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
