@@ -118,3 +118,16 @@ mod tests {
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
     }
 }
+
+#[cfg(test)]
+mod additional_ast_tests {
+    use super::*;
+
+    #[test]
+    fn test_ast_security_violation() {
+        let mut parser = ASTParser::new();
+        let result = parser.parse_for_security("sudo echo 'hello'");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "AST blocked: sudo");
+    }
+}

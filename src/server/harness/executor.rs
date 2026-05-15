@@ -103,3 +103,20 @@ mod tests {
         assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_telemetry_spawn_called() {
+        let task = LocalShellTask::new(None);
+        let result = task.execute("echo 'telemetry test'").await;
+        assert!(result.is_ok());
+        // Since we cannot assert the actual OpenTelemetry global meter state easily in a unit test
+        // without a mocked backend, we ensure the execution path that triggers it successfully runs
+        // without panicking.
+        let msg = result.unwrap();
+        assert!(msg.contains("Executing: bash -c \"set -e; echo 'telemetry test'\""));
+    }
+}

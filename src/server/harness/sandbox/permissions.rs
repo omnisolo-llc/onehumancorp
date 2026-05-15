@@ -92,3 +92,16 @@ mod tests {
         assert!(evaluator.evaluate("echo 'hello world'"));
     }
 }
+
+#[cfg(test)]
+mod additional_permissions_tests {
+    use super::*;
+
+    #[test]
+    fn test_permissions_evaluator() {
+        let evaluator = PermissionEvaluator::new();
+        assert!(evaluator.evaluate("echo 'hello'"));
+        assert!(!evaluator.evaluate("sudo rm -rf /"));
+        assert!(!evaluator.evaluate("chown root:root /etc/passwd"));
+    }
+}

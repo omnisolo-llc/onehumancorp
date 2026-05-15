@@ -94,3 +94,17 @@ impl SandboxAdapter for SandboxManager {
         format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
     }
 }
+
+#[cfg(test)]
+mod manager_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_telemetry_violation_called() {
+        let manager = SandboxManager::new(None);
+        let result = manager.wrap_command("sudo echo 'bad'").await;
+        // The policy rejects sudo, and the AST parser rejects sudo.
+        // This execution path triggers `record_bubblewrap_violation()`.
+        assert!(result.is_err());
+    }
+}

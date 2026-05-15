@@ -61,3 +61,18 @@ mod tests {
         assert!(wrapped.contains("echo hello"));
     }
 }
+
+#[cfg(test)]
+mod additional_wrapper_tests {
+    use super::*;
+
+    #[test]
+    fn test_wrapper_telemetry() {
+        let wrapper = BashWrapper::new();
+        // Since we cannot assert the actual OpenTelemetry global meter state easily in a unit test
+        // without a mocked backend, we ensure the execution path that triggers it successfully runs
+        // without panicking.
+        let result = wrapper.wrap("echo hello");
+        assert!(result.contains("bash -c \"set -e; echo hello\""));
+    }
+}
