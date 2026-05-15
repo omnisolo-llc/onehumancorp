@@ -93,7 +93,7 @@ mod tests {
         };
 
         // Custom retry block
-        let mut retries = 0;
+        let retries = 0;
         let mut success = false;
         while retries < 3 {
             if faulty_mesh.publish_with_ack("test", vec![]).await.is_ok() {
@@ -131,7 +131,7 @@ mod tests {
     #[tokio::test]
     async fn test_caching_strategy_resilience() {
         // Simulates caching strategy behavior ensuring it doesn't break when Redis is unavailable.
-        let mut retries = 0;
+        let retries = 0;
         let mut success = false;
         while retries < 3 {
             // Emulate hitting memory cache

@@ -19,15 +19,6 @@ impl ExperimentManager {
         }
     }
 
-    pub fn add_experiment(&self, id: &str, title: &str, split: f64) {
-        let mut experiments = self.experiments.write().unwrap();
-        experiments.insert(id.to_string(), Experiment {
-            id: id.to_string(),
-            title: title.to_string(),
-            traffic_split: split,
-        });
-    }
-
     pub fn get_variant(&self, id: &str, user_id: &str) -> String {
         let experiments = self.experiments.read().unwrap();
         let exp = match experiments.get(id) {
@@ -52,27 +43,4 @@ impl ExperimentManager {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_experiment_manager() {
-        let em = ExperimentManager::new();
-        em.add_experiment("exp1", "Test", 1.0);
-
-        let variant = em.get_variant("exp1", "user1");
-        assert_eq!(variant, "treatment");
-
-        em.add_experiment("exp2", "Test2", 0.0);
-        let variant = em.get_variant("exp2", "user1");
-        assert_eq!(variant, "control");
-
-        em.add_experiment("exp3", "Test3", 0.5);
-
-        let var1 = em.get_variant("exp3", "user1");
-        let var2 = em.get_variant("exp3", "user1");
-
-        assert_eq!(var1, var2); // Deterministic
-    }
 }

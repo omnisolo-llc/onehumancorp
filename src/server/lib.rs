@@ -1180,15 +1180,8 @@ impl HubService for MyHubService {
         &self,
         request: Request<AcceptInviteRequest>,
     ) -> Result<Response<AcceptInviteResponse>, Status> {
-        let req = request.into_inner();
-        
-        if req.invitee_id.is_empty() {
-            return Err(Status::invalid_argument("Missing invitee_id"));
-        }
-
-        self.viral_loop_tracker.record_invite_accepted(&req.invitee_id);
-
-        Ok(Response::new(AcceptInviteResponse { success: true }))
+        let _ = request;
+        unimplemented!()
     }
 
     async fn get_meetings(

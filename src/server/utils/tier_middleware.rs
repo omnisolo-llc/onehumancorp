@@ -6,7 +6,6 @@ use axum::{
     Json,
 };
 use std::sync::Arc;
-use serde_json::json;
 use crate::pricing::rate_limit::RedisRateLimiter;
 
 pub async fn tier_middleware(

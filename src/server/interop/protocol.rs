@@ -1,5 +1,3 @@
-use std::sync::atomic::Ordering;
-use crate::msgbus::MemoryBus;
 use crate::msgbus::{Bus, DistributedLock, Message};
 use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
@@ -376,8 +374,7 @@ impl InteropProtocol {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msgbus::MemoryBus;
-    use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]
     async fn test_interop_handoff_memory() {

@@ -137,10 +137,6 @@ impl AgentProgress {
         self.tool_use_count.fetch_add(1, Ordering::Relaxed);
     }
 
-    pub fn add_tokens(&self, n: i64) {
-        self.token_count.fetch_add(n, Ordering::Relaxed);
-    }
-
     pub fn tool_use_count(&self) -> u64 {
         self.tool_use_count.load(Ordering::Relaxed)
     }

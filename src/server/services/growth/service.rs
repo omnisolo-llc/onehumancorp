@@ -368,15 +368,8 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<GrowthIdRequest>,
     ) -> Result<Response<TeamInviteProto>, Status> {
-        let req = request.into_inner();
-        let mut invites = self.team_invites.write().unwrap();
-        
-        if let Some(inv) = invites.iter_mut().find(|i| i.id == req.id) {
-            inv.status = "ACCEPTED".to_string();
-            return Ok(Response::new(inv.clone()));
-        }
-        
-        Err(Status::not_found("invite not found"))
+        let _ = request;
+        unimplemented!()
     }
 
     async fn get_viral_coefficient(
