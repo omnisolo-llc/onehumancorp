@@ -1758,6 +1758,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <button onclick="showScreen('referral-dashboard-screen')">Share</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -1789,6 +1790,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
+                            <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</button>
                             <button class="nav-item">Distribute</button>
                         </nav>
                     </div>
@@ -2168,6 +2170,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <p style="margin-top: 30px; font-size: 0.8em; opacity: 0.7;"><a href="/signup" style="color: white; text-decoration: none;">Built with OHC — Start your free business →</a></p>
                         </div>
 
                         <div id="checklist-screen" class="screen">
