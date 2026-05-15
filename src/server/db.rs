@@ -232,6 +232,7 @@ impl DB {
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
+                        tenant_id TEXT DEFAULT 'system',
                         agent_id TEXT NOT NULL,
                         context_data TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -256,6 +257,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
+                        tenant_id TEXT DEFAULT 'system',
                         context TEXT NOT NULL,
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -315,6 +317,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS swarm_tasks (
                         id TEXT PRIMARY KEY,
+                        tenant_id TEXT DEFAULT 'system',
                         mission_id TEXT NOT NULL,
                         parent_plan_id TEXT,
                         dependencies TEXT NOT NULL DEFAULT '[]',
@@ -591,11 +594,11 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS agent_missions (
                         id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         status TEXT NOT NULL,
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
                         last_synced_at TIMESTAMP,
