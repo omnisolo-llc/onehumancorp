@@ -20,6 +20,7 @@ rust_library(
         "pipeline.rs",
         "powersync.rs",
         "queue.rs",
+        "inventory.rs",
         "queue_test.rs",
         "scheduler.rs",
         "seeder.rs",

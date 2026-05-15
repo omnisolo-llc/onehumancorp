@@ -17,6 +17,7 @@ pub use ::server_oidc as oidc;
 pub mod sip;
 pub mod seeder;
 pub mod queue;
+pub mod inventory;
 pub mod domain;
 pub use ::server_pricing as pricing;
 pub mod analytics;
