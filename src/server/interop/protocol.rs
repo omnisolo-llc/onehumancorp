@@ -197,17 +197,23 @@ impl InteropProtocol {
         self.bus.publish(msg).await?;
 
         // Wait for up to timeout_ms
-        let start = std::time::Instant::now();
-        while start.elapsed().as_millis() < timeout_ms as u128 {
-            if received.load(Ordering::SeqCst) {
-                cancel();
-                return Ok(true);
+        match tokio::time::timeout(tokio::time::Duration::from_millis(timeout_ms), async {
+            loop {
+                if received.load(Ordering::SeqCst) {
+                    return true;
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        }).await {
+            Ok(_) => {
+                cancel();
+                Ok(true)
+            }
+            Err(_) => {
+                cancel();
+                Ok(false)
+            }
         }
-
-        cancel();
-        Ok(false)
     }
 
     /// Dispatches a background job and waits for acknowledgment
@@ -262,17 +268,23 @@ impl InteropProtocol {
         }
 
         // Wait for up to timeout_ms
-        let start = std::time::Instant::now();
-        while start.elapsed().as_millis() < timeout_ms as u128 {
-            if received.load(Ordering::SeqCst) {
-                cancel();
-                return Ok(true);
+        match tokio::time::timeout(tokio::time::Duration::from_millis(timeout_ms), async {
+            loop {
+                if received.load(Ordering::SeqCst) {
+                    return true;
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
-
-        cancel();
-        Ok(false) // Not acked, implies failure/timeout, dispatch might need to be retried by the caller
+        }).await {
+            Ok(_) => {
+                cancel();
+                Ok(true)
+            }
+            Err(_) => {
+                cancel();
+                Ok(false)
+            }
+        } // Not acked, implies failure/timeout, dispatch might need to be retried by the caller
     }
 
     /// Listens for job dispatches and acknowledges them
