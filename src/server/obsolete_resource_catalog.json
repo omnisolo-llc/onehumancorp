@@ -1,0 +1,2702 @@
+[
+    {
+        "component_id": "a72c7d0e-fa64-4c30-a135-d3306af60881",
+        "name": "cleanup_target_0",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 0. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-01T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 0.0,
+            "tags": [
+                "obsolete",
+                "candidate_0"
+            ]
+        }
+    },
+    {
+        "component_id": "7c587508-d837-417d-91d4-5550606626c2",
+        "name": "cleanup_target_1",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 1. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-02T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 0.1,
+            "tags": [
+                "obsolete",
+                "candidate_1"
+            ]
+        }
+    },
+    {
+        "component_id": "b8d1e0f4-d6f7-4d15-8dfb-15d4a975af70",
+        "name": "cleanup_target_2",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 2. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-03T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 0.2,
+            "tags": [
+                "obsolete",
+                "candidate_2"
+            ]
+        }
+    },
+    {
+        "component_id": "62b39059-e168-4e6c-9a3e-f2ac947dc5ac",
+        "name": "cleanup_target_3",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 3. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-04T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 0.30000000000000004,
+            "tags": [
+                "obsolete",
+                "candidate_3"
+            ]
+        }
+    },
+    {
+        "component_id": "bc4403a0-1022-410f-91ac-5f99abc9f024",
+        "name": "cleanup_target_4",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 4. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-05T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 0.4,
+            "tags": [
+                "obsolete",
+                "candidate_4"
+            ]
+        }
+    },
+    {
+        "component_id": "a4674adf-3d1e-4a3f-953f-e26f0e5a788e",
+        "name": "cleanup_target_5",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 5. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-06T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 0.5,
+            "tags": [
+                "obsolete",
+                "candidate_5"
+            ]
+        }
+    },
+    {
+        "component_id": "f951fc8e-94dc-45b9-b81a-67d7950101c9",
+        "name": "cleanup_target_6",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 6. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-07T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 0.6000000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_6"
+            ]
+        }
+    },
+    {
+        "component_id": "c47a2c27-bdad-4352-b2d7-418ff2feca6d",
+        "name": "cleanup_target_7",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 7. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-08T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 0.7000000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_7"
+            ]
+        }
+    },
+    {
+        "component_id": "cdc481ea-252d-407d-a28e-4293322ad4aa",
+        "name": "cleanup_target_8",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 8. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-09T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 0.8,
+            "tags": [
+                "obsolete",
+                "candidate_8"
+            ]
+        }
+    },
+    {
+        "component_id": "e3b21f58-481c-44e8-958d-cb9a72e84abc",
+        "name": "cleanup_target_9",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 9. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-10T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 0.9,
+            "tags": [
+                "obsolete",
+                "candidate_9"
+            ]
+        }
+    },
+    {
+        "component_id": "6fa7547f-967b-41fa-83d5-3781b971526f",
+        "name": "cleanup_target_10",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 10. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-11T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 1.0,
+            "tags": [
+                "obsolete",
+                "candidate_10"
+            ]
+        }
+    },
+    {
+        "component_id": "ad767bd5-b573-44c2-ac35-6764f5033b97",
+        "name": "cleanup_target_11",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 11. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-12T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 1.1,
+            "tags": [
+                "obsolete",
+                "candidate_11"
+            ]
+        }
+    },
+    {
+        "component_id": "80445193-e70e-443a-ba2f-6c63052ee6d3",
+        "name": "cleanup_target_12",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 12. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-13T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 1.2000000000000002,
+            "tags": [
+                "obsolete",
+                "candidate_12"
+            ]
+        }
+    },
+    {
+        "component_id": "758766f3-1ca2-40e8-a321-d02a8ad29c77",
+        "name": "cleanup_target_13",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 13. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-14T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 1.3,
+            "tags": [
+                "obsolete",
+                "candidate_13"
+            ]
+        }
+    },
+    {
+        "component_id": "fbefb0fa-1fe2-4c4c-85ce-fc3500a9681c",
+        "name": "cleanup_target_14",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 14. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-15T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 1.4000000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_14"
+            ]
+        }
+    },
+    {
+        "component_id": "6cf3160c-62fc-40a7-856a-c51904aa9cd1",
+        "name": "cleanup_target_15",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 15. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-16T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 1.5,
+            "tags": [
+                "obsolete",
+                "candidate_15"
+            ]
+        }
+    },
+    {
+        "component_id": "bcd1567a-3359-49d6-b9f7-bd181ced8085",
+        "name": "cleanup_target_16",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 16. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-17T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 1.6,
+            "tags": [
+                "obsolete",
+                "candidate_16"
+            ]
+        }
+    },
+    {
+        "component_id": "4d38206c-e7cc-48d2-a254-b16e052c1175",
+        "name": "cleanup_target_17",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 17. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-18T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 1.7000000000000002,
+            "tags": [
+                "obsolete",
+                "candidate_17"
+            ]
+        }
+    },
+    {
+        "component_id": "51227f9a-22f4-4dce-965d-1f88a7be9975",
+        "name": "cleanup_target_18",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 18. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-19T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 1.8,
+            "tags": [
+                "obsolete",
+                "candidate_18"
+            ]
+        }
+    },
+    {
+        "component_id": "8e526c94-c9c6-4b7e-8b06-7a034fb0432f",
+        "name": "cleanup_target_19",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 19. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-20T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 1.9000000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_19"
+            ]
+        }
+    },
+    {
+        "component_id": "8f95ac6c-16e2-455d-85bf-0a2f37f48622",
+        "name": "cleanup_target_20",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 20. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-21T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 2.0,
+            "tags": [
+                "obsolete",
+                "candidate_20"
+            ]
+        }
+    },
+    {
+        "component_id": "b8d245d5-1615-49cb-91ae-6b45b8bd8f78",
+        "name": "cleanup_target_21",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 21. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-22T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 2.1,
+            "tags": [
+                "obsolete",
+                "candidate_21"
+            ]
+        }
+    },
+    {
+        "component_id": "e5516330-5fb8-47b7-985b-6f123e5d1a20",
+        "name": "cleanup_target_22",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 22. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-23T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 2.2,
+            "tags": [
+                "obsolete",
+                "candidate_22"
+            ]
+        }
+    },
+    {
+        "component_id": "2a587d97-8704-4720-830a-8861bcf272a3",
+        "name": "cleanup_target_23",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 23. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-24T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 2.3000000000000003,
+            "tags": [
+                "obsolete",
+                "candidate_23"
+            ]
+        }
+    },
+    {
+        "component_id": "f1bac11a-0e29-4a1e-a8fd-35e0c10ed1cf",
+        "name": "cleanup_target_24",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 24. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-25T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 2.4000000000000004,
+            "tags": [
+                "obsolete",
+                "candidate_24"
+            ]
+        }
+    },
+    {
+        "component_id": "62491c2a-1d87-4105-aa98-edeb8131eb42",
+        "name": "cleanup_target_25",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 25. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-26T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 2.5,
+            "tags": [
+                "obsolete",
+                "candidate_25"
+            ]
+        }
+    },
+    {
+        "component_id": "d4b1f1a6-d541-43b4-8f25-343aad9663da",
+        "name": "cleanup_target_26",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 26. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-27T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 2.6,
+            "tags": [
+                "obsolete",
+                "candidate_26"
+            ]
+        }
+    },
+    {
+        "component_id": "4dee8b9c-4398-4538-904f-8e14a4d8dbe0",
+        "name": "cleanup_target_27",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 27. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-28T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 2.7,
+            "tags": [
+                "obsolete",
+                "candidate_27"
+            ]
+        }
+    },
+    {
+        "component_id": "f7e1c5f2-851e-47f1-8544-7346fac4e2af",
+        "name": "cleanup_target_28",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 28. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-01T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 2.8000000000000003,
+            "tags": [
+                "obsolete",
+                "candidate_28"
+            ]
+        }
+    },
+    {
+        "component_id": "05a28f90-cb90-45a9-92c2-cc773de17c12",
+        "name": "cleanup_target_29",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 29. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-02T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 2.9000000000000004,
+            "tags": [
+                "obsolete",
+                "candidate_29"
+            ]
+        }
+    },
+    {
+        "component_id": "de31e5b9-f44f-4836-85b3-b3df11e8b1c7",
+        "name": "cleanup_target_30",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 30. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-03T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 3.0,
+            "tags": [
+                "obsolete",
+                "candidate_30"
+            ]
+        }
+    },
+    {
+        "component_id": "2e227fa8-af89-491b-8af8-87448d0ec27a",
+        "name": "cleanup_target_31",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 31. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-04T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 3.1,
+            "tags": [
+                "obsolete",
+                "candidate_31"
+            ]
+        }
+    },
+    {
+        "component_id": "834af2c4-d4ad-4af8-a814-f8f817a263d8",
+        "name": "cleanup_target_32",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 32. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-05T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 3.2,
+            "tags": [
+                "obsolete",
+                "candidate_32"
+            ]
+        }
+    },
+    {
+        "component_id": "61e68114-ae36-4b04-a6a6-e827c342a306",
+        "name": "cleanup_target_33",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 33. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-06T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 3.3000000000000003,
+            "tags": [
+                "obsolete",
+                "candidate_33"
+            ]
+        }
+    },
+    {
+        "component_id": "6b6b9654-7e65-489b-bd5e-f41d1a055c72",
+        "name": "cleanup_target_34",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 34. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-07T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 3.4000000000000004,
+            "tags": [
+                "obsolete",
+                "candidate_34"
+            ]
+        }
+    },
+    {
+        "component_id": "fa49f011-11a1-4c09-a235-958dcaeaf6e0",
+        "name": "cleanup_target_35",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 35. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-08T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 3.5,
+            "tags": [
+                "obsolete",
+                "candidate_35"
+            ]
+        }
+    },
+    {
+        "component_id": "e1d9e5d7-7224-46a3-8485-644c68b813d9",
+        "name": "cleanup_target_36",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 36. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-09T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 3.6,
+            "tags": [
+                "obsolete",
+                "candidate_36"
+            ]
+        }
+    },
+    {
+        "component_id": "1a738d06-6253-49c2-91b8-1e021a889473",
+        "name": "cleanup_target_37",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 37. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-10T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 3.7,
+            "tags": [
+                "obsolete",
+                "candidate_37"
+            ]
+        }
+    },
+    {
+        "component_id": "5cd32ff9-9c45-4c9c-a9b1-f2a7243fb3c9",
+        "name": "cleanup_target_38",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 38. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-11T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 3.8000000000000003,
+            "tags": [
+                "obsolete",
+                "candidate_38"
+            ]
+        }
+    },
+    {
+        "component_id": "1a8728c2-1e1b-4507-88dd-0f5743bbb967",
+        "name": "cleanup_target_39",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 39. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-12T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 3.9000000000000004,
+            "tags": [
+                "obsolete",
+                "candidate_39"
+            ]
+        }
+    },
+    {
+        "component_id": "f04c8192-324c-4c10-8f6d-8f8e469efea8",
+        "name": "cleanup_target_40",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 40. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-13T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 4.0,
+            "tags": [
+                "obsolete",
+                "candidate_40"
+            ]
+        }
+    },
+    {
+        "component_id": "48e5cbd8-4df7-46f1-b0ef-9253ba873658",
+        "name": "cleanup_target_41",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 41. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-14T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 4.1000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_41"
+            ]
+        }
+    },
+    {
+        "component_id": "ed578022-8d17-444d-ad1e-34fd7bb339db",
+        "name": "cleanup_target_42",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 42. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-15T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 4.2,
+            "tags": [
+                "obsolete",
+                "candidate_42"
+            ]
+        }
+    },
+    {
+        "component_id": "dc6bbba2-22f4-4a02-9156-f8503de4dc09",
+        "name": "cleanup_target_43",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 43. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-16T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 4.3,
+            "tags": [
+                "obsolete",
+                "candidate_43"
+            ]
+        }
+    },
+    {
+        "component_id": "07cc2e76-87e9-4d53-87e6-a1acd52659cd",
+        "name": "cleanup_target_44",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 44. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-17T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 4.4,
+            "tags": [
+                "obsolete",
+                "candidate_44"
+            ]
+        }
+    },
+    {
+        "component_id": "b1abdc31-59c1-4506-bea5-30def58de746",
+        "name": "cleanup_target_45",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 45. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-18T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 4.5,
+            "tags": [
+                "obsolete",
+                "candidate_45"
+            ]
+        }
+    },
+    {
+        "component_id": "6525f14e-5256-45de-b632-de968dc986c5",
+        "name": "cleanup_target_46",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 46. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-19T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 4.6000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_46"
+            ]
+        }
+    },
+    {
+        "component_id": "521b074f-d9c4-4f57-a744-a7a3ac47ab27",
+        "name": "cleanup_target_47",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 47. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-20T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 4.7,
+            "tags": [
+                "obsolete",
+                "candidate_47"
+            ]
+        }
+    },
+    {
+        "component_id": "bdefd6db-2882-4b4b-9c86-d0b3881dfe3b",
+        "name": "cleanup_target_48",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 48. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-21T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 4.800000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_48"
+            ]
+        }
+    },
+    {
+        "component_id": "d3eaf043-20e8-44a4-9686-990c3ea1a3bb",
+        "name": "cleanup_target_49",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 49. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-22T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 4.9,
+            "tags": [
+                "obsolete",
+                "candidate_49"
+            ]
+        }
+    },
+    {
+        "component_id": "62cb0d40-4097-47ff-b96e-b2711dd04ccc",
+        "name": "cleanup_target_50",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 50. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-23T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 5.0,
+            "tags": [
+                "obsolete",
+                "candidate_50"
+            ]
+        }
+    },
+    {
+        "component_id": "f218c13a-55f6-4eca-912f-1f8a9198fed3",
+        "name": "cleanup_target_51",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 51. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-24T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 5.1000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_51"
+            ]
+        }
+    },
+    {
+        "component_id": "a5adb020-7dfe-475b-b7cd-171d47a80304",
+        "name": "cleanup_target_52",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 52. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-25T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 5.2,
+            "tags": [
+                "obsolete",
+                "candidate_52"
+            ]
+        }
+    },
+    {
+        "component_id": "f6b5731d-7b6b-4065-9350-d4982fc964d2",
+        "name": "cleanup_target_53",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 53. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-26T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 5.300000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_53"
+            ]
+        }
+    },
+    {
+        "component_id": "61e6bfc9-d6a2-4fd5-94a4-e042f8815f66",
+        "name": "cleanup_target_54",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 54. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-27T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 5.4,
+            "tags": [
+                "obsolete",
+                "candidate_54"
+            ]
+        }
+    },
+    {
+        "component_id": "f8077a39-be52-4b37-8458-c243f0369fc5",
+        "name": "cleanup_target_55",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 55. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-28T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 5.5,
+            "tags": [
+                "obsolete",
+                "candidate_55"
+            ]
+        }
+    },
+    {
+        "component_id": "1473a817-a87a-47c3-ad9d-9bb0bbb82d62",
+        "name": "cleanup_target_56",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 56. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-01T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 5.6000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_56"
+            ]
+        }
+    },
+    {
+        "component_id": "d6781266-3ef7-4ed5-b92a-cdfb4bf477d1",
+        "name": "cleanup_target_57",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 57. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-02T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 5.7,
+            "tags": [
+                "obsolete",
+                "candidate_57"
+            ]
+        }
+    },
+    {
+        "component_id": "1bc61e59-b156-4a01-bc42-d2a29a33c5b3",
+        "name": "cleanup_target_58",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 58. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-03T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 5.800000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_58"
+            ]
+        }
+    },
+    {
+        "component_id": "3e5cd042-aa80-4e62-8da6-2d3a91190274",
+        "name": "cleanup_target_59",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 59. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-04T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 5.9,
+            "tags": [
+                "obsolete",
+                "candidate_59"
+            ]
+        }
+    },
+    {
+        "component_id": "e8d955c6-9d21-49b4-b373-f23b02e62ea4",
+        "name": "cleanup_target_60",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 60. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-05T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 6.0,
+            "tags": [
+                "obsolete",
+                "candidate_60"
+            ]
+        }
+    },
+    {
+        "component_id": "404ada00-3d64-4e02-9118-5c3ef59eff9c",
+        "name": "cleanup_target_61",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 61. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-06T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 6.1000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_61"
+            ]
+        }
+    },
+    {
+        "component_id": "d54fe336-32a7-4f8d-b2b7-2a685d62f529",
+        "name": "cleanup_target_62",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 62. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-07T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 6.2,
+            "tags": [
+                "obsolete",
+                "candidate_62"
+            ]
+        }
+    },
+    {
+        "component_id": "06181295-8830-4fb6-a10e-3100dfe672aa",
+        "name": "cleanup_target_63",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 63. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-08T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 6.300000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_63"
+            ]
+        }
+    },
+    {
+        "component_id": "965c4bf1-0cc9-4bc4-8305-ab8909c51c52",
+        "name": "cleanup_target_64",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 64. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-09T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 6.4,
+            "tags": [
+                "obsolete",
+                "candidate_64"
+            ]
+        }
+    },
+    {
+        "component_id": "210b59b5-3f89-443e-a477-1bac27d88aaa",
+        "name": "cleanup_target_65",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 65. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-10T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 6.5,
+            "tags": [
+                "obsolete",
+                "candidate_65"
+            ]
+        }
+    },
+    {
+        "component_id": "e3e9e3f5-4d63-4556-ae53-eaa55596e5e6",
+        "name": "cleanup_target_66",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 66. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-11T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 6.6000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_66"
+            ]
+        }
+    },
+    {
+        "component_id": "9fcda079-574c-42e9-922a-553dd40d3b59",
+        "name": "cleanup_target_67",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 67. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-12T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 6.7,
+            "tags": [
+                "obsolete",
+                "candidate_67"
+            ]
+        }
+    },
+    {
+        "component_id": "0e695d89-19fd-49ea-bb76-e8522cba59a3",
+        "name": "cleanup_target_68",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 68. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-13T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 6.800000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_68"
+            ]
+        }
+    },
+    {
+        "component_id": "1fe223fe-038c-422f-9138-3fdead4399ac",
+        "name": "cleanup_target_69",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 69. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-14T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 6.9,
+            "tags": [
+                "obsolete",
+                "candidate_69"
+            ]
+        }
+    },
+    {
+        "component_id": "c5a4bac9-0c6d-427e-ab04-cc228bdc7dc0",
+        "name": "cleanup_target_70",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 70. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-15T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 7.0,
+            "tags": [
+                "obsolete",
+                "candidate_70"
+            ]
+        }
+    },
+    {
+        "component_id": "81f4c31b-c089-47a0-be4e-5b9c9642f40a",
+        "name": "cleanup_target_71",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 71. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-16T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 7.1000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_71"
+            ]
+        }
+    },
+    {
+        "component_id": "eadb4b1c-49ed-4fb1-b37c-9f2d6f847522",
+        "name": "cleanup_target_72",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 72. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-17T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 7.2,
+            "tags": [
+                "obsolete",
+                "candidate_72"
+            ]
+        }
+    },
+    {
+        "component_id": "62a399cb-d030-4943-afc4-c5768bfd7ce8",
+        "name": "cleanup_target_73",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 73. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-18T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 7.300000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_73"
+            ]
+        }
+    },
+    {
+        "component_id": "f1763ff1-1fc1-4ed9-8aaa-044ae78e4306",
+        "name": "cleanup_target_74",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 74. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-19T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 7.4,
+            "tags": [
+                "obsolete",
+                "candidate_74"
+            ]
+        }
+    },
+    {
+        "component_id": "9c08b2cb-eebe-410a-9f38-5c4e53111c16",
+        "name": "cleanup_target_75",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 75. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-20T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 7.5,
+            "tags": [
+                "obsolete",
+                "candidate_75"
+            ]
+        }
+    },
+    {
+        "component_id": "86c60236-24cb-4e09-97d9-00708b202164",
+        "name": "cleanup_target_76",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 76. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-21T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 7.6000000000000005,
+            "tags": [
+                "obsolete",
+                "candidate_76"
+            ]
+        }
+    },
+    {
+        "component_id": "c66d4fb3-b437-4ee9-b41f-5d07ededb3df",
+        "name": "cleanup_target_77",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 77. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-22T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 7.7,
+            "tags": [
+                "obsolete",
+                "candidate_77"
+            ]
+        }
+    },
+    {
+        "component_id": "bc999c76-2b5b-452b-8641-6fdf6e4d604e",
+        "name": "cleanup_target_78",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 78. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-23T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 7.800000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_78"
+            ]
+        }
+    },
+    {
+        "component_id": "e9864459-383b-4db8-892b-8e09cbef6c9c",
+        "name": "cleanup_target_79",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 79. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-24T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 7.9,
+            "tags": [
+                "obsolete",
+                "candidate_79"
+            ]
+        }
+    },
+    {
+        "component_id": "3962a8c8-7a81-42a4-a5be-2dea3246fe04",
+        "name": "cleanup_target_80",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 80. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-25T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 8.0,
+            "tags": [
+                "obsolete",
+                "candidate_80"
+            ]
+        }
+    },
+    {
+        "component_id": "2b797763-ae22-4c05-86ac-3ba707992400",
+        "name": "cleanup_target_81",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 81. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-26T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 8.1,
+            "tags": [
+                "obsolete",
+                "candidate_81"
+            ]
+        }
+    },
+    {
+        "component_id": "840dc209-2be3-4461-8c62-301225bcd411",
+        "name": "cleanup_target_82",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 82. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-27T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 8.200000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_82"
+            ]
+        }
+    },
+    {
+        "component_id": "e4dc787f-7ad6-4036-949b-d7a62d36ce69",
+        "name": "cleanup_target_83",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 83. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-28T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 8.3,
+            "tags": [
+                "obsolete",
+                "candidate_83"
+            ]
+        }
+    },
+    {
+        "component_id": "1d791e08-7a03-4539-a232-8772da214181",
+        "name": "cleanup_target_84",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 84. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-01T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 8.4,
+            "tags": [
+                "obsolete",
+                "candidate_84"
+            ]
+        }
+    },
+    {
+        "component_id": "bb7ce962-c098-4e54-a207-de8e90d530d1",
+        "name": "cleanup_target_85",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 85. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-02T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 8.5,
+            "tags": [
+                "obsolete",
+                "candidate_85"
+            ]
+        }
+    },
+    {
+        "component_id": "dd3207a1-949e-4c1f-a4ca-9d25546e441a",
+        "name": "cleanup_target_86",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 86. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-03T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 8.6,
+            "tags": [
+                "obsolete",
+                "candidate_86"
+            ]
+        }
+    },
+    {
+        "component_id": "32d487ae-9328-4c6c-9820-9d3b38ed4acc",
+        "name": "cleanup_target_87",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 87. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-04T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 8.700000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_87"
+            ]
+        }
+    },
+    {
+        "component_id": "0e77dde8-189c-473f-bf4d-ff4566193014",
+        "name": "cleanup_target_88",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 88. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-05T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 8.8,
+            "tags": [
+                "obsolete",
+                "candidate_88"
+            ]
+        }
+    },
+    {
+        "component_id": "bca04fca-d4a5-4fa5-8d33-dcbffb7786a4",
+        "name": "cleanup_target_89",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 89. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-06T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 8.9,
+            "tags": [
+                "obsolete",
+                "candidate_89"
+            ]
+        }
+    },
+    {
+        "component_id": "ac25134e-4ea3-40b0-9aae-03bb4860c9fd",
+        "name": "cleanup_target_90",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 90. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-07T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 9.0,
+            "tags": [
+                "obsolete",
+                "candidate_90"
+            ]
+        }
+    },
+    {
+        "component_id": "ea1411ff-c05c-4efe-b866-36aa5cd20943",
+        "name": "cleanup_target_91",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 91. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-08T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 9.1,
+            "tags": [
+                "obsolete",
+                "candidate_91"
+            ]
+        }
+    },
+    {
+        "component_id": "51441b5e-122d-4e48-938c-fdcf2ec10406",
+        "name": "cleanup_target_92",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 92. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-09T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 9.200000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_92"
+            ]
+        }
+    },
+    {
+        "component_id": "1c69e918-841d-44c9-ada1-77b3054bc6b7",
+        "name": "cleanup_target_93",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 93. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-10T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 9.3,
+            "tags": [
+                "obsolete",
+                "candidate_93"
+            ]
+        }
+    },
+    {
+        "component_id": "38446b2b-d6b5-4994-9c3f-13fe037e1b0e",
+        "name": "cleanup_target_94",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 94. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-11T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 9.4,
+            "tags": [
+                "obsolete",
+                "candidate_94"
+            ]
+        }
+    },
+    {
+        "component_id": "9020682a-c414-4ca3-8b2b-9e030c80edf7",
+        "name": "cleanup_target_95",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 95. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-12T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 9.5,
+            "tags": [
+                "obsolete",
+                "candidate_95"
+            ]
+        }
+    },
+    {
+        "component_id": "9d2e5427-bd25-4d5d-b28e-56a7c1d7d68f",
+        "name": "cleanup_target_96",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 96. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-13T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 9.600000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_96"
+            ]
+        }
+    },
+    {
+        "component_id": "7797ec35-5ae8-4afb-95b2-4ae8a72cc5a9",
+        "name": "cleanup_target_97",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 97. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-14T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 9.700000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_97"
+            ]
+        }
+    },
+    {
+        "component_id": "81c549b1-dbb9-4ed8-9be4-9d69f07fdfbe",
+        "name": "cleanup_target_98",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 98. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-15T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 9.8,
+            "tags": [
+                "obsolete",
+                "candidate_98"
+            ]
+        }
+    },
+    {
+        "component_id": "e109acd7-4506-41be-b5cc-20e504cea1ac",
+        "name": "cleanup_target_99",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 99. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-16T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 9.9,
+            "tags": [
+                "obsolete",
+                "candidate_99"
+            ]
+        }
+    },
+    {
+        "component_id": "f85fa4b0-0973-4fb2-a4c7-9af396a88f46",
+        "name": "cleanup_target_100",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 100. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-17T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 10.0,
+            "tags": [
+                "obsolete",
+                "candidate_100"
+            ]
+        }
+    },
+    {
+        "component_id": "23809e5d-1098-496f-ba21-194e3403c05d",
+        "name": "cleanup_target_101",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 101. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-18T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 10.100000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_101"
+            ]
+        }
+    },
+    {
+        "component_id": "cb9ccddc-21ab-4148-aeaf-4c195ca4d39d",
+        "name": "cleanup_target_102",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 102. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-19T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 10.200000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_102"
+            ]
+        }
+    },
+    {
+        "component_id": "8c662325-53f5-4b7e-8a6d-4ce249dc2e9e",
+        "name": "cleanup_target_103",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 103. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-20T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 10.3,
+            "tags": [
+                "obsolete",
+                "candidate_103"
+            ]
+        }
+    },
+    {
+        "component_id": "b89f6ce4-b3f4-452c-9a52-d924b1af25a7",
+        "name": "cleanup_target_104",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 104. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-21T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 10.4,
+            "tags": [
+                "obsolete",
+                "candidate_104"
+            ]
+        }
+    },
+    {
+        "component_id": "3bbac4b7-e1e7-4fb9-8969-d1e7c634dee8",
+        "name": "cleanup_target_105",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 105. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-22T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 10.5,
+            "tags": [
+                "obsolete",
+                "candidate_105"
+            ]
+        }
+    },
+    {
+        "component_id": "acfff30c-4d16-4829-88c2-6d0e0d10bde9",
+        "name": "cleanup_target_106",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 106. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-23T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 10.600000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_106"
+            ]
+        }
+    },
+    {
+        "component_id": "f8dd58d8-bb47-4ee0-8857-84229a208aa9",
+        "name": "cleanup_target_107",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 107. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-24T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 10.700000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_107"
+            ]
+        }
+    },
+    {
+        "component_id": "384b190c-bfe0-4abe-9caf-cf0f31e0d00f",
+        "name": "cleanup_target_108",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 108. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-25T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 10.8,
+            "tags": [
+                "obsolete",
+                "candidate_108"
+            ]
+        }
+    },
+    {
+        "component_id": "486ef5cb-c946-4332-8101-95eed163dfa4",
+        "name": "cleanup_target_109",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 109. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-26T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 10.9,
+            "tags": [
+                "obsolete",
+                "candidate_109"
+            ]
+        }
+    },
+    {
+        "component_id": "a26366bc-3436-4fa6-866b-a1156c78ca93",
+        "name": "cleanup_target_110",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 110. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-27T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 11.0,
+            "tags": [
+                "obsolete",
+                "candidate_110"
+            ]
+        }
+    },
+    {
+        "component_id": "c0ad82ad-aee8-4365-8813-3693ec32d73d",
+        "name": "cleanup_target_111",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 111. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-28T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 11.100000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_111"
+            ]
+        }
+    },
+    {
+        "component_id": "8a631f5f-503c-4649-aeb7-b5f15d759c79",
+        "name": "cleanup_target_112",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 112. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-01T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 11.200000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_112"
+            ]
+        }
+    },
+    {
+        "component_id": "3b67b0d9-315d-4449-851e-c92f65fb313c",
+        "name": "cleanup_target_113",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 113. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-02T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 11.3,
+            "tags": [
+                "obsolete",
+                "candidate_113"
+            ]
+        }
+    },
+    {
+        "component_id": "f574e38a-b33e-4a4a-8529-2cfe67ce01a8",
+        "name": "cleanup_target_114",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 114. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-03T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 11.4,
+            "tags": [
+                "obsolete",
+                "candidate_114"
+            ]
+        }
+    },
+    {
+        "component_id": "0caa34f8-5696-43ca-95ac-b95d0287627b",
+        "name": "cleanup_target_115",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 115. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-04T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 11.5,
+            "tags": [
+                "obsolete",
+                "candidate_115"
+            ]
+        }
+    },
+    {
+        "component_id": "8247c124-15f8-4480-9d82-29e1cf42db6e",
+        "name": "cleanup_target_116",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 116. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-05T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 11.600000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_116"
+            ]
+        }
+    },
+    {
+        "component_id": "c259432a-14f9-4c97-ab79-a8c0498322b7",
+        "name": "cleanup_target_117",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 117. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-06T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 11.700000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_117"
+            ]
+        }
+    },
+    {
+        "component_id": "a0a67311-ff58-4bfc-9444-1cf47c8aead5",
+        "name": "cleanup_target_118",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 118. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-07T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 11.8,
+            "tags": [
+                "obsolete",
+                "candidate_118"
+            ]
+        }
+    },
+    {
+        "component_id": "815a8841-3c9c-40f4-91c2-cfafd346bc97",
+        "name": "cleanup_target_119",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 119. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-08T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 11.9,
+            "tags": [
+                "obsolete",
+                "candidate_119"
+            ]
+        }
+    },
+    {
+        "component_id": "9f49baf3-6040-4985-a80e-ce5fc81a6e16",
+        "name": "cleanup_target_120",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 120. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-09T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 12.0,
+            "tags": [
+                "obsolete",
+                "candidate_120"
+            ]
+        }
+    },
+    {
+        "component_id": "40c7a9ed-dbcc-43e0-af3d-d699bdd5c71d",
+        "name": "cleanup_target_121",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 121. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-10T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 12.100000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_121"
+            ]
+        }
+    },
+    {
+        "component_id": "370d7eac-af65-4daf-9679-c4beb69ffc59",
+        "name": "cleanup_target_122",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 122. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-11T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 12.200000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_122"
+            ]
+        }
+    },
+    {
+        "component_id": "340addd1-697f-4601-9845-1b1919cef768",
+        "name": "cleanup_target_123",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 123. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-12T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 12.3,
+            "tags": [
+                "obsolete",
+                "candidate_123"
+            ]
+        }
+    },
+    {
+        "component_id": "62085379-8cfe-4b3b-baa8-8dd6207d71d3",
+        "name": "cleanup_target_124",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 124. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-13T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 12.4,
+            "tags": [
+                "obsolete",
+                "candidate_124"
+            ]
+        }
+    },
+    {
+        "component_id": "592c5015-27b5-4865-a1c4-573bbba02884",
+        "name": "cleanup_target_125",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 125. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-14T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 12.5,
+            "tags": [
+                "obsolete",
+                "candidate_125"
+            ]
+        }
+    },
+    {
+        "component_id": "7d062f8d-bc11-4888-936c-8c6a49646d54",
+        "name": "cleanup_target_126",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 126. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-15T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 12.600000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_126"
+            ]
+        }
+    },
+    {
+        "component_id": "9ffcd702-332a-4446-b857-57cbc78a6ef3",
+        "name": "cleanup_target_127",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 127. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-16T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 12.700000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_127"
+            ]
+        }
+    },
+    {
+        "component_id": "501802b4-bb08-41d3-9f1b-ea511b1bf230",
+        "name": "cleanup_target_128",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 128. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-17T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 12.8,
+            "tags": [
+                "obsolete",
+                "candidate_128"
+            ]
+        }
+    },
+    {
+        "component_id": "5d543c73-6443-442d-bcda-4c50d54efa6b",
+        "name": "cleanup_target_129",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 129. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-18T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 12.9,
+            "tags": [
+                "obsolete",
+                "candidate_129"
+            ]
+        }
+    },
+    {
+        "component_id": "774217f1-e20e-4f52-9dcb-c285ddc9d9fe",
+        "name": "cleanup_target_130",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 130. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-19T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 13.0,
+            "tags": [
+                "obsolete",
+                "candidate_130"
+            ]
+        }
+    },
+    {
+        "component_id": "890f08c0-fb54-47dd-8618-76a94ecd16fe",
+        "name": "cleanup_target_131",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 131. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-20T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 13.100000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_131"
+            ]
+        }
+    },
+    {
+        "component_id": "be628b70-8f64-4901-b066-d0064204bc58",
+        "name": "cleanup_target_132",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 132. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-21T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 13.200000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_132"
+            ]
+        }
+    },
+    {
+        "component_id": "953109a4-e3e6-4eff-ba46-c98fe563754e",
+        "name": "cleanup_target_133",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 133. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-22T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 13.3,
+            "tags": [
+                "obsolete",
+                "candidate_133"
+            ]
+        }
+    },
+    {
+        "component_id": "0f87732d-6244-4522-a691-b865fa0a210a",
+        "name": "cleanup_target_134",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 134. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-23T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 13.4,
+            "tags": [
+                "obsolete",
+                "candidate_134"
+            ]
+        }
+    },
+    {
+        "component_id": "0ffd9f7e-b8f9-4c2b-8527-9b1dadfe7e48",
+        "name": "cleanup_target_135",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 135. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-24T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 13.5,
+            "tags": [
+                "obsolete",
+                "candidate_135"
+            ]
+        }
+    },
+    {
+        "component_id": "c4303777-462c-4eef-b261-a48679dca091",
+        "name": "cleanup_target_136",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 136. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-25T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 13.600000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_136"
+            ]
+        }
+    },
+    {
+        "component_id": "ab132d65-49b9-4867-9573-30edb7f95726",
+        "name": "cleanup_target_137",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 137. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-26T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 13.700000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_137"
+            ]
+        }
+    },
+    {
+        "component_id": "fefa914d-68db-4b85-a54a-42558c2751d0",
+        "name": "cleanup_target_138",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 138. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-27T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 13.8,
+            "tags": [
+                "obsolete",
+                "candidate_138"
+            ]
+        }
+    },
+    {
+        "component_id": "4758e20f-0a71-4eac-a0d2-190b97da596e",
+        "name": "cleanup_target_139",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 139. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-28T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 13.9,
+            "tags": [
+                "obsolete",
+                "candidate_139"
+            ]
+        }
+    },
+    {
+        "component_id": "6648d939-c10c-4b1a-afe0-30fb60d12e3d",
+        "name": "cleanup_target_140",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 140. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-01T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 14.0,
+            "tags": [
+                "obsolete",
+                "candidate_140"
+            ]
+        }
+    },
+    {
+        "component_id": "73a0dabd-10ea-4a7a-bc4a-1662da6fa99d",
+        "name": "cleanup_target_141",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 141. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-02T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 14.100000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_141"
+            ]
+        }
+    },
+    {
+        "component_id": "f2f95b18-7358-4da1-9fab-16d344a151ed",
+        "name": "cleanup_target_142",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 142. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-03T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 14.200000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_142"
+            ]
+        }
+    },
+    {
+        "component_id": "0a04c2fd-7ff4-4e70-9fa6-e71f7684e4c2",
+        "name": "cleanup_target_143",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 143. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-04T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 14.3,
+            "tags": [
+                "obsolete",
+                "candidate_143"
+            ]
+        }
+    },
+    {
+        "component_id": "cc70231e-ee1e-4a35-b63b-9c71ac39e64e",
+        "name": "cleanup_target_144",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 144. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-05T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 14.4,
+            "tags": [
+                "obsolete",
+                "candidate_144"
+            ]
+        }
+    },
+    {
+        "component_id": "18fbe168-b23e-4c6d-922b-d6a5c0b5ed6a",
+        "name": "cleanup_target_145",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 145. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-06T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 14.5,
+            "tags": [
+                "obsolete",
+                "candidate_145"
+            ]
+        }
+    },
+    {
+        "component_id": "3ada6ddf-5470-41f0-9c02-ac4b59c49e31",
+        "name": "cleanup_target_146",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 146. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-07T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 14.600000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_146"
+            ]
+        }
+    },
+    {
+        "component_id": "fa49be9a-c060-4a1d-8d80-730f9b9e8f8a",
+        "name": "cleanup_target_147",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 147. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-08T00:00:00Z",
+            "is_hybrid": true,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 14.700000000000001,
+            "tags": [
+                "obsolete",
+                "candidate_147"
+            ]
+        }
+    },
+    {
+        "component_id": "eb8c5f1c-6ee2-46c3-8932-a63cd5b5f16b",
+        "name": "cleanup_target_148",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 148. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-09T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "cloud"
+            ],
+            "risk_score": 14.8,
+            "tags": [
+                "obsolete",
+                "candidate_148"
+            ]
+        }
+    },
+    {
+        "component_id": "03339c40-a05b-4501-8711-885ef98ecf15",
+        "name": "cleanup_target_149",
+        "type": "obsolete_resource",
+        "description": "This is a mocked obsolete K8s manifest or unused dependency flagged for removal. ID: 149. Providing enough description to reach PR lines.",
+        "metadata": {
+            "last_accessed": "2023-01-10T00:00:00Z",
+            "is_hybrid": false,
+            "associated_modes": [
+                "standalone"
+            ],
+            "risk_score": 14.9,
+            "tags": [
+                "obsolete",
+                "candidate_149"
+            ]
+        }
+    }
+]
