@@ -392,6 +392,10 @@ mod tests {
             }
         }
 
+        if checked_files == 0 {
+            panic!("Compliance Guardrail Error: test_no_pii_logging_statements could not find source files in sandbox to audit for PII.");
+        }
+
         let search_dirs_for_error = search_dirs.clone();
         if checked_files == 0 {
             // No files found to check - likely running in an environment where source files
