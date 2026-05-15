@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
-	"github.com/redis/rueidis"
 )
 
 type TaskEvent string
@@ -21,16 +19,11 @@ const (
 
 type TaskStateMachine struct {
 	db *sql.DB
-	redisClient rueidis.Client
 	mu sync.Mutex // For SQLite concurrent updates
 }
 
 func NewTaskStateMachine(db *sql.DB) *TaskStateMachine {
 	return &TaskStateMachine{db: db}
-}
-
-func (sm *TaskStateMachine) SetRedisClient(client rueidis.Client) {
-	sm.redisClient = client
 }
 
 func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, event TaskEvent) error {
@@ -42,21 +35,6 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 	if isSqlite {
 		sm.mu.Lock()
 		defer sm.mu.Unlock()
-	} else if sm.redisClient != nil {
-		lockKey := fmt.Sprintf("lock:task:%s", taskID)
-		lockVal := fmt.Sprintf("%d", time.Now().UnixNano())
-		cmd := sm.redisClient.B().Set().Key(lockKey).Value(lockVal).Nx().Ex(10 * time.Second).Build()
-		err := sm.redisClient.Do(ctx, cmd).Error()
-		if err != nil {
-			if rueidis.IsRedisNil(err) {
-				return fmt.Errorf("could not acquire lock for task: %s", taskID)
-			}
-			return err
-		}
-		defer func() {
-			script := rueidis.NewLuaScript("if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end")
-			_ = script.Exec(context.Background(), sm.redisClient, []string{lockKey}, []string{lockVal}).Error()
-		}()
 	}
 
 	tx, err := sm.db.BeginTx(ctx, nil)

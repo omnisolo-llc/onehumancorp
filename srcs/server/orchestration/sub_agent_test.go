@@ -163,9 +163,6 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 	err = orchestrator.PollTasks(context.Background())
 	assert.NoError(t, err)
 
-	// Simulate worker picking it up
-	spawner.SpawnIsolated(context.Background(), &Job{ID: "job-" + task.ID, TaskID: task.ID})
-
 	// Check if task status updated to ASSIGNED
 	fetchedTask, err := store.GetTask(context.Background(), task.ID)
 	require.NoError(t, err)
@@ -286,7 +283,7 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	orchestrator.StartBackgroundWorker(ctx)
 
 	// Wait for the worker to poll
-	time.Sleep(6 * time.Second)
+	time.Sleep(3 * time.Second)
 	cancel() // Stop the worker
 
 	// Ensure task was processed
@@ -297,10 +294,6 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 // mockTaskStore implements TaskStore for testing errors
 type errorMockTaskStore struct {
 	*SqliteTaskStore // Embed to fulfill interface mostly
-}
-
-func (m *errorMockTaskStore) EnqueueSubAgentTask(ctx context.Context, taskID string, payload string) error {
-	return nil
 }
 
 func (m *errorMockTaskStore) PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error) {

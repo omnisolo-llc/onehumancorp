@@ -64,7 +64,7 @@ func (w *SubAgentWorker) Poll(ctx context.Context) {
 
 		// Find a pending job
 		var id, taskID string
-		query := "SELECT id, parent_task_id FROM sub_agent_queue WHERE status = 'PENDING' LIMIT 1"
+		query := "SELECT id, task_id FROM sub_agent_jobs WHERE status = 'PENDING' LIMIT 1"
 		if !w.isSQLite {
 			query += " FOR UPDATE SKIP LOCKED"
 		}
@@ -82,7 +82,7 @@ func (w *SubAgentWorker) Poll(ctx context.Context) {
 		}
 
 		// Update to RUNNING
-		_, err = tx.ExecContext(ctx, "UPDATE sub_agent_queue SET status = 'RUNNING', completed_at = CURRENT_TIMESTAMP WHERE id = $1", id)
+		_, err = tx.ExecContext(ctx, "UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = $1", id)
 		if err != nil {
 			tx.Rollback()
 			if w.isSQLite {
@@ -147,7 +147,7 @@ func (w *SubAgentWorker) processJob(ctx context.Context, jobID, taskID string) {
 
 	tx, txErr := w.db.BeginTx(ctx, nil)
 	if txErr == nil {
-		_, execErr := tx.ExecContext(ctx, "UPDATE sub_agent_queue SET status = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2", status, jobID)
+		_, execErr := tx.ExecContext(ctx, "UPDATE sub_agent_jobs SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", status, jobID)
 		if execErr == nil {
 			_ = tx.Commit()
 		} else {

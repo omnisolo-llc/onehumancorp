@@ -33,7 +33,6 @@ type TaskStore interface {
 	GetTasksByOrganization(ctx context.Context, organizationID string) ([]*SharedTask, error)
 	PollDelegatedTasks(ctx context.Context, limit int) ([]*SharedTask, error)
 	ReportMissionHandover(ctx context.Context, missionID string, blockers string) error
-	EnqueueSubAgentTask(ctx context.Context, taskID string, payload string) error
 }
 
 // PostgresTaskStore implementation
@@ -691,28 +690,4 @@ func (s *SqliteTaskStore) GetTasksByOrganization(ctx context.Context, organizati
 	}
 
 	return tasks, nil
-}
-
-
-func (s *PostgresTaskStore) EnqueueSubAgentTask(ctx context.Context, taskID string, payload string) error {
-	query := `
-		INSERT INTO sub_agent_queue (id, parent_task_id, payload, status)
-		VALUES ($1, $2, $3, 'PENDING')
-	`
-	id := "job-" + taskID
-	_, err := s.db.ExecContext(ctx, query, id, taskID, payload)
-	return err
-}
-
-func (s *SqliteTaskStore) EnqueueSubAgentTask(ctx context.Context, taskID string, payload string) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	query := `
-		INSERT INTO sub_agent_queue (id, parent_task_id, payload, status)
-		VALUES (?, ?, ?, 'PENDING')
-	`
-	id := "job-" + taskID
-	_, err := s.db.ExecContext(ctx, query, id, taskID, payload)
-	return err
 }

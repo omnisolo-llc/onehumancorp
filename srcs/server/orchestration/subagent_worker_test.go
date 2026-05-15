@@ -16,12 +16,12 @@ func setupTestDBForSubAgentWorker(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 
 	query := `
-		CREATE TABLE IF NOT EXISTS sub_agent_queue (
+		CREATE TABLE IF NOT EXISTS sub_agent_jobs (
 			id TEXT PRIMARY KEY,
-			parent_task_id TEXT,
+			task_id TEXT,
 			status TEXT,
 			created_at TIMESTAMP,
-			completed_at TIMESTAMP
+			updated_at TIMESTAMP
 		);
 		CREATE TABLE IF NOT EXISTS ohc_tasks (
 			id TEXT PRIMARY KEY,
@@ -64,7 +64,7 @@ func TestSubAgentWorker_Poll(t *testing.T) {
 	_, err := db.Exec("INSERT INTO ohc_tasks (id, status) VALUES ('task-1', 'PENDING')")
 	require.NoError(t, err)
 
-	_, err = db.Exec("INSERT INTO sub_agent_queue (id, parent_task_id, status) VALUES ('job-1', 'task-1', 'PENDING')")
+	_, err = db.Exec("INSERT INTO sub_agent_jobs (id, task_id, status) VALUES ('job-1', 'task-1', 'PENDING')")
 	require.NoError(t, err)
 
 	sm := NewTaskStateMachine(db)
@@ -79,7 +79,7 @@ func TestSubAgentWorker_Poll(t *testing.T) {
 
 	// Verify job status
 	var jobStatus string
-	err = db.QueryRow("SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&jobStatus)
+	err = db.QueryRow("SELECT status FROM sub_agent_jobs WHERE id = 'job-1'").Scan(&jobStatus)
 	require.NoError(t, err)
 	assert.Equal(t, "COMPLETED", jobStatus)
 
@@ -100,7 +100,7 @@ func TestSubAgentWorker_Poll_Failure(t *testing.T) {
 	_, err := db.Exec("INSERT INTO ohc_tasks (id, status) VALUES ('task-2', 'PENDING')")
 	require.NoError(t, err)
 
-	_, err = db.Exec("INSERT INTO sub_agent_queue (id, parent_task_id, status) VALUES ('job-2', 'task-2', 'PENDING')")
+	_, err = db.Exec("INSERT INTO sub_agent_jobs (id, task_id, status) VALUES ('job-2', 'task-2', 'PENDING')")
 	require.NoError(t, err)
 
 	sm := NewTaskStateMachine(db)
@@ -115,7 +115,7 @@ func TestSubAgentWorker_Poll_Failure(t *testing.T) {
 
 	// Verify job status
 	var jobStatus string
-	err = db.QueryRow("SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&jobStatus)
+	err = db.QueryRow("SELECT status FROM sub_agent_jobs WHERE id = 'job-2'").Scan(&jobStatus)
 	require.NoError(t, err)
 	assert.Equal(t, "FAILED", jobStatus)
 

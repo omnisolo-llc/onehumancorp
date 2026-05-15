@@ -42,11 +42,7 @@ func (t *DefaultTaskOrchestrator) PollTasks(ctx context.Context) error {
 	}
 
 	for _, task := range tasks {
-		payloadStr := "{}"
-		if task.Payload != nil {
-			payloadStr = string(*task.Payload)
-		}
-		_ = t.db.EnqueueSubAgentTask(ctx, task.ID, payloadStr)
+		_ = t.spawner.Spawn(ctx, task)
 	}
 
 	return nil
