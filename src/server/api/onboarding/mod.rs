@@ -4,7 +4,7 @@ use axum::{
     Router,
 };
 use std::sync::Arc;
-use crate::services::onboarding::onboarding_agent::OnboardingAgent;
+use crate::services::onboarding::agent::OnboardingAgent;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {

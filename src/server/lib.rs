@@ -161,7 +161,7 @@ pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
-    onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
+    agent: crate::services::onboarding::agent::OnboardingAgent,
     publish_counter: opentelemetry::metrics::Counter<u64>,
     stream_counter: opentelemetry::metrics::Counter<u64>,
 }
@@ -171,13 +171,13 @@ impl MyHubService {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub.clone());
+        let agent = crate::services::onboarding::agent::OnboardingAgent::new(db, hub.clone());
 
         let meter = opentelemetry::global::meter("ohc.orchestration.hub");
         let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
         let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
 
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, invite_tracker, viral_loop_tracker, agent, publish_counter, stream_counter }
     }
 }
 
@@ -1213,7 +1213,7 @@ impl HubService for MyHubService {
         request: Request<StartOnboardingRequest>,
     ) -> Result<Response<StartOnboardingResponse>, Status> {
         let req = request.into_inner();
-        match self.onboarding_agent.start_onboarding(req).await {
+        match self.agent.start_onboarding(req).await {
             Ok(resp) => Ok(Response::new(resp)),
             Err(e) => Err(Status::internal(e)),
         }
@@ -1469,7 +1469,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
-        .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
+        .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
