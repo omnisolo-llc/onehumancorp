@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Reverted Shared Task List Database Design due to performance regressions and multi-tenant scaling issues under heavy concurrency.
+
+### Privacy/Offline Improvements
+- Increased local stability by reverting Shared Task List Database Design, resolving offline agent synchronization staleness.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
