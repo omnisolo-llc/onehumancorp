@@ -1,8 +1,9 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('UX Friction Audit', () => {
   test('Page Load and Visual Verification', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
     // Wait for the app to be interactive
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(10000);

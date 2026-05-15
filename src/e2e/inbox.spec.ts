@@ -1,21 +1,22 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test('verify omnichannel inbox AI draft flow', async ({ page }) => {
     // 1. Login and navigate to Check Messages to open the unified inbox
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
-    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.CUSTOMER_INBOX)).toBeVisible();
 
     // 2. Select a conversation from the list
     await page.click('text="Maya"');
-    await expect(page.locator('text="Do you do vegan cakes?"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.VEGAN_CAKES)).toBeVisible();
 
     // 3. Click the "✨ AI Draft" button and verify the input field populates
     await page.click('button:has-text("✨ AI Draft")');
@@ -31,19 +32,19 @@ test('verify omnichannel inbox AI draft flow', async ({ page }) => {
 test('verify inbox mobile layout constraints', async ({ page }) => {
     // 5. Test mobile layout and navigation (e.g., < Back button)
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
-    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.CUSTOMER_INBOX)).toBeVisible();
 
     await page.click('text="Maya"');
-    await expect(page.locator('text="Do you do vegan cakes?"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.VEGAN_CAKES)).toBeVisible();
 
     await expect(page.locator('button:has-text("< Back")')).toBeVisible();
     await page.click('button:has-text("< Back")');
@@ -51,38 +52,38 @@ test('verify inbox mobile layout constraints', async ({ page }) => {
 });
 
 test('verify quick reply usage', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
-    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.CUSTOMER_INBOX)).toBeVisible();
 
     await page.click('text="Maya"');
-    await expect(page.locator('text="Do you do vegan cakes?"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.VEGAN_CAKES)).toBeVisible();
 
     await page.click('button:has-text("Yes, we have 3 vegan options!")');
     await expect(page.locator('text="Yes, we have 3 vegan options!"').last()).toBeVisible();
 });
 
 test('verify sending custom message clears input', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
-    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.CUSTOMER_INBOX)).toBeVisible();
 
     await page.click('text="Maya"');
-    await expect(page.locator('text="Do you do vegan cakes?"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.VEGAN_CAKES)).toBeVisible();
 
     await page.fill('input[placeholder="Type a message..."]', 'Testing custom message');
     await page.click('button:has-text("Send")');
@@ -91,28 +92,28 @@ test('verify sending custom message clears input', async ({ page }) => {
 });
 
 test('verify empty state when no conversation is selected', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     await page.click('button:has-text("Check Messages")');
-    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.CUSTOMER_INBOX)).toBeVisible();
 
     await expect(page.locator('text="Select a conversation"')).toBeVisible();
 });
 
 test('verify connecting social media creates inbox conversation and allows reply', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     const integrationsMenu = page.locator('text=/Integrations/i, text=/Connect/i').filter({ visible: true }).first();
     if (await integrationsMenu.isVisible()) {
@@ -123,7 +124,7 @@ test('verify connecting social media creates inbox conversation and allows reply
     await page.click('text="📘 Facebook" >> xpath=.. >> button:has-text("Configure")');
 
     // unified inbox should show up
-    await expect(page.locator('text="Customer Inbox"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.CUSTOMER_INBOX)).toBeVisible();
 
     // Click on Facebook User conversation
     await page.click('text="Facebook User"');

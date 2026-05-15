@@ -1,13 +1,14 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test('lens audit: fully verify login error states', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
 
     await expect(page.locator('text="One Human Corp"').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('text="Sign in to manage your business"').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SIGN_IN_MANAGE).filter({ visible: true }).first()).toBeVisible();
 
     // Try to login with empty credentials
-    await page.click('button:has-text("Sign In")');
+    await page.click(UI_LOCATORS.SIGN_IN_BTN);
 
     // Wait for the simulated network delay/error
     await page.waitForTimeout(1500);
@@ -24,35 +25,35 @@ test('lens audit: fully verify login error states', async ({ page }) => {
     await expect(page.locator('button:has-text("Use Google or Apple")').filter({ visible: true }).first()).toBeVisible();
 
     // Verify start business
-    await expect(page.locator('button:has-text("🚀 Start Business Setup")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.START_BUSINESS_SETUP).filter({ visible: true }).first()).toBeVisible();
 });
 
 test('lens audit: fully verify login mode toggling', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
 
-    await expect(page.locator('text="Sign in to manage your business"').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SIGN_IN_MANAGE).filter({ visible: true }).first()).toBeVisible();
     await page.click('button:has-text("New here? Create an account")');
     await expect(page.locator('text="Create an account to start your business"').filter({ visible: true }).first()).toBeVisible();
     await expect(page.locator('button:has-text("Sign Up")').filter({ visible: true }).first()).toBeVisible();
 
     await page.click('button:has-text("Have an account? Sign In")');
-    await expect(page.locator('text="Sign in to manage your business"').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('button:has-text("Sign In")').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SIGN_IN_MANAGE).filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SIGN_IN_BTN).filter({ visible: true }).first()).toBeVisible();
 });
 
 test('lens audit: fully verify login input states', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
 
     await page.fill('input[placeholder="Email or Username"]', 'hello@test.com');
     await page.fill('input[placeholder="Password"]', 'secretpassword');
 
     // Submit
-    await page.click('button:has-text("Sign In")');
+    await page.click(UI_LOCATORS.SIGN_IN_BTN);
     await expect(page.locator('button:has-text("Signing in...")')).toBeVisible();
 });
 
 test('lens audit: fully verify sign up mode', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
 
     await page.click('button:has-text("New here? Create an account")');
 
@@ -65,7 +66,7 @@ test('lens audit: fully verify sign up mode', async ({ page }) => {
 });
 
 test('lens audit: fully verify login sso flow', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
 
     await page.click('button:has-text("Use Google or Apple")');
 
@@ -74,9 +75,9 @@ test('lens audit: fully verify login sso flow', async ({ page }) => {
 });
 
 test('lens audit: fully verify start business routing', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
 
-    await page.click('button:has-text("🚀 Start Business Setup")');
+    await page.click(UI_LOCATORS.START_BUSINESS_SETUP);
 
     // Wait for the setup wizard modal/screen to open by checking for its contents
     await expect(page.locator('text="Your business, live in minutes."').filter({ visible: true }).first()).toBeVisible({ timeout: 5000 });

@@ -1,23 +1,24 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Task List Page', () => {
   test('should display dashboard', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   test('should display navigation', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
+    await page.goto(E2E_ROUTES.HOME);
+    await expect(page.locator(UI_LOCATORS.NAV)).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
   });
 
   test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(E2E_ROUTES.AGENTS);
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
@@ -29,14 +30,14 @@ test.describe('Task List Page', () => {
 
 test.describe('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
-    await page.locator('nav a:has-text("Agents")').click();
+    await page.goto(E2E_ROUTES.HOME);
+    await expect(page.locator(UI_LOCATORS.NAV)).toBeVisible();
+    await page.locator(UI_LOCATORS.NAV_AGENTS).click();
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
   test('should show welcome message', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
     await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 });

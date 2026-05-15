@@ -1,10 +1,11 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 import { execSync } from 'child_process';
 
 test.describe('Autonomous Operations CUJ', () => {
   test.beforeEach(async ({ page }) => {
     // 1. Start from the home page after user login
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
     // Assuming the app has a login or auto-login for E2E
     await expect(page).toHaveTitle(/OneHuman/);
   });
@@ -38,7 +39,7 @@ test.describe('Autonomous Operations CUJ', () => {
     // 4. Verify the drafted task appears with "The Ambassador" label
     const approvalCard = page.locator('text=Draft Reply');
     await expect(approvalCard).toBeVisible();
-    await expect(page.locator('text=The Ambassador')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.THE_AMBASSADOR)).toBeVisible();
     await expect(page.locator('text=E2E Test Message')).toBeVisible();
 
     // 5. Approve the task with 1-tap
@@ -111,7 +112,7 @@ test.describe('Autonomous Operations CUJ', () => {
     await page.reload();
 
     await expect(page.locator('text=The Manager')).toBeVisible();
-    await expect(page.locator('text=The Ambassador')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.THE_AMBASSADOR)).toBeVisible();
     await expect(page.locator('text=Restock Milk')).toBeVisible();
     await expect(page.locator('text=Draft Reply to Fatima')).toBeVisible();
 

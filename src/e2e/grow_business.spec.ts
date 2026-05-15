@@ -1,19 +1,20 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Grow Business Flow', () => {
   test('should display dashboard', async ({ page }) => {
     await page.goto('/?dashboard=1');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.NAV)).toBeVisible();
   });
 
   test('should navigate to agents page', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(E2E_ROUTES.AGENTS);
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
   });
 
@@ -27,7 +28,7 @@ test.describe('Grow Business Flow', () => {
 test.describe('Navigation', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/?dashboard=1');
-    await page.locator('nav a:has-text("Agents")').click();
+    await page.locator(UI_LOCATORS.NAV_AGENTS).click();
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 

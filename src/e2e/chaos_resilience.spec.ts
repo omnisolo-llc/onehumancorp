@@ -1,10 +1,11 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('E2E Chaos Resilience', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
     await page.waitForURL('**/dashboard**');
   });
@@ -52,7 +53,7 @@ test.describe('E2E Chaos Resilience', () => {
     // Perform a write operation
     await page.locator('button:has-text("Add"), button:has-text("Create")').filter({ visible: true }).first().click();
     await page.locator('input[type="text"]').filter({ visible: true }).first().fill('Chaos Test Record');
-    await page.locator('button:has-text("Save")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.SAVE).filter({ visible: true }).first().click();
 
     // UI should show optimistic success or "Syncing" status
     await expect(page.locator('text=/Saved|Syncing|Pending/i')).toBeVisible();
@@ -79,10 +80,10 @@ test.describe('E2E Chaos Resilience', () => {
 
   test('should enforce tenant isolation in records during concurrent access', async ({ page, context }) => {
     // This test simulates two tenants accessing the records at the same time
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('tenant1@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard**');
 
     await page.locator('button:has-text("Records")').click();

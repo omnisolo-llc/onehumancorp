@@ -1,3 +1,4 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 // Real E2E tests executing against the actual backend API/app stack
@@ -5,14 +6,14 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
     test.beforeEach(async ({ page }) => {
         // Start from home page and log in
-        await page.goto('/');
+        await page.goto(E2E_ROUTES.HOME);
         await page.waitForLoadState('networkidle');
         const loginBtn = page.locator('button:has-text("Log in")');
         // If login button is visible, perform login
         if (await loginBtn.isVisible({ timeout: 1000 })) {
             await loginBtn.click();
             await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-            await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password');
+            await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password');
             await page.click('button[type="submit"]');
             await page.waitForURL('**/dashboard*');
         }
@@ -41,7 +42,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
         await page.click('a:has-text("Settings"), button:has-text("Settings")');
         await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
         // Wait for the advanced tab
-        const advancedTab = page.locator('text=Advanced');
+        const advancedTab = page.locator(UI_LOCATORS.ADVANCED_TEXT);
         await advancedTab.waitFor();
         await advancedTab.click();
 

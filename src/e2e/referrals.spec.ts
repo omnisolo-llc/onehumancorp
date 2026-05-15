@@ -1,18 +1,19 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Referral Program', () => {
   test('should display referral dashboard and generate link', async ({ page }) => {
     // 1. Start from home page after login
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // 2. Navigate to Referrals dashboard via dashboard UI button
     await page.waitForURL('**/dashboard');
 
     // There is a tooltip button "Referrals" on dashboard
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator(UI_LOCATORS.REFERRALS_BTN).filter({ visible: true }).first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -35,13 +36,13 @@ test.describe('Referral Program', () => {
   });
 
   test('should verify Instagram sharing from referrals', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator(UI_LOCATORS.REFERRALS_BTN).filter({ visible: true }).first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -51,13 +52,13 @@ test.describe('Referral Program', () => {
   });
 
   test('should verify invite message copying', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator(UI_LOCATORS.REFERRALS_BTN).filter({ visible: true }).first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -69,13 +70,13 @@ test.describe('Referral Program', () => {
   });
 
   test('should view referral history', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator(UI_LOCATORS.REFERRALS_BTN).filter({ visible: true }).first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 
@@ -85,13 +86,13 @@ test.describe('Referral Program', () => {
   });
 
   test('should export referral data', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const referralsBtn = page.locator('button:has-text("Referrals")').filter({ visible: true }).first();
+    const referralsBtn = page.locator(UI_LOCATORS.REFERRALS_BTN).filter({ visible: true }).first();
     await expect(referralsBtn).toBeVisible();
     await referralsBtn.click();
 

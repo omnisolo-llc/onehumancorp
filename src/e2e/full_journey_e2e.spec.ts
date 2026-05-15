@@ -1,8 +1,9 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Guide E2E Journey', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Sign Up Flow
     await page.click('button:has-text("Don\'t have an account? Sign Up")');
@@ -16,7 +17,7 @@ test.describe('Onboarding Guide E2E Journey', () => {
 
   test('Complete Path to Live Business and Checklist', async ({ page }) => {
     // 1. Wizard start
-    await page.click('button:has-text("🚀 Start My Business")');
+    await page.click(UI_LOCATORS.START_MY_BUSINESS);
 
     // 2. Business Type
     await page.click('text="Online Store"');
@@ -59,7 +60,7 @@ test.describe('Onboarding Guide E2E Journey', () => {
     await page.click('button:has-text("Publish my business")');
 
     // Wait for the success state/confetti
-    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.CONFETTI)).toBeVisible({ timeout: 10000 });
 
     // 10. Welcome Checklist
     const viewChecklistBtn = page.locator('text="View Welcome Checklist →"');

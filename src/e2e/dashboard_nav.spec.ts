@@ -1,9 +1,10 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard Navigation UX', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the dashboard from home page (as required: "start from the home page")
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
     await page.waitForLoadState('networkidle');
   });
 

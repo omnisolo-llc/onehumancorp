@@ -1,31 +1,32 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Viral Referral Loop', () => {
   test('should navigate to user management and interact with the viral referral loop widget', async ({ page }) => {
     // 1. start from the home page after user login with no pre-authenticated shortcuts
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
     // 2. navigate the entire feature flow by clicking UI links/buttons exactly as a real user would
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
+    const usersBtn = page.locator(UI_LOCATORS.TEAM_USERS).filter({ visible: true }).first();
     await usersBtn.click();
 
     // Verify we are on User Management and the new widget is there
     await expect(page.locator('text=User Management').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('text=Referral Program')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.REFERRAL_PROGRAM)).toBeVisible();
 
     // Check typography
-    const referralHeader = page.locator('text=Referral Program');
+    const referralHeader = page.locator(UI_LOCATORS.REFERRAL_PROGRAM);
     await expect(referralHeader).toBeVisible();
 
-    const subtext = page.locator('text=Share OHC with a friend, both get 1 month free Pro.');
+    const subtext = page.locator(UI_LOCATORS.SHARE_OHC);
     await expect(subtext).toBeVisible();
 
     // 3. proceed through every step until the process finishes and the result is visible in the UI
-    const inviteUserBtn = page.locator('button:has-text("Invite User")');
+    const inviteUserBtn = page.locator(UI_LOCATORS.INVITE_USER);
     await expect(inviteUserBtn).toBeVisible();
 
     // Hover to trigger the AnimatedScale / Container animation logic from Slint
@@ -42,16 +43,16 @@ test.describe('Viral Referral Loop', () => {
   });
 
   test('should verify widget hover state micro-animations and layout resilience', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
+    const usersBtn = page.locator(UI_LOCATORS.TEAM_USERS).filter({ visible: true }).first();
     await usersBtn.click();
 
-    const widgetCard = page.locator('text=Referral Program').locator('..');
+    const widgetCard = page.locator(UI_LOCATORS.REFERRAL_PROGRAM).locator('..');
     await expect(widgetCard).toBeVisible();
 
     const initialBox = await widgetCard.boundingBox();
@@ -69,16 +70,16 @@ test.describe('Viral Referral Loop', () => {
   });
 
   test('should assert glassmorphism background token on referral widget', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
+    const usersBtn = page.locator(UI_LOCATORS.TEAM_USERS).filter({ visible: true }).first();
     await usersBtn.click();
 
-    const referralHeader = page.locator('text=Referral Program');
+    const referralHeader = page.locator(UI_LOCATORS.REFERRAL_PROGRAM);
     await expect(referralHeader).toBeVisible();
 
     const subtext = page.locator('text=Share OHC with a friend');
@@ -86,28 +87,28 @@ test.describe('Viral Referral Loop', () => {
   });
 
   test('should assert proper typography and text colors on referral widget', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
+    const usersBtn = page.locator(UI_LOCATORS.TEAM_USERS).filter({ visible: true }).first();
     await usersBtn.click();
 
-    const referralHeader = page.locator('text=Referral Program');
+    const referralHeader = page.locator(UI_LOCATORS.REFERRAL_PROGRAM);
     await expect(referralHeader).toBeVisible();
     // Validate the text content renders exactly as the new Slint file dictates
-    await expect(page.locator('text=Share OHC with a friend, both get 1 month free Pro.')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SHARE_OHC)).toBeVisible();
   });
 
   test('should handle responsive resizing for the referral widget', async ({ page }) => {
     // Mobile-first: All screens must be 100% usable at 375px width
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
@@ -116,11 +117,11 @@ test.describe('Viral Referral Loop', () => {
         await menuBtn.click();
     }
 
-    const usersBtn = page.locator('button:has-text("Users"), button:has-text("Team"), a[href*="/users"]').filter({ visible: true }).first();
+    const usersBtn = page.locator(UI_LOCATORS.TEAM_USERS).filter({ visible: true }).first();
     await usersBtn.click();
 
-    await expect(page.locator('text=Referral Program')).toBeVisible();
-    const inviteBtn = page.locator('button:has-text("Invite User")');
+    await expect(page.locator(UI_LOCATORS.REFERRAL_PROGRAM)).toBeVisible();
+    const inviteBtn = page.locator(UI_LOCATORS.INVITE_USER);
     await expect(inviteBtn).toBeVisible();
 
     // Ensure the button is still clickable inside 375px bounds

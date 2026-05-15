@@ -1,11 +1,12 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Free Tier & Upgrade Funnel', () => {
   test('should display product limit soft paywall', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
     // Assuming we have a mock in Rust that triggers the limit after a certain action
@@ -22,60 +23,60 @@ test.describe('Free Tier & Upgrade Funnel', () => {
     }
 
     // Since mock triggers are handled differently, we will look for the upgrade prompt directly
-    await expect(page.locator('text=Scale Up Your Team')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.SCALE_UP)).toBeVisible({ timeout: 5000 });
   });
 
   test('should display agent limits soft paywall', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/agents');
+    await page.goto(E2E_ROUTES.AGENTS);
 
     // Click "Hire Agent"
-    const hireBtn = page.locator('button:has-text("Hire Agent")').filter({ visible: true }).first();
+    const hireBtn = page.locator(UI_LOCATORS.HIRE_AGENT).filter({ visible: true }).first();
     await expect(hireBtn).toBeVisible();
     await hireBtn.click();
 
     // Verify upgrade prompt pops up
-    await expect(page.locator('text=Scale Up Your Team')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.SCALE_UP)).toBeVisible({ timeout: 5000 });
   });
 
   test('should verify upgrade prompt dismissal', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/agents');
+    await page.goto(E2E_ROUTES.AGENTS);
 
     // Click "Hire Agent"
-    const hireBtn = page.locator('button:has-text("Hire Agent")').filter({ visible: true }).first();
+    const hireBtn = page.locator(UI_LOCATORS.HIRE_AGENT).filter({ visible: true }).first();
     await expect(hireBtn).toBeVisible();
     await hireBtn.click();
 
-    await expect(page.locator('text=Scale Up Your Team')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.SCALE_UP)).toBeVisible({ timeout: 5000 });
 
     const dismissBtn = page.locator('button:has-text("✕")');
     await dismissBtn.click();
 
-    await expect(page.locator('text=Scale Up Your Team')).toBeHidden();
+    await expect(page.locator(UI_LOCATORS.SCALE_UP)).toBeHidden();
   });
 
   test('should verify upgrade CTA navigation', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/agents');
+    await page.goto(E2E_ROUTES.AGENTS);
 
     // Click "Hire Agent"
-    const hireBtn = page.locator('button:has-text("Hire Agent")').filter({ visible: true }).first();
+    const hireBtn = page.locator(UI_LOCATORS.HIRE_AGENT).filter({ visible: true }).first();
     await expect(hireBtn).toBeVisible();
     await hireBtn.click();
 
@@ -85,13 +86,13 @@ test.describe('Free Tier & Upgrade Funnel', () => {
   });
 
   test('should verify free tier text indication on my plan', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/my-plan');
+    await page.goto(E2E_ROUTES.MY_PLAN);
 
     await expect(page.locator('text=Free Tier').filter({ visible: true }).first()).toBeVisible();
   });

@@ -1,13 +1,14 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Help Center', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
   });
 
   test('should display dashboard with nav', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.NAV)).toBeVisible();
   });
 
   test('should show dashboard link in nav', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Help Center', () => {
   });
 
   test('should show agents link in nav', async ({ page }) => {
-    const agentsLink = page.locator('nav a:has-text("Agents")');
+    const agentsLink = page.locator(UI_LOCATORS.NAV_AGENTS);
     await expect(agentsLink).toBeVisible();
   });
 
@@ -36,23 +37,23 @@ test.describe('Help Center', () => {
 
 test.describe('Login Page', () => {
   test('should display login form', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
     await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('button:has-text("Login")')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.LOGIN_BUTTON)).toBeVisible();
   });
 });
 
 test.describe('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(E2E_ROUTES.AGENTS);
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
+    await page.goto(E2E_ROUTES.AGENTS);
+    await expect(page.locator(UI_LOCATORS.HIRE_AGENT)).toBeVisible();
   });
 });
 
@@ -70,8 +71,8 @@ test.describe('Business Setup Page', () => {
 
 test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('nav a:has-text("Agents")').click();
+    await page.goto(E2E_ROUTES.HOME);
+    await page.locator(UI_LOCATORS.NAV_AGENTS).click();
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 });

@@ -1,11 +1,12 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('User Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
     await page.goto('/users');
   });
@@ -24,25 +25,25 @@ test.describe('User Management', () => {
   });
 
   test('should show add user button', async ({ page }) => {
-    await expect(page.locator('button:has-text("Add User"), button:has-text("Invite")')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.ADD_USER)).toBeVisible();
   });
 
   test('should enter user email', async ({ page }) => {
-    const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').filter({ visible: true }).first();
+    const inviteBtn = page.locator(UI_LOCATORS.ADD_USER).filter({ visible: true }).first();
     await inviteBtn.click();
     const emailInput = page.getByPlaceholder('Email or Username').filter({ visible: true }).first();
     await emailInput.fill('newuser@example.com');
   });
 
   test('should assign role to user', async ({ page }) => {
-    const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').filter({ visible: true }).first();
+    const inviteBtn = page.locator(UI_LOCATORS.ADD_USER).filter({ visible: true }).first();
     await inviteBtn.click();
-    const roleSelect = page.locator('select').filter({ visible: true }).first();
+    const roleSelect = page.locator(UI_LOCATORS.SELECT_INPUT).filter({ visible: true }).first();
     await roleSelect.selectOption({ index: 1 });
   });
 
   test('should send invitation', async ({ page }) => {
-    const inviteBtn = page.locator('button:has-text("Add User"), button:has-text("Invite")').filter({ visible: true }).first();
+    const inviteBtn = page.locator(UI_LOCATORS.ADD_USER).filter({ visible: true }).first();
     await inviteBtn.click();
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'newuser@example.com');
     await page.locator('button:has-text("Send"), button:has-text("Invite")').click();
@@ -56,18 +57,18 @@ test.describe('User Management', () => {
   });
 
   test('should filter users by role', async ({ page }) => {
-    const filterSelect = page.locator('select').filter({ visible: true }).first();
+    const filterSelect = page.locator(UI_LOCATORS.SELECT_INPUT).filter({ visible: true }).first();
     await filterSelect.selectOption({ index: 1 });
   });
 
   test('should show user details', async ({ page }) => {
-    const userItem = page.locator('[class*="user"]').filter({ visible: true }).first();
+    const userItem = page.locator(UI_LOCATORS.USER_CLASS).filter({ visible: true }).first();
     await userItem.click();
     await expect(page.locator('text=/details|profile|name|email/i')).toBeVisible();
   });
 
   test('should edit user', async ({ page }) => {
-    const userItem = page.locator('[class*="user"]').filter({ visible: true }).first();
+    const userItem = page.locator(UI_LOCATORS.USER_CLASS).filter({ visible: true }).first();
     await userItem.click();
     const editBtn = page.locator('button:has-text("Edit"), button:has-text("Modify")').filter({ visible: true }).first();
     await editBtn.click();
@@ -75,9 +76,9 @@ test.describe('User Management', () => {
   });
 
   test('should delete user', async ({ page }) => {
-    const userItem = page.locator('[class*="user"]').filter({ visible: true }).first();
+    const userItem = page.locator(UI_LOCATORS.USER_CLASS).filter({ visible: true }).first();
     await userItem.hover();
-    const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').filter({ visible: true }).first();
+    const deleteBtn = page.locator(UI_LOCATORS.DELETE_REMOVE).filter({ visible: true }).first();
     await deleteBtn.click();
     await expect(page.locator('text=/deleted|removed|confirm/i')).toBeVisible({ timeout: 3000 });
   });
@@ -99,13 +100,13 @@ test.describe('User Management', () => {
   });
 
   test('should show pending invitations', async ({ page }) => {
-    const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').filter({ visible: true }).first();
+    const pendingTab = page.locator(UI_LOCATORS.PENDING_INVITES).filter({ visible: true }).first();
     await pendingTab.click();
     await expect(page.locator('text=/pending|invitation/i')).toBeVisible();
   });
 
   test('should resend invitation', async ({ page }) => {
-    const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').filter({ visible: true }).first();
+    const pendingTab = page.locator(UI_LOCATORS.PENDING_INVITES).filter({ visible: true }).first();
     await pendingTab.click();
     const resendBtn = page.locator('button:has-text("Resend"), button:has-text("Re-send")').filter({ visible: true }).first();
     await resendBtn.click();
@@ -113,7 +114,7 @@ test.describe('User Management', () => {
   });
 
   test('should cancel invitation', async ({ page }) => {
-    const pendingTab = page.locator('button:has-text("Pending"), button:has-text("Invitations")').filter({ visible: true }).first();
+    const pendingTab = page.locator(UI_LOCATORS.PENDING_INVITES).filter({ visible: true }).first();
     await pendingTab.click();
     const cancelBtn = page.locator('button:has-text("Cancel"), button:has-text("Withdraw")').filter({ visible: true }).first();
     await cancelBtn.click();
@@ -123,10 +124,10 @@ test.describe('User Management', () => {
 
 test.describe('Role Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
     await page.goto('/users/roles');
   });
@@ -159,17 +160,17 @@ test.describe('Role Management', () => {
   });
 
   test('should assign permissions to role', async ({ page }) => {
-    const roleCard = page.locator('[class*="role"]').filter({ visible: true }).first();
+    const roleCard = page.locator(UI_LOCATORS.ROLE_CLASS).filter({ visible: true }).first();
     await roleCard.click();
-    const permissionCheckbox = page.locator('input[type="checkbox"]').filter({ visible: true }).first();
+    const permissionCheckbox = page.locator(UI_LOCATORS.CHECKBOX_INPUT).filter({ visible: true }).first();
     await permissionCheckbox.check();
-    await page.locator('button:has-text("Save")').click();
+    await page.locator(UI_LOCATORS.SAVE).click();
   });
 
   test('should delete custom role', async ({ page }) => {
-    const roleCard = page.locator('[class*="role"]').filter({ visible: true }).first();
+    const roleCard = page.locator(UI_LOCATORS.ROLE_CLASS).filter({ visible: true }).first();
     await roleCard.hover();
-    const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').filter({ visible: true }).first();
+    const deleteBtn = page.locator(UI_LOCATORS.DELETE_REMOVE).filter({ visible: true }).first();
     await deleteBtn.click();
     await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
   });

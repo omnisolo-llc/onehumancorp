@@ -1,3 +1,4 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard UX', () => {
@@ -5,11 +6,11 @@ test.describe('Dashboard UX', () => {
 
   test('should display correctly on mobile and verify plain language labels', async ({ page }) => {
     // Navigate to login page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Fill in credentials and sign in
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 
     // Wait for Dashboard to load
@@ -29,9 +30,9 @@ test.describe('Dashboard UX', () => {
 });
 
 test('should display Quick Actions on mobile', async ({ page }) => {
-  await page.goto('/login');
+  await page.goto(E2E_ROUTES.LOGIN);
   await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-  await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+  await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
   await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
   await page.waitForURL('**/*');
 
@@ -83,9 +84,9 @@ test('should display Quick Actions on mobile', async ({ page }) => {
 });
 
 test('should display Menu toggle on mobile and have expected links', async ({ page }) => {
-  await page.goto('/login');
+  await page.goto(E2E_ROUTES.LOGIN);
   await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-  await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+  await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
   await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
   await page.waitForURL('**/*');
 
@@ -105,11 +106,11 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
 test.describe('Dashboard Flow Completeness UX', () => {
   test('Grandmother test: complete critical journey starting from login', async ({ page }) => {
     // Navigate to login page per constraints
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Fill in credentials and sign in
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 
     // Wait for Dashboard to load
@@ -124,9 +125,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Check Orders from login', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/*');
 
@@ -135,9 +136,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Check Messages from login', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/*');
 
@@ -146,9 +147,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Check Analytics from login', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/*');
 
@@ -157,9 +158,9 @@ test.describe('Dashboard Flow Completeness UX', () => {
   });
 
   test('Grandmother test: Share Store from login', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/*');
 

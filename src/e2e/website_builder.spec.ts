@@ -1,14 +1,15 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Website Builder Full E2E', () => {
 
     test('Flow 1: Modern Template with Subdomain', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(E2E_ROUTES.HOME);
         await page.fill('input[placeholder="Email"]', 'test@example.com');
         await page.fill('input[placeholder="Password"]', 'password123');
         await page.click('text="Log In"');
         await page.click('text="Build Website"');
-        await expect(page.locator('text="Choose a template"')).toBeVisible();
+        await expect(page.locator(UI_LOCATORS.CHOOSE_TEMPLATE)).toBeVisible();
         await page.click('text="Use this template →"'); // Default Modern
         await page.click('text="Next →"');
         await page.click('text="🟢 Nature Green"');
@@ -20,11 +21,11 @@ test.describe('Website Builder Full E2E', () => {
         await page.click('text="🌐 Use a free OHC subdomain"');
         await page.click('text="Next →"');
         await page.click('text="Publish →"');
-        await expect(page.locator('text="Publishing Site..."')).toBeVisible();
+        await expect(page.locator(UI_LOCATORS.PUBLISHING_SITE)).toBeVisible();
     });
 
     test('Flow 2: Classic Template with Custom Domain', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(E2E_ROUTES.HOME);
         await page.fill('input[placeholder="Email"]', 'test@example.com');
         await page.fill('input[placeholder="Password"]', 'password123');
         await page.click('text="Log In"');
@@ -39,11 +40,11 @@ test.describe('Website Builder Full E2E', () => {
         await page.click('text="🌍 Use my own domain"');
         await page.click('text="Next →"');
         await page.click('text="Publish →"');
-        await expect(page.locator('text="Publishing Site..."')).toBeVisible();
+        await expect(page.locator(UI_LOCATORS.PUBLISHING_SITE)).toBeVisible();
     });
 
     test('Flow 3: Bold Template with Domain Purchase', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(E2E_ROUTES.HOME);
         await page.fill('input[placeholder="Email"]', 'test@example.com');
         await page.fill('input[placeholder="Password"]', 'password123');
         await page.click('text="Log In"');
@@ -57,18 +58,18 @@ test.describe('Website Builder Full E2E', () => {
         await page.click('text="🛒 Buy a domain"');
         await page.click('text="Next →"');
         await page.click('text="Publish →"');
-        await expect(page.locator('text="Publishing Site..."')).toBeVisible();
+        await expect(page.locator(UI_LOCATORS.PUBLISHING_SITE)).toBeVisible();
     });
 
     test('Flow 4: Navigation Back and Forth', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(E2E_ROUTES.HOME);
         await page.fill('input[placeholder="Email"]', 'test@example.com');
         await page.fill('input[placeholder="Password"]', 'password123');
         await page.click('text="Log In"');
         await page.click('text="Build Website"');
         await page.click('text="Next →"'); // step 1
         await page.click('text="Back"'); // step 0
-        await expect(page.locator('text="Choose a template"')).toBeVisible();
+        await expect(page.locator(UI_LOCATORS.CHOOSE_TEMPLATE)).toBeVisible();
         await page.click('text="Next →"'); // step 1
         await page.click('text="Next →"'); // step 2
         await page.fill('input[placeholder="e.g. Custom Birthday Cake"]', 'Item');
@@ -79,7 +80,7 @@ test.describe('Website Builder Full E2E', () => {
     });
 
     test('Flow 5: Advanced Mode Toggling and Raw Export Visibility', async ({ page }) => {
-        await page.goto('/');
+        await page.goto(E2E_ROUTES.HOME);
         await page.fill('input[placeholder="Email"]', 'test@example.com');
         await page.fill('input[placeholder="Password"]', 'password123');
         await page.click('text="Log In"');

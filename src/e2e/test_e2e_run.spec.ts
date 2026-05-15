@@ -1,57 +1,58 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test('verify wizard UI state propagation to backend', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
 
     // Wait for Wizard to show
-    await expect(page.locator('text="Setup Wizard"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SETUP_WIZARD)).toBeVisible();
 
     // 0: Welcome -> 1
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 1: Business Type -> 2
     // Choose "Online Store"
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'My Awesome Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000); // Wait for mock gen
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Awesome Product');
     await page.fill('input[placeholder="0.00"]', '19.99');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 5: Payments -> 6
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 6: Theme -> 7
     await page.click('text="✨ Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 7: Domain -> 8
     await page.click('text="Get a free sub-domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // 8: Admin Info -> 9
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
@@ -60,28 +61,28 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     await page.click('button:has-text("Review & Launch")');
 
     // 9: Launch View
-    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.ALMOST_THERE)).toBeVisible({ timeout: 5000 });
 
     // We expect "Launch!" button. When clicked, it hits the `on_launch` handler in Rust.
     await page.click('button:has-text("Launch!")');
 
     // Verify it transitions away from launching after mock async backend setup
     // And lands on the success step or dashboard
-    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.ONBOARDING_COMPLETE)).toBeVisible({ timeout: 10000 });
 
     // Check that we can navigate back to dashboard
     await page.click('button:has-text("Go to Dashboard")');
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 });
 
 test('verify wizard AI agent configuration', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -90,12 +91,12 @@ test('verify wizard AI agent configuration', async ({ page }) => {
 
     // Toggle capabilities
     await page.click('text="Customer Support"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.check('text="Reply to customer messages"');
 
     // Save
-    await page.click('button:has-text("Next")');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('button:has-text("Activate Agent")');
 
     await expect(page.locator('text="Agent Activated ✓"')).toBeVisible();
@@ -103,12 +104,12 @@ test('verify wizard AI agent configuration', async ({ page }) => {
 
 test('verify wizard prompt tuning', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Navigate to agent settings
     await page.click('text="Manage Agents"');
@@ -120,38 +121,38 @@ test('verify wizard prompt tuning', async ({ page }) => {
 
     // Select Tone
     await page.click('text="Friendly & Warm"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
 
     // Toggle Focus
     await page.check('text="Only discuss business"');
 
     // Save
-    await page.click('button:has-text("Next")');
-    await page.click('button:has-text("Next")');
-    await page.click('button:has-text("Save")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
+    await page.click(UI_LOCATORS.SAVE);
 
     await expect(page.locator('text="Your agent has been updated ✓"')).toBeVisible();
 });
 
 test('verify grow business suggestions', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     await page.click('button:has-text("Grow Business")');
-    await expect(page.locator('text="Actionable Insights"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.ACTIONABLE_INSIGHTS)).toBeVisible();
 
-    await page.click('button:has-text("Dismiss")');
+    await page.click(UI_LOCATORS.DISMISS_BTN);
     // Ensure modal closes
-    await expect(page.locator('text="Actionable Insights"')).toBeHidden();
+    await expect(page.locator(UI_LOCATORS.ACTIONABLE_INSIGHTS)).toBeHidden();
 });
 
 test('verify website builder flow', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     await page.click('button:has-text("Website Builder")');
 
@@ -177,22 +178,22 @@ test('verify website builder flow', async ({ page }) => {
 
     // Step 5: Publish
     await page.click('text="Publish →"');
-    await expect(page.locator('text="Publishing Site..."')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.PUBLISHING_SITE)).toBeVisible({ timeout: 5000 });
 });
 
 test('verify login form error message UX wrap behavior', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Trigger an error to see if error message is displayed
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'invalid@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'wrong');
-    await page.click('button:has-text("Sign In")');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'wrong');
+    await page.click(UI_LOCATORS.SIGN_IN_BTN);
 
     // Assume an error message like 'Invalid email or password' appears
-    await expect(page.locator('text="Invalid"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.INVALID_TEXT)).toBeVisible();
 
     // Get bounding box of the error message to verify it wraps and doesn't exceed screen width
-    const errorLocator = page.locator('text="Invalid"');
+    const errorLocator = page.locator(UI_LOCATORS.INVALID_TEXT);
     const box = await errorLocator.boundingBox();
     expect(box).not.toBeNull();
     if (box) {
@@ -201,20 +202,20 @@ test('verify login form error message UX wrap behavior', async ({ page }) => {
 });
 
 test('verify app settings toggle', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // We changed 'Fix App Issues' to 'Fix App Issues'
     await page.click('button:has-text("Fix App Issues")');
 
     // Expect the settings to be shown
-    await expect(page.locator('text="Settings"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SETTINGS_TITLE)).toBeVisible();
 });
 
 test('verify sign up and sign in toggle', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Ensure we start at Sign In
-    await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SIGN_IN_BTN)).toBeVisible();
 
     // Click Don't have an account
     await page.click('button:has-text("Don\'t have an account? Sign Up")');
@@ -227,14 +228,14 @@ test('verify sign up and sign in toggle', async ({ page }) => {
     await page.click('button:has-text("Already have an account? Sign In")');
 
     // Ensure we are back at Sign In
-    await expect(page.locator('button:has-text("Sign In")')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SIGN_IN_BTN)).toBeVisible();
 });
 
 test('verify password toggle', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Fill password
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'secretpassword');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'secretpassword');
 
     // Click Show
     await page.click('button:has-text("Show")');
@@ -252,10 +253,10 @@ test('verify password toggle', async ({ page }) => {
 });
 
 test('verify login empty submission', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Submit empty form
-    await page.click('button:has-text("Sign In")');
+    await page.click(UI_LOCATORS.SIGN_IN_BTN);
 
     // Wait for validation error
     await expect(page.locator('text="Username cannot be empty"')).toBeVisible();
@@ -263,67 +264,67 @@ test('verify login empty submission', async ({ page }) => {
 
 test('verify checklist flow and integration', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
 
     // Wait for Wizard to show
-    await expect(page.locator('text="Setup Wizard"')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.SETUP_WIZARD)).toBeVisible();
 
     // Proceed to last step in wizard to see the checklist
     // Step 0 -> Step 1
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 1: Business Type -> 2
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 4: First Product -> 5
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 5: Payments -> 6
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 6: Theme -> 7
     await page.click('text="✨ Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 7: Domain -> 8
     await page.click('text="Get a free sub-domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     // Step 8: Admin Info -> 9
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
     await page.fill('input[placeholder="Create a strong password"]', 'securepass123');
     await page.click('button:has-text("Review & Launch")');
     // 9: Launch View
-    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.ALMOST_THERE)).toBeVisible({ timeout: 5000 });
     await page.click('button:has-text("Launch!")');
-    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.ONBOARDING_COMPLETE)).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
+    if (await page.locator(UI_LOCATORS.SETUP_CHECKLIST).isVisible()) {
         await page.click('button:has-text("Continue to Setup Checklist")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
     // Verify Welcome Checklist shows up
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.WELCOME_CHECKLIST)).toBeVisible({ timeout: 5000 });
 
     // Should route to WebsiteBuilder
     await page.click('text="Add 3 more products"');
@@ -332,53 +333,53 @@ test('verify checklist flow and integration', async ({ page }) => {
 
 test('verify checklist connects instagram routing', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
 
     // Proceed to last step in wizard
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="✨ Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Get a free sub-domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
     await page.fill('input[placeholder="Create a strong password"]', 'securepass123');
     await page.click('button:has-text("Review & Launch")');
-    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.ALMOST_THERE)).toBeVisible({ timeout: 5000 });
     await page.click('button:has-text("Launch!")');
-    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.ONBOARDING_COMPLETE)).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
+    if (await page.locator(UI_LOCATORS.SETUP_CHECKLIST).isVisible()) {
         await page.click('button:has-text("Continue to Setup Checklist")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.WELCOME_CHECKLIST)).toBeVisible({ timeout: 5000 });
 
     // Check routing
     await page.click('text="Connect Instagram"');
@@ -387,53 +388,53 @@ test('verify checklist connects instagram routing', async ({ page }) => {
 
 test('verify checklist share link routing', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
 
     // Proceed to last step in wizard
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="✨ Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Get a free sub-domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
     await page.fill('input[placeholder="Create a strong password"]', 'securepass123');
     await page.click('button:has-text("Review & Launch")');
-    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.ALMOST_THERE)).toBeVisible({ timeout: 5000 });
     await page.click('button:has-text("Launch!")');
-    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.ONBOARDING_COMPLETE)).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
+    if (await page.locator(UI_LOCATORS.SETUP_CHECKLIST).isVisible()) {
         await page.click('button:has-text("Continue to Setup Checklist")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.WELCOME_CHECKLIST)).toBeVisible({ timeout: 5000 });
 
     // Check routing
     await page.click('text="Share your link"');
@@ -442,55 +443,55 @@ test('verify checklist share link routing', async ({ page }) => {
 
 test('verify checklist fully completed state', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
 
     // Proceed to last step in wizard
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="✨ Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Get a free sub-domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
     await page.fill('input[placeholder="Create a strong password"]', 'securepass123');
     await page.click('button:has-text("Review & Launch")');
-    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.ALMOST_THERE)).toBeVisible({ timeout: 5000 });
     await page.click('button:has-text("Launch!")');
-    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.ONBOARDING_COMPLETE)).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
+    if (await page.locator(UI_LOCATORS.SETUP_CHECKLIST).isVisible()) {
         await page.click('button:has-text("Continue to Setup Checklist")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.WELCOME_CHECKLIST)).toBeVisible({ timeout: 5000 });
 
-    const checkboxes = page.locator('input[type="checkbox"]');
+    const checkboxes = page.locator(UI_LOCATORS.CHECKBOX_INPUT);
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
         await checkboxes.nth(i).check();
@@ -501,56 +502,56 @@ test('verify checklist fully completed state', async ({ page }) => {
 
 test('verify checklist completion progress', async ({ page }) => {
     // Navigate to the home page
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
 
     // Login
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
-    await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.WELCOME_TEXT)).toBeVisible();
 
     // Start setup wizard
     await page.click('button:has-text("Start Setup")');
 
     // Proceed to last step in wizard
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
     await page.fill('input[placeholder="0.00"]', '10');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Online"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="✨ Modern"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.click('text="Get a free sub-domain"');
-    await page.click('button:has-text("Next")');
+    await page.click(UI_LOCATORS.NEXT_BUTTON);
     await page.fill('input[placeholder="Your Full Name"]', 'Jane Doe');
     await page.fill('input[placeholder="your@email.com"]', 'jane@example.com');
     await page.fill('input[placeholder="Create a strong password"]', 'securepass123');
     await page.click('button:has-text("Review & Launch")');
-    await expect(page.locator('text="Almost there"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.ALMOST_THERE)).toBeVisible({ timeout: 5000 });
     await page.click('button:has-text("Launch!")');
-    await expect(page.locator('text="Onboarding Complete!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.ONBOARDING_COMPLETE)).toBeVisible({ timeout: 10000 });
 
-    if (await page.locator('text="Continue to Setup Checklist"').isVisible()) {
+    if (await page.locator(UI_LOCATORS.SETUP_CHECKLIST).isVisible()) {
         await page.click('button:has-text("Continue to Setup Checklist")');
     } else {
         await page.click('button:has-text("Go to Dashboard")');
     }
 
-    await expect(page.locator('text="Welcome Checklist"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.WELCOME_CHECKLIST)).toBeVisible({ timeout: 5000 });
 
     // Verify checklist items
-    const checkboxes = page.locator('input[type="checkbox"]');
+    const checkboxes = page.locator(UI_LOCATORS.CHECKBOX_INPUT);
     if (await checkboxes.count() > 0) {
         // Mark first as complete
         await checkboxes.nth(0).check();

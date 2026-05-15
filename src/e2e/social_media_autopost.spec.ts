@@ -1,12 +1,13 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Social Media Autoposting Flow', () => {
   test('user can connect Instagram and receive an automated post approval task', async ({ page }) => {
     // 1. Authenticate and navigate to dashboard
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
 
     // Wait for the Dashboard
     await page.waitForURL('**/dashboard');
@@ -31,7 +32,7 @@ test.describe('Social Media Autoposting Flow', () => {
     await expect(page.locator('text=📸 Connect Instagram').filter({ visible: true }).first()).toBeVisible();
 
     // Move to next step
-    const nextBtn = page.locator('button:has-text("Next")');
+    const nextBtn = page.locator(UI_LOCATORS.NEXT_BUTTON);
     await expect(nextBtn).toBeVisible();
     await nextBtn.click();
 
@@ -50,7 +51,7 @@ test.describe('Social Media Autoposting Flow', () => {
     await page.waitForTimeout(1000);
 
     // 5. Check for Drafted Instagram Post in the Agent Activity Feed
-    await expect(page.locator('text=Drafted Instagram Post').filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(UI_LOCATORS.DRAFTED_IG_POST).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Check out our new products!').filter({ visible: true }).first()).toBeVisible();
 
     // 6. Approve the post
@@ -59,17 +60,17 @@ test.describe('Social Media Autoposting Flow', () => {
     await approveBtn.click();
 
     // Verify it disappears from the feed
-    await expect(page.locator('text=Drafted Instagram Post').filter({ visible: true }).first()).toBeHidden();
+    await expect(page.locator(UI_LOCATORS.DRAFTED_IG_POST).filter({ visible: true }).first()).toBeHidden();
   });
 
   test('user can connect Facebook', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/social-posting');
+    await page.goto(E2E_ROUTES.SOCIAL_POSTING);
 
     const connectFbBtn = page.locator('button:has-text("Connect Facebook")');
     await expect(connectFbBtn).toBeVisible();
@@ -79,13 +80,13 @@ test.describe('Social Media Autoposting Flow', () => {
   });
 
   test('user can edit an AI draft', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/social-posting');
+    await page.goto(E2E_ROUTES.SOCIAL_POSTING);
 
     const generateBtn = page.locator('button:has-text("Generate Post with AI")');
     await expect(generateBtn).toBeVisible();
@@ -99,13 +100,13 @@ test.describe('Social Media Autoposting Flow', () => {
   });
 
   test('user can schedule a post', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/social-posting');
+    await page.goto(E2E_ROUTES.SOCIAL_POSTING);
 
     const scheduleBtn = page.locator('button:has-text("Schedule")');
     await expect(scheduleBtn).toBeVisible();
@@ -113,13 +114,13 @@ test.describe('Social Media Autoposting Flow', () => {
   });
 
   test('user can approve a post', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill('password123');
+    await page.locator(UI_LOCATORS.LOGIN_BUTTON).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    await page.goto('/social-posting');
+    await page.goto(E2E_ROUTES.SOCIAL_POSTING);
 
     const approveBtn = page.locator('button:has-text("Approve & Post Now")');
     await expect(approveBtn).toBeVisible();

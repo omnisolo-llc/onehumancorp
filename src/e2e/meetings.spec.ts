@@ -1,30 +1,31 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Meetings Page', () => {
   test('should display meetings page', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     await expect(page.locator('text=/meeting|schedule/i')).toBeVisible();
   });
 
   test('should show meetings header', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     await expect(page.locator('text=Meetings')).toBeVisible();
   });
 
   test('should display upcoming meetings', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     const meeting = page.locator('[class*="meeting"], [class*="event"]').filter({ visible: true }).first();
     await expect(meeting).toBeVisible();
   });
 
   test('should show schedule new meeting button', async ({ page }) => {
-    await page.goto('/meetings');
-    await expect(page.locator('button:has-text("Schedule"), button:has-text("New Meeting")')).toBeVisible();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    await expect(page.locator(UI_LOCATORS.SCHEDULE_MEETING)).toBeVisible();
   });
 
   test('should open meeting scheduler', async ({ page }) => {
-    await page.goto('/meetings');
-    const scheduleBtn = page.locator('button:has-text("Schedule"), button:has-text("New Meeting")').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const scheduleBtn = page.locator(UI_LOCATORS.SCHEDULE_MEETING).filter({ visible: true }).first();
     if (await scheduleBtn.isVisible()) {
       await scheduleBtn.click();
       await expect(page.locator('text=/schedule|create.*meeting/i')).toBeVisible();
@@ -32,8 +33,8 @@ test.describe('Meetings Page', () => {
   });
 
   test('should select meeting date', async ({ page }) => {
-    await page.goto('/meetings');
-    const scheduleBtn = page.locator('button:has-text("Schedule"), button:has-text("New Meeting")').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const scheduleBtn = page.locator(UI_LOCATORS.SCHEDULE_MEETING).filter({ visible: true }).first();
     if (await scheduleBtn.isVisible()) {
       await scheduleBtn.click();
       const datePicker = page.locator('input[type="date"], [class*="date"]').filter({ visible: true }).first();
@@ -44,8 +45,8 @@ test.describe('Meetings Page', () => {
   });
 
   test('should select meeting time', async ({ page }) => {
-    await page.goto('/meetings');
-    const scheduleBtn = page.locator('button:has-text("Schedule"), button:has-text("New Meeting")').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const scheduleBtn = page.locator(UI_LOCATORS.SCHEDULE_MEETING).filter({ visible: true }).first();
     if (await scheduleBtn.isVisible()) {
       await scheduleBtn.click();
       const timePicker = page.locator('input[type="time"], [class*="time"]').filter({ visible: true }).first();
@@ -56,8 +57,8 @@ test.describe('Meetings Page', () => {
   });
 
   test('should add meeting participants', async ({ page }) => {
-    await page.goto('/meetings');
-    const scheduleBtn = page.locator('button:has-text("Schedule"), button:has-text("New Meeting")').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const scheduleBtn = page.locator(UI_LOCATORS.SCHEDULE_MEETING).filter({ visible: true }).first();
     if (await scheduleBtn.isVisible()) {
       await scheduleBtn.click();
       const participantInput = page.locator('input[placeholder*="email" i], input[placeholder*="participant"]').filter({ visible: true }).first();
@@ -69,8 +70,8 @@ test.describe('Meetings Page', () => {
   });
 
   test('should set meeting title', async ({ page }) => {
-    await page.goto('/meetings');
-    const scheduleBtn = page.locator('button:has-text("Schedule"), button:has-text("New Meeting")').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const scheduleBtn = page.locator(UI_LOCATORS.SCHEDULE_MEETING).filter({ visible: true }).first();
     if (await scheduleBtn.isVisible()) {
       await scheduleBtn.click();
       const titleInput = page.locator('input[type="text"]').filter({ visible: true }).first();
@@ -81,7 +82,7 @@ test.describe('Meetings Page', () => {
   });
 
   test('should join meeting', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     const joinBtn = page.locator('button:has-text("Join"), button:has-text("Start")').filter({ visible: true }).first();
     if (await joinBtn.isVisible()) {
       await joinBtn.click();
@@ -90,8 +91,8 @@ test.describe('Meetings Page', () => {
   });
 
   test('should cancel meeting', async ({ page }) => {
-    await page.goto('/meetings');
-    const meeting = page.locator('[class*="meeting"]').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const meeting = page.locator(UI_LOCATORS.MEETING_CLASS).filter({ visible: true }).first();
     await meeting.hover();
     const cancelBtn = page.locator('button:has-text("Cancel"), button:has-text("Delete")').filter({ visible: true }).first();
     if (await cancelBtn.isVisible()) {
@@ -101,15 +102,15 @@ test.describe('Meetings Page', () => {
   });
 
   test('should show meeting details', async ({ page }) => {
-    await page.goto('/meetings');
-    const meeting = page.locator('[class*="meeting"]').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const meeting = page.locator(UI_LOCATORS.MEETING_CLASS).filter({ visible: true }).first();
     await meeting.click();
     await expect(page.locator('text=/details|description/i')).toBeVisible();
   });
 
   test('should reschedule meeting', async ({ page }) => {
-    await page.goto('/meetings');
-    const meeting = page.locator('[class*="meeting"]').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.MEETINGS);
+    const meeting = page.locator(UI_LOCATORS.MEETING_CLASS).filter({ visible: true }).first();
     await meeting.click();
     const rescheduleBtn = page.locator('button:has-text("Reschedule"), button:has-text("Edit")').filter({ visible: true }).first();
     if (await rescheduleBtn.isVisible()) {
@@ -119,7 +120,7 @@ test.describe('Meetings Page', () => {
   });
 
   test('should show past meetings', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     const pastTab = page.locator('button:has-text("Past"), button:has-text("History")').filter({ visible: true }).first();
     if (await pastTab.isVisible()) {
       await pastTab.click();
@@ -128,7 +129,7 @@ test.describe('Meetings Page', () => {
   });
 
   test('should display meeting calendar view', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     const calendarBtn = page.locator('button:has-text("Calendar"), [class*="calendar"]').filter({ visible: true }).first();
     if (await calendarBtn.isVisible()) {
       await calendarBtn.click();
@@ -137,7 +138,7 @@ test.describe('Meetings Page', () => {
   });
 
   test('should display meeting recordings', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     const recordingTab = page.locator('button:has-text("Recordings"), button:has-text("Recordings")').filter({ visible: true }).first();
     if (await recordingTab.isVisible()) {
       await recordingTab.click();
@@ -146,7 +147,7 @@ test.describe('Meetings Page', () => {
   });
 
   test('should show meeting countdown timer', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto(E2E_ROUTES.MEETINGS);
     const timer = page.locator('text=/\\d+:\\d+:\\d+/').filter({ visible: true }).first();
     await expect(timer).toBeVisible({ timeout: 3000 });
   });

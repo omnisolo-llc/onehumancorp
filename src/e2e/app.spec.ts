@@ -1,14 +1,15 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard', () => {
   test('should load dashboard page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(E2E_ROUTES.HOME);
     await expect(page).toHaveTitle(/OneHuman/);
   });
 
   test('should display navigation', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
+    await page.goto(E2E_ROUTES.HOME);
+    await expect(page.locator(UI_LOCATORS.NAV)).toBeVisible();
   });
 });
 
@@ -22,7 +23,7 @@ test.describe('Business Setup Wizard', () => {
     await page.goto('/business-setup');
 
     // Step 0: Welcome -> Next
-    const nextButton = page.locator('button:has-text("Next")');
+    const nextButton = page.locator(UI_LOCATORS.NEXT_BUTTON);
     await nextButton.click();
 
     // Step 1: Business type
@@ -40,14 +41,14 @@ test.describe('Business Setup Wizard', () => {
 
 test.describe('Login', () => {
   test('should show login form', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first()).toBeVisible();
   });
 
   test('should allow password visibility toggle', async ({ page }) => {
-    await page.goto('/login');
-    const passwordInput = page.locator('input[type="password"]').filter({ visible: true }).first();
+    await page.goto(E2E_ROUTES.LOGIN);
+    const passwordInput = page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first();
     const toggleButton = page.locator('button:has-text("Show")');
     await expect(toggleButton).toBeVisible();
   });
@@ -55,12 +56,12 @@ test.describe('Login', () => {
 
 test.describe('Agent Management', () => {
   test('should show agents list', async ({ page }) => {
-    await page.goto('/agents');
+    await page.goto(E2E_ROUTES.AGENTS);
     await expect(page.locator('h1:has-text("Agents")')).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
+    await page.goto(E2E_ROUTES.AGENTS);
+    await expect(page.locator(UI_LOCATORS.HIRE_AGENT)).toBeVisible();
   });
 });

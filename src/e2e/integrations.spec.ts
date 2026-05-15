@@ -1,12 +1,13 @@
+import { E2E_ROUTES, UI_LOCATORS } from "./playwright_test_constants";
 import { test, expect } from '@playwright/test';
 
 test.describe('Integrations Page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     const loginLink = page.locator('text=/Login/i');
     await loginLink.click();
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password');
     await page.click('button[type="submit"]');
     await page.waitForTimeout(500); // give some time
 
@@ -60,7 +61,7 @@ test.describe('Integrations Page', () => {
 
     const slackBtn = page.locator('button:has-text("Connect"), button:has-text("Slack")').filter({ visible: true }).first();
     await slackBtn.click();
-    await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.AUTHORIZING)).toBeVisible({ timeout: 5000 });
   });
 
   test('should disconnect integration', async ({ page }) => {
@@ -103,7 +104,7 @@ test.describe('Integrations Page', () => {
 
   test('should filter integrations by category', async ({ page }) => {
 
-    const filterSelect = page.locator('select').filter({ visible: true }).first();
+    const filterSelect = page.locator(UI_LOCATORS.SELECT_INPUT).filter({ visible: true }).first();
     await filterSelect.selectOption({ index: 1 });
   });
 
@@ -114,7 +115,7 @@ test.describe('Integrations Page', () => {
   test('should connect meta integration', async ({ page }) => {
     const metaBtn = page.locator('button:has-text("Connect"), button:has-text("Meta")').filter({ visible: true }).first();
     await metaBtn.click();
-    await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.AUTHORIZING)).toBeVisible({ timeout: 5000 });
   });
 
   test('should show zoom integration', async ({ page }) => {
@@ -124,7 +125,7 @@ test.describe('Integrations Page', () => {
   test('should connect zoom integration', async ({ page }) => {
     const zoomBtn = page.locator('button:has-text("Connect"), button:has-text("Zoom")').filter({ visible: true }).first();
     await zoomBtn.click();
-    await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.AUTHORIZING)).toBeVisible({ timeout: 5000 });
   });
 
   test('should show twilio integration', async ({ page }) => {
@@ -134,7 +135,7 @@ test.describe('Integrations Page', () => {
   test('should connect twilio integration', async ({ page }) => {
     const twilioBtn = page.locator('button:has-text("Connect"), button:has-text("Twilio")').filter({ visible: true }).first();
     await twilioBtn.click();
-    await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.AUTHORIZING)).toBeVisible({ timeout: 5000 });
   });
 
   test('should show calendly integration', async ({ page }) => {
@@ -144,7 +145,7 @@ test.describe('Integrations Page', () => {
   test('should connect calendly integration', async ({ page }) => {
     const calendlyBtn = page.locator('button:has-text("Connect"), button:has-text("Calendly")').filter({ visible: true }).first();
     await calendlyBtn.click();
-    await expect(page.locator('text=/authorizing|connecting/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(UI_LOCATORS.AUTHORIZING)).toBeVisible({ timeout: 5000 });
   });
 
 
@@ -223,11 +224,11 @@ test.describe('Integrations Page', () => {
 
 test.describe('Pipeline Management', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto(E2E_ROUTES.LOGIN);
     const loginLink = page.locator('text=/Login/i');
     await loginLink.click();
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password');
+    await page.locator(UI_LOCATORS.PASSWORD_INPUT).filter({ visible: true }).first().fill( 'password');
     await page.click('button[type="submit"]');
     await page.waitForTimeout(500); // give some time
 
@@ -266,13 +267,13 @@ test.describe('Pipeline Management', () => {
 
   test('should drag to reorder stages', async ({ page }) => {
 
-    const stage = page.locator('[class*="stage"]').filter({ visible: true }).first();
-    await stage.dragTo(page.locator('[class*="stage"]').nth(2));
+    const stage = page.locator(UI_LOCATORS.STAGE_CLASS).filter({ visible: true }).first();
+    await stage.dragTo(page.locator(UI_LOCATORS.STAGE_CLASS).nth(2));
   });
 
   test('should edit pipeline stage', async ({ page }) => {
 
-    const stage = page.locator('[class*="stage"]').filter({ visible: true }).first();
+    const stage = page.locator(UI_LOCATORS.STAGE_CLASS).filter({ visible: true }).first();
     await stage.click();
     const editBtn = page.locator('button:has-text("Edit"), button:has-text("Modify")').filter({ visible: true }).first();
     await editBtn.click();
@@ -281,9 +282,9 @@ test.describe('Pipeline Management', () => {
 
   test('should delete pipeline stage', async ({ page }) => {
 
-    const stage = page.locator('[class*="stage"]').filter({ visible: true }).first();
+    const stage = page.locator(UI_LOCATORS.STAGE_CLASS).filter({ visible: true }).first();
     await stage.hover();
-    const deleteBtn = page.locator('button:has-text("Delete"), button:has-text("Remove")').filter({ visible: true }).first();
+    const deleteBtn = page.locator(UI_LOCATORS.DELETE_REMOVE).filter({ visible: true }).first();
     await deleteBtn.click();
     await expect(page.locator('text=/deleted|removed/i')).toBeVisible({ timeout: 3000 });
   });
