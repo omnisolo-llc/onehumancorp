@@ -118,4 +118,4 @@ debian-binary
 /srcs/
 /scratch/
 *.db
-
+dummy.*
