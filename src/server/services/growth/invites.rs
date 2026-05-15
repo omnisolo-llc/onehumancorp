@@ -45,7 +45,7 @@ impl InviteRepository {
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         let count: i64 = row.get(0);
         Ok(count)
     }
@@ -55,7 +55,7 @@ impl InviteRepository {
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         let count: i64 = row.get(0);
         Ok(count)
     }
@@ -92,7 +92,12 @@ impl InviteTracker {
         InviteTracker { repo }
     }
 
-    pub async fn record_invite(&self, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<(), String> {
+    pub async fn record_invite(
+        &self,
+        team_id: &str,
+        inviter_id: &str,
+        invitee_id: &str,
+    ) -> Result<(), String> {
         let invite = TeamInvite {
             id: format!("inv-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),
             team_id: team_id.to_string(),
@@ -104,7 +109,7 @@ impl InviteTracker {
         };
 
         self.repo.create_invite(&invite).await?;
-        
+
         Ok(())
     }
 
@@ -116,11 +121,20 @@ impl InviteTracker {
         self.repo.get_total_invites_count().await
     }
 
-    pub async fn record_invites(&self, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
+    pub async fn record_invites(
+        &self,
+        team_id: &str,
+        inviter_id: &str,
+        invitee_ids: &[String],
+    ) -> Result<(), String> {
         let mut invites = Vec::new();
         for invitee_id in invitee_ids {
             invites.push(TeamInvite {
-                id: format!("inv-{}-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0), invitee_id),
+                id: format!(
+                    "inv-{}-{}",
+                    Utc::now().timestamp_nanos_opt().unwrap_or(0),
+                    invitee_id
+                ),
                 team_id: team_id.to_string(),
                 inviter_id: inviter_id.to_string(),
                 invitee_id: invitee_id.clone(),
@@ -131,7 +145,7 @@ impl InviteTracker {
         }
 
         self.repo.create_invites(&invites).await?;
-        
+
         Ok(())
     }
 }

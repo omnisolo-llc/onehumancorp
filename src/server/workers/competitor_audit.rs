@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use tokio::time::{interval, Duration};
 use chrono::Utc;
+use std::sync::Arc;
+use tokio::time::{Duration, interval};
 use uuid::Uuid;
 
 pub struct CompetitorAuditWorker {
@@ -27,14 +27,25 @@ impl CompetitorAuditWorker {
         });
     }
 
-    pub async fn run_audit(db: &crate::db::DB) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run_audit(
+        db: &crate::db::DB,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Implement `CompetitorAuditWorker` that periodically probes competitor update channels.
         // Integrates with OHC-SIP by publishing findings to `.agent-task/memory/`.
 
         let competitors = vec![
-            ("AI coding assistant", "https://api.github.com/repos/cursor/cursor/commits"),
-            ("OpenClaw", "https://api.github.com/repos/openclaw/openclaw/commits"),
-            ("Replit Agent", "https://api.github.com/repos/replit/replit/commits")
+            (
+                "AI coding assistant",
+                "https://api.github.com/repos/cursor/cursor/commits",
+            ),
+            (
+                "OpenClaw",
+                "https://api.github.com/repos/openclaw/openclaw/commits",
+            ),
+            (
+                "Replit Agent",
+                "https://api.github.com/repos/replit/replit/commits",
+            ),
         ];
 
         let client = reqwest::Client::builder()
@@ -49,10 +60,18 @@ impl CompetitorAuditWorker {
             let metrics_data = match client.get(url).send().await {
                 Ok(resp) => {
                     let status = resp.status();
-                    format!("{{\"status\": \"{}\", \"timestamp\": \"{}\"}}", status, probed_at.to_rfc3339())
-                },
+                    format!(
+                        "{{\"status\": \"{}\", \"timestamp\": \"{}\"}}",
+                        status,
+                        probed_at.to_rfc3339()
+                    )
+                }
                 Err(e) => {
-                    format!("{{\"error\": \"{}\", \"timestamp\": \"{}\"}}", e, probed_at.to_rfc3339())
+                    format!(
+                        "{{\"error\": \"{}\", \"timestamp\": \"{}\"}}",
+                        e,
+                        probed_at.to_rfc3339()
+                    )
                 }
             };
 
@@ -88,8 +107,11 @@ impl CompetitorAuditWorker {
 
         let findings = "Competitor Audit Finding: OHC-HA dynamic escalation is functioning. Local SQLite fallback is operational.";
         std::fs::write(
-            format!(".agent-task/memory/competitor_audit_{}.txt", Utc::now().timestamp()),
-            findings
+            format!(
+                ".agent-task/memory/competitor_audit_{}.txt",
+                Utc::now().timestamp()
+            ),
+            findings,
         )?;
 
         Ok(())

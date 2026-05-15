@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use std::io;
+use std::path::PathBuf;
 
 #[async_trait::async_trait]
 pub trait FileSystemProvider: Send + Sync {
@@ -16,11 +16,19 @@ pub struct BaseFSProvider {
 impl BaseFSProvider {
     fn resolve_path(&self, path: &str) -> io::Result<PathBuf> {
         let full_path = self.root_dir.join(path);
-        let canonical_root = self.root_dir.canonicalize().unwrap_or_else(|_| self.root_dir.clone());
-        let canonical_path = full_path.canonicalize().unwrap_or_else(|_| full_path.clone());
+        let canonical_root = self
+            .root_dir
+            .canonicalize()
+            .unwrap_or_else(|_| self.root_dir.clone());
+        let canonical_path = full_path
+            .canonicalize()
+            .unwrap_or_else(|_| full_path.clone());
 
         if !canonical_path.starts_with(&canonical_root) {
-            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Path out of bounds"));
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "Path out of bounds",
+            ));
         }
 
         Ok(full_path)
@@ -88,13 +96,17 @@ impl FileSystemProvider for BaseFSProvider {
 pub struct LocalFSProvider;
 impl LocalFSProvider {
     pub fn new(workspace_dir: PathBuf) -> BaseFSProvider {
-        BaseFSProvider { root_dir: workspace_dir }
+        BaseFSProvider {
+            root_dir: workspace_dir,
+        }
     }
 }
 
 pub struct CloudFSProvider;
 impl CloudFSProvider {
     pub fn new(tenant_id: String, mount_point: PathBuf) -> BaseFSProvider {
-        BaseFSProvider { root_dir: mount_point.join(tenant_id) }
+        BaseFSProvider {
+            root_dir: mount_point.join(tenant_id),
+        }
     }
 }
