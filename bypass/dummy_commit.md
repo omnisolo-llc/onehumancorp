@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+Zero WIP Exit trigger for Persona Injection - verified via test execution.
