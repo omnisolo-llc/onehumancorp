@@ -310,9 +310,15 @@ impl Store {
             return Err("account disabled".to_string());
         }
 
-        if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && user_org != org_id {
+        if ::server_config::get().multitenant {
+            if org_id.is_empty() || user.organization_id.as_deref() != Some(org_id) {
                 return Err("invalid credentials".to_string());
+            }
+        } else {
+            if let Some(ref user_org) = user.organization_id {
+                if !org_id.is_empty() && user_org != org_id {
+                    return Err("invalid credentials".to_string());
+                }
             }
         }
 
@@ -327,13 +333,19 @@ impl Store {
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
 
-        if !org_id.is_empty() {
-            if let Some(ref user_org) = u.organization_id {
-                if user_org != org_id {
+        if ::server_config::get().multitenant {
+            if org_id.is_empty() || u.organization_id.as_deref() != Some(org_id) {
+                return None;
+            }
+        } else {
+            if !org_id.is_empty() {
+                if let Some(ref user_org) = u.organization_id {
+                    if user_org != org_id {
+                        return None;
+                    }
+                } else {
                     return None;
                 }
-            } else {
-                return None;
             }
         }
         Some(u.clone())
@@ -355,9 +367,15 @@ impl Store {
 
         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
+        if ::server_config::get().multitenant {
+             if org_id.is_empty() || u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
+             }
+        } else {
+             if !org_id.is_empty() {
+                 if u.organization_id.as_deref() != Some(org_id) {
+                     return Err("user not found".to_string());
+                 }
              }
         }
 
@@ -395,9 +413,15 @@ impl Store {
 
         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
+        if ::server_config::get().multitenant {
+             if org_id.is_empty() || u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
+             }
+        } else {
+             if !org_id.is_empty() {
+                 if u.organization_id.as_deref() != Some(org_id) {
+                     return Err("user not found".to_string());
+                 }
              }
         }
 
