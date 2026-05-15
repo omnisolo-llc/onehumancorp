@@ -32,7 +32,7 @@ impl InteropProtocol {
         let acquire_future = async {
             let mut retries = 0;
             loop {
-                if self.mesh.acquire_lock(&lock_resource, &self.node_id, 10).await.map_err(|e| e.to_string()).unwrap_or(false) {
+                if self.mesh.acquire_lock(&lock_resource, &self.node_id, 10).await.map_err(|e| e.to_string()).map_err(|e| e.to_string()).unwrap_or(false) {
                     break;
                 }
                 retries += 1;
@@ -49,8 +49,8 @@ impl InteropProtocol {
         let idempotency_lock_resource = format!("handoff:processed:{}", mission_id);
         // Generate a unique owner ID for this specific handoff attempt to prevent lock extension.
         let attempt_owner = format!("{}_{}", self.node_id, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
-        if !self.mesh.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.map_err(|e| e.to_string()).unwrap_or(false) {
-            let _ = self.mesh.release_lock(&lock_resource, &self.node_id).await.map_err(|e| e.to_string());
+        if !self.mesh.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.map_err(|e| e.to_string()).map_err(|e| e.to_string()).unwrap_or(false) {
+            let _ = self.mesh.release_lock(&lock_resource, &self.node_id).await.map_err(|e| e.to_string()).map_err(|e| e.to_string());
             return Ok(());
         }
 
@@ -65,8 +65,8 @@ impl InteropProtocol {
 
         let mut buf = Vec::new();
         if let Err(e) = handoff_msg.encode(&mut buf) {
-            let _ = self.mesh.release_lock(&idempotency_lock_resource, &attempt_owner).await.map_err(|e| e.to_string());
-            let _ = self.mesh.release_lock(&lock_resource, &self.node_id).await.map_err(|e| e.to_string());
+            let _ = self.mesh.release_lock(&idempotency_lock_resource, &attempt_owner).await.map_err(|e| e.to_string()).map_err(|e| e.to_string());
+            let _ = self.mesh.release_lock(&lock_resource, &self.node_id).await.map_err(|e| e.to_string()).map_err(|e| e.to_string());
             return Err(e.to_string());
         }
 
@@ -218,7 +218,7 @@ impl InteropProtocol {
         failures_left: std::sync::atomic::AtomicUsize,
     }
     #[async_trait::async_trait]
-    impl crate::msgbus::Bus for MockFailingBus {
+    impl ohc_builtin_agent::mesh::transport::MeshTransport for MockFailingBus {
             mesh.publish(&"system".to_string(), buf.clone()).await.unwrap();
         }
     }
