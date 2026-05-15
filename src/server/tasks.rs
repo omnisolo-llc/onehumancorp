@@ -92,21 +92,52 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
+        pub(crate) grpc_client: RwLock<Option<::server_ohc::orchestration::hub_service_client::HubServiceClient<tonic::transport::Channel>>>,
 }
 
+
+
+
 impl TaskManager {
-    pub fn new() -> Self {
+    pub fn set_grpc_client(&self, client: ::server_ohc::orchestration::hub_service_client::HubServiceClient<tonic::transport::Channel>) {
+        *self.grpc_client.write().unwrap() = Some(client);
+    }
+
+    fn broadcast_event(&self, task: &SharedTask, event_type: &str) {
+        let _ = event_type;
+        if let Some(client) = self.grpc_client.read().unwrap().clone() {
+            if let Ok(payload) = serde_json::to_vec(&task) {
+                let event = ::server_ohc::orchestration::MeshEvent {
+                    event_id: uuid::Uuid::new_v4().to_string(),
+                    topic: format!("mesh:tasks:{}", task.organization_id),
+                    payload,
+                    timestamp: chrono::Utc::now().timestamp(),
+                };
+                let mut client_clone = client.clone();
+                tokio::spawn(async move {
+                    let req = ::server_ohc::orchestration::PublishMeshEventRequest {
+                        event: Some(event),
+                    };
+                    let _ = client_clone.publish_mesh_event(tonic::Request::new(req)).await;
+                });
+            }
+        }
+    }
+
+        pub fn new() -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
-        }
+
+         grpc_client: RwLock::new(None), }
     }
 
     pub fn with_db(db: Arc<DB>) -> Self {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
-        }
+
+         grpc_client: RwLock::new(None), }
     }
 
     pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
@@ -155,7 +186,7 @@ impl TaskManager {
         
         let mut tasks = self.tasks.write().unwrap();
         tasks.insert(id, task.clone());
-        
+        self.broadcast_event(&task, "TASK_CREATED");
         Ok(task)
     }
 
@@ -198,6 +229,7 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
+            self.broadcast_event(&task, "TASK_REVIEW");
                 task.updated_at = Utc::now();
                 return Ok(());
             } else {
@@ -212,6 +244,7 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "COMPLETED".to_string();
+            self.broadcast_event(&task, "TASK_COMPLETED");
                 
                 let mut payload_map: serde_json::Value = if task.payload.is_empty() {
                     serde_json::json!({})
@@ -241,6 +274,7 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "FAILED".to_string();
+            self.broadcast_event(&task, "TASK_FAILED");
 
                 let mut payload_map: serde_json::Value = if task.payload.is_empty() {
                     serde_json::json!({})
@@ -340,6 +374,8 @@ impl TaskManager {
                 task.payload = payload;
             }
             task.updated_at = new_updated_at;
+
+
         }
 
         Ok(())

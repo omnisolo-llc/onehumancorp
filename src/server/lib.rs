@@ -1240,6 +1240,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:8081".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+    if let Ok(_mesh) = crate::orchestration::mesh::get_mesh_transport(&db.store).await {
+        tokio::spawn({
+            let hub_clone = hub.clone();
+            async move {
+                if let Ok(client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8082".to_string())).await {
+                    hub_clone.task_manager().set_grpc_client(client);
+                }
+            }
+        });
+    }
     hub.set_db(db.clone());
     
     // Start AutoDream worker

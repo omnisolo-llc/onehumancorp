@@ -337,3 +337,4 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
     }
 }
 // dummy validation comment
+// TeammateMesh trait for KAIROS Phase 2
