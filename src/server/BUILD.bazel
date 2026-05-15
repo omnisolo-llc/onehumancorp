@@ -45,6 +45,7 @@ rust_library(
         "//src/server/services:srcs",
     ],
     data = ["//src/server/migrations"],
+    compile_data = ["assets/index.html"],
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -115,6 +116,7 @@ rust_library(
 rust_binary(
     name = "server",
     srcs = ["main.rs"],
+    compile_data = ["assets/index.html"],
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
@@ -130,6 +132,7 @@ rust_test(
     size = "large",
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    compile_data = ["assets/index.html"],
     edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
@@ -152,6 +155,7 @@ rust_test(
     size = "small",
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
+    compile_data = ["assets/index.html"],
     edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],
