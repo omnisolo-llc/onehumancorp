@@ -12,6 +12,69 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub }
     }
 
+
+
+    pub async fn get_state(&self, user_id: &str) -> Result<serde_json::Value, String> {
+        let pool = self.db.pool.clone();
+        let res = sqlx::query(
+            "SELECT state_json FROM onboarding_state WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1"
+        )
+        .bind(user_id)
+        .fetch_optional(&pool)
+        .await;
+
+        match res {
+            Ok(Some(row)) => {
+                use sqlx::Row;
+                // PostgreSQL: state_json is JSONB -> serde_json::Value
+                // SQLite: state_json is TEXT -> String
+                // To support both without strict compile-time types, we attempt to parse as string first, or json directly.
+                let val = row.try_get::<serde_json::Value, _>("state_json")
+                    .or_else(|_| row.try_get::<String, _>("state_json").map(|s| serde_json::from_str(&s).unwrap_or(serde_json::json!({}))))
+                    .unwrap_or(serde_json::json!({}));
+                Ok(val)
+            },
+            Ok(None) => Ok(serde_json::json!({})),
+            Err(e) => {
+                tracing::error!("Failed to get onboarding state: {}", e);
+                Err("Failed to get onboarding state".to_string())
+            }
+        }
+    }
+
+    pub async fn save_state(&self, user_id: &str, state: serde_json::Value) -> Result<(), String> {
+        let pool = self.db.pool.clone();
+
+        let tenant_id = "default_tenant";
+        let organization_id = format!("org-{}", user_id); // use user_id as org derivation for simplicity
+
+        // Use UPSERT
+        // PostgreSQL uses ON CONFLICT (tenant_id, organization_id)
+        let res = sqlx::query(
+            r#"
+            INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json)
+            VALUES ($1, $2, $3, 0, $4)
+            ON CONFLICT (tenant_id, organization_id)
+            DO UPDATE SET state_json = $4, updated_at = CURRENT_TIMESTAMP
+            "#
+        )
+        .bind(tenant_id)
+        .bind(organization_id)
+        .bind(user_id)
+        .bind(state)
+        .execute(&pool)
+        .await;
+
+        match res {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                tracing::error!("Failed to save onboarding state: {}", e);
+                Err("Failed to save onboarding state".to_string())
+            }
+        }
+    }
+
+
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 

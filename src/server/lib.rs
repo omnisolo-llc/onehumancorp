@@ -1610,7 +1610,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 <head>
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-                    <style>
+
+                    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+<style>
                         :root {
                             --primary: #0055ff;
                             --primary-hover: #0044cc;
@@ -1728,14 +1731,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </nav>
 
 
-                    <!-- Signup Screen -->
+                                        <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
                         <h1>Create an account</h1>
                         <p>Create an account to start your business</p>
-                        <input type="email" placeholder="Email or Username" />
+                        <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="handleSignup(this)">Continue with Google</button>
+                        <button class="secondary" style="width:100%; margin-bottom:20px;" onclick="handleSignup(this)">Continue with Apple</button>
+                        <p style="text-align:center; font-size:12px; margin-bottom:20px;">OR</p>
+                        <input type="email" placeholder="Email Address" />
                         <input type="password" placeholder="Password" />
-                        <button onclick="handleSignup(this)">Sign Up</button>
-                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
+                        <button style="width:100%" onclick="handleSignup(this)">Sign Up</button>
+                        <button class="secondary" style="width:100%" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
                     <!-- Dashboard Screen -->
@@ -2087,7 +2093,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
+                                          <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -2097,94 +2103,99 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <button class="secondary" onclick="onboardingState.businessType='Online Store'; nextStep(3)">🛒 Online Store</button>
+                            <button class="secondary" onclick="onboardingState.businessType='Service'; nextStep(3)">🛠️ Service Business</button>
+                            <button class="secondary" onclick="onboardingState.businessType='Food'; nextStep(3)">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="onboardingState.businessType='Creative'; nextStep(3)">🎨 Creative</button>
+                            <button class="secondary" onclick="onboardingState.businessType='Local'; nextStep(3)">🏠 Local Business</button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
+                            <h1>What is the name of your business?</h1>
+                            <input type="text" placeholder="e.g. Maya's Cakes" onchange="onboardingState.businessName = this.value" />
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
+                            <input type="text" placeholder="e.g. Vegan Cakes" onchange="onboardingState.sellCategory = this.value" />
                             <br/><button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                                                <div id="step-5" style="display: none;">
+                            <h1>Let's add your first product</h1>
+                            <p>We'll use AI to write a great description for you.</p>
+                            <div id="cropper-container" style="max-width: 100%; height: 200px; display: none; margin-bottom: 10px;">
+                                <img id="cropper-image" src="" style="display: block; max-width: 100%;" />
+                            </div>
+                            <input type="file" id="product-photo-input" accept="image/*" />
+                            <input type="text" placeholder="Product Name" onchange="onboardingState.firstProductName = this.value" />
+                            <div style="display:flex; gap:10px;">
+                                <select id="currency-select" style="padding:10px; border-radius:6px; border:1px solid #ccc; background:#fff;"><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select>
+                                <input type="number" placeholder="0.00" onchange="onboardingState.firstProductPrice = this.value" />
+                            </div>
+                            <textarea id="ai-product-desc" placeholder="Product Description (AI Generated)" rows="4" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccc; margin-bottom:10px;" onchange="onboardingState.firstProductDesc = this.value"></textarea>
+                            <button id="generate-ai-desc-btn" onclick="generateProductAI()">✨ Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
+
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="onboardingState.payment='Online'; nextStep(8)">Online Only</button>
+                            <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="onboardingState.payment='InPerson'; nextStep(8)">In-Person Only</button>
+                            <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="onboardingState.payment='Both'; nextStep(8)">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <div style="display:flex; gap:20px; margin-bottom:20px;">
+                                <div style="flex:1;">
+                                    <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="selectTemplate('Modern')">Modern (Light)</button>
+                                    <button class="secondary" style="width:100%;" onclick="selectTemplate('Bold')">Bold (Dark)</button>
+                                </div>
+                                <div id="template-preview" style="flex:1; border: 1px dashed #ccc; border-radius: 8px; padding: 10px; min-height: 100px; display: none;">
+                                    <!-- Preview rendered here -->
+                                </div>
+                            </div>
+                            <button onclick="nextStep(9)">Next →</button>
+                            <button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <p>Your business needs an address on the web.</p>
+                            <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="onboardingState.domainChoice='free'; nextStep(10)">🌐 Get a Free OHC Domain (.ohc.app)</button>
+                            <button class="secondary" style="width:100%; margin-bottom:20px;" onclick="onboardingState.domainChoice='custom'; nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="nextStep(8)">Back</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
+                            <p>Your business is fully configured.</p>
                             <button onclick="nextStep(100)">Publish my business →</button>
+                            <button class="secondary" onclick="nextStep(9)">Back</button>
                         </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
+                        <div id="step-100" style="display: none; text-align: center;">
+                            <h1 style="font-size:60px; animation: bounce 1s infinite;">🎉</h1>
+                            <h1 style="color: #4ecca3;">BUSINESS LIVE!</h1>
+                            <style>
+                                @keyframes bounce {
+                                    0%, 100% { transform: translateY(0); }
+                                    50% { transform: translateY(-20px); }
+                                }
+                            </style>
+                                                        <script>
+                                // Fallback inline confetti call
+                                if (typeof confetti === 'function') {
+                                    confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+                                }
+                                try {
+                                    navigator.clipboard.writeText('https://mybusiness.ohc.app');
+                                } catch(e) {}
+                            </script>
+                            <p>Your business is now live at <strong>mybusiness.ohc.app</strong></p>
+                            <button style="margin-bottom:20px;" onclick="navigator.clipboard.writeText('https://mybusiness.ohc.app'); alert('Link copied to clipboard!');">📋 Copy Link to Share</button>
+                            <br/>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
-
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
                         <div id="step-ai" style="display: none;">
@@ -2200,9 +2211,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
+                    </div>
+
+                    <div id="checklist-screen" class="screen glass">
+                        <h1>You're set up! Here's what to do next:</h1>
+                        <div style="margin:20px 0;">
+                            <p style="padding:10px; background:rgba(0,200,0,0.1); border-radius:6px; border:1px solid rgba(0,200,0,0.2);">✅ <strong>Business live</strong></p>
+                            <p style="padding:10px; border-radius:6px; border:1px solid var(--border); cursor:pointer;" onclick="alert('Navigating to Add Product')">⬜ Add 3 more products</p>
+                            <p style="padding:10px; border-radius:6px; border:1px solid var(--border); cursor:pointer;" onclick="alert('Navigating to Integrations')">⬜ Connect Instagram</p>
+                            <p style="padding:10px; border-radius:6px; border:1px solid var(--border); cursor:pointer;" onclick="navigator.clipboard.writeText('https://mybusiness.ohc.app'); alert('Link copied!')">⬜ Share your link with a friend</p>
+                        </div>
+                        <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                     </div>
 
                     <!-- Login Screen -->
@@ -2211,15 +2232,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>One Human Corp</h2>
                         <p>Sign in to manage your business</p>
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
+                        <button class="secondary" style="width:100%; margin-bottom:10px;" onclick="handleLogin(this)">Continue with Google</button>
+                        <button class="secondary" style="width:100%; margin-bottom:20px;" onclick="handleLogin(this)">Continue with Apple</button>
+                        <p style="text-align:center; font-size:12px; margin-bottom:20px;">OR</p>
+                        <input type="email" placeholder="Email Address" />
                         <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                        <button style="width:100%" onclick="handleLogin(this)">Login</button>
+                        <button class="secondary" style="width:100%" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                     </div>
 
                     <script>
-                        const pathMap = {
+                                                const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
@@ -2229,15 +2252,181 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'diagnostics-screen': '/diagnostics',
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
-                            'setup-screen': '/website-builder',
+                            'setup-screen': '/setup',
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
-                            'meeting-room-screen': '/meetings/room/1'
+                            'meeting-room-screen': '/meetings/room/1',
+                            'checklist-screen': '/checklist'
                         };
+
+                        let onboardingState = {};
+                        let userId = localStorage.getItem('ohc_user_id') || '';
+
+                        async function saveState() {
+                            if (!userId) return;
+                            try {
+                                await fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'x-user-id': userId
+                                    },
+                                    body: JSON.stringify(onboardingState)
+                                });
+                            } catch (e) {
+                                console.error('Failed to save state', e);
+                            }
+                        }
+
+                        async function loadState() {
+                            if (!userId) return;
+                            try {
+                                const res = await fetch('/api/onboarding/state', {
+                                    headers: { 'x-user-id': userId }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data && Object.keys(data).length > 0) {
+                                        onboardingState = data;
+                                        if (onboardingState.currentStep) {
+                                            if (onboardingState.currentStep < 100) {
+                                                showScreen('setup-screen');
+                                            }
+                                            nextStep(onboardingState.currentStep);
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to load state', e);
+                            }
+                        }
+
+                        function handleSignup(btn) {
+                            // Mock email verification and signup
+                            const parent = btn.parentElement;
+                            const email = parent.querySelector('input[type="email"]').value;
+                            if (!email) return alert('Enter an email');
+
+                            userId = 'usr_' + btoa(email).substring(0, 10);
+                            localStorage.setItem('ohc_user_id', userId);
+
+                            parent.innerHTML = `
+                                <h1>Verify your email</h1>
+                                <p>We sent a code to ${email}</p>
+                                <input type="text" placeholder="123456" />
+                                <button onclick="finishSignup()">Verify</button>
+                                <button class="secondary" onclick="alert('Email resent!')">Resend code</button>
+                            `;
+                        }
+
+                        function finishSignup() {
+                            onboardingState.currentStep = 1;
+                            saveState();
+                            showScreen('setup-screen');
+                        }
+
+                        function handleLogin(btn) {
+                            const email = btn.parentElement.querySelector('input[type="email"]').value;
+                            if (!email) {
+                                document.getElementById('login-error').style.display = 'block';
+                                return;
+                            }
+                            userId = 'usr_' + btoa(email).substring(0, 10);
+                            localStorage.setItem('ohc_user_id', userId);
+
+                            // Load resume state
+                            loadState().then(() => {
+                                if (onboardingState.currentStep && onboardingState.currentStep < 100) {
+                                    showScreen('setup-screen');
+                                } else {
+                                    showScreen('dashboard-screen');
+                                }
+                            });
+                        }
+
+                        function nextStep(step) {
+                            // Hide all steps inside setup-screen
+                            document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                if (d.id && d.id.startsWith('step-')) {
+                                    d.style.display = 'none';
+                                }
+                            });
+
+                            const stepEl = document.getElementById('step-' + step);
+                            if (stepEl) {
+                                stepEl.style.display = 'block';
+                            }
+
+                            onboardingState.currentStep = step;
+
+                            if (step === 'generating') {
+                                setTimeout(() => nextStep('launch-ai'), 2000);
+                            }
+
+                            saveState();
+                        }
+
+                        function selectTemplate(tmpl) {
+                            onboardingState.template = tmpl;
+
+                            // Show live mini-preview
+                            const preview = document.getElementById('template-preview');
+                            if (preview) {
+                                preview.style.display = 'block';
+                                const wrapper = document.createElement('div');
+                                wrapper.style.transform = "scale(0.8)";
+                                wrapper.style.transformOrigin = "top left";
+                                wrapper.style.border = "1px solid #ccc";
+                                wrapper.style.borderRadius = "8px";
+                                wrapper.style.padding = "10px";
+                                wrapper.style.background = tmpl === 'Modern' ? '#fff' : '#222';
+                                wrapper.style.color = tmpl === 'Modern' ? '#000' : '#fff';
+                                wrapper.style.width = "125%";
+
+                                const h3 = document.createElement('h3');
+                                h3.style.margin = "0";
+                                h3.textContent = onboardingState.businessName || 'My Store';
+
+                                const p = document.createElement('p');
+                                p.style.fontSize = "10px";
+                                p.style.marginTop = "5px";
+                                p.textContent = `Welcome to our ${tmpl.toLowerCase()} store.`;
+
+                                wrapper.appendChild(h3);
+                                wrapper.appendChild(p);
+
+                                preview.innerHTML = '';
+                                preview.appendChild(wrapper);
+                            }
+                            saveState();
+                        }
+
+
+                        function generateProductAI() {
+                            const descEl = document.getElementById('ai-product-desc');
+                            const btn = document.getElementById('generate-ai-desc-btn');
+                            btn.textContent = "Generating...";
+                            btn.disabled = true;
+
+                            setTimeout(() => {
+                                const name = onboardingState.firstProductName || "This product";
+                                descEl.value = `${name} is an amazing offering tailored specifically for our customers. Enjoy top quality and exceptional value.`;
+                                onboardingState.firstProductDesc = descEl.value;
+                                saveState();
+                                btn.textContent = "✨ Regenerate";
+                                btn.disabled = false;
+                            }, 1500);
+                        }
+
+                        function generateAI() {
+
+                            onboardingState.businessName = document.querySelector('#step-ai input').value || "AI Store";
+                            nextStep('generating');
+                        }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
@@ -2261,19 +2450,73 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (['dashboard-screen', 'agents-screen', 'api-screen', 'settings-screen', 'my-plan-screen', 'pricing-screen', 'checkout-screen', 'diagnostics-screen', 'services-screen', 'scaling-screen', 'checklist-screen', 'users-screen', 'referral-dashboard-screen', 'inbox-screen', 'meetings-screen', 'meeting-room-screen', 'setup-screen'].includes(id)) {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
+
+                            // Special initialization
+                            if (id === 'setup-screen') {
+                                if (onboardingState.currentStep) {
+                                    nextStep(onboardingState.currentStep);
+                                } else {
+                                    nextStep(1);
+                                }
+                            }
                         }
+
+                                                let cropper;
 
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+                            if (userId) loadState();
+
+                            // Auto-detect currency
+                            try {
+                                const detectedCurrency = Intl.NumberFormat().resolvedOptions().currency || "USD";
+                                const select = document.getElementById('currency-select');
+                                if (select && select.querySelector(`option[value="${detectedCurrency}"]`)) {
+                                    select.value = detectedCurrency;
+                                } else if (select) {
+                                    const opt = document.createElement('option');
+                                    opt.value = detectedCurrency;
+                                    opt.textContent = detectedCurrency;
+                                    select.appendChild(opt);
+                                    select.value = detectedCurrency;
+                                }
+                            } catch (e) {}
+
+                            // Setup Cropper
+                            const photoInput = document.getElementById('product-photo-input');
+                            const cropperImage = document.getElementById('cropper-image');
+                            const cropperContainer = document.getElementById('cropper-container');
+
+                            if (photoInput && cropperImage) {
+                                photoInput.addEventListener('change', function (e) {
+                                    const files = e.target.files;
+                                    if (files && files.length > 0) {
+                                        const file = files[0];
+                                        const reader = new FileReader();
+                                        reader.onload = function (event) {
+                                            cropperImage.src = event.target.result;
+                                            cropperContainer.style.display = 'block';
+                                            if (cropper) {
+                                                cropper.destroy();
+                                            }
+                                            cropper = new Cropper(cropperImage, {
+                                                aspectRatio: 1,
+                                                viewMode: 1,
+                                            });
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                });
+                            }
                         };
-                    </script>
+</script>
                 </body>
             </html>
         "#,

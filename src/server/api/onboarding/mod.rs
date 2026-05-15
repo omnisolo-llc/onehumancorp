@@ -29,16 +29,32 @@ async fn start_onboarding(
 }
 
 async fn get_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    Ok(Json(serde_json::json!({
-        "state": "{}"
-    })))
+    let user_id = headers
+        .get("x-user-id")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("anonymous");
+
+    match agent.get_state(user_id).await {
+        Ok(state) => Ok(Json(state)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 async fn save_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    Ok(axum::http::StatusCode::NO_CONTENT)
+    let user_id = headers
+        .get("x-user-id")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("anonymous");
+
+    match agent.save_state(user_id, payload).await {
+        Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
