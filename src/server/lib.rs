@@ -1743,6 +1743,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
+                            <h2>Today's Sales</h2>
+                            <h2>Orders to Ship</h2>
+                            <h2>Team Members</h2>
+                            <h2>Ongoing Tasks</h2>
+                            <h2>Needs Your Approval</h2>
+                            <h2>Store Tips</h2>
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
@@ -1760,6 +1766,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
+                            <button>Help Center</button>
+                            <button>Connect Apps</button>
+                            <button>Video Tutorials</button>
+                            <button>How to use this app</button>
+                            <button>What's New</button>
                         </div>
                         <div id="facebook-integration" class="card glass">
                             <h3>📘 Facebook</h3>
@@ -1784,12 +1795,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
+                            <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add</button>
                             <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                            <button class="nav-item">Stats</button>
+                            <button class="nav-item">Share</button>
                         </nav>
                     </div>
 
