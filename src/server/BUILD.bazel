@@ -39,6 +39,7 @@ rust_library(
         "//src/server/orchestration:srcs",
         "//src/server/workers:srcs",
         "//src/server/tools:srcs",
+        "//src/server/compliance:srcs",
         "//src/server/interop:srcs",
         "//src/server/integrations:srcs",
         "//src/server/domain:srcs",

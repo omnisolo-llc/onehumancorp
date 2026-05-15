@@ -1,0 +1,14 @@
+--- src/server/telemetry/mod.rs
++++ src/server/telemetry/mod.rs
+@@ -160,9 +160,10 @@
+     labels: Value,
+ ) -> Result<(), Box<dyn std::error::Error>> {
+     // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
+-    let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
++    let config = ::server_config::get();
++    let is_telemetry_enabled = config.telemetry_enabled;
+
+-    if !is_telemetry_enabled {
++    if config.standalone && !is_telemetry_enabled {
+         return Ok(());
+     }

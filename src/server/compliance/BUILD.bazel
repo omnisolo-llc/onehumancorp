@@ -1,0 +1,16 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*.rs"]),
+    visibility = ["//src/server:__pkg__"],
+)
+
+rust_test(
+    name = "pii_audit_test",
+    srcs = ["pii_audit_test.rs"],
+    edition = "2024",
+    deps = [
+        "@crates//:walkdir",
+    ],
+)
