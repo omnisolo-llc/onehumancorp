@@ -290,6 +290,20 @@ mod tests {
                 search_dirs.push(src_root);
             }
         }
+        let mut current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        for _ in 0..10 {
+            let src = current_dir.join("src");
+            if src.exists() && src.is_dir() {
+                search_dirs.push(src);
+            }
+            if let Some(parent) = current_dir.parent() { current_dir = parent.to_path_buf(); } else { break; }
+        }
+        search_dirs.push(PathBuf::from("/workspace"));
+        search_dirs.push(PathBuf::from("/workspace/src"));
+        search_dirs.push(PathBuf::from("/app"));
+        search_dirs.push(PathBuf::from("/app/src"));
+        search_dirs.push(PathBuf::from(env::var("RUNFILES_DIR").unwrap_or_else(|_| ".".into())).join(env::var("TEST_WORKSPACE").unwrap_or_else(|_| ".".into())).join("src"));
+        search_dirs.push(PathBuf::from(env::var("TEST_SRCDIR").unwrap_or_else(|_| ".".into())).join(env::var("TEST_WORKSPACE").unwrap_or_else(|_| ".".into())).join("src"));
 
         let mut checked_files = 0;
 
@@ -393,12 +407,10 @@ mod tests {
         }
 
         let search_dirs_for_error = search_dirs.clone();
-        if checked_files == 0 {
-            // No files found to check - likely running in an environment where source files
-            // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
-            println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
-            return;
-        }
+        assert!(
+            checked_files > 10,
+            "Failed to find sufficient source files for PII check. Checked files: {}, Search dirs: {:?}", checked_files, search_dirs_for_error
+        );
         assert!(
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",
