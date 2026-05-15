@@ -60,6 +60,15 @@ impl OnboardingAgent {
                 ("The Advisor", "tenant.report.generated"),
             ];
 
+            // Also schedule weekly health reports for The Advisor
+            let _ = sqlx::query("INSERT INTO scheduled_tasks (organization_id, task_type, payload, cron_schedule) VALUES ($1, $2, $3, $4)")
+                .bind(&org_id_clone3)
+                .bind("agent_action")
+                .bind(serde_json::json!({"agent_role": "The Advisor", "action": "generate_health_report"}).to_string())
+                .bind("0 8 * * 1") // Every Monday at 8 AM
+                .execute(&pool)
+                .await;
+
             for (agent_role, topic) in event_topics {
                 let _ = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
                     .bind(&org_id_clone3)

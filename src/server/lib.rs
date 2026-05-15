@@ -1621,7 +1621,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --border: #e1e4e8;
                             --sidebar-bg: #ffffff;
                         }
-                        body { 
+                        body {
+                            backdrop-filter: blur(20px) saturate(200%);
+                            background: rgba(255, 255, 255, 0.03);
                             font-family: 'Inter', 'Outfit', sans-serif; 
                             background: var(--bg); 
                             color: var(--text); 
@@ -2239,6 +2241,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meeting-room-screen': '/meetings/room/1'
                         };
 
+                        function nextStep(step) { let s = document.getElementById("setup-screen"); if (s) { let c = s.children; for(let i=0; i<c.length; i++) { c[i].style.display="none"; } let n = document.getElementById("step-" + step); if (n) n.style.display="block"; } }
+                        function generateAI() { nextStep("generating"); setTimeout(() => { showScreen("checklist-screen"); }, 1500); }
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
