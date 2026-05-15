@@ -1,0 +1,12 @@
+{
+  "dashboard_revenue": "Total revenue collected minus refunds over the selected period.",
+  "dashboard_visitors": "Unique people who visited your store.",
+  "settings_taxes": "Configure how sales tax is calculated at checkout.",
+  "inventory_low_stock": "Items with fewer than 5 units left in stock.",
+  "ai_agent_greeting": "The first message your AI assistant will send to customers.",
+  "marketing_campaign_budget": "The maximum amount you want to spend on this campaign.",
+  "payment_gateway_stripe": "Connect Stripe to accept credit card payments.",
+  "shipping_flat_rate": "Charge the same shipping fee for all orders.",
+  "storefront_theme": "Choose how your online store looks to customers.",
+  "customer_tags": "Labels to help you organize and filter your customer list."
+}

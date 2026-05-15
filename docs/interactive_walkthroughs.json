@@ -1,0 +1,38 @@
+{
+  "store_setup": {
+    "steps": [
+      {
+        "elementId": "#store-name",
+        "message": "First, let's give your store a name. Make it memorable!"
+      },
+      {
+        "elementId": "#add-logo",
+        "message": "Upload your logo here. A square image works best."
+      },
+      {
+        "elementId": "#select-theme",
+        "message": "Pick a theme that matches your brand. You can change this later."
+      },
+      {
+        "elementId": "#publish-btn",
+        "message": "When you're ready, click Publish to go live!"
+      }
+    ]
+  },
+  "payment_setup": {
+    "steps": [
+      {
+        "elementId": "#connect-bank",
+        "message": "Click here to link your bank account securely."
+      },
+      {
+        "elementId": "#currency-select",
+        "message": "Choose the currency you want to charge in."
+      },
+      {
+        "elementId": "#save-payments",
+        "message": "Save your settings to start accepting payments."
+      }
+    ]
+  }
+}

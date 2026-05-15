@@ -1,0 +1,100 @@
+[
+  {
+    "id": "v1",
+    "title": "Set up your store in 5 minutes",
+    "duration": 85,
+    "url": "https://cdn.ohc.com/v/setup.mp4",
+    "tags": [
+      "getting started",
+      "store"
+    ]
+  },
+  {
+    "id": "v2",
+    "title": "Accept your first payment",
+    "duration": 60,
+    "url": "https://cdn.ohc.com/v/payment.mp4",
+    "tags": [
+      "payments",
+      "onboarding"
+    ]
+  },
+  {
+    "id": "v3",
+    "title": "Activate your AI Support Agent",
+    "duration": 45,
+    "url": "https://cdn.ohc.com/v/ai_agent.mp4",
+    "tags": [
+      "ai",
+      "support"
+    ]
+  },
+  {
+    "id": "v4",
+    "title": "Add a new product",
+    "duration": 70,
+    "url": "https://cdn.ohc.com/v/product.mp4",
+    "tags": [
+      "inventory",
+      "store"
+    ]
+  },
+  {
+    "id": "v5",
+    "title": "Launch an email campaign",
+    "duration": 90,
+    "url": "https://cdn.ohc.com/v/email.mp4",
+    "tags": [
+      "marketing"
+    ]
+  },
+  {
+    "id": "v6",
+    "title": "Understand your dashboard",
+    "duration": 55,
+    "url": "https://cdn.ohc.com/v/dashboard.mp4",
+    "tags": [
+      "analytics"
+    ]
+  },
+  {
+    "id": "v7",
+    "title": "Manage refunds",
+    "duration": 40,
+    "url": "https://cdn.ohc.com/v/refunds.mp4",
+    "tags": [
+      "payments",
+      "customer service"
+    ]
+  },
+  {
+    "id": "v8",
+    "title": "Set up shipping zones",
+    "duration": 80,
+    "url": "https://cdn.ohc.com/v/shipping.mp4",
+    "tags": [
+      "shipping",
+      "setup"
+    ]
+  },
+  {
+    "id": "v9",
+    "title": "Invite staff members",
+    "duration": 30,
+    "url": "https://cdn.ohc.com/v/staff.mp4",
+    "tags": [
+      "account",
+      "team"
+    ]
+  },
+  {
+    "id": "v10",
+    "title": "Connect a custom domain",
+    "duration": 85,
+    "url": "https://cdn.ohc.com/v/domain.mp4",
+    "tags": [
+      "store",
+      "advanced"
+    ]
+  }
+]
