@@ -17,7 +17,11 @@ mod tests {
             return;
         }
 
-        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let db_res = tokio::time::timeout(std::time::Duration::from_millis(500), crate::db::DB::new()).await;
+        let db = match db_res {
+            Ok(Ok(d)) => Arc::new(d),
+            _ => return, // DB unavailable, skip test
+        };
         let transport = Arc::new(MemoryTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
 
