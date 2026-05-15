@@ -24,6 +24,21 @@
   "panels": [
     {
       "type": "text",
+      "title": "OHC Premium Styling",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "options": {
+        "content": "<style>\n  .panel-container {\n    background: rgba(255, 255, 255, 0.05) !important;\n    backdrop-filter: blur(15px) !important;\n    -webkit-backdrop-filter: blur(15px) !important;\n    border: 1px solid rgba(255, 255, 255, 0.1) !important;\n    border-radius: 12px !important;\n    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;\n  }\n</style>",
+        "mode": "html"
+      },
+      "transparent": true
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 3,
