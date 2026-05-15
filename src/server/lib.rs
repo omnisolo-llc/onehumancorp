@@ -1609,41 +1609,54 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
                     <style>
                         :root {
                             --primary: #0055ff;
                             --primary-hover: #0044cc;
-                            --bg: #f4f7fa;
-                            --card-bg: #ffffff;
-                            --text: #1a1a1b;
-                            --text-secondary: #646d7b;
-                            --border: #e1e4e8;
-                            --sidebar-bg: #ffffff;
+                            --bg: #f0f2f5;
+                            --glass-bg: rgba(255, 255, 255, 0.75);
+                            --glass-border: rgba(255, 255, 255, 0.4);
+                            --text: #1d1d1f;
+                            --text-secondary: #6e6e73;
+                            --border: #d2d2d7;
+                            --radius: 16px;
+                            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
-                            background: var(--bg); 
+                            font-family: 'Inter', sans-serif;
+                            background: radial-gradient(circle at top right, #f8faff, #f0f2f5);
                             color: var(--text); 
                             margin: 0; 
-                            line-height: 1.5;
+                            line-height: 1.6;
+                            min-height: 100vh;
+                            -webkit-font-smoothing: antialiased;
+                        }
+                        h1, h2, h3, .h-font {
+                            font-family: 'Outfit', sans-serif;
+                            font-weight: 600;
+                            letter-spacing: -0.02em;
                         }
                         .glass { 
-                            background: var(--card-bg); 
-                            border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            background: var(--glass-bg);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            border: 1px solid var(--glass-border);
+                            border-radius: var(--radius);
+                            box-shadow: var(--shadow);
                         }
                         nav { 
                             padding: 0 40px; 
                             display: flex; 
                             gap: 30px; 
-                            border-bottom: 1px solid var(--border); 
-                            background: var(--sidebar-bg); 
+                            background: var(--glass-bg);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            border-bottom: 1px solid var(--glass-border);
                             position: sticky; 
                             top: 0; 
                             z-index: 100; 
-                            height: 60px;
+                            height: 72px;
                             align-items: center;
                         }
                         nav a { 
@@ -1657,14 +1670,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         nav a:hover {
                             color: var(--primary);
                         }
+
+                        /* Layout & Structure */
                         main { padding: 40px; }
+
+                        .active-screen {
+                            animation: screen-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+
+                        @keyframes screen-enter {
+                            from { opacity: 0; transform: translateY(10px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
                         .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
                         .card { 
-                            background: var(--card-bg); 
                             padding: 24px; 
-                            border-radius: 8px; 
                             margin-bottom: 24px; 
-                            border: 1px solid var(--border);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input { 
@@ -1684,25 +1705,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-color: var(--primary);
                         }
                         button { 
-                            padding: 10px 20px; 
+                            padding: 12px 24px;
                             background: var(--primary); 
                             border: none; 
-                            border-radius: 6px; 
+                            border-radius: 12px;
                             color: white; 
                             font-weight: 600; 
                             cursor: pointer; 
                             margin-right: 8px; 
                             margin-bottom: 8px; 
-                            font-size: 14px;
-                            transition: background 0.2s;
+                            font-size: 15px;
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            min-height: 44px;
+                            min-width: 44px;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
                         }
                         button:hover {
                             background: var(--primary-hover);
+                            transform: translateY(-1px);
+                            box-shadow: 0 4px 12px rgba(0, 85, 255, 0.2);
+                        }
+                        button:active {
+                            transform: translateY(0);
                         }
                         button.secondary { 
-                            background: transparent; 
-                            border: 1px solid var(--border); 
-                            color: var(--text-secondary); 
+                            background: rgba(0, 0, 0, 0.05);
+                            border: 1px solid transparent;
+                            color: var(--text);
                         }
                         button.secondary:hover {
                             background: #f8f9fa;
@@ -1717,42 +1748,146 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+
+                        /* Dark Mode Overrides */
+                        body.dark-theme {
+                            --bg: #121212;
+                            --glass-bg: rgba(30, 30, 30, 0.8);
+                            --glass-border: rgba(255, 255, 255, 0.1);
+                            --text: #ffffff;
+                            --text-secondary: #a1a1a6;
+                            --border: #333333;
+                            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+                        }
+                        body.dark-theme select, body.dark-theme input, body.dark-theme textarea {
+                            background: #1a1a1b;
+                            color: white;
+                            border-color: #333;
+                        }
+
+                        /* Bottom Nav */
+                        #mobile-bottom-nav {
+                            display: none;
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            height: 72px;
+                            background: var(--glass-bg);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            border-top: 1px solid var(--glass-border);
+                            z-index: 1000;
+                            justify-content: space-around;
+                            align-items: center;
+                            padding-bottom: env(safe-area-inset-bottom);
+                        }
+                        @media (max-width: 768px) {
+                            #main-nav { display: none !important; }
+                            #mobile-bottom-nav { display: flex; }
+                            main { padding: 20px; padding-bottom: 100px; }
+                            .screen { padding: 20px; }
+                        }
+                        .nav-icon-btn {
+                            background: none;
+                            border: none;
+                            padding: 8px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 4px;
+                            color: var(--text-secondary);
+                            min-width: 64px;
+                        }
+                        .nav-icon-btn.active { color: var(--primary); }
+                        .nav-icon-btn span { font-size: 10px; font-weight: 600; }
+                        .nav-icon-btn i { font-size: 20px; }
+
+                        /* Shimmer Loading */
+                        .shimmer {
+                            background: linear-gradient(90deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 1.5s infinite;
+                            border-radius: 8px;
+                        }
+                        @keyframes shimmer {
+                            0% { background-position: 200% 0; }
+                            100% { background-position: -200% 0; }
+                        }
                     </style>
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
-                        <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('dashboard-screen')">Overview</a>
+                        <a onclick="showScreen('agents-screen')">AI Assistants</a>
+                        <a onclick="showScreen('setup-screen')">Launch Site</a>
+                        <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
+
+                    <div id="mobile-bottom-nav">
+                        <button class="nav-icon-btn active" onclick="showScreen('dashboard-screen')">
+                            <i>🏠</i>
+                            <span>Home</span>
+                        </button>
+                        <button class="nav-icon-btn" onclick="showScreen('inbox-screen')">
+                            <i>💬</i>
+                            <span>Messages</span>
+                        </button>
+                        <button class="nav-icon-btn" onclick="showScreen('setup-screen')">
+                            <i>✨</i>
+                            <span>Build</span>
+                        </button>
+                        <button class="nav-icon-btn" onclick="showScreen('agents-screen')">
+                            <i>🤖</i>
+                            <span>Team</span>
+                        </button>
+                        <button class="nav-icon-btn" onclick="showScreen('settings-screen')">
+                            <i>⚙️</i>
+                            <span>Settings</span>
+                        </button>
+                    </div>
 
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
-                        <h1>Create an account</h1>
-                        <p>Create an account to start your business</p>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleSignup(this)">Sign Up</button>
-                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
+                        <h1>Start your journey</h1>
+                        <p>Create an account to build your business</p>
+                        <input type="email" placeholder="Email address" />
+                        <input type="password" placeholder="Choose a password" />
+                        <button onclick="handleSignup(this)">Create Account</button>
+                        <button class="secondary" onclick="showScreen('login-screen')">Already have an account? Sign In</button>
                     </div>
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+                        <h1>Overview</h1>
+
+                        <!-- Daily Summary Section -->
+                        <div class="card glass" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 32px;">
+                            <div style="text-align: center;">
+                                <p style="color: var(--text-secondary); margin: 0; font-size: 14px;">Today's Sales</p>
+                                <h2 style="margin: 8px 0; font-size: 28px;">$142.50</h2>
+                            </div>
+                            <div style="text-align: center; border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);">
+                                <p style="color: var(--text-secondary); margin: 0; font-size: 14px;">New Customers</p>
+                                <h2 style="margin: 8px 0; font-size: 28px;">12</h2>
+                            </div>
+                            <div style="text-align: center;">
+                                <p style="color: var(--text-secondary); margin: 0; font-size: 14px;">Time Saved by AI</p>
+                                <h2 style="margin: 8px 0; font-size: 28px;">4.5 hrs</h2>
+                            </div>
+                        </div>
+
                         <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Agents</button>
+                            <h2>Welcome back!</h2>
+                            <p>Your AI assistants are working on your behalf.</p>
+                            <p>Store Status: <strong style="color: #28a745;">Live & Active</strong></p>
+                            <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button onclick="showScreen('agents-screen')">My AI Team</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <h3>Quick Actions <button class="secondary" style="min-width: 32px; padding: 0 8px;" onclick="document.getElementById('quick-actions-hint').style.display = document.getElementById('quick-actions-hint').style.display === 'none' ? 'block' : 'none'">?</button></h3>
+                            <p id="quick-actions-hint" style="display: none; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; font-size: 14px; margin-bottom: 16px;">These buttons are shortcuts to your most common daily tasks.</p>
+                            <button onclick="showScreen('agents-screen')">Manage AI Team</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
@@ -1766,11 +1901,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <div class="card glass">
-                            <h3>Agent Activity</h3>
+                            <h3>Recent Activity</h3>
                             <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
+                                <div class="shimmer" style="height: 20px; width: 80%; margin-bottom: 12px;"></div>
+                                <div class="shimmer" style="height: 20px; width: 60%; margin-bottom: 12px;"></div>
+                                <div class="shimmer" style="height: 20px; width: 70%;"></div>
                             </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
+                            <button style="margin-top: 16px;" onclick="simulateOrder()">Refresh Updates</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
@@ -1817,57 +1954,121 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Inbox Screen -->
-                    <div id="inbox-screen" class="screen glass">
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
-                        <h1>Customer Inbox</h1>
-                        <div class="card glass" onclick="this.classList.toggle('active')">
-                            <h3>Maya</h3>
-                            <p>Do you do vegan cakes?</p>
-                            <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
+                    <div id="inbox-screen" class="screen">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1 class="h-font" style="margin: 0;">Messages</h1>
+                            <button class="secondary" style="margin: 0;" onclick="showScreen('dashboard-screen')">Done</button>
                         </div>
-                        <div class="card glass">
-                            <h3>Facebook User</h3>
-                            <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
-                        </div>
-                        <div id="chat-window" class="card glass">
-                            <p>Select a conversation</p>
-                            <div id="messages-list"></div>
-                            <input id="reply-input" type="text" placeholder="Type a message...">
-                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
+
+                        <div style="display: grid; grid-template-columns: 320px 1fr; gap: 24px; height: calc(100vh - 200px); min-height: 500px;">
+                            <!-- Conversation List -->
+                            <div class="card glass" style="padding: 0; overflow-y: auto;">
+                                <div style="padding: 16px; border-bottom: 1px solid var(--glass-border);">
+                                    <input type="text" placeholder="Search messages..." style="margin-bottom: 0;">
+                                </div>
+                                <div style="padding: 8px;">
+                                    <div class="card glass" style="margin-bottom: 8px; cursor: pointer; border: 1px solid var(--primary); background: rgba(0, 85, 255, 0.05);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                            <strong style="font-size: 14px;">Maya</strong>
+                                            <span style="font-size: 11px; color: var(--text-secondary);">2m ago</span>
+                                        </div>
+                                        <p style="font-size: 13px; margin: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Do you do vegan cakes?</p>
+                                    </div>
+                                    <div class="card glass" style="margin-bottom: 8px; cursor: pointer; opacity: 0.7;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                            <strong style="font-size: 14px;">Facebook User</strong>
+                                            <span style="font-size: 11px; color: var(--text-secondary);">1h ago</span>
+                                        </div>
+                                        <p style="font-size: 13px; margin: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Hello from Facebook!</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Chat Window -->
+                            <div class="card glass" style="display: flex; flex-direction: column; padding: 0;">
+                                <div style="padding: 16px; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; border-radius: 20px; background: #eee; display: flex; align-items: center; justify-content: center;">M</div>
+                                    <div>
+                                        <h3 class="h-font" style="margin: 0; font-size: 16px;">Maya</h3>
+                                        <p style="margin: 0; font-size: 12px; color: #28a745;">Online</p>
+                                    </div>
+                                </div>
+
+                                <div style="flex-grow: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+                                    <div style="align-self: flex-start; background: #eee; padding: 12px 16px; border-radius: 12px 12px 12px 0; max-width: 80%; font-size: 14px;">
+                                        Hi! I was wondering if you do vegan cakes for birthdays?
+                                    </div>
+                                    <div style="align-self: flex-end; background: var(--primary); color: white; padding: 12px 16px; border-radius: 12px 12px 0 12px; max-width: 80%; font-size: 14px;">
+                                        Hello Maya! Yes, we have several delicious vegan options.
+                                    </div>
+                                    <div style="align-self: flex-start; background: #eee; padding: 12px 16px; border-radius: 12px 12px 12px 0; max-width: 80%; font-size: 14px;">
+                                        That's great! Do you have a list I can see?
+                                    </div>
+                                </div>
+
+                                <div style="padding: 20px; border-top: 1px solid var(--glass-border);">
+                                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                        <button class="secondary" style="font-size: 12px; padding: 6px 12px; min-height: 32px;" onclick="document.getElementById('reply-input').value = 'Sure, I will send our vegan menu right over!'">✨ Send Vegan Menu</button>
+                                        <button class="secondary" style="font-size: 12px; padding: 6px 12px; min-height: 32px;" onclick="document.getElementById('reply-input').value = 'We have 3 main flavors: Chocolate, Vanilla, and Berry.'">✨ Explain Flavors</button>
+                                    </div>
+                                    <div style="display: flex; gap: 12px;">
+                                        <input id="reply-input" type="text" placeholder="Type your message..." style="margin-bottom: 0;">
+                                        <button style="margin: 0;">Send</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Meetings Screen -->
-                    <div id="meetings-screen" class="screen glass">
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;" 
-                                onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
-                            Meetings Schedule New Meeting
-                        </button>
-                        <div class="card glass meeting">
-                            <h3>Next Item</h3>
-                            <p>Team Sync - 14:00</p>
-                            <p>00:10:00</p>
-                            <button onclick="showScreen('meeting-room-screen')">Join Start</button>
-                            <button onclick="this.parentElement.innerHTML='<p>Canceled Cancelled</p>'">Cancel Delete</button>
+                    <div id="meetings-screen" class="screen">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+                            <h1 class="h-font" style="margin: 0;">Calendar & Sync</h1>
+                            <button onclick="document.getElementById('scheduler').style.display='block'">+ Schedule New</button>
                         </div>
-                        <div id="scheduler" class="card glass" style="display: none;">
-                            <h2>Plan Create</h2>
-                            <input type="text" placeholder="Meeting Title">
-                            <input type="date">
-                            <input type="time">
-                            <input type="email" placeholder="Participant Email">
-                            <button onclick="alert('Participant added')">Add</button>
-                            <button onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
+
+                        <div id="scheduler" class="card glass" style="display: none; margin-bottom: 32px;">
+                            <h2 class="h-font">Schedule a Sync</h2>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <input type="text" placeholder="What are we discussing?">
+                                <input type="email" placeholder="Who else is joining?">
+                                <input type="date">
+                                <input type="time">
+                            </div>
+                            <div style="margin-top: 16px; display: flex; gap: 12px;">
+                                <button onclick="alert('Meeting saved!'); document.getElementById('scheduler').style.display='none'">Confirm</button>
+                                <button class="secondary" onclick="document.getElementById('scheduler').style.display='none'">Cancel</button>
+                            </div>
                         </div>
-                        <div class="tabs">
-                            <button onclick="alert('History shown')">📜 View Log</button>
-                            <button onclick="alert('Records')">Past</button>
-                            <button onclick="alert('Calendar')">Calendar</button>
-                            <button onclick="alert('Archive')">Archive</button>
+
+                        <div class="card glass" style="border-left: 4px solid var(--primary);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                        <span style="background: rgba(0, 85, 255, 0.1); color: var(--primary); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">UPCOMING</span>
+                                        <span style="color: var(--text-secondary); font-size: 13px;">Today at 2:00 PM</span>
+                                    </div>
+                                    <h3 class="h-font" style="margin-bottom: 4px;">Weekly Store Update</h3>
+                                    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">Reviewing last week's sales and planning new promotions.</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <p style="font-family: monospace; font-weight: 700; font-size: 18px; margin: 0;">00:10:45</p>
+                                    <p style="font-size: 11px; color: var(--text-secondary);">Starts in</p>
+                                </div>
+                            </div>
+                            <button onclick="showScreen('meeting-room-screen')">Join Now</button>
+                            <button class="secondary">Reschedule</button>
                         </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+
+                        <div class="card glass" style="opacity: 0.8;">
+                            <h3 class="h-font">Recent Notes</h3>
+                            <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px; line-height: 2;">
+                                <li>📅 Monday Sync: Decided to launch the summer collection on June 1st.</li>
+                                <li>📅 Support Review: Need to update the FAQ about international shipping.</li>
+                            </ul>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
                     <!-- Meeting Room Screen -->
@@ -1891,148 +2092,210 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
+                        <h1>My AI Assistants</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 24px;">Think of these as specialized team members available 24/7 to help you grow.</p>
                         <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <h3>Growth Expert</h3>
+                            <p>Helps you find new customers and promotes your products.</p>
+                            <p>Status: <strong style="color: #28a745;">Active</strong></p>
+                            <button>Ask for Help</button>
                         </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
                     <!-- Setup Page -->
                     <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
+                        <h1>Store Designer</h1>
                         <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
+                            <h3>Step 1: Business Profile <button class="secondary" style="min-width: 32px; padding: 0 8px;" onclick="alert('This info helps our AI build a storefront that matches your brand.')">?</button></h3>
+                            <p>Let's tell the world who you are and what you do.</p>
+                            <button onclick="alert('Continuing...')">Continue Setup</button>
                         </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        <p style="text-align: center; color: var(--text-secondary);">Your site is protected with banking-grade security.</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <h1>Connect Your Tools</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 24px;">Link your existing apps to make them work together seamlessly.</p>
+                        <div class="card glass">
+                            <h3>Custom Connections</h3>
+                            <p>Bridge your store with other tools you use daily.</p>
+                            <button>Add New Connection</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
                     <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
-                        <h1>Settings</h1>
-                        <h2>General</h2>
-                        <label><input type="checkbox"> Enable Email Notifications</label>
-                        <label><input type="checkbox"> Enable Push Notifications</label>
-                        <p>Timezone</p>
-                        <select><option>UTC</option><option>EST</option></select>
-                        <p>Language</p>
-                        <select><option>English</option><option>Spanish</option></select>
-                        <p>Theme</p>
-                        <button onclick="document.body.className='dark-theme'">Dark</button>
-                        <button onclick="document.body.className='light-theme'">Light</button>
-                        <p>Date Format</p>
-                        <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
-                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+                        <h1 class="h-font">App Settings</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 32px;">Personalize your experience and manage your business preferences.</p>
 
-                        <hr/>
-                        <h2>Profile</h2>
-                        <p>Photo</p>
-                        <input type="file">
-                        <input type="text" placeholder="Display Name">
-                        <textarea placeholder="Bio"></textarea>
-                        <input type="email" placeholder="Email or Username">
-                        <input type="tel" placeholder="Phone Number">
-                        <button onclick="alert('Profile updated!')">Update</button>
+                        <div class="card glass">
+                            <h2 class="h-font">Notifications</h2>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Control how we keep you updated about your store.</p>
+                            <label style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; cursor: pointer;">
+                                <input type="checkbox" style="width: 20px; height: 20px; margin: 0;">
+                                <span>Get email updates about new orders</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; cursor: pointer;">
+                                <input type="checkbox" style="width: 20px; height: 20px; margin: 0;">
+                                <span>Get mobile alerts for customer messages</span>
+                            </label>
+                        </div>
 
-                        <hr/>
-                        <h2>Security</h2>
-                        <p>Change Password</p>
-                        <input type="password" placeholder="Current Password">
-                        <input type="password" placeholder="New Password">
-                        <input type="password" placeholder="Confirm Password">
-                        <button onclick="alert('Password changed!')">Change</button>
+                        <div class="card glass">
+                            <h2 class="h-font">Display & Language</h2>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div>
+                                    <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Language</p>
+                                    <select style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: white;">
+                                        <option>English</option>
+                                        <option>Spanish</option>
+                                        <option>French</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Timezone</p>
+                                    <select style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: white;">
+                                        <option>Pacific Time (PT)</option>
+                                        <option>Eastern Time (ET)</option>
+                                        <option>UTC</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-top: 24px;">
+                                <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Appearance</p>
+                                <div style="display: flex; gap: 12px;">
+                                    <button class="secondary" style="flex: 1;" onclick="document.body.className='light-theme'">Light</button>
+                                    <button class="secondary" style="flex: 1;" onclick="document.body.className='dark-theme'">Dark</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card glass">
+                            <h2 class="h-font">Business Profile</h2>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Your public information shown to customers.</p>
+                            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px;">
+                                <div style="width: 80px; height: 80px; border-radius: 40px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>
+                                <button class="secondary" style="margin: 0;">Change Photo</button>
+                            </div>
+                            <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Store Name</p>
+                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Short Bio</p>
+                            <textarea placeholder="Tell customers about your business..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); min-height: 100px; font-family: inherit; margin-bottom: 16px;"></textarea>
+                            <button onclick="alert('Profile updated!')">Save Changes</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h2 class="h-font">Security</h2>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Keep your account safe and secure.</p>
+                            <button class="secondary" onclick="alert('Password reset link sent!')">Reset Password</button>
+                            <button class="secondary" style="color: #d93025; border-color: rgba(217, 48, 37, 0.2);">Delete My Account</button>
+                        </div>
+
+                        <div style="padding-bottom: 40px;">
+                            <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Done</button>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+                        </div>
                     </div>
 
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen">
-                        <h1>Pricing Plans</h1>
-                        <p>Choose the best plan for your business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
-                        <div class="card glass">
-                            <h3>Free Starter</h3>
-                            <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Pro Professional</h3>
-                            <p>$29 / 30-days</p>
-                            <p>Suggested</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Business Enterprise</h3>
-                            <p>$79 / 30-days</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
-                                <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
+                        <h1 class="h-font" style="text-align: center; margin-bottom: 8px;">Simple, Transparent Pricing</h1>
+                        <p style="text-align: center; color: var(--text-secondary); margin-bottom: 40px;">Choose the plan that fits your business stage.</p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 40px;">
+                            <!-- Free Plan -->
+                            <div class="card glass" style="display: flex; flex-direction: column; border: 1px solid var(--glass-border);">
+                                <h3 class="h-font" style="margin-bottom: 4px;">Free</h3>
+                                <div style="font-size: 32px; font-weight: 700; margin-bottom: 20px;">$0 <span style="font-size: 16px; color: var(--text-secondary); font-weight: 400;">/ month</span></div>
+                                <p style="font-size: 14px; margin-bottom: 24px; flex-grow: 1;">Perfect for starting your journey and testing your ideas.</p>
+                                <ul style="list-style: none; padding: 0; margin: 0 0 32px 0; font-size: 14px; line-height: 2.2;">
+                                    <li>✓ 1 AI Assistant</li>
+                                    <li>✓ Simple Online Store</li>
+                                    <li>✓ Standard Support</li>
+                                    <li>✓ Secure Payments</li>
+                                </ul>
+                                <button class="secondary" style="width: 100%;" onclick="showScreen('dashboard-screen')">Current Plan</button>
+                            </div>
+
+                            <!-- Pro Plan -->
+                            <div class="card glass" style="display: flex; flex-direction: column; border: 2px solid var(--primary); position: relative; transform: scale(1.05); z-index: 1;">
+                                <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 4px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;">Most Popular</div>
+                                <h3 class="h-font" style="margin-bottom: 4px;">Professional</h3>
+                                <div style="font-size: 32px; font-weight: 700; margin-bottom: 20px;">$29 <span style="font-size: 16px; color: var(--text-secondary); font-weight: 400;">/ month</span></div>
+                                <p style="font-size: 14px; margin-bottom: 24px; flex-grow: 1;">Advanced tools for growing businesses that need more power.</p>
+                                <ul style="list-style: none; padding: 0; margin: 0 0 32px 0; font-size: 14px; line-height: 2.2;">
+                                    <li>✓ 10 AI Assistants</li>
+                                    <li>✓ Custom Domain</li>
+                                    <li>✓ Priority Support</li>
+                                    <li>✓ Advanced Analytics</li>
+                                    <li>✓ Social Media Integration</li>
+                                </ul>
+                                <button style="width: 100%;" onclick="showScreen('checkout-screen')">Upgrade to Pro</button>
+                            </div>
+
+                            <!-- Business Plan -->
+                            <div class="card glass" style="display: flex; flex-direction: column; border: 1px solid var(--glass-border);">
+                                <h3 class="h-font" style="margin-bottom: 4px;">Business</h3>
+                                <div style="font-size: 32px; font-weight: 700; margin-bottom: 20px;">$79 <span style="font-size: 16px; color: var(--text-secondary); font-weight: 400;">/ month</span></div>
+                                <p style="font-size: 14px; margin-bottom: 24px; flex-grow: 1;">Full-scale operations for established teams and high volume.</p>
+                                <ul style="list-style: none; padding: 0; margin: 0 0 32px 0; font-size: 14px; line-height: 2.2;">
+                                    <li>✓ Unlimited AI Assistants</li>
+                                    <li>✓ Team Collaboration</li>
+                                    <li>✓ 24/7 Dedicated Support</li>
+                                    <li>✓ White-label Branding</li>
+                                    <li>✓ API Access</li>
+                                </ul>
+                                <button class="secondary" style="width: 100%;" onclick="alert('Contacting sales...')">Contact Sales</button>
                             </div>
                         </div>
-                        <p>100% money back guarantee. Secure SSL payments.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
-                            </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
+
+                        <div class="card glass" style="text-align: center;">
+                            <h3 class="h-font">Common Questions</h3>
+                            <div style="text-align: left; max-width: 600px; margin: 24px auto;">
+                                <details style="margin-bottom: 16px; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.02);">
+                                    <summary style="font-weight: 600; cursor: pointer; padding: 4px;">Can I cancel at any time?</summary>
+                                    <p style="font-size: 14px; margin-top: 12px; color: var(--text-secondary);">Yes, you can cancel your subscription at any time. You'll keep your features until the end of your current billing period.</p>
+                                </details>
+                                <details style="margin-bottom: 16px; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.02);">
+                                    <summary style="font-weight: 600; cursor: pointer; padding: 4px;">How does the AI assistant limit work?</summary>
+                                    <p style="font-size: 14px; margin-top: 12px; color: var(--text-secondary);">Each AI assistant is a specialized team member (e.g., Marketing, Sales, Customer Support). Pro users can have up to 10 active at once.</p>
+                                </details>
                             </div>
                         </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
-                        <h1>My Current Plan</h1>
-                        <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
+                        <h1>My Subscription</h1>
+                        <p>Status: <strong style="color: #28a745;">Active</strong></p>
+                        <p>Next payment: June 1, 2024</p>
                         <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                            <h3>Monthly Allowance</h3>
+                            <p>Storage: <progress value="10" max="500"></progress> 10MB of 500MB used</p>
+                            <p>Current estimated cost: $1.23</p>
+                            <button onclick="showScreen('pricing-screen')">Change Plan</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <button class="secondary">Download Receipt</button>
+                        <button class="secondary" style="color: #d93025;">Stop Subscription</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
-                        <p>LLM Usage: 5,000 tokens</p>
-                        <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
+                        <h1>Usage Details</h1>
+                        <div class="card glass">
+                            <h3>AI Assistance</h3>
+                            <p>Your AI team has handled 5,000 requests this month.</p>
+                            <p>This has saved you approximately 15 hours of manual work.</p>
+                        </div>
+                        <button onclick="showScreen('my-plan-screen')">Back to Subscription</button>
                     </div>
 
                      <!-- Checkout Page -->
@@ -2147,36 +2410,84 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
                         </div>
                         <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <h1 class="h-font">Secure your web address</h1>
+                            <p style="color: var(--text-secondary); margin-bottom: 32px;">Every store needs a home on the web. Choose a free address or link one you already own.</p>
+
+                            <div style="display: grid; gap: 16px;">
+                                <div class="card glass" style="margin: 0; cursor: pointer; border: 1px solid var(--primary); background: rgba(0, 85, 255, 0.05);" onclick="nextStep(10)">
+                                    <h3 class="h-font" style="margin: 0; font-size: 16px;">🌐 Free Address</h3>
+                                    <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">yourbusiness.ohc.app</p>
+                                </div>
+                                <div class="card glass" style="margin: 0; cursor: pointer; opacity: 0.8;" onclick="alert('Domain service coming soon!')">
+                                    <h3 class="h-font" style="margin: 0; font-size: 16px;">🔗 Custom Domain</h3>
+                                    <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">www.yourbusiness.com</p>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 32px; display: flex; gap: 12px;">
+                                <button style="flex: 1;" onclick="nextStep(10)">Continue</button>
+                                <button class="secondary" onclick="nextStep(8)">Back</button>
+                            </div>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
                             <button onclick="nextStep(100)">Publish my business →</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <div style="text-align: center; padding: 40px 0;">
+                                <div style="font-size: 64px; margin-bottom: 24px;">🎉</div>
+                                <h1 class="h-font">Your business is live!</h1>
+                                <p style="color: var(--text-secondary); margin-bottom: 32px;">Congratulations! You've taken the first big step. Your store is now ready to welcome customers.</p>
+                                <button style="padding: 16px 32px; font-size: 18px;" onclick="showScreen('checklist-screen')">See what's next</button>
+                            </div>
                         </div>
 
                         <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                            <h1 class="h-font">Launch Checklist</h1>
+                            <p style="color: var(--text-secondary); margin-bottom: 32px;">Complete these steps to ensure your store is perfectly prepared for your first sale.</p>
+
+                            <div class="card glass">
+                                <div style="display: flex; flex-direction: column; gap: 20px;">
+                                    <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: 12px; background: rgba(40, 167, 69, 0.1); border: 1px solid rgba(40, 167, 69, 0.2);">
+                                        <div style="font-size: 20px;">✅</div>
+                                        <div>
+                                            <h3 class="h-font" style="margin: 0; font-size: 16px;">Create your profile</h3>
+                                            <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Done! Your business details are saved.</p>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                                        <div style="font-size: 20px; color: var(--border);">⭕</div>
+                                        <div style="flex-grow: 1;">
+                                            <h3 class="h-font" style="margin: 0; font-size: 16px;">Add 3 products</h3>
+                                            <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Adding more products helps customers find what they love.</p>
+                                        </div>
+                                        <button class="secondary" style="margin: 0; padding: 6px 12px; min-height: 32px; font-size: 12px;">Add Now</button>
+                                    </div>
+
+                                    <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                                        <div style="font-size: 20px; color: var(--border);">⭕</div>
+                                        <div style="flex-grow: 1;">
+                                            <h3 class="h-font" style="margin: 0; font-size: 16px;">Connect Instagram</h3>
+                                            <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Show off your products where your customers already are.</p>
+                                        </div>
+                                        <button class="secondary" style="margin: 0; padding: 6px 12px; min-height: 32px; font-size: 12px;">Connect</button>
+                                    </div>
+
+                                    <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                                        <div style="font-size: 20px; color: var(--border);">⭕</div>
+                                        <div style="flex-grow: 1;">
+                                            <h3 class="h-font" style="margin: 0; font-size: 16px;">Share your link</h3>
+                                            <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Send your store link to a friend to get your first feedback.</p>
+                                        </div>
+                                        <button class="secondary" style="margin: 0; padding: 6px 12px; min-height: 32px; font-size: 12px;">Copy Link</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="text-align: center; margin-top: 32px;">
+                                <button style="width: 100%;" onclick="showScreen('dashboard-screen')">Go to Overview</button>
+                            </div>
                         </div>
                         <div id="step-101" style="display: none;">
                             <h1>You're set up! Here's what to do next:</h1>
@@ -2188,37 +2499,66 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <h1 class="h-font">AI Instant Build</h1>
+                            <p style="color: var(--text-secondary); margin-bottom: 32px;">Describe your dream business in a sentence or two, and our AI will draft your entire storefront in seconds.</p>
+                            <textarea id="ai-description" placeholder="e.g. I run a local bakery called Maya's Cakes in Brooklyn. We specialize in organic vegan cupcakes and custom birthday cakes." style="width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border); min-height: 120px; font-family: inherit; margin-bottom: 24px; font-size: 16px;"></textarea>
+                            <button id="ai-build-btn" style="width: 100%; padding: 16px;" onclick="startAIBuild()">✨ Build My Storefront</button>
+                            <div style="text-align: center; margin-top: 24px;">
+                                <button class="secondary" style="background: none;" onclick="nextStep(1)">Wait, I'll do it manually</button>
+                            </div>
                         </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
+                        <div id="step-generating" style="display: none; text-align: center; padding: 60px 0;">
+                            <div class="shimmer" style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 32px auto;"></div>
+                            <h1 class="h-font">Designing your storefront...</h1>
+                            <p style="color: var(--text-secondary);">Our AI is crafting a custom experience for your brand. This usually takes about 30 seconds.</p>
+                            <div style="max-width: 300px; margin: 40px auto 0 auto; display: flex; flex-direction: column; gap: 12px;">
+                                <div class="shimmer" style="height: 12px; width: 100%;"></div>
+                                <div class="shimmer" style="height: 12px; width: 80%;"></div>
+                                <div class="shimmer" style="height: 12px; width: 90%;"></div>
+                            </div>
                         </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        <div id="step-launch-ai" style="display: none; text-align: center; padding: 40px 0;">
+                            <div style="font-size: 64px; margin-bottom: 24px;">✨</div>
+                            <h1 class="h-font">Your AI storefront is ready!</h1>
+                            <p style="color: var(--text-secondary); margin-bottom: 32px;">We've generated a theme, product descriptions, and a custom logo based on your vision.</p>
+                            <div class="card glass" style="margin-bottom: 32px; padding: 40px;">
+                                <h2 class="h-font" id="ai-site-name">Your New Store</h2>
+                                <p>Previewing live layout...</p>
+                            </div>
+                            <button style="width: 100%; padding: 16px;" onclick="showScreen('checklist-screen')">Launch My Storefront →</button>
                         </div>
                     </div>
 
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
-                        <h1>Login</h1>
-                        <h2>One Human Corp</h2>
+                        <h1>Welcome Back</h1>
                         <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                        <div id="login-error" class="error" style="background: rgba(217, 48, 37, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(217, 48, 37, 0.2); margin-bottom: 20px;">
+                            <strong>Oops!</strong> We couldn't find an account with those details. Please check your email and password and try again.
+                        </div>
+                        <input type="email" id="login-email" placeholder="Email address" />
+                        <input type="password" id="login-password" placeholder="Password" />
+                        <button style="width: 100%;" onclick="handleLogin(this)">Sign In</button>
+                        <div style="text-align: center; margin-top: 16px;">
+                            <button class="secondary" style="background: none;" onclick="showScreen('signup-screen')">New here? Create an account</button>
+                        </div>
+                        <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 24px 0;" />
+                        <button class="secondary" style="width: 100%;" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
                     <script>
+                        /**
+                         * One Human Corp - UI Navigation & Interaction Engine
+                         *
+                         * This script handles the client-side routing, screen transitions,
+                         * and dynamic UI updates for the embedded OHC management interface.
+                         *
+                         * Design Principles:
+                         * 1. Clarity: Every action must be understandable by a non-technical user.
+                         * 2. Speed: Transitions must be snappy (<300ms).
+                         * 3. Continuity: State is preserved across screen switches where appropriate.
+                         */
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2239,33 +2579,150 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meeting-room-screen': '/meetings/room/1'
                         };
 
+                        /**
+                         * Switches between application screens with a smooth transition.
+                         * @param {string} id - The ID of the screen element to display.
+                         */
                         function showScreen(id) {
-                            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-                            const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
+                            const screens = document.querySelectorAll('.screen');
+                            const targetScreen = document.getElementById(id);
 
-                            // Nav renaming logic
-                            const navButtons = document.querySelectorAll('.nav-item');
-                            if (id !== 'dashboard-screen') {
-                                navButtons.forEach(btn => {
-                                    if (!btn.dataset.text) btn.dataset.text = btn.textContent;
-                                    btn.textContent = '---';
-                                });
+                            if (!targetScreen) {
+                                console.error(`Screen with ID "${id}" not found.`);
+                                return;
+                            }
+
+                            // Update URL first for history support
+                            if (pathMap[id] && window.location.protocol !== 'data:' && window.location.href !== 'about:blank') {
+                                window.history.pushState({ screenId: id }, '', pathMap[id]);
+                            }
+
+                            // Performance: Hide all screens and then show the target
+                            // In a real app, we might add an 'entering' class for animations
+                            screens.forEach(s => {
+                                s.style.display = 'none';
+                                s.classList.remove('active-screen');
+                            });
+
+                            targetScreen.style.display = 'block';
+                            targetScreen.classList.add('active-screen');
+
+                            // Dynamic Navigation Handling
+                            const mainNav = document.getElementById('main-nav');
+                            const mobileNav = document.getElementById('mobile-bottom-nav');
+
+                            const authenticatedScreens = [
+                                'dashboard-screen', 'agents-screen', 'api-screen',
+                                'settings-screen', 'my-plan-screen', 'pricing-screen',
+                                'checkout-screen', 'diagnostics-screen', 'services-screen',
+                                'scaling-screen', 'checklist-screen', 'users-screen',
+                                'referral-dashboard-screen', 'inbox-screen', 'meetings-screen',
+                                'meeting-room-screen', 'setup-screen'
+                            ];
+
+                            if (authenticatedScreens.includes(id)) {
+                                if (mainNav) mainNav.style.display = 'flex';
+                                if (mobileNav) mobileNav.style.display = 'flex';
                             } else {
-                                navButtons.forEach(btn => {
-                                    if (btn.dataset.text) btn.textContent = btn.dataset.text;
-                                });
+                                if (mainNav) mainNav.style.display = 'none';
+                                if (mobileNav) mobileNav.style.display = 'none';
                             }
 
-                            if (pathMap[id]) {
-                                window.history.pushState({}, '', pathMap[id]);
+                            // Update Bottom Navigation Active States
+                            document.querySelectorAll('.nav-icon-btn').forEach(btn => {
+                                btn.classList.remove('active');
+                                // Check if the button's action leads to the current screen
+                                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${id}'`)) {
+                                    btn.classList.add('active');
+                                }
+                            });
+
+                            // Scroll to top for new screen
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                            console.log(`Navigation: Switched to ${id}`);
+                        }
+
+                        /**
+                         * Handles the login process and simulates authentication.
+                         * @param {HTMLElement} btn - The button element that triggered the login.
+                         */
+                        function handleLogin(btn) {
+                            const email = document.getElementById('login-email').value;
+                            const pass = document.getElementById('login-password').value;
+                            const errorDiv = document.getElementById('login-error');
+
+                            if (!email || !pass) {
+                                errorDiv.style.display = 'block';
+                                return;
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
-                                document.getElementById('main-nav').style.display = 'flex';
-                            } else {
-                                document.getElementById('main-nav').style.display = 'none';
+                            // Visual feedback for loading
+                            const originalText = btn.innerText;
+                            btn.innerText = 'Signing in...';
+                            btn.disabled = true;
+
+                            setTimeout(() => {
+                                if (email.includes('error')) {
+                                    errorDiv.style.display = 'block';
+                                    btn.innerText = originalText;
+                                    btn.disabled = false;
+                                } else {
+                                    showScreen('dashboard-screen');
+                                }
+                            }, 800);
+                        }
+
+                        /**
+                         * Transitions between setup wizard steps.
+                         * @param {number|string} step - The next step number or 'ai' for AI flow.
+                         */
+                        function nextStep(step) {
+                            // Hide current step
+                            const currentStepDiv = document.querySelector('[id^="step-"]:not([style*="none"])');
+                            if (currentStepDiv) currentStepDiv.style.display = 'none';
+
+                            // Show target step
+                            const nextStepDiv = document.getElementById(`step-${step}`);
+                            if (nextStepDiv) {
+                                nextStepDiv.style.display = 'block';
+                                nextStepDiv.scrollIntoView({ behavior: 'smooth' });
                             }
+
+                            if (step === 100) {
+                                triggerConfetti();
+                            }
+                        }
+
+                        /**
+                         * Starts the AI building process with data extraction.
+                         */
+                        function startAIBuild() {
+                            const desc = document.getElementById('ai-description').value;
+                            if (!desc) {
+                                alert("Please describe your business first!");
+                                return;
+                            }
+
+                            // Extract potential business name
+                            const nameMatch = desc.match(/called ([^.,\s]+ [^.,\s]+)|called ([^.,\s]+)/i);
+                            const bizName = (nameMatch ? (nameMatch[1] || nameMatch[2]) : "Your New Store");
+                            document.getElementById('ai-site-name').innerText = bizName;
+
+                            nextStep('generating');
+
+                            // Simulate AI progress
+                            setTimeout(() => {
+                                nextStep('launch-ai');
+                            }, 3000);
+                        }
+
+                        /**
+                         * Triggers a visual celebration when a major milestone is reached.
+                         */
+                        function triggerConfetti() {
+                            console.log("CONFETTI CELEBRATION!");
+                            // In a real environment, we'd use canvas-confetti or similar
                         }
 
                         window.onload = () => {
