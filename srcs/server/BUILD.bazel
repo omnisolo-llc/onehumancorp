@@ -20,5 +20,6 @@ go_binary(
         "//srcs/server/api/mesh:mesh",
         "//srcs/server/dashboard:dashboard",
         "//srcs/server/api/sync:sync",
+        "//srcs/server/tools/crdtmcp:crdtmcp",
     ],
 )

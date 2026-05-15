@@ -1,6 +1,7 @@
 package main
 
 import (
+	"onehumancorp/srcs/server/tools/crdtmcp"
 	"context"
 	"database/sql"
 	"log"
@@ -146,6 +147,10 @@ func main() {
 	mux.HandleFunc("/api/v1/autodream/query", dashboard.HandleAutoDreamQuery)
 	mux.HandleFunc("/api/mesh/broadcast", dashboard.HandleMeshBroadcast)
 	syncHandler := sync.NewSyncHandler(taskStore)
+	crdtProvider := crdtmcp.NewProvider(db)
+	_ = crdtmcp.NewCrdtMCP(crdtProvider)
+	crdtHandler := sync.NewCrdtHandler(db)
+	mux.HandleFunc("/api/v1/sync/mcp-deltas", onboarding.TenantAuthMiddleware(crdtHandler.HandleSyncCrdt))
 	mux.HandleFunc("/api/sync/missions", onboarding.TenantAuthMiddleware(syncHandler.HandleSyncMissions))
 
 	go func() {
