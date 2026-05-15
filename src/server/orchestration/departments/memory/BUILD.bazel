@@ -3,7 +3,11 @@ filegroup(
     srcs = [
         "e2e_journey_test.rs",
         "layer.rs",
+        "layer_tests.rs",
+        "metrics.rs",
         "mod.rs",
+        "models.rs",
+        "worker.rs",
     ],
     visibility = ["//src/server/orchestration/departments:__pkg__"],
 )

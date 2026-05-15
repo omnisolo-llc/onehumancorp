@@ -120,6 +120,7 @@ pub struct DepartmentOrchestrator {
     agents: RwLock<HashMap<String, Arc<tokio::sync::RwLock<dyn BaseAgent>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
     memory_repo: Arc<VectorRepository>,
+    memory_layer: Arc<super::memory::layer::MemoryLayer>,
     mesh: Arc<dyn TeammateMesh>,
     action_counter: Counter<u64>,
 }
@@ -132,14 +133,44 @@ impl DepartmentOrchestrator {
         };
         let meter = global::meter("ohc.orchestrator");
         let action_counter = meter.u64_counter("agent.actions.total").build();
+
+        let pruning_policy = super::memory::models::PruningPolicy {
+            retention_days_default: 90,
+            retention_days_override: None,
+            keep_high_access_count: 5,
+        };
+        let mut department_weights = std::collections::HashMap::new();
+        department_weights.insert("sales".to_string(), 1.5);
+        let conflict_policy = super::memory::models::ConflictResolutionPolicy {
+            prefer_recency: true,
+            require_owner_approval: true,
+            department_weights,
+        };
         Self {
             db,
             departments: RwLock::new(HashMap::new()),
             agents: RwLock::new(HashMap::new()),
             event_subscriptions: RwLock::new(HashMap::new()),
-            memory_repo,
+            memory_repo: memory_repo.clone(),
             mesh,
             action_counter,
+
+            memory_layer: {
+                let layer = Arc::new(super::memory::layer::MemoryLayer::new(
+                    memory_repo.clone(),
+                    pruning_policy,
+                    conflict_policy,
+                ));
+                let layer_clone = layer.clone();
+                let worker = super::memory::worker::MemoryConsolidationWorker::new(
+                    layer_clone,
+                    tokio::time::Duration::from_secs(3600), // Run every hour
+                );
+                tokio::spawn(async move {
+                    worker.start().await;
+                });
+                layer
+            },
         }
     }
 

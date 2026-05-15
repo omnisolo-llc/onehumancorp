@@ -1,2 +1,10 @@
-pub mod layer; // Persistent memory layer module
-#[cfg(test)] pub mod e2e_journey_test;
+pub mod layer;
+pub mod models;
+pub mod metrics;
+pub mod worker;
+
+#[cfg(test)]
+pub mod e2e_journey_test;
+
+#[cfg(test)]
+mod layer_tests;

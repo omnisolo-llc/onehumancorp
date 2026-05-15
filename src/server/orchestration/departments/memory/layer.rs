@@ -1,118 +1,123 @@
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
+use super::models::{MemoryContext, ConflictResolutionPolicy, PruningPolicy};
+use super::metrics::MemoryMetrics;
 use std::sync::Arc;
+use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-    use std::str::FromStr;
-    use sqlx::Row;
+#[derive(Clone)]
+pub struct MemoryLayer {
+    metrics: Arc<MemoryMetrics>,
+    repo: Arc<VectorRepository>,
+    pruning_policy: Arc<PruningPolicy>,
+    conflict_policy: Arc<ConflictResolutionPolicy>,
+}
 
-    #[tokio::test]
-    async fn test_cross_department_context_sharing() {
-        // Safe database initialization
-        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
-        let pool = SqlitePoolOptions::new()
-            .connect_with(conn_opts)
-            .await
-            .expect("Failed to connect to SQLite in-memory database");
-
-        // Set up the schema
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                agent_id TEXT,
-                content TEXT NOT NULL,
-                embedding TEXT,
-                source_type TEXT NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                reference_count INTEGER DEFAULT 0,
-                reliability_score INTEGER DEFAULT 50,
-                owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );"
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create consolidated_memory table");
-
-        // The VectorRepository's `semantic_search` uses vector functions for Postgres.
-        // For SQLite, it uses `vec_distance_cosine`, or falls back to returning all matches or none
-        // based on extension availability. Let's provide a mock function so `vec_distance_cosine` succeeds
-        // inside `semantic_search` if the repository calls it. If `sqlite-vss` is not available,
-        // we can still test the cross-department schema integrity and the logic surrounding context sharing
-        // by verifying the records can be stored and retrieved successfully.
-
-        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
-
-        // Dept A: Customer Success notes customer is unhappy
-        let rec1 = EmbeddingRecord {
-            id: "cs_1".to_string(),
-            tenant_id: "org1".to_string(),
-            agent_id: "cs_agent_1".to_string(),
-            content: "Customer expressed dissatisfaction with recent delivery delays.".to_string(),
-            embedding: vec![0.5, 0.5, 0.5],
-            source_type: "SESSION_DATA".to_string(),
-            created_at: chrono::Utc::now(),
-            last_referenced_at: chrono::Utc::now(),
-            reference_count: 1,
-            reliability_score: 80,
-            owner_override: false,
-            metadata: None,
-        };
-        repo.upsert(&rec1).await.expect("Failed to upsert Dept A record");
-
-        // Dept B: Operations
-        let rec2 = EmbeddingRecord {
-            id: "ops_1".to_string(),
-            tenant_id: "org1".to_string(),
-            agent_id: "ops_agent_1".to_string(),
-            content: "Warehouse routing updated to reduce delivery delays.".to_string(),
-            embedding: vec![0.4, 0.6, 0.5],
-            source_type: "SESSION_DATA".to_string(),
-            created_at: chrono::Utc::now(),
-            last_referenced_at: chrono::Utc::now(),
-            reference_count: 1,
-            reliability_score: 80,
-            owner_override: false,
-            metadata: None,
-        };
-        repo.upsert(&rec2).await.expect("Failed to upsert Dept B record");
-
-        // Prove that context is cross-departmental by checking directly against the database
-        // to bypass the SQLite vector extension requirement for `semantic_search` in test environments.
-        // This validates the structure allows cross-departmental data retrieval.
-        let rows = sqlx::query("SELECT agent_id FROM consolidated_memory WHERE tenant_id = 'org1'")
-            .fetch_all(&pool)
-            .await
-            .expect("Failed to query consolidated_memory");
-
-        assert_eq!(rows.len(), 2, "Both records should be successfully stored for cross-department context sharing");
-
-        let agent_ids: Vec<String> = rows.into_iter().map(|row| row.try_get("agent_id").expect("Failed to get agent_id")).collect();
-
-        assert!(agent_ids.contains(&"cs_agent_1".to_string()), "Customer Success agent record should exist");
-        assert!(agent_ids.contains(&"ops_agent_1".to_string()), "Operations agent record should exist");
-
-        // Dept C: Business Advisory tries to retrieve context about delays
-        // In Cloud mode with Postgres, `semantic_search` would be called.
-        // We will call it here, handling the Result safely if the SQLite vector extension is missing.
-        let query_embedding = vec![0.5, 0.5, 0.5];
-        match repo.semantic_search("org1", &query_embedding, 5).await {
-            Ok(results) => {
-                let cs_found = results.iter().any(|r| r.agent_id == "cs_agent_1");
-                let ops_found = results.iter().any(|r| r.agent_id == "ops_agent_1");
-
-                // If the query succeeds, ensure both were found (or at least one of the similar ones)
-                assert!(cs_found || ops_found, "Cross-department context sharing should return records from other agents.");
-            },
-            Err(e) => {
-                // In SQLite test environments without the vec_distance_cosine extension loaded,
-                // it is acceptable for `semantic_search` to return an error related to missing functions.
-                assert!(e.contains("no such function: vec_distance_cosine") || e.contains("syntax error") || e.contains("no such table"), "Unexpected semantic_search error: {}", e);
-            }
+impl MemoryLayer {
+    pub fn new(
+        repo: Arc<VectorRepository>,
+        pruning_policy: PruningPolicy,
+        conflict_policy: ConflictResolutionPolicy,
+    ) -> Self {
+        Self {
+            metrics: Arc::new(MemoryMetrics::new()),
+            repo,
+            pruning_policy: Arc::new(pruning_policy),
+            conflict_policy: Arc::new(conflict_policy),
         }
+    }
+
+    pub async fn store_context(&self, context: MemoryContext) -> Result<(), String> {
+        let record = EmbeddingRecord {
+            id: context.id.clone(),
+            tenant_id: context.tenant_id.clone(),
+            agent_id: context.department_id.clone(),
+            content: context.content.clone(),
+            embedding: context.semantic_embedding.clone(),
+            source_type: context.source_event_type.clone(),
+            created_at: context.created_at,
+            last_referenced_at: context.last_accessed_at,
+            reference_count: context.access_count,
+            reliability_score: 50,
+            owner_override: context.owner_override,
+            metadata: context.metadata_json.clone().map(|v| v.to_string()),
+        };
+
+        self.repo.upsert(&record).await.map_err(|e| e.to_string())?;
+        self.metrics.record_store();
+        Ok(())
+    }
+
+    pub async fn retrieve_cross_department(
+        &self,
+        tenant_id: &str,
+        query_embedding: &[f32],
+        limit: usize,
+    ) -> Result<Vec<MemoryContext>, String> {
+        self.metrics.record_cross_dept_query();
+        let results = self.repo.cross_department_search(tenant_id, query_embedding, limit.try_into().unwrap())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(results.into_iter().map(|r| {
+            MemoryContext {
+                id: r.id,
+                tenant_id: r.tenant_id,
+                department_id: r.agent_id,
+                content: r.content,
+                semantic_embedding: r.embedding,
+                source_event_type: r.source_type,
+                created_at: r.created_at,
+                last_accessed_at: r.last_referenced_at,
+                access_count: r.reference_count,
+                conflict_resolved: true,
+                owner_override: r.owner_override,
+                metadata_json: r.metadata.and_then(|m| serde_json::from_str(&m).ok()),
+            }
+        }).collect())
+    }
+
+    pub async fn run_pruning(&self) -> Result<(), String> {
+        let now = chrono::Utc::now();
+        let default_retention = chrono::Duration::days(self.pruning_policy.retention_days_default);
+        let cutoff_date = now - default_retention;
+
+        self.repo.prune_stale(cutoff_date).await.map_err(|e| e.to_string())?;
+        self.metrics.record_prune(1);
+        Ok(())
+    }
+
+    pub async fn run_conflict_resolution(&self) -> Result<(), String> {
+        let resolved_count = self.repo.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;
+
+        for _ in 0..resolved_count {
+            self.metrics.record_conflict_resolution();
+        }
+
+        Ok(())
+    }
+
+    pub async fn share_context_cross_department(
+        &self,
+        tenant_id: &str,
+        source_department: &str,
+        target_department: &str,
+        content: String,
+        embedding: Vec<f32>,
+    ) -> Result<(), String> {
+        let mut context = MemoryContext::new(
+            format!("shared_{}_{}", source_department, uuid::Uuid::new_v4()),
+            tenant_id.to_string(),
+            target_department.to_string(),
+            content,
+            embedding,
+            "CROSS_DEPARTMENT_SHARE".to_string(),
+        );
+
+        let metadata = serde_json::json!({
+            "source_department": source_department,
+            "shared": true,
+        });
+        context.metadata_json = Some(metadata);
+
+        self.store_context(context).await
     }
 }
