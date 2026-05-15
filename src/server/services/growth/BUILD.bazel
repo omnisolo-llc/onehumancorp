@@ -8,6 +8,7 @@ filegroup(
         "referral_api.rs",
         "referrals.rs",
         "service.rs",
+        "nova_growth.rs",
         "viral_loop.rs",
     ],
     visibility = ["//src/server/services:__pkg__"],
