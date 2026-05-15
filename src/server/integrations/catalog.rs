@@ -1,7 +1,6 @@
 // Stub module - functionality was removed or moved
 // This file exists to satisfy module references that weren't cleaned up
 
-
 pub struct IntegrationProvider {
     pub metadata: ProviderMetadata,
 }
@@ -24,7 +23,7 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             name: "NATS Event Mesh".to_string(),
             category: "event_mesh".to_string(),
             base_url: "nats://localhost:4222".to_string(),
-        }
+        },
     };
     catalog.push(nats_provider);
 
@@ -36,7 +35,7 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             name: "Twilio SMS".to_string(),
             category: "sms".to_string(),
             base_url: "https://api.twilio.com".to_string(),
-        }
+        },
     };
     catalog.push(twilio_provider);
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();

@@ -1,11 +1,13 @@
-use std::sync::Arc;
 use crate::db::DB;
-use sqlx::Row;
+use ::server_ohc::orchestration::{
+    PowerSyncPullRequest, PowerSyncPushRequest, sync_service_client::SyncServiceClient,
+};
 use serde_json::json;
-use ::server_ohc::orchestration::{sync_service_client::SyncServiceClient, PowerSyncPushRequest, PowerSyncPullRequest};
-use tonic::transport::Channel;
+use sqlx::Row;
+use std::sync::Arc;
 use tonic::Request;
 use tonic::metadata::MetadataValue;
+use tonic::transport::Channel;
 
 pub struct PowerSyncOrchestrator {
     db: Arc<DB>,
@@ -82,7 +84,11 @@ impl PowerSyncOrchestrator {
             format!("http://{}", self.cloud_url)
         };
 
-        let channel = Channel::from_shared(endpoint).map_err(|e| e.to_string())?.connect().await.map_err(|e| e.to_string())?;
+        let channel = Channel::from_shared(endpoint)
+            .map_err(|e| e.to_string())?
+            .connect()
+            .await
+            .map_err(|e| e.to_string())?;
 
         let mut client = SyncServiceClient::new(channel);
 
@@ -92,18 +98,25 @@ impl PowerSyncOrchestrator {
 
         // Add internal auth using spiffe identity
         let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
-        req.metadata_mut().insert("x-spiffe-id", MetadataValue::try_from(spiffe_id.as_str()).unwrap());
+        req.metadata_mut().insert(
+            "x-spiffe-id",
+            MetadataValue::try_from(spiffe_id.as_str()).unwrap(),
+        );
 
-        let res = client.power_sync_push(req).await.map_err(|e| e.to_string())?;
+        let res = client
+            .power_sync_push(req)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if res.into_inner().status == "ok" {
             // Update _sync_status to synced
             for item in payload_items {
                 let id = item["id"].as_str().unwrap();
-                let _ = sqlx::query("UPDATE agent_missions SET _sync_status = 'synced' WHERE id = ?")
-                    .bind(id)
-                    .execute(sqlite_pool)
-                    .await;
+                let _ =
+                    sqlx::query("UPDATE agent_missions SET _sync_status = 'synced' WHERE id = ?")
+                        .bind(id)
+                        .execute(sqlite_pool)
+                        .await;
             }
         }
 
@@ -123,7 +136,11 @@ impl PowerSyncOrchestrator {
             format!("http://{}", self.cloud_url)
         };
 
-        let channel = Channel::from_shared(endpoint).map_err(|e| e.to_string())?.connect().await.map_err(|e| e.to_string())?;
+        let channel = Channel::from_shared(endpoint)
+            .map_err(|e| e.to_string())?
+            .connect()
+            .await
+            .map_err(|e| e.to_string())?;
 
         let mut client = SyncServiceClient::new(channel);
 
@@ -131,16 +148,23 @@ impl PowerSyncOrchestrator {
 
         // Add internal auth using spiffe identity
         let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
-        req.metadata_mut().insert("x-spiffe-id", MetadataValue::try_from(spiffe_id.as_str()).unwrap());
+        req.metadata_mut().insert(
+            "x-spiffe-id",
+            MetadataValue::try_from(spiffe_id.as_str()).unwrap(),
+        );
 
-        let res = client.power_sync_pull(req).await.map_err(|e| e.to_string())?;
+        let res = client
+            .power_sync_pull(req)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let payload = res.into_inner().payload;
         if payload.is_empty() || payload == "[]" {
             return Ok(());
         }
 
-        let items: Vec<serde_json::Value> = serde_json::from_str(&payload).map_err(|e| e.to_string())?;
+        let items: Vec<serde_json::Value> =
+            serde_json::from_str(&payload).map_err(|e| e.to_string())?;
 
         for item in items {
             if item["table"].as_str() == Some("agent_missions") {
