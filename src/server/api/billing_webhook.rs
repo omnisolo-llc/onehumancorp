@@ -11,6 +11,21 @@ use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
 
 #[derive(Clone)]
+/// The `WebhookState` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
@@ -18,6 +33,21 @@ pub struct WebhookState {
 }
 
 #[derive(Debug, Deserialize)]
+/// The `StripeEvent` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct StripeEvent {
     pub id: String,
     pub r#type: String,
@@ -25,6 +55,21 @@ pub struct StripeEvent {
 }
 
 #[derive(Debug, Deserialize)]
+/// The `StripeEventData` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct StripeEventData {
     pub object: Value,
 }
@@ -155,6 +200,21 @@ pub async fn stripe_webhook_handler(
 }
 
 #[derive(Debug, Deserialize)]
+/// The `MercadoPagoEvent` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct MercadoPagoEvent {
     pub id: i64,
     pub live_mode: bool,
@@ -169,6 +229,21 @@ pub struct MercadoPagoEvent {
 }
 
 #[derive(Debug, Deserialize)]
+/// The `MercadoPagoEventData` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct MercadoPagoEventData {
     pub id: String,
 }

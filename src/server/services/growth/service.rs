@@ -10,6 +10,21 @@ use sqlx::{PgPool, Row};
 use crate::services::growth::referral_api;
 use ::server_common::auth_utils::set_org_context;
 
+/// The `MyGrowthService` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct MyGrowthService {
     pool: PgPool,
     hub: Arc<crate::hub::Hub>,

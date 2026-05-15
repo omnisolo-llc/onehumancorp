@@ -8,6 +8,21 @@ use tokio_stream::Stream;
 use std::pin::Pin;
 use tokio_stream::StreamExt;
 
+/// The `MyOpsService` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct MyOpsService {
     hub: Arc<Hub>,
     incidents: RwLock<Vec<Incident>>,

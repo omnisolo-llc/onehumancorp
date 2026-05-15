@@ -2,6 +2,13 @@ use std::fs;
 use std::path::Path;
 use opentelemetry::global;
 
+/// Executes `provision_environment` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
     
@@ -23,6 +30,13 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Executes `check_environment` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn check_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
     
@@ -41,6 +55,13 @@ pub fn check_environment(is_cloud: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Executes `cleanup_environment` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn cleanup_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
     

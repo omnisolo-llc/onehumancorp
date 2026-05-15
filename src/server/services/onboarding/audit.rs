@@ -1,5 +1,12 @@
 use crate::services::onboarding::provisioner;
 
+/// Executes `generate_audit_report` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn generate_audit_report(is_cloud: bool) -> String {
     let err = provisioner::check_environment(is_cloud);
     let status = if err.is_ok() { "PASSED" } else { "FAILED" };

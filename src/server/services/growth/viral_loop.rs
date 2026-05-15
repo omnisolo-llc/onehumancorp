@@ -2,6 +2,21 @@ use std::sync::RwLock;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 
+/// The `ViralLoopTracker` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct ViralLoopTracker {
     invites_sent: RwLock<i32>,
     invites_accepted: RwLock<i32>,

@@ -2,6 +2,13 @@ use crate::services::onboarding::wizard::InteractiveWizard;
 use std::collections::BTreeMap;
 use std::io::Write;
 
+/// Executes `run_cli` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn run_cli(mut writer: impl Write, is_cloud: bool) -> Result<(), String> {
     let wizard = InteractiveWizard::new();
     let config = wizard.run_interactive_setup(is_cloud)?;

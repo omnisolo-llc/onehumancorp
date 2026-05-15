@@ -7,6 +7,21 @@ use tonic::transport::Channel;
 use tonic::Request;
 use tonic::metadata::MetadataValue;
 
+/// The `PowerSyncOrchestrator` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct PowerSyncOrchestrator {
     db: Arc<DB>,
     cloud_url: String,

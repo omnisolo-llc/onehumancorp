@@ -4,6 +4,21 @@ use ::server_ohc::orchestration::auto_dream_service_server::AutoDreamService;
 use std::sync::Arc;
 use crate::autodream::AutoDreamWorker;
 
+/// The `MyAutoDreamService` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct MyAutoDreamService {
     worker: Arc<AutoDreamWorker>,
 }

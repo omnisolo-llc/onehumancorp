@@ -2,6 +2,21 @@ use serde_json::json;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
 #[derive(Clone)]
+/// The `OnboardingAgent` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
     hub: std::sync::Arc<crate::hub::Hub>,

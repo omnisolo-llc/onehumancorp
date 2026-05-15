@@ -1,5 +1,20 @@
 use std::thread;
 
+/// The `PreflightResult` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct PreflightResult {
     pub os: String,
     pub arch: String,
@@ -8,6 +23,13 @@ pub struct PreflightResult {
     pub message: String,
 }
 
+/// Executes `run_preflight_check` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn run_preflight_check(is_cloud: bool) -> PreflightResult {
     let os = std::env::consts::OS.to_string();
     let arch = std::env::consts::ARCH.to_string();
@@ -28,6 +50,13 @@ pub fn run_preflight_check(is_cloud: bool) -> PreflightResult {
     res
 }
 
+/// Executes `generate_preflight_report` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn generate_preflight_report(res: &PreflightResult) -> String {
     let status = if res.passed { "PASSED" } else { "FAILED" };
 

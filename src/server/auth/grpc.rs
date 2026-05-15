@@ -12,6 +12,21 @@ enum AuthMode {
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
+/// The `AuthConfig` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct AuthConfig {
     mode: AuthMode,
 }
@@ -124,6 +139,13 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
 }
 
 #[allow(dead_code)]
+/// Executes `interceptor` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn interceptor(cfg: AuthConfig) -> impl Fn(Request<()>) -> Result<Request<()>, Status> + Clone {
     move |req: Request<()>| {
         cfg.authenticate(&req)?;

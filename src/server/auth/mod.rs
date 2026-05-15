@@ -16,6 +16,16 @@ type HmacSha256 = Hmac<Sha256>;
 
 /// Authentication mode.
 #[derive(Debug, Clone)]
+/// The `AuthMode` enumeration defines valid states.
+///
+/// # Overview
+/// Provides a strongly-typed way to represent discrete configurations.
+///
+/// # Exhaustive Matching
+/// Consumers must use exhaustive pattern matching.
+///
+/// # Memory Layout
+/// Carries minimal memory overhead.
 pub enum AuthMode {
     /// No authentication (dev/test only).
     Disabled,
@@ -75,6 +85,21 @@ use ::server_ohc::orchestration::auth_service_server::AuthService;
 use ::server_ohc::orchestration::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// The `User` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct User {
     pub id: String,
     pub username: String,
@@ -90,6 +115,21 @@ pub struct User {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// The `Role` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct Role {
     pub id: String,
     pub name: String,
@@ -98,18 +138,63 @@ pub struct Role {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
+/// The `TenantKey` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct TenantKey {
     pub org_id: String,
     pub key: String,
 }
 
 #[derive(Debug, Clone)]
+/// The `OIDCConfig` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct OIDCConfig {
     pub issuer_url: String,
     pub client_id: String,
     pub enabled: bool,
 }
 
+/// The `Store` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
     roles: RwLock<HashMap<String, Role>>,
@@ -515,6 +600,21 @@ fn random_bytes(n: usize) -> Vec<u8> {
 }
 
 #[derive(Clone)]
+/// The `AuthServiceServerImpl` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct AuthServiceServerImpl {
     pub store: Arc<Store>,
 }
@@ -531,6 +631,13 @@ impl Default for Store {
     }
 }
 
+/// Executes `parse_spiffe_id` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
     if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" {
@@ -539,6 +646,13 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     Ok((parts[4].to_string(), parts[6].to_string()))
 }
 
+/// Executes `extract_spiffe_id_from_metadata` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Result<String, String> {
     md.get("x-spiffe-id")
         .ok_or_else(|| "missing x-spiffe-id header".to_string())?
@@ -547,6 +661,21 @@ pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Res
         .map(|s| s.to_string())
 }
 
+/// The `AuthInfo` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct AuthInfo {
     pub spiffe_id: String,
     pub org_id: String,

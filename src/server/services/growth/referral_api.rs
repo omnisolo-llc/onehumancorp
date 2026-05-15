@@ -1,5 +1,12 @@
 use rand::RngCore;
 
+/// Executes `generate_referral_link` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn generate_referral_link(user_id: &str) -> Result<String, String> {
     if user_id.is_empty() {
         return Err("userID cannot be empty".to_string());

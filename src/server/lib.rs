@@ -1962,67 +1962,92 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="alert('Password changed!')">Change</button>
                     </div>
 
+
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen">
                         <h1>Pricing Plans</h1>
-                        <p>Choose the best plan for your business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
+                        <p>Simple, transparent pricing for your business.</p>
+
+                        <div class="pricing-toggle" style="margin: 20px 0; text-align: center;">
+                            <label style="margin: 0 10px; cursor: pointer;"><input type="radio" name="billing" checked onchange="location.reload()"> Monthly</label>
+                            <label style="margin: 0 10px; cursor: pointer;"><input type="radio" name="billing" onchange="applyAnnualDiscount()"> Annually (Save 20%)</label>
+                        </div>
+
                         <div class="card glass">
-                            <h3>Free Starter</h3>
-                            <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
+                            <h3>Free Starter Plan</h3>
+                            <p class="price" style="font-size: 2em; font-weight: bold; color: #4ade80;">$0</p>
+                            <ul>
+                                <li>1 Agent Limit</li>
+                                <li>500MB Storage</li>
+                                <li>Community Support</li>
+                            </ul>
+                            <button onclick="upgradePlan('Free', 0)">Start Free</button>
                         </div>
                         <div class="card glass">
-                            <h3>Pro Professional</h3>
-                            <p>$29 / 30-days</p>
-                            <p>Suggested</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
+                            <h3>Starter Plan</h3>
+                            <p class="price" style="font-size: 2em; font-weight: bold; color: #4ade80;">$9</p>
+                            <ul>
+                                <li>3 Agents Limit</li>
+                                <li>5GB Storage</li>
+                                <li>Email Support</li>
+                            </ul>
+                            <button onclick="upgradePlan('Starter', 9)">Choose Starter</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Pro Professional (Recommended)</h3>
+                            <p class="price" style="font-size: 2em; font-weight: bold; color: #4ade80;">$29</p>
+                            <ul>
+                                <li>10 Agents Limit</li>
+                                <li>50GB Storage</li>
+                                <li>Priority Support</li>
+                            </ul>
+                            <button onclick="upgradePlan('Pro', 29)">Choose Pro</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Enterprise</h3>
-                            <p>$79 / 30-days</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
+                            <p class="price" style="font-size: 2em; font-weight: bold; color: #4ade80;">$79</p>
+                            <ul>
+                                <li>Unlimited Agents</li>
+                                <li>500GB Storage</li>
+                                <li>24/7 Dedicated Support</li>
+                            </ul>
+                            <button onclick="upgradePlan('Business', 79)">Contact Sales</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
-                                <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
-                            </div>
+                            <h2>Plan Comparison</h2>
+                            <p>Compare our feature-rich plans.</p>
                         </div>
-                        <p>100% money back guarantee. Secure SSL payments.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+
                         <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
+                            <h2>100% Money Back Guarantee</h2>
+                            <p>Secure SSL payments.</p>
+                        </div>
+
+                        <div class="card glass">
+                            <h2>Frequently Asked Questions (FAQ)</h2>
+                            <div class="faq-item question" onclick="this.classList.toggle('active')">
                                 <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
-                            </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
+                                <p class="answer description" style="display: none;">You can upgrade anytime.</p>
                             </div>
                         </div>
                     </div>
+
 
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
                         <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
+                        <p>Next billing / renewal date: 2024-06-01</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
+                            <p id="storage-tracker">Storage Used: 0MB / 500MB</p>
                             <p>Projected Cost this cycle: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
+                        <button onclick="showScreen('pricing-screen')">Upgrade / Change Plan</button>
+                        <button class="secondary" onclick="confirmCancel()">Cancel Subscription</button>
+                        <button class="secondary" onclick="alert('Payment Method')">Update Payment Method</button>
+                        <button class="download" onclick="alert('Invoice PDF')">Download Invoice History</button>
                         <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
@@ -2273,6 +2298,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
+
+                        // Miser: UI Price Optimization Logic
+                        function applyAnnualDiscount() {
+                            const prices = document.querySelectorAll('.price');
+                            prices.forEach(price => {
+                                let current = parseFloat(price.innerText.replace('$', '').split('/')[0]);
+                                if (current > 0) {
+                                    let newPrice = (current * 0.8).toFixed(2);
+                                    price.innerText = '$' + newPrice + ' / month (billed annually)';
+                                }
+                            });
+                        }
+
+                        function upgradePlan(planName, cost) {
+                            if(planName === 'Free') {
+                                showScreen('dashboard-screen');
+                                return;
+                            }
+                            if(planName === 'Business') {
+                                alert('Contact Sales Email');
+                                return;
+                            }
+
+                            showScreen('checkout-screen');
+                        }
+
+                        function confirmCancel() {
+                            if(confirm("Confirm cancel subscription?")) {
+                                alert("Canceled.");
+                            }
+                        }
+
+                        document.addEventListener('click', function(e) {
+                            if(e.target.closest('.faq-item')) {
+                                let ans = e.target.closest('.faq-item').querySelector('.answer');
+                                if(ans) ans.style.display = ans.style.display === 'none' ? 'block' : 'none';
+                            }
+                        });
+
                     </script>
                 </body>
             </html>

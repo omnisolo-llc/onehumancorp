@@ -1,6 +1,21 @@
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
+/// The `EnvConfig` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct EnvConfig {
     pub mode: String,
     pub multi_tenant: bool,
@@ -10,6 +25,13 @@ pub struct EnvConfig {
     pub database_url: String,
 }
 
+/// Executes `verify_environment` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfig, String> {
     let mut config = EnvConfig {
         mode: String::new(),

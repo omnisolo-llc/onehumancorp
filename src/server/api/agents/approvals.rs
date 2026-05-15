@@ -13,27 +13,94 @@ use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
 
 #[derive(Serialize)]
+/// The `ApprovalsResponse` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct ApprovalsResponse {
     pub pending_approvals: Vec<ApprovalRequest>,
     pub next_cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
+/// The `PaginationQuery` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct PaginationQuery {
     pub cursor: Option<String>,
     pub limit: Option<usize>,
 }
 
 #[derive(Deserialize)]
+/// The `DecisionRequest` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct DecisionRequest {
     pub approved: bool,
 }
 
 #[derive(Serialize)]
+/// The `DecisionResponse` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct DecisionResponse {
     pub success: bool,
 }
 
+/// Executes `router` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,

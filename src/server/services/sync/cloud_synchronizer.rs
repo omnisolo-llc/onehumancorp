@@ -5,11 +5,30 @@ use ::server_telemetry::{record_sync_escalation, record_sync_daemon_batch_size, 
 use std::time::Instant;
 
 #[async_trait::async_trait]
+/// Defines the `SyncHttpClient:` trait.
+///
+/// # Overview
+/// Used for dependency injection and mocking in tests.
 pub trait SyncHttpClient: Send + Sync {
     async fn post_json(&self, url: &str, payload: &serde_json::Value) -> Result<(u16, serde_json::Value), String>;
     async fn get_json(&self, url: &str) -> Result<(u16, serde_json::Value), String>;
 }
 
+/// The `DefaultSyncClient` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct DefaultSyncClient {
     client: reqwest::Client,
 }
@@ -39,6 +58,21 @@ impl SyncHttpClient for DefaultSyncClient {
     }
 }
 
+/// The `CloudSynchronizerImpl` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct CloudSynchronizerImpl {
     repo: Arc<dyn LocalRepository>,
     client: Box<dyn SyncHttpClient>,
@@ -194,6 +228,10 @@ impl CloudSynchronizerImpl {
 }
 
 #[async_trait::async_trait]
+/// Defines the `CloudSynchronizer:` trait.
+///
+/// # Overview
+/// Used for dependency injection and mocking in tests.
 pub trait CloudSynchronizer: Send + Sync {
     async fn push_pending_missions(&self, organization_id: &str) -> Result<(), String>;
     async fn pull_mission_updates(&self, organization_id: &str) -> Result<(), String>;

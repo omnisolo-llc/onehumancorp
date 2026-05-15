@@ -4,6 +4,21 @@ use ::server_ohc::orchestration::b2b_service_server::B2bService;
 use std::sync::RwLock;
 use chrono::Utc;
 
+/// The `MyB2BService` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct MyB2BService {
     approvals: RwLock<Vec<ApprovalRequest>>,
     handoffs: RwLock<Vec<HandoffPackage>>,

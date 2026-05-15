@@ -3,6 +3,13 @@ use crate::services::onboarding::wizard::InteractiveWizard;
 use crate::services::onboarding::validation::ValidationEndpoint;
 use crate::services::onboarding::audit;
 
+/// Executes `run_day_one_setup` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn run_day_one_setup(is_cloud: bool) -> Result<String, String> {
     // 1. Provision environment
     provisioner::provision_environment(is_cloud)?;

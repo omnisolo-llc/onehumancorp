@@ -4,6 +4,21 @@ use ::server_ohc::orchestration::*;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
+/// The `AuthInfo` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct AuthInfo {
     pub org_id: String,
     pub agent_id: String,
@@ -11,6 +26,13 @@ pub struct AuthInfo {
 }
 
 #[allow(dead_code)]
+/// Executes `interceptor` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
     let spiffe_id_str = req.metadata().get("x-spiffe-id")
         .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
@@ -31,6 +53,13 @@ pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
 }
 
 #[allow(dead_code)]
+/// Executes `authorize_register_agent` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn authorize_register_agent(auth: &AuthInfo, req: &RegisterAgentRequest) -> Result<(), Status> {
     if let Some(agent) = &req.agent {
         if auth.agent_id != agent.id {
@@ -44,6 +73,13 @@ pub fn authorize_register_agent(auth: &AuthInfo, req: &RegisterAgentRequest) -> 
 }
 
 #[allow(dead_code)]
+/// Executes `authorize_publish_message` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn authorize_publish_message(auth: &AuthInfo, req: &PublishMessageRequest) -> Result<(), Status> {
     if let Some(msg) = &req.message {
         if auth.agent_id != msg.from_agent {
@@ -54,6 +90,13 @@ pub fn authorize_publish_message(auth: &AuthInfo, req: &PublishMessageRequest) -
 }
 
 #[allow(dead_code)]
+/// Executes `authorize_delegate_task` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn authorize_delegate_task(auth: &AuthInfo, req: &DelegateTaskRequest) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
         return Err(Status::permission_denied(format!("SPIFFE ID {} cannot delegate task as agent {}", auth.spiffe_id, req.from_agent_id)));
@@ -62,6 +105,13 @@ pub fn authorize_delegate_task(auth: &AuthInfo, req: &DelegateTaskRequest) -> Re
 }
 
 #[allow(dead_code)]
+/// Executes `authorize_sub_task` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn authorize_sub_task(auth: &AuthInfo, req: &SubTask) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
         return Err(Status::permission_denied(format!("SPIFFE ID {} cannot delegate subtask as agent {}", auth.spiffe_id, req.from_agent_id)));
@@ -70,6 +120,13 @@ pub fn authorize_sub_task(auth: &AuthInfo, req: &SubTask) -> Result<(), Status> 
 }
 
 #[allow(dead_code)]
+/// Executes `authorize_reason_request` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn authorize_reason_request(auth: &AuthInfo, req: &ReasonRequest) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
         return Err(Status::permission_denied(format!("SPIFFE ID {} cannot request reasoning as agent {}", auth.spiffe_id, req.from_agent_id)));
@@ -78,6 +135,13 @@ pub fn authorize_reason_request(auth: &AuthInfo, req: &ReasonRequest) -> Result<
 }
 
 #[allow(dead_code)]
+/// Executes `authorize_open_meeting` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn authorize_open_meeting(auth: &AuthInfo, req: &OpenMeetingRequest) -> Result<(), Status> {
     let found = req.participants.iter().any(|p| p == &auth.agent_id);
     if !found {

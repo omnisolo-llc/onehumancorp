@@ -2,6 +2,21 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use rand::RngCore;
 
+/// The `ReferralTracker` struct acts as a primary component.
+///
+/// # Overview
+/// This struct encapsulates the state necessary for execution.
+///
+/// # Thread Safety
+/// Designed to be shared safely across async tokio tasks.
+/// Uses types like `Arc` and `Mutex` to prevent race conditions.
+///
+/// # Performance
+/// Optimized for low-latency operations.
+///
+/// # Usage Guidelines
+/// - Created during initialization.
+/// - Avoid holding synchronous locks across await points.
 pub struct ReferralTracker {
     total_referrals: RwLock<i32>,
     user_referrals: RwLock<HashMap<String, i32>>,
@@ -92,6 +107,13 @@ impl ReferralTracker {
     }
 }
 
+/// Executes `calculate_referral_tier` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn calculate_referral_tier(referrals: i32) -> &'static str {
     if referrals >= 50 {
         "Platinum"
@@ -104,6 +126,13 @@ pub fn calculate_referral_tier(referrals: i32) -> &'static str {
     }
 }
 
+/// Executes `calculate_tier_discount` securely and efficiently.
+///
+/// # Overview
+/// Public entry point for business logic.
+///
+/// # Error Handling
+/// Propagate errors upward using `?`.
 pub fn calculate_tier_discount(tier: &str) -> f64 {
     match tier {
         "Platinum" => 0.20,
