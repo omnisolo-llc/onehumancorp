@@ -1,12 +1,11 @@
 use ::server_ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use tracing::Instrument;
 
-pub struct LocalProxyServer {
-}
+pub struct LocalProxyServer {}
 
 impl LocalProxyServer {
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
 
     pub fn get_tools(&self) -> Vec<McpToolProto> {
@@ -21,29 +20,40 @@ impl LocalProxyServer {
         ]
     }
 
-    pub async fn invoke_tool(&self, req: &McpInvokeRequest) -> Result<McpInvokeResponse, tonic::Status> {
+    pub async fn invoke_tool(
+        &self,
+        req: &McpInvokeRequest,
+    ) -> Result<McpInvokeResponse, tonic::Status> {
         let params: serde_json::Value = serde_json::from_str(&req.params)
             .map_err(|e| tonic::Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
 
         match req.tool_id.as_str() {
             "local_stateful_proxy" => {
-                let command = params["command"].as_str().ok_or_else(|| tonic::Status::invalid_argument("command is required"))?;
-                let context_id = params["context_id"].as_str().ok_or_else(|| tonic::Status::invalid_argument("context_id is required"))?;
+                let command = params["command"]
+                    .as_str()
+                    .ok_or_else(|| tonic::Status::invalid_argument("command is required"))?;
+                let context_id = params["context_id"]
+                    .as_str()
+                    .ok_or_else(|| tonic::Status::invalid_argument("context_id is required"))?;
 
                 async {
-
                     let resp = serde_json::json!({
                         "status": "success",
                         "command": command,
                         "context_id": context_id,
                         "message": "command proxied successfully"
                     });
-                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    Ok(McpInvokeResponse {
+                        payload: serde_json::to_string(&resp).unwrap(),
+                    })
                 }
                 .instrument(tracing::info_span!("local_stateful_proxy"))
                 .await
             }
-            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
+            _ => Err(tonic::Status::unimplemented(format!(
+                "tool {} not implemented",
+                req.tool_id
+            ))),
         }
     }
 }

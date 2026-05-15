@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, ActionRisk};
+    use crate::db::DbStore;
+    use crate::orchestration::departments::orchestrator::{ActionRisk, DepartmentOrchestrator};
     use crate::orchestration::departments::types::DepartmentType;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
     use std::sync::Arc;
-    use crate::db::DbStore;
 
     #[tokio::test]
     async fn test_approvals_workflow() {
@@ -39,22 +39,26 @@ mod tests {
 
         let description = "Draft email for review".to_string();
 
-        let _ = orchestrator.execute_action(
-            DepartmentType::CustomerSuccess,
-            description.clone(),
-            tenant_id.clone(),
-            ActionRisk::DraftForReview,
-            serde_json::json!({"test": "payload"}),
-        ).await;
+        let _ = orchestrator
+            .execute_action(
+                DepartmentType::CustomerSuccess,
+                description.clone(),
+                tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                serde_json::json!({"test": "payload"}),
+            )
+            .await;
 
         let pending = orchestrator.get_pending_approvals(&tenant_id).await;
         if pending.is_empty() {
-             return; // allow gracefully failure if schema not fully ready locally.
+            return; // allow gracefully failure if schema not fully ready locally.
         }
 
         let request_id = pending[0].id.clone();
 
-        let res = orchestrator.decide_approval(&request_id, &tenant_id, true).await;
+        let res = orchestrator
+            .decide_approval(&request_id, &tenant_id, true)
+            .await;
         assert!(res.is_ok());
 
         let pending_after = orchestrator.get_pending_approvals(&tenant_id).await;
