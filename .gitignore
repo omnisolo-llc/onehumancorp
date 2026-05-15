@@ -98,6 +98,7 @@ Chart.lock
 !/README.md
 !/CHANGELOG.md
 !/RELEASE_NOTES.md
+/*.go
 
 # Rust build artifacts
 /target/
