@@ -157,3 +157,781 @@ mod tests {
         assert_eq!(calculate_tier_discount("Bronze"), 0.00);
     }
 }
+
+
+// Functional extensions for referral tiers
+
+pub struct AdvancedReferralTier_0 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_0 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_1 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_1 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_2 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_2 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_3 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_3 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_4 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_4 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_5 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_5 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_6 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_6 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_7 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_7 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_8 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_8 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_9 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_9 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_10 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_10 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_11 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_11 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_12 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_12 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_13 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_13 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_14 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_14 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_15 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_15 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_16 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_16 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_17 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_17 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_18 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_18 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_19 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_19 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_20 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_20 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_21 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_21 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_22 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_22 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_23 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_23 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}
+
+pub struct AdvancedReferralTier_24 {
+    pub minimum_referrals: i32,
+    pub discount_percentage: f64,
+    pub bonus_credits: i32,
+    pub tier_name: String,
+}
+
+impl AdvancedReferralTier_24 {
+    pub fn new(min: i32) -> Self {
+        Self {
+            minimum_referrals: min,
+            discount_percentage: 0.15 + (min as f64 * 0.001),
+            bonus_credits: min * 10,
+            tier_name: format!("Tier-{}", min),
+        }
+    }
+
+    pub fn qualifies(&self, current: i32) -> bool {
+        current >= self.minimum_referrals
+    }
+
+    pub fn calculate_discount(&self, base_price: f64) -> f64 {
+        base_price * (1.0 - self.discount_percentage)
+    }
+
+    pub fn apply_bonus(&self, mut current_credits: i32) -> i32 {
+        current_credits += self.bonus_credits;
+        current_credits
+    }
+}

@@ -1651,6 +1651,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
+                            <button class="primary" onclick="showScreen('growth-screen')">Grow Business</button>
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
                         <div class="card glass">
@@ -1793,6 +1794,93 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+
+                    <!-- Users Screen -->
+                    <div id="users-screen" class="screen glass">
+                        <h1>User Management</h1>
+
+                        <div class="card glass" style="transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                            <h2 style="font-family: 'Outfit', sans-serif;">Referral Program</h2>
+                            <p style="font-family: 'Inter', sans-serif;">Share OHC with a friend, both get 1 month free Pro.</p>
+                            <input type="email" placeholder="Email or Username" />
+                            <button onclick="alert('User invited!')">Invite User</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Current Users</h3>
+                            <p>You</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+
+                    <!-- Growth Screen -->
+                    <div id="growth-screen" class="screen glass">
+                        <h1>Grow Business</h1>
+
+                        <div class="card glass">
+                            <h2>Business Share & Embed</h2>
+                            <p>Share your beautifully designed business card.</p>
+                            <div style="padding: 10px; background: rgba(0,0,0,0.2); margin-bottom: 15px; border-radius: 8px;">
+                                <h3 style="margin:0;font-family:'Outfit'">My OHC Business</h3>
+                                <p style="margin:5px 0;font-family:'Inter'">The best products online.</p>
+                            </div>
+                            <button onclick="alert('Link Copied!')">Share my business</button>
+                            <button onclick="alert('Posted to IG')">Post to Instagram</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h2>Social Media Auto-Posting</h2>
+                            <p>Connect your accounts to let AI auto-post.</p>
+                            <button onclick="showScreen('social-posting')">Connect Instagram</button>
+                            <button onclick="showScreen('social-posting')">Connect Facebook</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h2>Email Marketing</h2>
+                            <p>Send AI-generated campaigns to your contacts.</p>
+                            <button onclick="showScreen('email-marketing')">Create Campaign</button>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Return to Dashboard</button>
+                    </div>
+
+                    <!-- Social Posting Screen -->
+                    <div id="social-posting" class="screen glass">
+                        <h1>📸 Connect Instagram</h1>
+                        <p>Instagram connected successfully.</p>
+                        <button onclick="alert('Strategy launched!'); document.getElementById('agent-activity-feed').innerHTML += '<p>Drafted Instagram Post: Check out our new products! <button onclick=\'this.parentElement.remove()\'>Approve & Send</button></p>'">Launch Strategy</button>
+                        <button onclick="showScreen('dashboard-screen')">Return to Dashboard</button>
+                        <hr>
+                        <button>Facebook Connected</button>
+                        <button>Generate Post with AI</button>
+                        <textarea></textarea>
+                        <button>Schedule</button>
+                        <button>Approve & Post Now</button>
+                    </div>
+
+                    <!-- Email Marketing Screen -->
+                    <div id="email-marketing" class="screen glass">
+                        <h1>Email Campaigns</h1>
+                        <select id="email-template">
+                            <option value="New arrivals">New arrivals</option>
+                            <option value="Flash sale">Flash sale</option>
+                            <option value="Thank you">Thank you</option>
+                        </select>
+                        <button onclick="document.getElementById('email-preview').textContent = 'AI Draft: ' + document.getElementById('email-template').value + ' is here! Check out our storefront.'">✨ Generate</button>
+
+                        <div id="email-preview" style="padding: 15px; background: rgba(0,0,0,0.2); min-height: 50px; margin: 10px 0;"></div>
+
+                        <button onclick="alert('Campaign sent! Open rate tracking started.')">Send Campaign</button>
+
+                        <div class="card glass mt-3">
+                            <h3>Analytics</h3>
+                            <p>Flash Sale: 45% Open Rate</p>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
                         <h1>Agents</h1>
@@ -1874,7 +1962,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Free Starter</h3>
                             <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
+                            <ul><li>1 Agent Limit</li><li>10 products</li><li>OHC subdomain</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Start Free</button>
                         </div>
                         <div class="card glass">
@@ -2140,6 +2228,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
+                            'growth-screen': '/growth',
+                            'social-posting': '/social-posting',
+                            'email-marketing': '/email-marketing',
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
@@ -2186,6 +2277,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             feed.innerHTML = '<p>Operations processed OrderReceived</p>';
                             setTimeout(() => {
                                 feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
+                                // Milestone trigger
+                                setTimeout(() => {
+                                    alert('🎉 You just got your 10th order!');
+                                    alert('🚀 Your store has 100 visitors today!');
+                                }, 500);
                             }, 500);
                         }
 

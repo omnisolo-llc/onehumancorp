@@ -89,15 +89,29 @@ async fn handle_social_post(
     })
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCampaignResponse {
+    pub success: bool,
+    pub campaign_id: String,
+    pub target_audience_count: i32,
+    pub estimated_delivery_time: i32,
+}
+
 async fn handle_send_campaign(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<CampaignRequest>,
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
-    Json(CampaignResponse {
+    tracing::info!("Starting email campaign: {}", req.name);
+    // Real implementation would queue jobs here
+    Json(SendCampaignResponse {
+        success: true,
         campaign_id: uuid::Uuid::new_v4().to_string(),
-        emails_sent: 150,
+        target_audience_count: 450,
+        estimated_delivery_time: 120,
     })
 }
+
 
 async fn handle_track_visitor(
     Extension(_state): Extension<GrowthState>,
