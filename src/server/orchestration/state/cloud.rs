@@ -151,43 +151,52 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
-        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
-        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
-            Ok(Ok(guard)) => guard,
-            Ok(Err(e)) => return Err(e),
-            Err(_) => {
-                tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
-                return Ok(vec![]);
-            }
-        };
 
-        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        let mut attempts = 0;
+        let max_attempts = 3;
 
-        let rows_future = sqlx::query(
-            r#"
-            SELECT t.*
-            FROM swarm_tasks t
-            WHERE t.status = 'PENDING'
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM jsonb_array_elements_text(t.dependencies) as dep_id
-                  JOIN swarm_tasks dep ON dep.id::text = dep_id
-                  WHERE dep.status != 'COMPLETED'
-              )
-            LIMIT $1
-            FOR UPDATE SKIP LOCKED
-            "#
-        )
-        .bind(limit)
-        .fetch_all(&mut *tx);
+        let (_lock_guard, mut tx, rows) = loop {
+            let acquire_and_fetch = async {
+                let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30).await?;
 
-        let rows = match tokio::time::timeout(std::time::Duration::from_secs(2), rows_future).await {
-            Ok(Ok(rows)) => rows,
-            Ok(Err(e)) => return Err(e.to_string()),
-            Err(_) => {
-                tracing::warn!("Database timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
-                return Ok(vec![]);
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+
+                let rows = sqlx::query(
+                    r#"
+                    SELECT t.*
+                    FROM swarm_tasks t
+                    WHERE t.status = 'PENDING'
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM jsonb_array_elements_text(t.dependencies) as dep_id
+                          JOIN swarm_tasks dep ON dep.id::text = dep_id
+                          WHERE dep.status != 'COMPLETED'
+                      )
+                    LIMIT $1
+                    FOR UPDATE SKIP LOCKED
+                    "#
+                )
+                .bind(limit)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                Ok::<_, String>((lock_guard, tx, rows))
+            };
+
+            match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
+                Ok(Ok(result)) => break result,
+                Ok(Err(e)) => return Err(e),
+                Err(_) => {
+                    attempts += 1;
+                    if attempts >= max_attempts {
+                        tracing::warn!("Database/Lock timeout in CloudStateManager::pull_available_tasks after {} attempts, fail-safing to empty list.", max_attempts);
+                        return Ok(vec![]);
+                    }
+                    tracing::warn!("Database/Lock timeout in CloudStateManager::pull_available_tasks, retrying ({}/{})", attempts, max_attempts);
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
             }
         };
 

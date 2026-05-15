@@ -141,15 +141,28 @@ impl StateManager for StandaloneStateManager {
 
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
-        let transition_future = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
-            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
-        };
+        let mut attempts = 0;
+        let max_attempts = 3;
 
-        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => Err(e),
-            Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
+        loop {
+            let transition_future = async {
+                let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+                self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
+            };
+
+            match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
+                Ok(Ok(())) => return Ok(()),
+                Ok(Err(e)) => return Err(e),
+                Err(_) => {
+                    attempts += 1;
+                    if attempts >= max_attempts {
+                        tracing::error!("Timeout acquiring lock or writing database transition after {} attempts for task {}", max_attempts, task_id);
+                        return Err(format!("Timeout acquiring lock or writing database transition after {} attempts", max_attempts));
+                    }
+                    tracing::warn!("Timeout acquiring lock or writing database transition for task {}, retrying ({}/{})", task_id, attempts, max_attempts);
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+            }
         }
     }
 
@@ -160,52 +173,63 @@ impl StateManager for StandaloneStateManager {
         };
 
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
-        let acquire_and_fetch = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
 
-            let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+        let mut attempts = 0;
+        let max_attempts = 3;
 
-            let now_rfc = Utc::now().to_rfc3339();
-            let rows = sqlx::query(
-                r#"
-                UPDATE swarm_tasks
-                SET status = 'IN_PROGRESS', updated_at = ?
-                WHERE id IN (
-                    SELECT t.id
-                    FROM swarm_tasks t
-                    WHERE t.status = 'PENDING'
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM json_each(t.dependencies) as dep_id
-                        JOIN swarm_tasks dep ON dep.id = dep_id.value
-                        WHERE dep.status != 'COMPLETED'
+        let (_lock_guard, mut tx, rows) = loop {
+            let acquire_and_fetch = async {
+                let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let now_rfc = Utc::now().to_rfc3339();
+                let rows = sqlx::query(
+                    r#"
+                    UPDATE swarm_tasks
+                    SET status = 'IN_PROGRESS', updated_at = ?
+                    WHERE id IN (
+                        SELECT t.id
+                        FROM swarm_tasks t
+                        WHERE t.status = 'PENDING'
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM json_each(t.dependencies) as dep_id
+                            JOIN swarm_tasks dep ON dep.id = dep_id.value
+                            WHERE dep.status != 'COMPLETED'
+                        )
+                        LIMIT ?
                     )
-                    LIMIT ?
+                    RETURNING *
+                    "#
                 )
-                RETURNING *
-                "#
-            )
-            .bind(now_rfc)
-            .bind(limit)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+                .bind(now_rfc)
+                .bind(limit)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
-            Ok::<_, String>((lock_guard, tx, rows))
-        };
+                Ok::<_, String>((lock_guard, tx, rows))
+            };
 
-        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
-            Ok(Ok(result)) => result,
-            Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") {
-                    tracing::warn!("Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
-                    return Ok(vec![]);
+            match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
+                Ok(Ok(result)) => break result,
+                Ok(Err(e)) => {
+                    if e.contains("Timeout acquiring lock") {
+                        tracing::warn!("Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                        return Ok(vec![]);
+                    }
+                    return Err(e);
+                },
+                Err(_) => {
+                    attempts += 1;
+                    if attempts >= max_attempts {
+                        tracing::warn!("Database/Lock timeout in StandaloneStateManager::pull_available_tasks after {} attempts, fail-safing to empty list.", max_attempts);
+                        return Ok(vec![]);
+                    }
+                    tracing::warn!("Database/Lock timeout in StandaloneStateManager::pull_available_tasks, retrying ({}/{})", attempts, max_attempts);
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
-                return Err(e);
-            },
-            Err(_) => {
-                tracing::warn!("Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
-                return Ok(vec![]);
             }
         };
 

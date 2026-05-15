@@ -718,13 +718,14 @@ mod tests {
     async fn test_ml_resilience_tasks_timeout() {
         // Test the ML-Resilience 60s timeout enforcement logic in tasks orchestration
         let start = std::time::Instant::now();
-        let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
+        let timeout_duration = std::time::Duration::from_millis(60);
+        let result = tokio::time::timeout(timeout_duration, async {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             Ok::<(), String>(())
         }).await;
 
         assert!(result.is_err(), "Tasks orchestration must enforce ML-Resilience timeout");
-        assert!(start.elapsed() >= std::time::Duration::from_millis(60), "Timeout should wait the configured time");
+        assert!(start.elapsed() >= timeout_duration, "Timeout should wait the configured time");
     }
 
     #[tokio::test]

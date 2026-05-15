@@ -226,7 +226,7 @@ impl TaskQueue for PostgresTaskQueue {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', locked_until = CURRENT_TIMESTAMP + INTERVAL '60 seconds' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at, locked_until")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await
@@ -241,6 +241,8 @@ impl TaskQueue for PostgresTaskQueue {
             let status: String = row.get("status");
             let scheduled_at: DateTime<Utc> = row.get("scheduled_at");
             
+            let locked_until: Option<DateTime<Utc>> = row.try_get("locked_until").unwrap_or(None);
+
             let mut j = Job {
                 id,
                 tenant_id: tenant_id,
@@ -251,7 +253,7 @@ impl TaskQueue for PostgresTaskQueue {
                 attempts: 0,
                 max_attempts: 3,
                 run_after: scheduled_at,
-                locked_until: None,
+                locked_until,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
             };
@@ -329,8 +331,14 @@ impl Worker {
                             let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), self.handler.handle(job.clone())).await;
                             let handler_res = match handle_res {
                                 Ok(Ok(())) => Ok(()),
-                                Ok(Err(e)) => Err(e),
-                                Err(_) => Err("Timeout executing job".to_string()),
+                                Ok(Err(e)) => {
+                                    if e.to_lowercase().contains("timeout") || e.to_lowercase().contains("rate limit") || e.to_lowercase().contains("unavailable") || e.to_lowercase().contains("exhausted") {
+                                        Err(format!("LLM API unavailable or exhausted: {}", e))
+                                    } else {
+                                        Err(e)
+                                    }
+                                },
+                                Err(_) => Err("Timeout executing job. AI agent job exceeded the 60-second limit.".to_string()),
                             };
                             match handler_res {
                                 Ok(_) => {
@@ -339,7 +347,13 @@ impl Worker {
                                 }
                                 Err(e) => {
                                     tracing::error!("Worker failed to process job: {}, error: {}", job.id, e);
-                                    if job.attempts < job.max_attempts {
+                                    if e.contains("LLM API unavailable or exhausted:") {
+                                        tracing::warn!("Circuit breaker activated: AI agent transitioning to paused state for job {}", job.id);
+                                        let mut retry_job = job.clone();
+                                        retry_job.status = "PAUSED".to_string();
+                                        let _ = self.queue.requeue(retry_job).await;
+                                        // A real system would also trigger a notification event here to notify the business owner
+                                    } else if job.attempts < job.max_attempts {
                                         let mut retry_job = job.clone();
                                         retry_job.attempts += 1;
                                         retry_job.status = "PENDING".to_string();

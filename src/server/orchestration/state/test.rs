@@ -244,9 +244,9 @@ async fn test_degradation_fallback_standalone() {
     let tasks = state_manager.pull_available_tasks(10).await.unwrap();
     let elapsed = start.elapsed();
 
-    // It should have timed out around 2 seconds, not the full 2.5 seconds
-    assert!(elapsed < std::time::Duration::from_millis(2200));
-    assert!(elapsed > std::time::Duration::from_millis(1900));
+    // It should have timed out around 2 seconds x 3 attempts, not the full 2.5 seconds
+    assert!(elapsed < std::time::Duration::from_millis(6500));
+    assert!(elapsed > std::time::Duration::from_millis(5900));
 
     // And returned empty list fail-safe
     assert_eq!(tasks.len(), 0);

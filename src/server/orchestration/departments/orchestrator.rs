@@ -205,6 +205,7 @@ impl DepartmentOrchestrator {
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
         if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
+            tracing::warn!("AI Budget exhausted for tenant: {}", tenant_id);
             return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
         }
 
