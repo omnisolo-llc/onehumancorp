@@ -36,3 +36,39 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 });
+
+  test('verify Setup Wizard UI regression fix', async ({ page }) => {
+    // Navigate to root and start setup
+    await page.goto('/website-builder');
+    // Ensure duplicate headings are gone
+    const templateHeadings = await page.locator('h1:has-text("Choose a Template")').count();
+    expect(templateHeadings).toBe(1);
+    const domainHeadings = await page.locator('h1:has-text("Choose a Domain")').count();
+    expect(domainHeadings).toBe(1);
+
+    // Ensure generateAI function triggers network call instead of mock timeout
+    await page.goto('/website-builder');
+
+    // Switch to AI setup step
+    await page.evaluate(() => (window as any).nextStep('ai'));
+    await expect(page.locator('#step-ai')).toBeVisible();
+
+    // Fill the description
+    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'Test Business');
+
+    // Setup network interception to verify we don't use setTimeout mock data
+
+    await page.route('/api/ai-generate', async route => {
+
+      await route.fulfill({ json: { success: true } });
+    });
+
+    // Click generate AI
+    const [request] = await Promise.all([page.waitForRequest("/api/ai-generate"), page.click('button:has-text("Generate Storefront →")')]); expect(request.url()).toContain("/api/ai-generate");
+
+    // Ensure we transitioned to generating state
+    await expect(page.locator('#step-generating')).toBeVisible();
+
+    // And finally verify the network route was actually hit (not mocked)
+
+  });

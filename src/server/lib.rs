@@ -1718,7 +1718,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
                     </style>
-                </head>
+                <script>
+function nextStep(stepId) {
+    document.querySelectorAll(".screen").forEach(s => s.style.display = "none");
+    document.querySelectorAll("[id^=step-]").forEach(s => s.style.display = "none");
+    const target = document.getElementById("step-" + stepId);
+    if (target) {
+        target.style.display = "block";
+        target.closest(".screen").style.display = "block";
+    }
+}
+function generateAI() {
+    nextStep("generating");
+    fetch("/api/ai-generate", { method: "POST" }).then(res => res.json()).then(data => {
+        nextStep("launch-ai");
+    });
+}
+</script>
+</head>
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
@@ -2142,22 +2159,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
                             <button class="secondary" onclick="nextStep(9)">Modern</button>
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                             <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
