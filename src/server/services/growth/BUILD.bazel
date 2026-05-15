@@ -7,6 +7,7 @@ filegroup(
         "quota.rs",
         "referral_api.rs",
         "referrals.rs",
+        "schema_constant.rs",
         "service.rs",
         "viral_loop.rs",
     ],

@@ -45,10 +45,6 @@ impl MyGrowthService {
     }
 }
 
-// Force usage of schema constant to avoid dead code warnings
-#[allow(dead_code)]
-const USE_SCHEMA: &str = crate::services::growth::schema_constant::GROWTH_OPENAPI_SCHEMA;
-
 #[tonic::async_trait]
 impl GrowthService for MyGrowthService {
     async fn get_landing_page_experiments(
@@ -69,7 +65,7 @@ impl GrowthService for MyGrowthService {
         if req.title.is_empty() {
             return Err(Status::invalid_argument("title is required"));
         }
-        
+
         let exp = LandingPageExperiment {
             id: format!("exp-{}", Utc::now().timestamp()),
             title: req.title,
@@ -77,10 +73,10 @@ impl GrowthService for MyGrowthService {
             status: "ACTIVE".to_string(),
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut exps = self.experiments.write().unwrap();
         exps.push(exp.clone());
-        
+
         Ok(Response::new(exp))
     }
 
@@ -208,7 +204,7 @@ impl GrowthService for MyGrowthService {
         } else {
             req.referral_code
         };
-        
+
         let id = format!("ref-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
         let created_at = Utc::now().timestamp();
 
@@ -243,7 +239,7 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<Referral>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
-        
+
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
@@ -271,7 +267,7 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<Referral>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
-        
+
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
@@ -320,17 +316,17 @@ impl GrowthService for MyGrowthService {
         if req.os.is_empty() {
             return Err(Status::invalid_argument("os is required"));
         }
-        
+
         let dl = Download {
             id: format!("dl-{}", Utc::now().timestamp()),
             os: req.os,
             version: req.version,
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut dls = self.downloads.write().unwrap();
         dls.push(dl.clone());
-        
+
         Ok(Response::new(dl))
     }
 
@@ -352,7 +348,7 @@ impl GrowthService for MyGrowthService {
         if req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("inviterId and inviteeId are required"));
         }
-        
+
         let invite = TeamInviteProto {
             id: format!("inv-{}", Utc::now().timestamp()),
             inviter_id: req.inviter_id,
@@ -360,10 +356,10 @@ impl GrowthService for MyGrowthService {
             status: "PENDING".to_string(),
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut invites = self.team_invites.write().unwrap();
         invites.push(invite.clone());
-        
+
         Ok(Response::new(invite))
     }
 
@@ -373,12 +369,12 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<TeamInviteProto>, Status> {
         let req = request.into_inner();
         let mut invites = self.team_invites.write().unwrap();
-        
+
         if let Some(inv) = invites.iter_mut().find(|i| i.id == req.id) {
             inv.status = "ACCEPTED".to_string();
             return Ok(Response::new(inv.clone()));
         }
-        
+
         Err(Status::not_found("invite not found"))
     }
 
@@ -402,21 +398,21 @@ impl GrowthService for MyGrowthService {
         let total_referrals = rows.len() as i32;
         let mut total_conversions = 0;
         let mut inviters = HashMap::new();
-        
+
         for row in rows.iter() {
             let conversions: i32 = row.get("conversions");
             let user_id: String = row.get("user_id");
             total_conversions += conversions;
             inviters.insert(user_id, true);
         }
-        
+
         let unique_inviters = inviters.len() as i32;
         let score = if unique_inviters > 0 {
             total_conversions as f64 / unique_inviters as f64
         } else {
             0.0
         };
-        
+
         Ok(Response::new(ReferralScoreResponse {
             total_referrals,
             total_conversions,
@@ -431,7 +427,7 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<ReferralScoreMetricsResponse>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
         let res = self.get_referral_score(request).await?.into_inner();
-        
+
         Ok(Response::new(ReferralScoreMetricsResponse {
             referral_score: res.score,
             organization_id: org_id,
@@ -456,17 +452,17 @@ impl GrowthService for MyGrowthService {
         if req.user_id.is_empty() || req.step.is_empty() {
             return Err(Status::invalid_argument("userId and step are required"));
         }
-        
+
         let funnel = OnboardingFunnel {
             id: format!("funnel-{}", Utc::now().timestamp()),
             user_id: req.user_id,
             step: req.step,
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut funnels = self.onboarding_funnels.write().unwrap();
         funnels.push(funnel.clone());
-        
+
         Ok(Response::new(funnel))
     }
 
@@ -479,12 +475,12 @@ impl GrowthService for MyGrowthService {
         for f in funnels.iter() {
             *counts.entry(f.step.clone()).or_insert(0) += 1;
         }
-        
+
         let mut metrics = Vec::new();
         for (step, count) in counts {
             metrics.push(OnboardingMetric { step, count });
         }
-        
+
         Ok(Response::new(OnboardingMetricsResponse { metrics }))
     }
 
@@ -513,7 +509,7 @@ impl GrowthService for MyGrowthService {
 
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
         let max_quota = 50 + (total_conversions as i32) * 10;
-        
+
         let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
@@ -541,16 +537,16 @@ impl GrowthService for MyGrowthService {
         if req.email.is_empty() {
             return Err(Status::invalid_argument("email is required"));
         }
-        
+
         let entry = WaitlistEntry {
             id: format!("wl-{}", Utc::now().timestamp()),
             email: req.email,
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut wl = self.waitlist.write().unwrap();
         wl.push(entry.clone());
-        
+
         Ok(Response::new(entry))
     }
 }
