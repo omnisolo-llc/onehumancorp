@@ -1738,7 +1738,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
-                    <!-- Dashboard Screen -->
+                                            <div id="website-builder-screen" class="screen">
+                            <h1>Website Builder</h1>
+                            <p>Here you can add products to your website.</p>
+                            <button onclick="showScreen('dashboard-screen')">Go Back</button>
+                        </div>
+
+                        <div id="integrations-screen" class="screen">
+                            <h1>Integrations</h1>
+                            <p>Connect Instagram, Facebook, and more.</p>
+                            <button onclick="showScreen('dashboard-screen')">Go Back</button>
+                        </div>
+
+                        <div id="referrals-screen" class="screen">
+                            <h1>Referrals</h1>
+                            <p>Referral page.</p>
+                            <button onclick="showScreen('dashboard-screen')">Go Back</button>
+                        </div>
+
+<!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
@@ -1795,7 +1813,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
-                        <h1>Referral Dashboard</h1>
+                        <h1>Referrals</h1>
                         <div class="card glass">
                             <h3>Your Referral Link</h3>
                             <p id="referral-link">ohc://join?ref=DEFAULT</p>
@@ -2171,19 +2189,40 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
+                            <h1>Welcome Checklist</h1>
+                            <div id="checklist-progress" style="display:none;">25% Complete</div>
+                            <h2 id="checklist-congrats" style="display:none;">Congratulations! You finished the checklist.</h2>
+                            <h2>You're set up! Here's what to do next:</h2>
+                            <p>✅ <label><input type="checkbox" checked disabled class="checklist-item"> Business live</label></p>
+                            <p>⬜ <label><input type="checkbox" class="checklist-item" onchange="updateChecklist()"> <span onclick="showScreen('website-builder-screen')">Add 3 more products</span></label></p>
+                            <p>⬜ <label><input type="checkbox" class="checklist-item" onchange="updateChecklist()"> <span onclick="showScreen('integrations-screen')">Connect Instagram</span></label></p>
+                            <p>⬜ <label><input type="checkbox" class="checklist-item" onchange="updateChecklist()"> <span onclick="showScreen('referral-dashboard-screen')">Share your link</span></label></p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
+                        <script>
+                            function updateChecklist() {
+                                let boxes = document.querySelectorAll('.checklist-item');
+                                let checked = 0;
+                                boxes.forEach(b => { if(b.checked) checked++; });
+
+                                let percent = Math.floor((checked / boxes.length) * 100);
+                                let prog = document.getElementById('checklist-progress');
+                                prog.style.display = 'block';
+                                prog.innerText = percent + '% Complete';
+
+                                if (checked === boxes.length) {
+                                    document.getElementById('checklist-congrats').style.display = 'block';
+                                } else {
+                                    document.getElementById('checklist-congrats').style.display = 'none';
+                                }
+                            }
+                        </script>
                         <div id="step-101" style="display: none;">
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
                             <p>Add 3 more products</p>
                             <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
+                            <p>Share your link</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
