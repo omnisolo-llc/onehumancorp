@@ -1,4 +1,31 @@
 use ohc_builtin_agent_core::types::ToolCall;
+use std::sync::Arc;
+
+#[async_trait::async_trait]
+pub trait UserConfirmationProvider: Send + Sync + std::fmt::Debug {
+    async fn confirm_tool_call(&self, tool_name: &str, args: &serde_json::Value) -> Result<bool, String>;
+}
+
+#[derive(Clone, Debug)]
+pub struct AnthropicToolGatingConfig {
+    pub is_trusted_workspace: bool,
+    pub allowed_tools: Vec<String>,
+    pub high_risk_tools: Vec<String>,
+    pub confirmation_provider: Option<Arc<dyn UserConfirmationProvider>>,
+}
+
+impl Default for AnthropicToolGatingConfig {
+    fn default() -> Self {
+        Self {
+            is_trusted_workspace: true,
+            allowed_tools: vec![], // Empty means allow all, up to the implementation logic
+            high_risk_tools: vec![],
+            confirmation_provider: None,
+        }
+    }
+}
+
+
 
 #[derive(Debug, Clone)]
 pub struct GuardrailConfig {

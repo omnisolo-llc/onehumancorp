@@ -72,6 +72,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub tool_gating: Option<crate::guardrails::AnthropicToolGatingConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -121,6 +122,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
+            tool_gating: None,
         }
     }
 }
@@ -358,7 +360,7 @@ impl Agent {
                 let session_tools_clone = session_tools.to_vec();
                 let messages_clone = messages.clone();
                 read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, Some(cfg)).await {
                         Ok(res) => res,
                         Err(e) => format!("Error: {:?}", e),
                     };
@@ -384,7 +386,7 @@ impl Agent {
             }
 
             for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
+                let r = match self.execute_tool(tc, session_tools, &messages, Some(cfg)).await {
                     Ok(res) => res,
                     Err(e) => format!("Error: {:?}", e),
                 };
@@ -981,7 +983,7 @@ impl Agent {
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let result = loop {
-                match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                match self.execute_tool(&dummy_tc, session_tools, &[], None).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -1704,7 +1706,7 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, Some(cfg)).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -1904,7 +1906,7 @@ impl Agent {
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc, &session_tools, &messages).await {
+                    match self.execute_tool(&tc, &session_tools, &messages, Some(cfg)).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2329,11 +2331,45 @@ impl Agent {
         tc: &ToolCall,
         session_tools: &[Tool],
         current_messages: &[Message],
+        cfg: Option<&AgentRunConfig>,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
+
+        // 3-Stage Tool Gating (Anthropic Mechanic)
+        if let Some(config) = cfg {
+            if let Some(gating) = &config.tool_gating {
+                // Stage 1: Trust Establishment
+                if !gating.is_trusted_workspace && !tool.is_read_only {
+                    return Err(ToolError::LlmRecoverable(format!("Workspace is untrusted. Mutating tool '{}' is blocked.", tc.name)));
+                }
+
+                // Stage 2: Permission Check
+                if !gating.allowed_tools.is_empty() && !gating.allowed_tools.contains(&tc.name) {
+                    return Err(ToolError::LlmRecoverable(format!("Tool '{}' is not explicitly permitted in allowed_tools.", tc.name)));
+                }
+
+                // Stage 3: Explicit User Confirmation
+                if gating.high_risk_tools.contains(&tc.name) {
+                    if let Some(provider) = &gating.confirmation_provider {
+                        match provider.confirm_tool_call(&tc.name, &tc.arguments).await {
+                            Ok(true) => { /* Approved */ }
+                            Ok(false) => {
+                                return Err(ToolError::UserFixable(format!("User denied permission for high-risk tool: {}", tc.name)));
+                            }
+                            Err(e) => {
+                                return Err(ToolError::LlmRecoverable(format!("Error requesting user confirmation for tool {}: {}", tc.name, e)));
+                            }
+                        }
+                    } else {
+                        // High-risk tool, but no confirmation provider. Fail safe.
+                        return Err(ToolError::UserFixable(format!("Tool '{}' is high-risk, but no confirmation provider is attached.", tc.name)));
+                    }
+                }
+            }
+        }
 
         let mut args = tc.arguments.clone();
         if tc.name == "spawn_subagent" {
@@ -2571,7 +2607,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": "hello", "int_param": 42 }),
         };
-        let res = agent.execute_tool(&valid_call, &tools, &[]).await;
+        let res = agent.execute_tool(&valid_call, &tools, &[], None).await;
         assert!(res.is_ok());
 
         // Test missing required
@@ -2580,7 +2616,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "int_param": 42 }),
         };
-        let res = agent.execute_tool(&missing_call, &tools, &[]).await;
+        let res = agent.execute_tool(&missing_call, &tools, &[], None).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -2595,7 +2631,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": 123 }),
         };
-        let res = agent.execute_tool(&wrong_type_call, &tools, &[]).await;
+        let res = agent.execute_tool(&wrong_type_call, &tools, &[], None).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -5265,4 +5301,144 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
+
+    #[tokio::test]
+    async fn test_anthropic_3_stage_tool_gating() {
+        use crate::guardrails::{AnthropicToolGatingConfig, UserConfirmationProvider};
+
+        #[derive(Debug)]
+        struct MockConfirmationProvider {
+            approve: bool,
+        }
+        #[async_trait::async_trait]
+        impl UserConfirmationProvider for MockConfirmationProvider {
+            async fn confirm_tool_call(&self, _tool_name: &str, _args: &serde_json::Value) -> Result<bool, String> {
+                Ok(self.approve)
+            }
+        }
+
+        struct MockToolExecutor;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for MockToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("executed".to_string())
+            }
+        }
+
+        let tools = vec![
+            Tool {
+                name: "read_file".to_string(),
+                description: "reads".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockToolExecutor),
+            },
+            Tool {
+                name: "write_file".to_string(),
+                description: "writes".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockToolExecutor),
+            },
+            Tool {
+                name: "delete_db".to_string(),
+                description: "deletes".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockToolExecutor),
+            },
+            Tool {
+                name: "run_command".to_string(),
+                description: "runs command".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockToolExecutor),
+            },
+        ];
+
+        struct SimpleMockClient;
+        #[async_trait::async_trait]
+        impl LlmClient for SimpleMockClient {
+            async fn chat(&self, _req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("done"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+
+        let agent = Agent::new(Arc::new(SimpleMockClient), tools.clone());
+
+        // Test Stage 1: Trust Establishment (untrusted workspace blocks non-read-only)
+        let mut cfg1 = AgentRunConfig::default();
+        cfg1.tool_gating = Some(AnthropicToolGatingConfig {
+            is_trusted_workspace: false,
+            allowed_tools: vec![],
+            high_risk_tools: vec![],
+            confirmation_provider: None,
+        });
+
+        let tc_read = ToolCall { id: "1".to_string(), name: "read_file".to_string(), arguments: serde_json::json!({}) };
+        let res1_read = agent.execute_tool(&tc_read, &tools, &[], Some(&cfg1)).await;
+        assert!(res1_read.is_ok(), "Read-only tool should pass in untrusted workspace");
+
+        let tc_write = ToolCall { id: "2".to_string(), name: "write_file".to_string(), arguments: serde_json::json!({}) };
+        let res1_write = agent.execute_tool(&tc_write, &tools, &[], Some(&cfg1)).await;
+        assert!(res1_write.is_err(), "Mutating tool should be blocked in untrusted workspace");
+        assert!(res1_write.unwrap_err().to_string().contains("untrusted"));
+
+        // Test Stage 2: Permission Check (allowed_tools)
+        let mut cfg2 = AgentRunConfig::default();
+        cfg2.tool_gating = Some(AnthropicToolGatingConfig {
+            is_trusted_workspace: true,
+            allowed_tools: vec!["read_file".to_string(), "write_file".to_string()],
+            high_risk_tools: vec![],
+            confirmation_provider: None,
+        });
+
+        let tc_delete = ToolCall { id: "3".to_string(), name: "delete_db".to_string(), arguments: serde_json::json!({}) };
+        let res2_delete = agent.execute_tool(&tc_delete, &tools, &[], Some(&cfg2)).await;
+        assert!(res2_delete.is_err(), "Unlisted tool should be blocked by allowed_tools");
+        assert!(res2_delete.unwrap_err().to_string().contains("not explicitly permitted"));
+
+        // Test Stage 3: Explicit User Confirmation (high_risk_tools)
+        let mut cfg3_deny = AgentRunConfig::default();
+        cfg3_deny.tool_gating = Some(AnthropicToolGatingConfig {
+            is_trusted_workspace: true,
+            allowed_tools: vec![], // allow all
+            high_risk_tools: vec!["delete_db".to_string()],
+            confirmation_provider: Some(Arc::new(MockConfirmationProvider { approve: false })),
+        });
+
+        let res3_deny = agent.execute_tool(&tc_delete, &tools, &[], Some(&cfg3_deny)).await;
+        assert!(res3_deny.is_err(), "High-risk tool should be blocked if user denies");
+        assert!(res3_deny.unwrap_err().to_string().contains("User denied permission"));
+
+        let mut cfg3_approve = AgentRunConfig::default();
+        cfg3_approve.tool_gating = Some(AnthropicToolGatingConfig {
+            is_trusted_workspace: true,
+            allowed_tools: vec![],
+            high_risk_tools: vec!["delete_db".to_string()],
+            confirmation_provider: Some(Arc::new(MockConfirmationProvider { approve: true })),
+        });
+
+        let res3_approve = agent.execute_tool(&tc_delete, &tools, &[], Some(&cfg3_approve)).await;
+        assert!(res3_approve.is_ok(), "High-risk tool should pass if user approves");
+
+        // Stage 3 Fail-safe: high-risk but no provider
+        let mut cfg3_no_provider = AgentRunConfig::default();
+        cfg3_no_provider.tool_gating = Some(AnthropicToolGatingConfig {
+            is_trusted_workspace: true,
+            allowed_tools: vec![],
+            high_risk_tools: vec!["delete_db".to_string()],
+            confirmation_provider: None,
+        });
+
+        let res3_no_prov = agent.execute_tool(&tc_delete, &tools, &[], Some(&cfg3_no_provider)).await;
+        assert!(res3_no_prov.is_err());
+        assert!(res3_no_prov.unwrap_err().to_string().contains("no confirmation provider"));
     }
+
+}
