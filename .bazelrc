@@ -2,7 +2,7 @@
 
 # Keep this checkout's output base away from stale root-owned runfiles that can
 # be left behind by Docker-backed Playwright tests in Bazel's default cache.
-#startup --output_user_root=/home/kevin/.bazel-output-root-mono
+startup --output_user_root=/home/kevin/.bazel-output-root-mono
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 # BuildBuddy configs are available explicitly with --config=buildbuddy-official
