@@ -63,7 +63,7 @@ impl AutoDreamPipeline {
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
-            LEFT JOIN consolidated_memory m ON t.id = m.task_id
+            LEFT JOIN knowledge_embeddings m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
         ";
@@ -113,7 +113,7 @@ impl AutoDreamPipeline {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
                         let insert_query = "
-                            INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id)
+                            INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, content, embedding, source_type, task_id)
                             VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
                         ";
 
@@ -175,7 +175,7 @@ mod tests {
         });
 
         // Clean up
-        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM knowledge_embeddings").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
@@ -189,7 +189,7 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE task_id = $1")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM knowledge_embeddings WHERE task_id = $1")
             .bind(task_id)
             .fetch_one(&pool)
             .await

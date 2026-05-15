@@ -1595,6 +1595,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::auto_dream_service_server::AutoDreamServiceServer::with_interceptor(crate::services::autodream::service::MyAutoDreamService::new(autodream_worker.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 
