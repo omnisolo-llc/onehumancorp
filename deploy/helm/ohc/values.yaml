@@ -159,6 +159,12 @@ kube-prometheus-stack:
   enabled: true
   grafana:
     enabled: true
+    extraConfigmapMounts:
+      - name: grafana-custom-css
+        configMap: grafana-custom-css
+        mountPath: /usr/share/grafana/public/css/custom.css
+        subPath: custom.css
+        readOnly: true
     env:
       GF_LOG_CONSOLE_FORMAT: "json"
     sidecar:
