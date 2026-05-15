@@ -17,14 +17,6 @@ type EventBroker struct {
 	messages    chan string
 }
 
-func NewEventBroker() *EventBroker {
-	return &EventBroker{
-		clients:     make(map[chan string]bool),
-		newClients:  make(chan chan string),
-		deadClients: make(chan chan string),
-		messages:    make(chan string),
-	}
-}
 
 func (b *EventBroker) Start() {
 	go func() {

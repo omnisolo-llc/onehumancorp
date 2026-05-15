@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
 ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_shared_tasks ON shared_tasks;
 
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_shared_tasks ON shared_tasks;
+
 CREATE TABLE IF NOT EXISTS task_dependencies (
     task_id TEXT NOT NULL,
     depends_on_task_id TEXT NOT NULL,
@@ -21,5 +24,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     FOREIGN KEY (task_id) REFERENCES shared_tasks(id),
     FOREIGN KEY (depends_on_task_id) REFERENCES shared_tasks(id)
 );
+
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;

@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS agents (
 
 ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS agent_inbox (
     seq         BIGSERIAL PRIMARY KEY,   -- ordering guarantee
     agent_id    TEXT NOT NULL,

@@ -120,12 +120,6 @@ func (p *Provider) ClaimTask(ctx context.Context, taskID string) error {
 
 var GlobalProvider = &Provider{}
 
-func NewSqliteProvider(db *sql.DB) *Provider {
-	os.Setenv("OHC_STANDALONE", "true")
-	return &Provider{
-		DB: db,
-	}
-}
 
 func NewTestProvider(t interface{}) *Provider {
 	os.Setenv("OHC_STANDALONE", "true")

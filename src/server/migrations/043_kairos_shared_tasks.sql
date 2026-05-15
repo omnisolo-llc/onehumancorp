@@ -18,3 +18,6 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
 
 ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_shared_tasks ON shared_tasks;
+
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_shared_tasks ON shared_tasks;

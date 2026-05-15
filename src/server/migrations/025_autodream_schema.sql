@@ -10,3 +10,6 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 
 ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_autodream_memories ON autodream_memories;
+
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_autodream_memories ON autodream_memories;

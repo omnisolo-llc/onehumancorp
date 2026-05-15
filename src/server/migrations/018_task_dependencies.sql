@@ -10,5 +10,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 
 ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_task_deps_task ON task_dependencies(task_id);
 CREATE INDEX idx_task_deps_depends ON task_dependencies(depends_on_task_id);

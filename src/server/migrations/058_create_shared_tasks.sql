@@ -27,3 +27,5 @@ CREATE TABLE task_dependencies (
 );
 
 ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;

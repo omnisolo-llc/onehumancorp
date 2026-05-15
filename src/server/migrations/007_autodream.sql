@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS agent_session_data (
 
 ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX idx_agent_session_accessed ON agent_session_data(last_accessed);
 
 CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
@@ -22,6 +24,8 @@ CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
 
 ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS memory_conflicts (
     conflict_id TEXT PRIMARY KEY,
     memory_id_1 TEXT NOT NULL,
@@ -30,5 +34,7 @@ CREATE TABLE IF NOT EXISTS memory_conflicts (
     resolved_memory_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE memory_conflicts ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE memory_conflicts ENABLE ROW LEVEL SECURITY;

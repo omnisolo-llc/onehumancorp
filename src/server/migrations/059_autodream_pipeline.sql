@@ -15,4 +15,6 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
 
 ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX IF NOT EXISTS idx_consolidated_memory_embedding_cosine ON consolidated_memory USING ivfflat (embedding vector_cosine_ops);

@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS tenants (
 );
 
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_tenants ON tenants
     USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 
@@ -26,6 +28,8 @@ CREATE TABLE IF NOT EXISTS customers (
     name TEXT,
     preferences JSONB DEFAULT '{}'
 );
+
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 
@@ -57,6 +61,8 @@ CREATE TABLE IF NOT EXISTS orders (
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_orders ON orders
     USING (tenant_id::text = current_setting('app.current_tenant', true) OR current_setting('app.current_tenant', true) = 'system' OR current_setting('app.current_tenant', true) = '');
 
@@ -69,6 +75,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     quantity INT,
     price DECIMAL
 );
+
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 
@@ -86,6 +94,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     end_time TIMESTAMPTZ,
     status TEXT
 );
+
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 

@@ -14,4 +14,6 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
 
 ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX IF NOT EXISTS idx_consolidated_memory_embedding ON consolidated_memory USING hnsw (embedding vector_cosine_ops);

@@ -13,11 +13,6 @@ type Catalog struct {
 	providers []IntegrationProvider
 }
 
-func NewCatalog() *Catalog {
-	c := &Catalog{}
-	c.Register(restic.NewProvider())
-	return c
-}
 
 func (c *Catalog) Register(p IntegrationProvider) {
 	c.providers = append(c.providers, p)
