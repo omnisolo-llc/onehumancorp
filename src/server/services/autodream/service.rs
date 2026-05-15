@@ -1,8 +1,8 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::auto_dream_service_server::AutoDreamService;
-use std::sync::Arc;
 use crate::autodream::AutoDreamWorker;
+use ::server_ohc::orchestration::auto_dream_service_server::AutoDreamService;
+use ::server_ohc::orchestration::*;
+use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
 pub struct MyAutoDreamService {
     worker: Arc<AutoDreamWorker>,
@@ -21,7 +21,9 @@ impl AutoDreamService for MyAutoDreamService {
         _request: Request<AutoDreamSyncRequest>,
     ) -> Result<Response<AutoDreamSyncResponse>, Status> {
         match self.worker.consolidate_epoch().await {
-            Ok(_) => Ok(Response::new(AutoDreamSyncResponse { status: "success".to_string() })),
+            Ok(_) => Ok(Response::new(AutoDreamSyncResponse {
+                status: "success".to_string(),
+            })),
             Err(e) => Err(Status::internal(e.to_string())),
         }
     }
@@ -40,7 +42,8 @@ impl AutoDreamService for MyAutoDreamService {
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let client = crate::minimax::MinimaxClient::new(api_key);
         let embedding = match client.generate_embedding(&req.query_text).await {
-            Ok(emb) => serde_json::to_string(&emb).unwrap_or_else(|_| format!("[{}]", vec!["0.0"; 1536].join(", "))),
+            Ok(emb) => serde_json::to_string(&emb)
+                .unwrap_or_else(|_| format!("[{}]", vec!["0.0"; 1536].join(", "))),
             Err(e) => {
                 tracing::error!("AutoDream service: failed to generate embedding: {}", e);
                 format!("[{}]", vec!["0.0"; 1536].join(", "))

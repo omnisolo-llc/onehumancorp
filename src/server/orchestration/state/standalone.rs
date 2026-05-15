@@ -1,13 +1,13 @@
 use super::StateManager;
-use crate::tasks::SharedTask;
 use crate::db::{DB, DbStore};
+use crate::tasks::SharedTask;
 use async_trait::async_trait;
-use std::sync::Arc;
-use sqlx::Row;
 use chrono::Utc;
+use sqlx::Row;
+use std::sync::Arc;
 
-use crate::orchestration::mesh::TeammateMesh;
 use super::MeshLockGuard;
+use crate::orchestration::mesh::TeammateMesh;
 
 pub struct StandaloneStateManager {
     db: Arc<DB>,
@@ -33,13 +33,12 @@ impl StandaloneStateManager {
         let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state
-        let row = sqlx::query(
-            "SELECT status, dependencies, tenant_id FROM swarm_tasks WHERE id = ?"
-        )
-        .bind(task_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+        let row =
+            sqlx::query("SELECT status, dependencies, tenant_id FROM swarm_tasks WHERE id = ?")
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
         let row = match row {
             Some(r) => r,
@@ -55,14 +54,22 @@ impl StandaloneStateManager {
             ));
         }
 
-        let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id: String = row
+            .try_get("tenant_id")
+            .unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
-            let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
+            let deps_str: String = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| "[]".to_string());
             let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
             if !dependencies.is_empty() {
-                let placeholders = dependencies.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+                let placeholders = dependencies
+                    .iter()
+                    .map(|_| "?")
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 let query = format!(
                     "SELECT count(*) FROM swarm_tasks WHERE id IN ({}) AND status = 'COMPLETED'",
                     placeholders
@@ -79,7 +86,11 @@ impl StandaloneStateManager {
                     .map_err(|e| e.to_string())?;
 
                 if completed_count as usize != dependencies.len() {
-                    return Err(format!("Not all dependencies are COMPLETED (found {}, expected {})", completed_count, dependencies.len()));
+                    return Err(format!(
+                        "Not all dependencies are COMPLETED (found {}, expected {})",
+                        completed_count,
+                        dependencies.len()
+                    ));
                 }
             }
         }
@@ -87,7 +98,7 @@ impl StandaloneStateManager {
         // 2. Update state
         let now = Utc::now();
         sqlx::query(
-            "UPDATE swarm_tasks SET status = ?, assigned_agent_id = ?, updated_at = ? WHERE id = ?"
+            "UPDATE swarm_tasks SET status = ?, assigned_agent_id = ?, updated_at = ? WHERE id = ?",
         )
         .bind(to_state)
         .bind(agent_id)
@@ -142,8 +153,24 @@ impl StateManager for StandaloneStateManager {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
         let transition_future = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
-            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
+            let lock_guard = MeshLockGuard::acquire(
+                self.mesh.clone(),
+                lock_key.clone(),
+                "standalone_state_manager".to_string(),
+                30,
+            )
+            .await?;
+            self.transition_state_inner(
+                task_id,
+                tenant_id,
+                from_state,
+                to_state,
+                agent_id,
+                reason,
+                &lock_guard,
+                sqlite_pool,
+            )
+            .await
         };
 
         match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
@@ -161,7 +188,13 @@ impl StateManager for StandaloneStateManager {
 
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
         let acquire_and_fetch = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+            let lock_guard = MeshLockGuard::acquire(
+                self.mesh.clone(),
+                lock_key.clone(),
+                "standalone_state_manager".to_string(),
+                30,
+            )
+            .await?;
 
             let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -183,7 +216,7 @@ impl StateManager for StandaloneStateManager {
                     LIMIT ?
                 )
                 RETURNING *
-                "#
+                "#,
             )
             .bind(now_rfc)
             .bind(limit)
@@ -194,17 +227,26 @@ impl StateManager for StandaloneStateManager {
             Ok::<_, String>((lock_guard, tx, rows))
         };
 
-        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
+        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            acquire_and_fetch,
+        )
+        .await
+        {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
                 if e.contains("Timeout acquiring lock") {
-                    tracing::warn!("Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                    tracing::warn!(
+                        "Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
+                    );
                     return Ok(vec![]);
                 }
                 return Err(e);
-            },
+            }
             Err(_) => {
-                tracing::warn!("Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                tracing::warn!(
+                    "Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
+                );
                 return Ok(vec![]);
             }
         };
@@ -214,13 +256,19 @@ impl StateManager for StandaloneStateManager {
 
         for row in rows {
             let id: String = row.get("id");
-            let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
+            let deps_str: String = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| "[]".to_string());
             let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
 
             // Check dependencies again explicitly in Rust just to be perfectly safe
             let mut all_completed = true;
             if !dependencies.is_empty() {
-                let placeholders = dependencies.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+                let placeholders = dependencies
+                    .iter()
+                    .map(|_| "?")
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 let query = format!(
                     "SELECT count(*) FROM swarm_tasks WHERE id IN ({}) AND status = 'COMPLETED'",
                     placeholders
@@ -242,14 +290,25 @@ impl StateManager for StandaloneStateManager {
             }
 
             if all_completed {
-                let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+                let tenant_id: String = row
+                    .try_get("tenant_id")
+                    .unwrap_or_else(|_| "system".to_string());
                 task_ids.push((id.clone(), tenant_id.clone()));
 
-                let payload_str: String = row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
-                let created_at: String = row.try_get("created_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
-                let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at).unwrap_or_default().with_timezone(&Utc);
-                let updated_at: String = row.try_get("updated_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
-                let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap_or_default().with_timezone(&Utc);
+                let payload_str: String =
+                    row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                let created_at: String = row
+                    .try_get("created_at")
+                    .unwrap_or_else(|_| Utc::now().to_rfc3339());
+                let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at)
+                    .unwrap_or_default()
+                    .with_timezone(&Utc);
+                let updated_at: String = row
+                    .try_get("updated_at")
+                    .unwrap_or_else(|_| Utc::now().to_rfc3339());
+                let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at)
+                    .unwrap_or_default()
+                    .with_timezone(&Utc);
 
                 let t = SharedTask {
                     id: id.clone(),

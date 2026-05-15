@@ -1,6 +1,6 @@
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
@@ -23,11 +23,7 @@ pub struct BookingTimeSlot {
 pub struct BookingService;
 
 impl BookingService {
-    pub fn create_draft_quote(
-        tenant_id: Uuid,
-        customer_id: Uuid,
-        amount: i64,
-    ) -> Quote {
+    pub fn create_draft_quote(tenant_id: Uuid, customer_id: Uuid, amount: i64) -> Quote {
         Quote {
             id: Uuid::new_v4(),
             tenant_id,
@@ -66,7 +62,10 @@ impl BookingService {
         };
 
         // Dummy Stripe Link
-        let stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", Uuid::new_v4().to_string().replace("-", ""));
+        let stripe_link = format!(
+            "https://checkout.stripe.com/pay/cs_test_{}",
+            Uuid::new_v4().to_string().replace("-", "")
+        );
 
         Ok((time_slot, stripe_link))
     }

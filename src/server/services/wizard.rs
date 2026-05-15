@@ -1,7 +1,7 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::wizard_service_server::WizardService;
+use ::server_ohc::orchestration::*;
 use std::sync::RwLock;
+use tonic::{Request, Response, Status};
 
 pub struct MyWizardService {
     settings: RwLock<WizardConfigureRequest>,
@@ -31,17 +31,17 @@ impl WizardService for MyWizardService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<WizardStatusProtoResponse>, Status> {
         let cfg = self.settings.read().unwrap();
-        
+
         let has_enabled_provider = cfg.ai_providers.iter().any(|p| p.enabled);
-        
+
         let steps = WizardStepsProto {
             server: !cfg.listen_addr.is_empty() && !cfg.db_path.is_empty(),
             ai_provider: has_enabled_provider,
             centrifuge: !cfg.centrifuge_url.is_empty(),
         };
-        
+
         let configured = steps.server && steps.ai_provider && steps.centrifuge;
-        
+
         Ok(Response::new(WizardStatusProtoResponse {
             configured,
             steps: Some(steps),
@@ -54,7 +54,7 @@ impl WizardService for MyWizardService {
     ) -> Result<Response<WizardStatusProtoResponse>, Status> {
         let req = request.into_inner();
         let mut cfg = self.settings.write().unwrap();
-        
+
         if !req.listen_addr.is_empty() {
             cfg.listen_addr = req.listen_addr;
         }
@@ -73,25 +73,25 @@ impl WizardService for MyWizardService {
         if !req.minimax_api_key.is_empty() {
             cfg.minimax_api_key = req.minimax_api_key;
         }
-        
+
         for (k, v) in req.extras {
             cfg.extras.insert(k, v);
         }
-        
+
         if !req.ai_providers.is_empty() {
             cfg.ai_providers = req.ai_providers;
         }
 
         let has_enabled_provider = cfg.ai_providers.iter().any(|p| p.enabled);
-        
+
         let steps = WizardStepsProto {
             server: !cfg.listen_addr.is_empty() && !cfg.db_path.is_empty(),
             ai_provider: has_enabled_provider,
             centrifuge: !cfg.centrifuge_url.is_empty(),
         };
-        
+
         let configured = steps.server && steps.ai_provider && steps.centrifuge;
-        
+
         Ok(Response::new(WizardStatusProtoResponse {
             configured,
             steps: Some(steps),
@@ -102,9 +102,9 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone =
+            std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
-        
         let mut health_checks = Vec::new();
         let mut is_all_healthy = true;
 
@@ -160,7 +160,9 @@ impl WizardService for MyWizardService {
                 health_checks.push(DiagnosticCheckProto {
                     check: "DATABASE_URL".to_string(),
                     status: "invalid".to_string(),
-                    message: "DATABASE_URL must be a sqlite:// connection string in standalone mode".to_string(),
+                    message:
+                        "DATABASE_URL must be a sqlite:// connection string in standalone mode"
+                            .to_string(),
                 });
             } else {
                 health_checks.push(DiagnosticCheckProto {
@@ -171,11 +173,16 @@ impl WizardService for MyWizardService {
             }
         }
 
-        let resp_status = if is_all_healthy { "healthy" } else { "degraded" };
+        let resp_status = if is_all_healthy {
+            "healthy"
+        } else {
+            "degraded"
+        };
         let mode = if is_standalone { "standalone" } else { "cloud" };
 
         // Hybrid mode mission sync health probe check
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url =
+            std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.is_empty() {
             health_checks.push(DiagnosticCheckProto {
                 check: "LOCAL_TO_CLOUD_SYNC".to_string(),
@@ -201,90 +208,161 @@ impl WizardService for MyWizardService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tonic::Request;
     use ::server_ohc::orchestration::EmptyRequest;
     use std::sync::Mutex;
     use std::sync::OnceLock;
+    use tonic::Request;
 
     static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
     fn env_lock() -> std::sync::MutexGuard<'static, ()> {
         ENV_MUTEX.get_or_init(|| Mutex::new(())).lock().unwrap()
     }
 
-
     #[test]
     fn test_verify_onboarding_standalone_sqlite_ok() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "healthy");
-                assert_eq!(response.mode, "standalone");
-                let has_ok_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "ok");
-                assert!(has_ok_db);
-                let has_hybrid_check = response.diagnostics.iter().any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
-                assert!(has_hybrid_check);
-                let has_local_sync_check = response.diagnostics.iter().any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
-                assert!(has_local_sync_check);
-            });
-        });
+        temp_env::with_vars(
+            vec![
+                ("STANDALONE_MODE", Some("true")),
+                ("DATABASE_URL", Some("sqlite://local.db")),
+            ],
+            || {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap()
+                    .block_on(async {
+                        let service = MyWizardService::new();
+                        let request = Request::new(EmptyRequest {});
+                        let response = service
+                            .verify_onboarding(request)
+                            .await
+                            .unwrap()
+                            .into_inner();
+                        assert_eq!(response.status, "healthy");
+                        assert_eq!(response.mode, "standalone");
+                        let has_ok_db = response
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.check == "DATABASE_URL" && d.status == "ok");
+                        assert!(has_ok_db);
+                        let has_hybrid_check = response
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
+                        assert!(has_hybrid_check);
+                        let has_local_sync_check = response
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
+                        assert!(has_local_sync_check);
+                    });
+            },
+        );
     }
-
-
 
     #[test]
     fn test_verify_onboarding_standalone_sqlite_missing() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", None::<&str>)], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "degraded");
-                assert_eq!(response.mode, "standalone");
-                let has_missing_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "missing");
-                assert!(has_missing_db);
-            });
-        });
+        temp_env::with_vars(
+            vec![
+                ("STANDALONE_MODE", Some("true")),
+                ("DATABASE_URL", None::<&str>),
+            ],
+            || {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap()
+                    .block_on(async {
+                        let service = MyWizardService::new();
+                        let request = Request::new(EmptyRequest {});
+                        let response = service
+                            .verify_onboarding(request)
+                            .await
+                            .unwrap()
+                            .into_inner();
+                        assert_eq!(response.status, "degraded");
+                        assert_eq!(response.mode, "standalone");
+                        let has_missing_db = response
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.check == "DATABASE_URL" && d.status == "missing");
+                        assert!(has_missing_db);
+                    });
+            },
+        );
     }
-
-
 
     #[test]
     fn test_verify_onboarding_standalone_sqlite_invalid() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("postgres://localhost/db"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "degraded");
-                assert_eq!(response.mode, "standalone");
-                let has_invalid_db = response.diagnostics.iter().any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
-                assert!(has_invalid_db);
-            });
-        });
+        temp_env::with_vars(
+            vec![
+                ("STANDALONE_MODE", Some("true")),
+                ("DATABASE_URL", Some("postgres://localhost/db")),
+            ],
+            || {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap()
+                    .block_on(async {
+                        let service = MyWizardService::new();
+                        let request = Request::new(EmptyRequest {});
+                        let response = service
+                            .verify_onboarding(request)
+                            .await
+                            .unwrap()
+                            .into_inner();
+                        assert_eq!(response.status, "degraded");
+                        assert_eq!(response.mode, "standalone");
+                        let has_invalid_db = response
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.check == "DATABASE_URL" && d.status == "invalid");
+                        assert!(has_invalid_db);
+                    });
+            },
+        );
     }
 
     #[test]
     fn test_verify_onboarding_hybrid_mode_probes() {
         let _guard = env_lock();
-        temp_env::with_vars(vec![("STANDALONE_MODE", Some("false")), ("DATABASE_URL", Some("postgres://db")), ("REDIS_URL", Some("redis://cache"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let service = MyWizardService::new();
-                let request = Request::new(EmptyRequest {});
-                let response = service.verify_onboarding(request).await.unwrap().into_inner();
-                assert_eq!(response.status, "healthy");
-                assert_eq!(response.mode, "cloud");
-                let has_hybrid_check = response.diagnostics.iter().any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
-                assert!(has_hybrid_check);
-                let has_local_sync_check = response.diagnostics.iter().any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
-                assert!(has_local_sync_check);
-            });
-        });
+        temp_env::with_vars(
+            vec![
+                ("STANDALONE_MODE", Some("false")),
+                ("DATABASE_URL", Some("postgres://db")),
+                ("REDIS_URL", Some("redis://cache")),
+            ],
+            || {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap()
+                    .block_on(async {
+                        let service = MyWizardService::new();
+                        let request = Request::new(EmptyRequest {});
+                        let response = service
+                            .verify_onboarding(request)
+                            .await
+                            .unwrap()
+                            .into_inner();
+                        assert_eq!(response.status, "healthy");
+                        assert_eq!(response.mode, "cloud");
+                        let has_hybrid_check = response
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.check == "HYBRID_MODE_SWITCHING" && d.status == "ok");
+                        assert!(has_hybrid_check);
+                        let has_local_sync_check = response
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.check == "LOCAL_TO_CLOUD_SYNC" && d.status == "ok");
+                        assert!(has_local_sync_check);
+                    });
+            },
+        );
     }
-
-
 }

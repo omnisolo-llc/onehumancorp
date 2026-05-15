@@ -1,6 +1,6 @@
-use crate::db::{DbStore, DB};
-use ::server_ohc::orchestration::SyncStateHandoff;
+use crate::db::{DB, DbStore};
 use crate::orchestration::mesh::TeammateMesh;
+use ::server_ohc::orchestration::SyncStateHandoff;
 use ohc_builtin_agent::mesh::transport::Message as MeshMessage;
 use prost::Message;
 use std::sync::Arc;
@@ -159,8 +159,8 @@ impl HandoffManager {
 mod tests {
     use super::*;
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
-    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use sqlx::Row;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
 
     #[tokio::test]
@@ -187,7 +187,14 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("DISCARD ALL").await?;
+                        Ok(true)
+                    })
+                })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -286,7 +293,14 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("DISCARD ALL").await?;
+                        Ok(true)
+                    })
+                })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -429,7 +443,14 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("DISCARD ALL").await?;
+                        Ok(true)
+                    })
+                })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;

@@ -1,12 +1,17 @@
 #![allow(dead_code)]
 
-use ::server_ohc::organization::Organization;
-use ::server_ohc::organization::TeamMember;
-use ::server_ohc::organization::RoleProfile;
 use ::server_ohc::common::Role;
+use ::server_ohc::organization::Organization;
+use ::server_ohc::organization::RoleProfile;
+use ::server_ohc::organization::TeamMember;
 use chrono::{DateTime, Utc};
 
-pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
+pub fn new_software_company(
+    id: &str,
+    name: &str,
+    ceo_name: &str,
+    now: DateTime<Utc>,
+) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let director_id = format!("{}-director-eng", id);
 
@@ -125,11 +130,19 @@ impl OrganizationExt for Organization {
     }
 
     fn members_by_manager(&self, manager_id: &str) -> Vec<&TeamMember> {
-        self.members.iter().filter(|m| m.manager_id == manager_id).collect()
+        self.members
+            .iter()
+            .filter(|m| m.manager_id == manager_id)
+            .collect()
     }
 }
 
-pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
+pub fn new_digital_marketing_agency(
+    id: &str,
+    name: &str,
+    ceo_name: &str,
+    now: DateTime<Utc>,
+) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let director_id = format!("{}-director-mkt", id);
 
@@ -212,7 +225,12 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
     }
 }
 
-pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
+pub fn new_accounting_firm(
+    id: &str,
+    name: &str,
+    ceo_name: &str,
+    now: DateTime<Utc>,
+) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let cfo_id = format!("{}-cfo", id);
 

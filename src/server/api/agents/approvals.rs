@@ -1,16 +1,15 @@
-use axum::{
-    extract::{Extension, State, Path, Query},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::{get, post},
-    Router,
-    Json,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
+use axum::{
+    Json, Router,
+    extract::{Extension, Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Serialize)]
 pub struct ApprovalsResponse {
@@ -51,7 +50,16 @@ async fn list_approvals(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApprovalsResponse {
+                    pending_approvals: vec![],
+                    next_cursor: None,
+                }),
+            )
+                .into_response();
+        }
     };
 
     // Assuming we fetch all and paginate manually for now given simple DB fetch
@@ -78,10 +86,14 @@ async fn list_approvals(
         None
     };
 
-    (StatusCode::OK, Json(ApprovalsResponse {
-        pending_approvals: paginated_approvals,
-        next_cursor,
-    })).into_response()
+    (
+        StatusCode::OK,
+        Json(ApprovalsResponse {
+            pending_approvals: paginated_approvals,
+            next_cursor,
+        }),
+    )
+        .into_response()
 }
 
 async fn decide_approval(
@@ -92,11 +104,24 @@ async fn decide_approval(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
-    match orchestrator.decide_approval(&id, &tenant_id, payload.approved).await {
+    match orchestrator
+        .decide_approval(&id, &tenant_id, payload.approved)
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(DecisionResponse { success: false }),
+        )
+            .into_response(),
     }
 }
