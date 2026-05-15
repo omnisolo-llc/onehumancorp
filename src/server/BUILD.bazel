@@ -6,6 +6,24 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "server_lib",
     srcs = [
+        "ultraplan_tests.rs",
+        "tasks_tests.rs",
+        "sip_tests.rs",
+        "settings_tests.rs",
+        "scheduler_tests.rs",
+        "queue_test_tests.rs",
+        "queue_tests.rs",
+        "powersync_tests.rs",
+        "pipeline_tests.rs",
+        "msgbus_tests_ipc.rs",
+        "msgbus_tests.rs",
+        "hub_tests.rs",
+        "db_autodream_tests.rs",
+        "db_tests.rs",
+        "crypto_tests.rs",
+        "chaos_tests.rs",
+        "autodream_sync_tests.rs",
+        "analytics_tests.rs",
         "analytics.rs",
         "autodream_sync.rs",
         "billing.rs",
@@ -116,7 +134,7 @@ rust_library(
 
 rust_binary(
     name = "server",
-    srcs = ["main.rs"],
+    srcs = ["main.rs", "main_tests.rs"],
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
@@ -152,7 +170,7 @@ rust_test(
 rust_test(
     name = "crypto_test",
     size = "small",
-    srcs = ["crypto.rs"],
+    srcs = ["crypto.rs", "crypto_tests.rs"],
     crate_root = "crypto.rs",
     edition = "2024",
     target_compatible_with = select({
