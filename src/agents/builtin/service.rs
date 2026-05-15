@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
+use ohc_builtin_agent_core::types::{EmbeddingRecord, LongTermMemory};
 
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
@@ -21,6 +22,7 @@ pub struct MemoryEntry {
 }
 
 pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str) -> String {
+    // Priority-based sorting could be added here for better context window utilization.
     if memories.is_empty() {
         return system_prompt.to_string();
     }
@@ -36,7 +38,7 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
     s
 }
 
-use crate::memory_store::{VectorRepository, EmbeddingRecord};
+use crate::memory_store::VectorRepository;
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -330,11 +332,13 @@ impl AgentServiceImpl {
                 &self.cfg.system_prompt
             };
             inject_memories_into_prompt(&memories, base_prompt)
+    // Priority-based sorting could be added here for better context window utilization.
         } else {
             inject_memories_into_prompt(&memories, &req.system_prompt)
+    // Priority-based sorting could be added here for better context window utilization.
         };
 
-        let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
+        let long_term_memory: Option<Arc<dyn LongTermMemory>> = if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR").unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
             Some(Arc::new(crate::json_store::NamespaceJsonStore::new(&base_dir)))
         } else {
@@ -344,7 +348,7 @@ impl AgentServiceImpl {
                     tenant_id: org_id.clone(),
                     agent_id: self.agent_id.clone(),
                     llm: llm.clone(),
-                }) as Arc<dyn crate::memory_store::LongTermMemory>
+                }) as Arc<dyn LongTermMemory>
             })
         };
 
@@ -495,8 +499,7 @@ impl AgentService for AgentServiceImpl {
         // Inject memory accessor if using Anthropic3TierMemoryStore
         let anthropic_memory = self.anthropic_memory.clone();
         let accessor = if let Some(mem) = &anthropic_memory {
-            use crate::memory_store::LongTermMemory;
-            mem.as_anthropic_accessor()
+            mem.clone().as_anthropic_accessor()
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
 
@@ -666,6 +669,7 @@ impl AgentService for AgentServiceImpl {
                     reference_count: 0,
                     reliability_score: 50,
                     owner_override: false,
+            archived: false,
                     metadata: None,
                 };
                 let _ = store.upsert(&record).await;
@@ -1112,8 +1116,7 @@ mod memory_tests {
         assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");
         let mem = service.anthropic_memory.as_ref().unwrap();
 
-        use crate::memory_store::LongTermMemory;
-        let accessor = mem.as_anthropic_accessor();
+        let accessor = mem.clone().as_anthropic_accessor();
         assert!(accessor.is_some(), "Should return the anthropic memory accessor");
 
         unsafe {

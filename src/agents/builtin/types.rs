@@ -161,3 +161,31 @@ impl std::fmt::Display for ToolError {
 }
 
 impl std::error::Error for ToolError {}
+
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EmbeddingRecord {
+    pub id: String,
+    pub tenant_id: String,
+    pub agent_id: String,
+    pub content: String,
+    pub embedding: Vec<f32>,
+    pub source_type: String,
+    pub created_at: DateTime<Utc>,
+    pub last_referenced_at: DateTime<Utc>,
+    pub reference_count: i32,
+    pub reliability_score: i32,
+    pub owner_override: bool,
+    pub archived: bool,
+    pub metadata: Option<String>,
+}
+
+#[async_trait::async_trait]
+pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
+    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
+    async fn get_lightweight_index(&self) -> Result<String, String> { Ok("".to_string()) }
+    async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> { Err("Not implemented".to_string()) }
+    async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> { Ok(vec![]) }
+}
