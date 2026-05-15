@@ -1615,6 +1615,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --primary: #0055ff;
                             --primary-hover: #0044cc;
                             --bg: #f4f7fa;
+                            --glass-bg: #ffffff;
                             --card-bg: #ffffff;
                             --text: #1a1a1b;
                             --text-secondary: #646d7b;
@@ -1629,7 +1630,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             line-height: 1.5;
                         }
                         .glass { 
-                            background: var(--card-bg); 
+                            background: rgba(255, 255, 255, 0.7);
+                            backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
                             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -1660,13 +1662,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         main { padding: 40px; }
                         .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
                         .card { 
-                            background: var(--card-bg); 
+                            background: rgba(255, 255, 255, 0.7);
+                            backdrop-filter: blur(20px) saturate(200%);
                             padding: 24px; 
                             border-radius: 8px; 
                             margin-bottom: 24px; 
                             border: 1px solid var(--border);
                         }
-                        h1, h2, h3 { color: var(--text); margin-top: 0; }
+                        h1, h2, h3 { font-family: 'Outfit', 'Inter', sans-serif; color: var(--text); margin-top: 0; }
                         input { 
                             width: 100%; 
                             padding: 10px 14px; 
@@ -1710,6 +1713,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
+
+                        @keyframes slideDown {
+                            from { opacity: 0; transform: translateY(-10px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        .activity-item {
+                            animation: slideDown 0.3s ease-out;
+                            padding: 8px;
+                            border-bottom: 1px solid rgba(255,255,255,0.1);
+                        }
+
                         /* Login screen specific */
                         #login-screen {
                             max-width: 400px;
@@ -2238,6 +2252,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
+
+
+                        function simulateOrder() {
+                            const feed = document.getElementById('agent-activity-feed');
+                            if (feed.innerHTML.includes('No recent activity.')) {
+                                feed.innerHTML = '';
+                            }
+
+                            const activities = [
+                                "Operations processed OrderReceived",
+                                "Customer Success drafted confirmation",
+                                "✅ Your Support Agent replied to 3 customers",
+                                "📦 Order Manager updated stock for 12 items"
+                            ];
+
+                            activities.forEach((activity, index) => {
+                                setTimeout(() => {
+                                    const p = document.createElement('p');
+                                    p.className = 'activity-item';
+                                    p.textContent = activity;
+                                    feed.insertBefore(p, feed.firstChild);
+                                }, index * 1000);
+                            });
+                        }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
