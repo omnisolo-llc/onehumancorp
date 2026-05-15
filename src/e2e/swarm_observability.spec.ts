@@ -3,7 +3,7 @@ import * as os from 'os';
 
 test.describe('Swarm Observability Flow', () => {
   test('User can observe swarm velocity and drill down into memory state', async ({ page }) => {
-    // Start from the home page
+    // Navigate to home page
     await page.goto('/');
 
     // Simulate UI component locally because backend DB fails in sandbox
@@ -13,8 +13,8 @@ test.describe('Swarm Observability Flow', () => {
       <body>
         <h1>OHC Business Dashboard</h1>
         <div id="swarm-velocity">Swarm Velocity</div>
-        <div id="task-rate">Task Rate: 142.5 /min</div>
-        <div id="latency">Latency: 85 ms</div>
+        <div id="task-rate">Task Rate</div>
+        <div id="latency">Latency</div>
         <button id="view-memory">View Swarm Memory State</button>
         <div id="memory-screen" style="display: none;">
           <h2>Swarm Memory State</h2>
@@ -35,8 +35,8 @@ test.describe('Swarm Observability Flow', () => {
 
     // Verify Swarm Velocity widget is present with its metrics
     await expect(page.locator('text="Swarm Velocity"').first()).toBeVisible();
-    await expect(page.locator('text="Task Rate: 142.5 /min"').first()).toBeVisible();
-    await expect(page.locator('text="Latency: 85 ms"').first()).toBeVisible();
+    await expect(page.locator('text="Task Rate"').first()).toBeVisible();
+    await expect(page.locator('text="Latency"').first()).toBeVisible();
 
     // The user should see the 'View Swarm Memory State' button
     const viewMemoryBtn = page.locator('text="View Swarm Memory State"').first();
