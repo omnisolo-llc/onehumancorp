@@ -8,6 +8,9 @@
 - **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
 - **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
 - **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+**Ease of Use**: Invisible to the business owner. They just toggle "Send SMS Reminders" on.
+**Environment**: API works directly.
+**Reputation**: Best in class.
 **Design Doc**:
 - User goes to Settings and toggles "Send me SMS for new orders".
 - When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."

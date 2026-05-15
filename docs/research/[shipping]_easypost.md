@@ -8,6 +8,9 @@
 - Competitive pricing (free tier for low volume, pennies per label after).
 - Abstracts away complex carrier-specific APIs and handles tracking webhooks.
 - Great fit for OHC physical product merchants.
+**Ease of Use**: Very high for the business owner. Just click "Print Label" on the order details page.
+**Environment**: API works directly.
+**Reputation**: Top tier.
 **Design Doc**:
 - Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
 - In the Order details view, the business owner clicks "Print Label."

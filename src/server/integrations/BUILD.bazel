@@ -12,6 +12,13 @@ filegroup(
         "obsidian.rs",
         "registry.rs",
         "//src/server/integrations/nats:srcs",        "//src/server/integrations/stripe:srcs",        "//src/server/integrations/mercadopago:srcs",        "//src/server/integrations/twilio:srcs",        "//src/server/integrations/pubsub:srcs",        "//src/server/integrations/task_scheduler:srcs",        "//src/server/integrations/chromadb:srcs",
+        "//src/server/integrations/meta_graph:srcs",
+        "//src/server/integrations/cal_com:srcs",
+        "//src/server/integrations/resend:srcs",
+        "//src/server/integrations/mercado_pago:srcs",
+        "//src/server/integrations/easypost:srcs",
+        "//src/server/integrations/twilio_q2:srcs",
+        "//src/server/integrations/google_meet:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

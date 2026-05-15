@@ -8,6 +8,9 @@
 - It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
 - Free tier available for individuals; great for our free tier users.
 - Alternative is building from scratch, which is error-prone.
+**Ease of Use**: Zero configuration needed beyond logging in. Avoids confusing users with Calendly setups. Fully integrated into OHC's existing booking flow.
+**Environment**: API works directly.
+**Reputation**: Best in class open source alternative.
 **Design Doc**:
 - "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
 - Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.

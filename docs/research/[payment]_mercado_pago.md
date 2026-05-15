@@ -8,6 +8,9 @@
 - **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
 - **Pricing**: Variable by country (e.g., ~4-5% per transaction).
 - **Compatibility**: Cloud (OAuth). Standalone (API Key).
+**Ease of Use**: Simple onboarding, very familiar for LATAM users.
+**Environment**: API works directly.
+**Reputation**: Good LATAM presence.
 **Design Doc**:
 - User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
 - User connects their Mercado Pago account.
