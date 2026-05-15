@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+🗣️ Echo: [UX Friction Audit & Fixes]
