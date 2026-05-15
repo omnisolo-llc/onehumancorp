@@ -187,7 +187,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            pool: sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -286,7 +286,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            pool: sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -429,7 +429,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            pool: sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
