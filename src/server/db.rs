@@ -1228,7 +1228,16 @@ mod additional_tests {
             .await
             .unwrap();
 
-        let db = DB::new_sqlite(pool.clone());
+        // Because DB struct requires a PgPool, and we just want to test DbStore::Sqlite logic without spinning up Postgres,
+        // we'll use a dummy PgPool just to construct the struct, then call our method.
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let db = DB {
+            pool: pg_pool,
+            store: DbStore::Sqlite(pool.clone()),
+        };
         let affected = db.cleanup_stagnant_missions(3600).await.unwrap();
         assert_eq!(affected, 2);
     }
