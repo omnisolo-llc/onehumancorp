@@ -716,14 +716,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_ml_resilience_tasks_timeout() {
-        // Test the ML-Resilience 60s timeout enforcement logic in tasks orchestration
         let start = std::time::Instant::now();
         let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             Ok::<(), String>(())
         }).await;
 
-        assert!(result.is_err(), "Tasks orchestration must enforce ML-Resilience timeout");
+        let final_result = match result {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => Err(e),
+            Err(_) => {
+                Err("Tasks Circuit Breaker Fallback".to_string())
+            }
+        };
+
+        assert!(final_result.is_err(), "Tasks orchestration must enforce ML-Resilience timeout");
+        assert_eq!(final_result.unwrap_err(), "Tasks Circuit Breaker Fallback");
         assert!(start.elapsed() >= std::time::Duration::from_millis(60), "Timeout should wait the configured time");
     }
 

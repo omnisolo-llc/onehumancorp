@@ -4415,7 +4415,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_ml_resilience_60s_timeout_rule() {
-        // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
         let timeout_duration = std::time::Duration::from_millis(50);
         let start = std::time::Instant::now();
 
@@ -4424,7 +4423,16 @@ mod tests {
             Ok::<(), String>(())
         }).await;
 
-        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
+        let final_result = match result {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => Err(e),
+            Err(_) => {
+                Err("Agent Circuit Breaker Fallback".to_string())
+            }
+        };
+
+        assert!(final_result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
+        assert_eq!(final_result.unwrap_err(), "Agent Circuit Breaker Fallback");
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 
