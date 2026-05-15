@@ -61,6 +61,7 @@ rust_library(
         "ralph_loop.rs",
         "registry.rs",
         "service.rs",
+        "tests.rs",
         "consolidation_worker.rs",
     ],
     crate_name = "ohc_builtin_agent",
