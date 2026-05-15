@@ -113,18 +113,7 @@ void main() {
       expect(find.text('mycustomdomain.ohc.app'), findsOneWidget);
 
       // Launch!
-            final scrollable = find.descendant(of: find.byType(SingleChildScrollView), matching: find.byType(Scrollable));
-      final btn = find.text('Launch My AI Team');
-      await tester.scrollUntilVisible(btn, 100.0, scrollable: scrollable.first);
-
-
-      await tester.pump(const Duration(milliseconds: 500));
-
-      ProviderScope.containerOf(tester.element(find.byType(BusinessSetupWizardScreen))).read(wizardProvider.notifier).submitWizard();
-      await tester.pump(const Duration(seconds: 2));
-
-
-
+      await tester.tap(find.text('Launch My AI Team'));
       await tester.pump(const Duration(seconds: 2));
 
       // Step 10: Checklist
@@ -325,11 +314,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       // 10. Review & Launch -> Launch My AI Team
-      ProviderScope.containerOf(tester.element(find.byType(BusinessSetupWizardScreen))).read(wizardProvider.notifier).submitWizard();
-      await tester.pump(const Duration(seconds: 2));
-
-
-
+      final launchBtn = find.byKey(const Key('launchAIBtn'));
+      await tester.ensureVisible(launchBtn);
+      await tester.tap(launchBtn);
       await tester.pump(const Duration(milliseconds: 500));
 
       // After launch, step goes to 10, rendering WelcomeChecklistScreen

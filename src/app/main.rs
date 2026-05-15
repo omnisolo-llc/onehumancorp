@@ -298,7 +298,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let login_ui_handle = login_ui.as_weak();
 
+
     let setup_wizard_ui = app::SetupWizard::new()?;
+
+    setup_wizard_ui.on_copy_to_clipboard(|_link| {
+        // mock clipboard implementation for setup wizard
+    });
+
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
@@ -3713,7 +3719,13 @@ async fn run_app_wasm() -> Result<(), Box<dyn std::error::Error>> {
     });
     let login_ui_handle = login_ui.as_weak();
 
+
     let setup_wizard_ui = app::SetupWizard::new()?;
+
+    setup_wizard_ui.on_copy_to_clipboard(|_link| {
+        // mock clipboard implementation for setup wizard
+    });
+
     setup_wizard_ui.set_is_advanced(IS_ADVANCED.with(|ia| *ia.borrow()));
 
     // Locale-based currency detection
