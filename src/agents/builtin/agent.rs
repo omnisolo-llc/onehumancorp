@@ -70,6 +70,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
+    pub enable_restrictive_architecture: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
@@ -119,6 +120,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
+            enable_restrictive_architecture: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
         }
@@ -2280,6 +2282,13 @@ impl Agent {
             return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
         }
 
+        // Permission Architecture: Restrictive vs Permissive
+        if cfg.enable_restrictive_architecture && !is_read_only {
+            if !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("Restrictive architecture enabled. Mutating tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
+        }
+
         Ok(())
     }
 
@@ -2360,6 +2369,38 @@ mod tests {
     struct MyStructuredOutput {
         city: String,
         population: u32,
+    }
+
+    #[tokio::test]
+    async fn test_permission_architecture() {
+        let mut cfg = AgentRunConfig::default();
+        let tc_read = ToolCall { id: "1".to_string(), name: "read_db".to_string(), arguments: serde_json::Value::Null };
+        let tc_write = ToolCall { id: "2".to_string(), name: "write_db".to_string(), arguments: serde_json::Value::Null };
+
+        // Default is permissive: mutating tools should pass without explicit approval
+        let res_permissive = Agent::check_tool_gating(&tc_write, false, &cfg);
+        assert!(res_permissive.is_ok());
+
+        // Enable restrictive architecture
+        cfg.enable_restrictive_architecture = true;
+
+        // Read tools should still pass
+        let res_read = Agent::check_tool_gating(&tc_read, true, &cfg);
+        assert!(res_read.is_ok());
+
+        // Mutating tools should fail if unapproved
+        let res_write_unapproved = Agent::check_tool_gating(&tc_write, false, &cfg);
+        assert!(res_write_unapproved.is_err());
+        if let Err(ToolError::UserFixable(msg)) = res_write_unapproved {
+            assert!(msg.contains("Restrictive architecture enabled. Mutating tool 'write_db' requires explicit user confirmation."));
+        } else {
+            panic!("Expected UserFixable error for unapproved mutating tool in restrictive mode");
+        }
+
+        // Mutating tools should pass if explicitly approved
+        cfg.approved_tool_calls.push("2".to_string());
+        let res_write_approved = Agent::check_tool_gating(&tc_write, false, &cfg);
+        assert!(res_write_approved.is_ok());
     }
 
     #[tokio::test]
