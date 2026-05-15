@@ -495,3 +495,176 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
+
+use std::sync::atomic::{AtomicUsize, Ordering};
+use tokio::sync::RwLock;
+
+/// Represents the state of a Circuit Breaker.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CircuitState {
+    Closed,
+    Open,
+    HalfOpen,
+}
+
+/// A highly resilient Circuit Breaker pattern implementation for Chaos Engineering
+pub struct ChaosCircuitBreaker {
+    state: RwLock<CircuitState>,
+    failure_count: AtomicUsize,
+    failure_threshold: usize,
+    reset_timeout: std::time::Duration,
+    last_failure_time: RwLock<Option<std::time::Instant>>,
+}
+
+impl ChaosCircuitBreaker {
+    pub fn new(failure_threshold: usize, reset_timeout: std::time::Duration) -> Self {
+        Self {
+            state: RwLock::new(CircuitState::Closed),
+            failure_count: AtomicUsize::new(0),
+            failure_threshold,
+            reset_timeout,
+            last_failure_time: RwLock::new(None),
+        }
+    }
+
+    pub async fn get_state(&self) -> CircuitState {
+        let current_state = *self.state.read().await;
+
+        if current_state == CircuitState::Open {
+            let last_failure = *self.last_failure_time.read().await;
+            if let Some(time) = last_failure {
+                if time.elapsed() >= self.reset_timeout {
+                    let mut state_write = self.state.write().await;
+                    *state_write = CircuitState::HalfOpen;
+                    return CircuitState::HalfOpen;
+                }
+            }
+        }
+        current_state
+    }
+
+    pub async fn record_failure(&self) {
+        let count = self.failure_count.fetch_add(1, Ordering::SeqCst) + 1;
+        let mut state_write = self.state.write().await;
+
+        if *state_write == CircuitState::HalfOpen || count >= self.failure_threshold {
+            *state_write = CircuitState::Open;
+            *self.last_failure_time.write().await = Some(std::time::Instant::now());
+        }
+    }
+
+    pub async fn record_success(&self) {
+        let mut state_write = self.state.write().await;
+        if *state_write == CircuitState::HalfOpen {
+            *state_write = CircuitState::Closed;
+            self.failure_count.store(0, Ordering::SeqCst);
+            *self.last_failure_time.write().await = None;
+        } else if *state_write == CircuitState::Closed {
+            self.failure_count.store(0, Ordering::SeqCst);
+        }
+    }
+
+    pub async fn call<F, Fut, T, E>(&self, func: F) -> Result<T, String>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+        E: std::fmt::Display,
+    {
+        let current_state = self.get_state().await;
+        if current_state == CircuitState::Open {
+            return Err("Circuit breaker is OPEN".to_string());
+        }
+
+        match func().await {
+            Ok(result) => {
+                self.record_success().await;
+                Ok(result)
+            }
+            Err(e) => {
+                self.record_failure().await;
+                Err(format!("Operation failed: {}", e))
+            }
+        }
+    }
+}
+
+/// A manager for ensuring ML-Resilience.
+pub struct AiAgentResilienceManager {
+    pub circuit_breaker: ChaosCircuitBreaker,
+    token_budget: AtomicUsize,
+    token_limit: usize,
+}
+
+impl AiAgentResilienceManager {
+    pub fn new(token_limit: usize) -> Self {
+        Self {
+            circuit_breaker: ChaosCircuitBreaker::new(3, std::time::Duration::from_secs(60)),
+            token_budget: AtomicUsize::new(token_limit),
+            token_limit,
+        }
+    }
+
+    /// Consumes tokens from the budget, enforced server-side.
+    pub fn consume_tokens(&self, amount: usize) -> Result<(), String> {
+        let mut current = self.token_budget.load(Ordering::SeqCst);
+        loop {
+            if current < amount {
+                return Err("Token budget exceeded".to_string());
+            }
+            match self.token_budget.compare_exchange_weak(
+                current,
+                current - amount,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => return Ok(()),
+                Err(val) => current = val,
+            }
+        }
+    }
+
+    /// Resets the token budget
+    pub fn reset_budget(&self) {
+        self.token_budget.store(self.token_limit, Ordering::SeqCst);
+    }
+
+    /// Executes an AI job with a timeout and circuit breaker
+    pub async fn execute_ai_job<F, Fut, T, E>(&self, job: F) -> Result<T, String>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+        E: std::fmt::Display,
+    {
+        let current_state = self.circuit_breaker.get_state().await;
+        if current_state == CircuitState::Open {
+            return Err("Agent is paused: LLM API unavailable".to_string());
+        }
+
+        let mut retries = 0;
+        let max_retries = 3;
+
+        while retries < max_retries {
+            let res = tokio::time::timeout(std::time::Duration::from_secs(60), job()).await;
+            match res {
+                Ok(Ok(result)) => {
+                    self.circuit_breaker.record_success().await;
+                    return Ok(result);
+                }
+                Ok(Err(_e)) => {
+                    // API error or malformed response
+                    retries += 1;
+                }
+                Err(_) => {
+                    // Timeout
+                    retries += 1;
+                }
+            }
+            if retries < max_retries {
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            }
+        }
+
+        self.circuit_breaker.record_failure().await;
+        Err("Job failed after retries or timed out".to_string())
+    }
+}

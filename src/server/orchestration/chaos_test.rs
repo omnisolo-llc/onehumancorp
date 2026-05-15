@@ -352,3 +352,110 @@ mod chaos_tests {
         assert_eq!(tasks.unwrap().len(), 0);
     }
 }
+
+#[cfg(test)]
+mod resilient_chaos_tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use crate::chaos::{AiAgentResilienceManager, ChaosCircuitBreaker, CircuitState};
+
+    #[tokio::test]
+    async fn test_agent_job_timeout_retry() {
+        let manager = AiAgentResilienceManager::new(100);
+        let attempts = Arc::new(AtomicUsize::new(0));
+
+        let job = || {
+            let a = attempts.clone();
+            async move {
+                let current = a.fetch_add(1, Ordering::SeqCst) + 1;
+                if current <= 2 {
+                    // Simulate an error or timeout behavior manually triggering retry
+                    // To do this we simulate the job taking slightly longer than normal,
+                    // but since AiAgentResilienceManager wraps the whole block with 60s timeout,
+                    // we just return Err to simulate malformed JSON or API error.
+                    return Err::<String, String>("Malformed JSON".to_string());
+                }
+                Ok::<String, String>("Success".to_string())
+            }
+        };
+
+        // Note: the test will run and retry up to 3 times because of the resilient manager
+        let result = manager.execute_ai_job(job).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Success");
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker() {
+        let breaker = ChaosCircuitBreaker::new(2, std::time::Duration::from_millis(100));
+
+        // Cause two failures
+        let fail_job = || async move { Err::<(), String>("Error".to_string()) };
+        let _ = breaker.call(fail_job).await;
+        let _ = breaker.call(fail_job).await;
+
+        // Circuit should now be open
+        assert_eq!(breaker.get_state().await, CircuitState::Open);
+
+        // Immediate call should fail fast
+        let success_job = || async move { Ok::<&str, String>("Success") };
+        let fast_fail = breaker.call(success_job).await;
+        assert!(fast_fail.is_err());
+        assert_eq!(fast_fail.unwrap_err(), "Circuit breaker is OPEN");
+
+        // Wait for reset timeout
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+        // Circuit should be HalfOpen
+        assert_eq!(breaker.get_state().await, CircuitState::HalfOpen);
+
+        // Call should succeed and close the circuit
+        let recover_result = breaker.call(success_job).await;
+        assert!(recover_result.is_ok());
+        assert_eq!(breaker.get_state().await, CircuitState::Closed);
+    }
+
+    #[tokio::test]
+    async fn test_token_budget_enforced_server_side() {
+        let manager = AiAgentResilienceManager::new(100);
+
+        // Consume within budget
+        assert!(manager.consume_tokens(40).is_ok());
+        assert!(manager.consume_tokens(50).is_ok());
+
+        // Consume exceeding budget
+        let result = manager.consume_tokens(20);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Token budget exceeded");
+    }
+
+    #[tokio::test]
+    async fn test_llm_api_unavailable_paused_state() {
+        let manager = AiAgentResilienceManager::new(100);
+
+        // We force 3 consecutive failures to open the circuit breaker
+        let fail_job = || async move { Err::<(), String>("API Down".to_string()) };
+
+        // This attempts to run but exhausts all retries because it continues failing.
+        let result1 = manager.execute_ai_job(fail_job).await;
+        assert!(result1.is_err());
+
+        // Because it exhausted all retries, the circuit breaker recorded a failure.
+        // But the circuit breaker threshold is 3. We must call `execute_ai_job` until it opens.
+        // Let's call it two more times.
+        let result2 = manager.execute_ai_job(fail_job).await;
+        let result3 = manager.execute_ai_job(fail_job).await;
+        assert!(result2.is_err());
+        assert!(result3.is_err());
+
+        // State is now Open
+        assert_eq!(manager.circuit_breaker.get_state().await, CircuitState::Open);
+
+        // Subsequent job execution fails with paused state
+        let paused_result = manager.execute_ai_job(fail_job).await;
+        assert!(paused_result.is_err());
+        assert_eq!(paused_result.unwrap_err(), "Agent is paused: LLM API unavailable");
+    }
+}

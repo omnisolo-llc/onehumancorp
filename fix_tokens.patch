@@ -1,0 +1,30 @@
+<<<<<<< SEARCH
+    pub fn consume_tokens(&self, amount: usize) -> Result<(), String> {
+        let current = self.token_budget.load(Ordering::SeqCst);
+        if current >= amount {
+            // Attempt to subtract, in a real scenario we'd use compare_exchange loop
+            self.token_budget.fetch_sub(amount, Ordering::SeqCst);
+            Ok(())
+        } else {
+            Err("Token budget exceeded".to_string())
+        }
+    }
+=======
+    pub fn consume_tokens(&self, amount: usize) -> Result<(), String> {
+        let mut current = self.token_budget.load(Ordering::SeqCst);
+        loop {
+            if current < amount {
+                return Err("Token budget exceeded".to_string());
+            }
+            match self.token_budget.compare_exchange_weak(
+                current,
+                current - amount,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => return Ok(()),
+                Err(val) => current = val,
+            }
+        }
+    }
+>>>>>>> REPLACE
