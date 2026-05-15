@@ -1622,17 +1622,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --sidebar-bg: #ffffff;
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
                         }
-                        .glass { 
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: 'Outfit', sans-serif;
+                        }
+                        .glass, .card {
                             background: var(--card-bg); 
+                            backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            border-radius: 16px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -1646,25 +1650,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             height: 60px;
                             align-items: center;
                         }
-                        nav a { 
+                        nav a, .nav-item {
                             color: var(--text-secondary); 
                             text-decoration: none; 
                             font-weight: 500; 
                             cursor: pointer; 
                             font-size: 14px;
-                            transition: color 0.2s;
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            min-width: 44px;
+                            min-height: 44px;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
                         }
-                        nav a:hover {
+                        nav a:hover, .nav-item:hover {
                             color: var(--primary);
                         }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
+                        .screen { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; width: 100%; box-sizing: border-box; }
                         .card { 
-                            background: var(--card-bg); 
                             padding: 24px; 
-                            border-radius: 8px; 
                             margin-bottom: 24px; 
-                            border: 1px solid var(--border);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input { 
@@ -1694,7 +1700,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-right: 8px; 
                             margin-bottom: 8px; 
                             font-size: 14px;
-                            transition: background 0.2s;
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            min-width: 44px;
+                            min-height: 44px;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -1744,15 +1755,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
+                            <p>Your helpers are working on your behalf.</p>
+                            <p>Store Status: <strong>Open</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Agents</button>
+                            <button onclick="showScreen('agents-screen')">My Helpers</button>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
+                            <button onclick="showScreen('agents-screen')">Manage Helpers</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
