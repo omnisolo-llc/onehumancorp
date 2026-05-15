@@ -20,7 +20,11 @@ mod tests {
         let write_res = write_tool.execute.execute(write_args).await.unwrap();
         assert_eq!(write_res, "Todo list updated with 2 items.");
 
-        let read_res = read_tool.execute.execute(serde_json::json!({})).await.unwrap();
+        let read_res = read_tool
+            .execute
+            .execute(serde_json::json!({}))
+            .await
+            .unwrap();
         assert!(read_res.contains("Fix bug"));
         assert!(read_res.contains("Write test"));
         assert!(read_res.contains("t1"));

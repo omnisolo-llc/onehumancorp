@@ -1,5 +1,5 @@
-use ohc_builtin_agent_core::types::ToolError;
 use chrono::Utc;
+use ohc_builtin_agent_core::types::ToolError;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -41,12 +41,7 @@ impl TaskStore {
         self.tasks.values().collect()
     }
 
-    pub fn update(
-        &mut self,
-        id: &str,
-        status: Option<String>,
-        result: Option<String>,
-    ) -> bool {
+    pub fn update(&mut self, id: &str, status: Option<String>, result: Option<String>) -> bool {
         if let Some(task) = self.tasks.get_mut(id) {
             if let Some(s) = status {
                 task.status = s;
@@ -70,13 +65,10 @@ struct TaskCreateExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for TaskCreateExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let title = args["title"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("task_create: title is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let title = args["title"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("task_create: title is required".to_string())
+        })?;
         let description = args["description"].as_str().unwrap_or("").to_string();
         let assignee = args["assignee"].as_str().unwrap_or("").to_string();
 
@@ -106,11 +98,10 @@ struct TaskGetExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for TaskGetExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("task_get: id is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let id = args["id"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("task_get: id is required".to_string()))?;
         let store = self.store.read().await;
         if let Some(task) = store.get(id) {
             Ok(serde_json::to_string_pretty(task).unwrap_or_default())
@@ -128,10 +119,7 @@ struct TaskListExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for TaskListExecutor {
-    async fn execute(
-        &self,
-        _args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, _args: Value) -> Result<String, ToolError> {
         let store = self.store.read().await;
         let tasks: Vec<&Task> = store.list();
         if tasks.is_empty() {
@@ -149,11 +137,10 @@ struct TaskUpdateExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for TaskUpdateExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("task_update: id is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let id = args["id"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("task_update: id is required".to_string()))?;
         let status = args["status"].as_str().map(str::to_string);
         let result = args["result"].as_str().map(str::to_string);
 

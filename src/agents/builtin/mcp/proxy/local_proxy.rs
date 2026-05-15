@@ -16,8 +16,11 @@ impl LocalStatefulExecutionProxy {
                 error TEXT,
                 exit_code INTEGER,
                 executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )"
-        ).execute(&db).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&db)
+        .await
+        .map_err(|e| e.to_string())?;
 
         Ok(Self { db, session })
     }
@@ -60,16 +63,15 @@ mod tests {
     async fn test_local_proxy_execution_success() {
         let db_id = Uuid::new_v4();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = SqlitePoolOptions::new()
-            .connect(&uri)
-            .await
-            .unwrap();
+        let pool = SqlitePoolOptions::new().connect(&uri).await.unwrap();
 
         let dir = format!("/tmp/test_session_{}", db_id);
         let _ = tokio::fs::remove_dir_all(&dir).await;
         let session = ShellSession::new("sess-proxy-1", &dir).await.unwrap();
 
-        let proxy = LocalStatefulExecutionProxy::new(pool.clone(), session).await.unwrap();
+        let proxy = LocalStatefulExecutionProxy::new(pool.clone(), session)
+            .await
+            .unwrap();
 
         let res = proxy.execute_command("echo 'proxytest'").await.unwrap();
         assert!(res.contains("proxytest"));
@@ -86,16 +88,15 @@ mod tests {
     async fn test_local_proxy_execution_error() {
         let db_id = Uuid::new_v4();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = SqlitePoolOptions::new()
-            .connect(&uri)
-            .await
-            .unwrap();
+        let pool = SqlitePoolOptions::new().connect(&uri).await.unwrap();
 
         let dir = format!("/tmp/test_session_{}", db_id);
         let _ = tokio::fs::remove_dir_all(&dir).await;
         let session = ShellSession::new("sess-proxy-2", &dir).await.unwrap();
 
-        let proxy = LocalStatefulExecutionProxy::new(pool.clone(), session).await.unwrap();
+        let proxy = LocalStatefulExecutionProxy::new(pool.clone(), session)
+            .await
+            .unwrap();
 
         let res = proxy.execute_command("nonexistent_command_12345").await;
         assert!(res.is_err());

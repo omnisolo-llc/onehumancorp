@@ -1,19 +1,19 @@
 #![allow(dead_code)]
 
+use crate::agents::sandbox::session::ShellSession;
+use crate::pricing::calculator::calculate_compute_cost;
+use crate::pricing::calculator::CostConfig;
+use crate::telemetry::buffer_metric;
+use futures::StreamExt;
+use serde_json::json;
+use sqlx::PgPool;
 use std::path::PathBuf;
+use std::process::Stdio;
+use std::time::Instant;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use futures::StreamExt;
-use std::process::Stdio;
-use std::time::Instant;
-use serde_json::json;
-use crate::agents::sandbox::session::ShellSession;
-use crate::telemetry::buffer_metric;
-use crate::pricing::calculator::calculate_compute_cost;
-use crate::pricing::calculator::CostConfig;
-use sqlx::PgPool;
 
 pub enum ExecutionEvent {
     Stdout(String),
@@ -29,7 +29,11 @@ pub struct SandboxManager {
 }
 
 impl SandboxManager {
-    pub async fn new(session_id: &str, sandbox_dir: &str, pool: Option<PgPool>) -> Result<Self, String> {
+    pub async fn new(
+        session_id: &str,
+        sandbox_dir: &str,
+        pool: Option<PgPool>,
+    ) -> Result<Self, String> {
         let session = ShellSession::new(session_id, sandbox_dir).await?;
 
         // Default cost config for compute
@@ -128,7 +132,8 @@ impl SandboxManager {
                     "counter",
                     cost as f32,
                     labels.clone(),
-                ).await;
+                )
+                .await;
 
                 let _ = buffer_metric(
                     &pool,
@@ -136,7 +141,8 @@ impl SandboxManager {
                     "histogram",
                     duration.as_millis() as f32,
                     labels,
-                ).await;
+                )
+                .await;
             }
         });
 

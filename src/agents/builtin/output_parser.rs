@@ -1,7 +1,7 @@
-use crate::types::{ChatRequest, Message, ToolError, ChatResponse};
+use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
+use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
-use async_trait::async_trait;
 
 #[async_trait]
 pub trait LlmClientForParser: Send + Sync {
@@ -39,7 +39,11 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         }),
     };
 
-    if !current_req.tools.iter().any(|t| t.name == "structured_output") {
+    if !current_req
+        .tools
+        .iter()
+        .any(|t| t.name == "structured_output")
+    {
         current_req.tools.push(schema_tool);
     }
 
@@ -56,13 +60,20 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
 
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty() {
-            if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+            if let Some(call) = msg
+                .tool_calls
+                .iter()
+                .find(|t| t.name == "structured_output")
+            {
                 if let Some(data) = call.arguments.get("data") {
                     match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => return Ok(parsed),
                         Err(e) => {
                             if attempt >= max_retries {
-                                return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
+                                return Err(ToolError::Fatal(format!(
+                                    "Output parsing failed after {} retries. Last error: {}",
+                                    max_retries, e
+                                )));
                             }
 
                             // Let the LLM know the tool call arguments were invalid
@@ -155,7 +166,10 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
             Ok(parsed) => return Ok(parsed),
             Err(e) => {
                 if attempt >= max_retries {
-                    return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
+                    return Err(ToolError::Fatal(format!(
+                        "Output parsing failed after {} retries. Last error: {}",
+                        max_retries, e
+                    )));
                 }
 
                 current_req.messages.push(Message::assistant(completion));
@@ -184,7 +198,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClientForParser for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             if !resps.is_empty() {
                 Ok(resps.remove(0))
@@ -242,13 +259,16 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_markdown_wrapper() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```")
-            ]),
+            responses: Mutex::new(vec![create_text_resp(
+                "```json\n{\n  \"result\": \"success_markdown\"\n}\n```",
+            )]),
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
+                .await
+                .unwrap();
         assert_eq!(result.result, "success_markdown");
     }
 
@@ -259,7 +279,10 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
+                .await
+                .unwrap();
         assert_eq!(result.result, "success");
     }
 
@@ -268,12 +291,15 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
                 create_text_resp("invalid json"),
-                create_text_resp(r#"{"result": "success after retry"}"#)
+                create_text_resp(r#"{"result": "success after retry"}"#),
             ]),
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
+                .await
+                .unwrap();
         assert_eq!(result.result, "success after retry");
     }
 
@@ -287,7 +313,8 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let result: Result<TestOutput, _> =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::Fatal(msg)) = result {
             assert!(msg.contains("Output parsing failed after 2 retries"));
@@ -299,13 +326,17 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_tool_calls_success() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_tool_call"}})),
-            ]),
+            responses: Mutex::new(vec![create_tool_call_resp(
+                "structured_output",
+                serde_json::json!({"data": {"result": "success_tool_call"}}),
+            )]),
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
+                .await
+                .unwrap();
         assert_eq!(result.result, "success_tool_call");
     }
 
@@ -313,13 +344,22 @@ mod tests {
     async fn test_parse_structured_output_tool_calls_retry_success() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field": "test"}})),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_tool_call_retry"}})),
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"wrong_field": "test"}}),
+                ),
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "success_tool_call_retry"}}),
+                ),
             ]),
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
+                .await
+                .unwrap();
         assert_eq!(result.result, "success_tool_call_retry");
     }
 
@@ -327,13 +367,20 @@ mod tests {
     async fn test_parse_structured_output_tool_calls_failure() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field": "test"}})),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field_again": "test"}})),
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"wrong_field": "test"}}),
+                ),
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"wrong_field_again": "test"}}),
+                ),
             ]),
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let result: Result<TestOutput, _> =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::Fatal(msg)) = result {
             assert!(msg.contains("Output parsing failed after 2 retries"));

@@ -12,10 +12,7 @@ struct BashExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for BashExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let command = args["command"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("bash: command is required".to_string()))?
@@ -24,11 +21,21 @@ impl ToolExecutor for BashExecutor {
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
 
         let wd_ref = self.working_dir.as_deref();
-        let output_res = tokio::time::timeout(timeout, self.runner.run("bash", &["-c", &command], wd_ref, vec![])).await;
-        
+        let output_res = tokio::time::timeout(
+            timeout,
+            self.runner.run("bash", &["-c", &command], wd_ref, vec![]),
+        )
+        .await;
+
         let output = output_res
-            .map_err(|_| ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
-            .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|_| {
+                ToolError::LlmRecoverable(format!(
+                    "bash: command timed out after {}s",
+                    timeout_secs
+                ))
+            })?
+            .map_err(|e| format!("bash: failed to execute: {}", e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -55,7 +62,10 @@ impl ToolExecutor for BashExecutor {
     }
 }
 
-pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
+pub fn bash_tool(
+    working_dir: Option<std::path::PathBuf>,
+    runner: Arc<dyn crate::runner::CommandRunner>,
+) -> Tool {
     Tool {
         name: "Bash".to_string(),
         description: "Execute a bash command and return its output. \
@@ -77,6 +87,9 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["command"]
         }),
-        execute: Arc::new(BashExecutor { working_dir, runner }),
+        execute: Arc::new(BashExecutor {
+            working_dir,
+            runner,
+        }),
     }
 }

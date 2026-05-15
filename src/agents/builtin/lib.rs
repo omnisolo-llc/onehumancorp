@@ -16,26 +16,26 @@
 pub use ohc_builtin_agent_core::*;
 
 pub mod agent;
-pub mod service;
+pub mod autogen;
 pub mod departments;
 pub mod guardrails;
-pub mod memory_store;
 pub mod json_store;
-pub mod autogen;
+pub mod memory_store;
 pub mod ralph_loop;
+pub mod service;
 
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
-pub mod proto;
 pub mod mesh;
+pub mod proto;
 pub use service::start_builtin_agent;
 
-pub mod provider;
-pub mod registry;
-pub mod plane;
 pub mod checkpointer;
+pub mod codex_runner;
+pub mod consolidation_worker;
 pub mod harness;
 pub mod langgraph;
 pub mod masking_tests;
-pub mod codex_runner;
-pub mod consolidation_worker;
+pub mod plane;
+pub mod provider;
+pub mod registry;

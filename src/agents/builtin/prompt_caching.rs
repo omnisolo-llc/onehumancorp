@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 #[derive(Clone, Debug)]
 pub struct CachedResponse {
@@ -36,11 +36,14 @@ impl PromptCache {
 
     pub fn set(&self, prompt: &str, response: &str, token_count: usize) {
         let mut cache = self.cache.lock().unwrap();
-        cache.insert(prompt.to_string(), CachedResponse {
-            text: response.to_string(),
-            created_at: Instant::now(),
-            token_count,
-        });
+        cache.insert(
+            prompt.to_string(),
+            CachedResponse {
+                text: response.to_string(),
+                created_at: Instant::now(),
+                token_count,
+            },
+        );
     }
 
     pub fn clear_expired(&self) {

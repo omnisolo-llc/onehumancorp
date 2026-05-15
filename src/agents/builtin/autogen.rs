@@ -227,10 +227,8 @@ Provide your response, which will be passed to the next agent in the sequence.",
     }
 }
 
-
-
-use crate::tools::task::TaskStore;
 use crate::tools::magentic::magentic_tool;
+use crate::tools::task::TaskStore;
 
 /// The Orchestrator that manages a "Magentic" flow of agents (a manager dynamically updating a task ledger).
 pub struct MagenticManager {
@@ -277,17 +275,24 @@ impl MagenticManager {
 
             current_cfg.server_system_message = sys_msg;
 
-            let recent_history = transcript.iter().map(|m| {
-                format!("{}: {}", m.role, m.content)
-            }).collect::<Vec<_>>().join("\n\n");
+            let recent_history = transcript
+                .iter()
+                .map(|m| format!("{}: {}", m.role, m.content))
+                .collect::<Vec<_>>()
+                .join("\n\n");
 
             let prompt = format!("Recent Transcript:\n{}\n\nYour turn.", recent_history);
 
             let mut on_event = |_| {};
-            let response = run_agent.run(&current_cfg, &prompt, &mut on_event).await
+            let response = run_agent
+                .run(&current_cfg, &prompt, &mut on_event)
+                .await
                 .map_err(|e| format!("Manager Agent failed: {}", e))?;
 
-            transcript.push(Message::assistant(format!("{}: {}", self.manager_agent.name, response)));
+            transcript.push(Message::assistant(format!(
+                "{}: {}",
+                self.manager_agent.name, response
+            )));
 
             if response.contains("FINISHED") {
                 break;
@@ -300,7 +305,9 @@ impl MagenticManager {
                 if let Some(route_idx) = line.find("ROUTE_TO:") {
                     if let Some(task_idx) = line.find("TASK:") {
                         if route_idx < task_idx {
-                            let agent_part = line[route_idx + "ROUTE_TO:".len()..task_idx].trim().to_string();
+                            let agent_part = line[route_idx + "ROUTE_TO:".len()..task_idx]
+                                .trim()
+                                .to_string();
                             let task_part = line[task_idx + "TASK:".len()..].trim().to_string();
                             routed_agent = Some(agent_part);
                             routed_task = Some(task_part);
@@ -321,20 +328,30 @@ impl MagenticManager {
                     let mut sub_cfg = agent.run_config.clone();
                     sub_cfg.server_system_message = sub_sys_msg;
 
-                    let sub_prompt = format!("Recent Transcript:\n{}\n\nPlease complete TASK: {}.", recent_history, task_id);
-                    let sub_response = agent.agent.run(&sub_cfg, &sub_prompt, &mut on_event).await
+                    let sub_prompt = format!(
+                        "Recent Transcript:\n{}\n\nPlease complete TASK: {}.",
+                        recent_history, task_id
+                    );
+                    let sub_response = agent
+                        .agent
+                        .run(&sub_cfg, &sub_prompt, &mut on_event)
+                        .await
                         .map_err(|e| format!("SubAgent {} failed: {}", agent.name, e))?;
 
-                    transcript.push(Message::assistant(format!("{}: {}", agent.name, sub_response)));
+                    transcript.push(Message::assistant(format!(
+                        "{}: {}",
+                        agent.name, sub_response
+                    )));
 
                     // Automatically update task status as complete
-                    let _ = magentic_tool(self.task_store.clone()).execute.execute(
-                        serde_json::json!({
+                    let _ = magentic_tool(self.task_store.clone())
+                        .execute
+                        .execute(serde_json::json!({
                             "action": "update",
                             "id": task_id,
                             "status": "complete"
-                        })
-                    ).await;
+                        }))
+                        .await;
                 }
             }
         }
@@ -351,7 +368,10 @@ pub struct ConcurrentChatManager {
 
 impl ConcurrentChatManager {
     pub fn new(agents: Vec<ChatAgent>, synthesizer: Option<ChatAgent>) -> Self {
-        Self { agents, synthesizer }
+        Self {
+            agents,
+            synthesizer,
+        }
     }
 
     /// Run the concurrent chat loop, fanning out the input to all agents, then fanning in to the synthesizer if present.
@@ -622,7 +642,9 @@ mod tests {
         // futures::future::join_all preserves order of inputs
         assert!(transcript[1].content.contains("Agent1: Output from Agent1"));
         assert!(transcript[2].content.contains("Agent2: Output from Agent2"));
-        assert!(transcript[3].content.contains("Synthesizer: Synthesized final response"));
+        assert!(transcript[3]
+            .content
+            .contains("Synthesizer: Synthesized final response"));
     }
 
     #[tokio::test]
@@ -636,9 +658,7 @@ mod tests {
         });
 
         let worker_llm = Arc::new(AutoGenMockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                "I have completed task-1.".to_string(),
-            ]),
+            responses: tokio::sync::Mutex::new(vec!["I have completed task-1.".to_string()]),
         });
 
         let cfg = AgentRunConfig::default();
@@ -665,9 +685,16 @@ mod tests {
 
         assert!(transcript.len() >= 3);
         assert!(transcript[0].content.contains("Initialize project"));
-        assert!(transcript[1].content.contains("ROUTE_TO: Worker1 TASK: task-1"));
+        assert!(transcript[1]
+            .content
+            .contains("ROUTE_TO: Worker1 TASK: task-1"));
 
-        let found = transcript.iter().any(|m| m.content.contains("I have completed task-1."));
-        assert!(found, "Transcript should contain the worker's completion message");
+        let found = transcript
+            .iter()
+            .any(|m| m.content.contains("I have completed task-1."));
+        assert!(
+            found,
+            "Transcript should contain the worker's completion message"
+        );
     }
 }

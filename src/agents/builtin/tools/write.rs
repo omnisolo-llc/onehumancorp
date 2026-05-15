@@ -12,28 +12,35 @@ struct WriteExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for WriteExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("write: path is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let path = args["path"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("write: path is required".to_string()))?;
         let content = args["content"]
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("write: content is required".to_string()))?;
 
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let safe_path = std::path::Path::new(path)
+            .strip_prefix("/")
+            .unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir {
+            wd.join(safe_path)
+        } else {
+            std::path::PathBuf::from(path)
+        };
 
         // Create parent directories if needed.
         if let Some(parent) = actual_path.parent() {
             fs::create_dir_all(parent)
                 .await
-                .map_err(|e| format!("write: create dir {}: {}", parent.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                .map_err(|e| format!("write: create dir {}: {}", parent.display(), e))
+                .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         }
 
         fs::write(&actual_path, content)
             .await
-            .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("write: {}: {}", actual_path.display(), e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
@@ -43,11 +50,23 @@ impl ToolExecutor for WriteExecutor {
             // within the file itself without requiring a full `cargo check` of a potentially broken tree.
             // We ignore errors related to missing external crates (E0432, E0463) as they are false positives
             // when running `rustc` outside the build system.
-            match self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &actual_path_str], None, vec![]).await {
+            match self
+                .runner
+                .run(
+                    "rustc",
+                    &["--emit=metadata", "--edition=2021", &actual_path_str],
+                    None,
+                    vec![],
+                )
+                .await
+            {
                 Ok(output) => {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
-                        if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                        if !stderr.contains("E0432")
+                            && !stderr.contains("E0463")
+                            && !stderr.contains("E0433")
+                        {
                             return Err(ToolError::LlmRecoverable(format!(
                                 "Verification Loop Failed: `rustc` reported syntax errors after writing to {}.
 
@@ -66,13 +85,14 @@ Please fix the errors and try again.",
             }
         }
 
-
-
         Ok(format!("File written: {}", path))
     }
 }
 
-pub fn write_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
+pub fn write_tool(
+    working_dir: Option<std::path::PathBuf>,
+    runner: Arc<dyn crate::runner::CommandRunner>,
+) -> Tool {
     Tool {
         name: "Write".to_string(),
         description: "Write content to a file. Creates parent directories as needed. Overwrites any existing content.".to_string(),
@@ -104,7 +124,10 @@ mod tests {
     async fn test_write_tool_basic() {
         let dir = tempdir().unwrap();
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = WriteExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+            runner,
+        };
 
         let args = json!({
             "path": "test.txt",
@@ -114,14 +137,19 @@ mod tests {
         let result = executor.execute(args).await.unwrap();
         assert_eq!(result, "File written: test.txt");
 
-        let content = fs::read_to_string(dir.path().join("test.txt")).await.unwrap();
+        let content = fs::read_to_string(dir.path().join("test.txt"))
+            .await
+            .unwrap();
         assert_eq!(content, "hello world");
     }
 
     #[tokio::test]
     async fn test_write_tool_missing_args() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = WriteExecutor { working_dir: None, runner };
+        let executor = WriteExecutor {
+            working_dir: None,
+            runner,
+        };
 
         let args = json!({ "path": "test.txt" });
         let result = executor.execute(args).await;
@@ -136,7 +164,10 @@ mod tests {
     async fn test_write_tool_rust_verification_success() {
         let dir = tempdir().unwrap();
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = WriteExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+            runner,
+        };
 
         let args = json!({
             "path": "test.rs",
@@ -153,9 +184,16 @@ mod tests {
         let dir = tempdir().unwrap();
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         // Simulate rustc failure
-        runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(
+            1,
+            "",
+            "error: expected expression, found `;`",
+        )));
 
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = WriteExecutor {
+            working_dir: Some(dir.path().to_path_buf()),
+            runner,
+        };
 
         let args = json!({
             "path": "test.rs",
@@ -164,7 +202,10 @@ mod tests {
 
         // Should fail verification due to syntax error
         let result = executor.execute(args).await;
-        assert!(result.is_err(), "Expected error from mock rustc verification");
+        assert!(
+            result.is_err(),
+            "Expected error from mock rustc verification"
+        );
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
         } else {

@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tests {
     use crate::agent::{Agent, AgentRunConfig};
-    use crate::tools::recall::recall_observation_tool;
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
     use crate::llm::LlmClient;
+    use crate::tools::recall::recall_observation_tool;
     use crate::tools::Tool;
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+    use dashmap::DashMap;
     use std::sync::Arc;
     use tokio::sync::Mutex;
-    use dashmap::DashMap;
 
     struct MockLlm {
         responses: Mutex<Vec<ChatResponse>>,
@@ -15,7 +15,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 Ok(ChatResponse {
@@ -33,7 +36,10 @@ mod tests {
     struct SimpleTool;
     #[async_trait::async_trait]
     impl crate::tools::ToolExecutor for SimpleTool {
-        async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+        async fn execute(
+            &self,
+            _args: serde_json::Value,
+        ) -> Result<String, crate::types::ToolError> {
             Ok("This is a very long observation that should eventually be masked if it gets old enough and is large enough.".to_string())
         }
     }
@@ -59,7 +65,11 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: "Calling tool".to_string(),
-                        tool_calls: vec![ToolCall { id: "call_1".to_string(), name: "long_tool".to_string(), arguments: serde_json::Value::Null }],
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "long_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
@@ -109,7 +119,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for RecordingMockLlm {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             self.requests.lock().await.push(req);
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
@@ -128,7 +141,10 @@ mod tests {
     #[tokio::test]
     async fn test_recall_observation_tool() {
         let observation_store = Arc::new(DashMap::new());
-        observation_store.insert("secret_id".to_string(), "The lost city is at 42, 42".to_string());
+        observation_store.insert(
+            "secret_id".to_string(),
+            "The lost city is at 42, 42".to_string(),
+        );
 
         let tool = recall_observation_tool(observation_store.clone());
         let args = serde_json::json!({"tool_call_id": "secret_id"});
@@ -151,7 +167,11 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: "Call 1".to_string(),
-                        tool_calls: vec![ToolCall { id: "c1".to_string(), name: "t".to_string(), arguments: serde_json::Value::Null }],
+                        tool_calls: vec![ToolCall {
+                            id: "c1".to_string(),
+                            name: "t".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
@@ -164,7 +184,11 @@ mod tests {
                     message: Message {
                         role: Role::Assistant,
                         content: "Call 2".to_string(),
-                        tool_calls: vec![ToolCall { id: "c2".to_string(), name: "t".to_string(), arguments: serde_json::Value::Null }],
+                        tool_calls: vec![ToolCall {
+                            id: "c2".to_string(),
+                            name: "t".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
@@ -185,18 +209,24 @@ mod tests {
         struct FixedTool;
         #[async_trait::async_trait]
         impl crate::tools::ToolExecutor for FixedTool {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+            async fn execute(
+                &self,
+                _args: serde_json::Value,
+            ) -> Result<String, crate::types::ToolError> {
                 Ok("Long output content here".to_string())
             }
         }
 
-        let mut agent = Agent::new(client.clone(), vec![Tool {
-            name: "t".to_string(),
-            description: "t".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(FixedTool),
-        }]);
+        let mut agent = Agent::new(
+            client.clone(),
+            vec![Tool {
+                name: "t".to_string(),
+                description: "t".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(FixedTool),
+            }],
+        );
         agent.observation_store = observation_store;
 
         let mut cfg = AgentRunConfig::default();
@@ -218,10 +248,16 @@ mod tests {
         let turn3_msgs = &reqs[2].messages;
         let tr1 = &turn3_msgs[2];
         assert_eq!(tr1.role, Role::Tool);
-        assert!(tr1.tool_results[0].content.contains("Observation Masked"), "Expected Result 1 to be masked in turn 3");
+        assert!(
+            tr1.tool_results[0].content.contains("Observation Masked"),
+            "Expected Result 1 to be masked in turn 3"
+        );
 
         let tr2 = &turn3_msgs[4];
         assert_eq!(tr2.role, Role::Tool);
-        assert!(tr2.tool_results[0].content.contains("Long output content"), "Expected Result 2 NOT to be masked in turn 3");
+        assert!(
+            tr2.tool_results[0].content.contains("Long output content"),
+            "Expected Result 2 NOT to be masked in turn 3"
+        );
     }
 }
