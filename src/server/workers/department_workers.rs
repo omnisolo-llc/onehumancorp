@@ -115,12 +115,15 @@ impl OperationsWorker {
             .map(|(id, tenant_id, payload)| {
                 let db = db.clone();
                 async move {
-                    Self::process_task(&db, id, tenant_id, payload).await
+                    if let Err(e) = Self::process_task(&db, id, tenant_id, payload).await {
+                        tracing::error!("Failed to process task: {}", e);
+                    }
+                    Ok::<(), String>(())
                 }
             })
             .buffer_unordered(5)
-            .try_collect::<Vec<()>>()
-            .await?;
+            .collect::<Vec<_>>()
+            .await;
 
         Ok(processed)
     }
@@ -681,12 +684,15 @@ impl CustomerSuccessWorker {
             .map(|(id, tenant_id, payload, event_type)| {
                 let db = db.clone();
                 async move {
-                    Self::process_task(&db, id, tenant_id, payload, event_type).await
+                    if let Err(e) = Self::process_task(&db, id, tenant_id, payload, event_type).await {
+                        tracing::error!("Failed to process task: {}", e);
+                    }
+                    Ok::<(), String>(())
                 }
             })
             .buffer_unordered(5)
-            .try_collect::<Vec<()>>()
-            .await?;
+            .collect::<Vec<_>>()
+            .await;
 
         Ok(processed)
     }
