@@ -1790,6 +1790,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
+                            <button class="nav-item" onclick="showScreen('help-screen')">Help</button>
                         </nav>
                     </div>
 
@@ -2218,6 +2219,40 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
+                    <!-- Help Center Screen -->
+                    <div id="help-screen" class="screen glass" style="display: none;">
+                        <h1>Help Center</h1>
+                        <h2>How can we help your business today?</h2>
+                        <p>Find answers to your questions and learn how to get the most out of One Human Corp.</p>
+
+                        <div class="card glass">
+                            <h3>Getting Started</h3>
+                            <p>Learn how to set up your store and add your first product.</p>
+                            <button onclick="alert('Article: Getting Started')">Read Article</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Payments & Billing</h3>
+                            <p>Understand how to accept payments and manage your subscriptions.</p>
+                            <button onclick="alert('Article: Payments')">Read Article</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Marketing & Growth</h3>
+                            <p>Discover tips and tricks to grow your small business online.</p>
+                            <button onclick="alert('Article: Marketing')">Read  Article</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>AI Agents</h3>
+                            <p>Learn how our AI can help automate your daily tasks.</p>
+                            <button onclick="alert('Article: AI Agents')">Read Article</button>
+                        </div>
+
+                        <button class="primary" onclick="alert('Opening AI Help Chat...')">💤 Ask AI Support</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
                     <script>
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
@@ -2236,7 +2271,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
-                            'meeting-room-screen': '/meetings/room/1'
+                            'meeting-room-screen': '/meetings/room/1',
+                            'help-screen': '/help'
                         };
 
                         function showScreen(id) {
@@ -2261,7 +2297,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'help-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
