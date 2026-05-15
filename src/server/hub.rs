@@ -292,7 +292,7 @@ impl Hub {
                     let hub = self.clone();
                     
                     tokio::spawn(async move {
-                        let client = crate::minimax::MinimaxClient::new(api_key);
+                        let client = crate::minimax::ResilientClient::new(crate::minimax::MinimaxClient::new(api_key));
                         let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
                         
                         for m in &transcript {

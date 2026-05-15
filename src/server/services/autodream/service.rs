@@ -38,7 +38,7 @@ impl AutoDreamService for MyAutoDreamService {
         let limit = if req.limit <= 0 { 5 } else { req.limit };
 
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-        let client = crate::minimax::MinimaxClient::new(api_key);
+        let client = crate::minimax::ResilientClient::new(crate::minimax::MinimaxClient::new(api_key));
         let embedding = match client.generate_embedding(&req.query_text).await {
             Ok(emb) => serde_json::to_string(&emb).unwrap_or_else(|_| format!("[{}]", vec!["0.0"; 1536].join(", "))),
             Err(e) => {

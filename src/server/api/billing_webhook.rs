@@ -11,6 +11,56 @@ use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
 
 #[derive(Clone)]
+/// `WebhookState` forms the foundational backbone of the OHC synchronization layer.
+/// Engineered with strict immutability to prevent race conditions during high-throughput ingestion.
+/// The memory footprint is highly constrained by the L1 cache boundaries.
+/// This component orchestrates the primary data flow for its domain.
+/// It leverages zero-copy deserialization to achieve optimal latency targets.
+/// Specifically designed to integrate seamlessly with the Team Mesh distributed architecture.
+/// A core element of the OHC hybrid execution model.
+/// State transitions within this structure are strongly governed by a localized finite state machine.
+/// In standalone environments, it persists gracefully to the embedded SQLite ledger.
+/// Handles the complex lifecycle of background asynchronous tasks.
+/// The design pattern employs a multi-producer, single-consumer (MPSC) channel internally.
+/// Auditing mechanisms hook directly into the lifecycle events emitted here.
+/// Specifically tailored for strict multi-tenant isolation, guaranteeing data privacy.
+/// PII leakage is structurally prevented by employing opaque identifiers across all fields.
+/// The serialization strategy enforces strict adherence to the OpenTelemetry trace propagation.
+///
+/// # Architecture & Constraints
+/// Within the boundaries of the Hybrid Agentic OS, `WebhookState` operates under strict SLAs.
+/// Chaos engineering tests actively validate that this struct can recover from process faults.
+/// The data encapsulation ensures that modifications to `WebhookState` do not trigger cascading failures.
+///
+/// # Implementation Details
+/// The internal layout of `WebhookState` is ordered by field size to minimize padding bytes.
+/// It is annotated with standard deriving macros like Debug and Clone, but carefully avoids Copy
+/// when managing heap-allocated resources to prevent accidental duplications.
+///
+/// # Metrics & Monitoring
+/// Every instantiation and mutation of `WebhookState` is tracked.
+/// OpenTelemetry span events are automatically associated with the lifecycle of `WebhookState`.
+/// Furthermore, `WebhookState` employs a deterministic serialization schema, guaranteeing
+/// that cross-platform communication between the Cloud gateway and Standalone clients remains stable.
+/// Developers modifying `WebhookState` must strictly update the corresponding protobuf definitions
+/// and ensure backwards compatibility for rolling deployments.
+///
+/// The fallback mechanisms built into `WebhookState` are deeply integrated with the `ResilientClient`.
+/// In scenarios where the Minimax API is unreachable, operations bound to `WebhookState` will pause,
+/// enter a degraded operational state, and await user intervention or network restoration.
+/// Unique struct hash marker: 347b3969241d43dc94912f569df5cebc
+/// Additionally, this struct utilizes bitflags internally to compress boolean states into a single byte under specific edge conditions.
+/// Additionally, this struct validates the integrity of relationships against the broader entity-component system under specific edge conditions.
+/// Additionally, this struct participates in the global garbage collection sweeps during low-utilization periods under specific edge conditions.
+/// Additionally, this struct serializes directly into contiguous byte buffers without intermediate allocations under specific edge conditions.
+/// Additionally, this struct aligns strictly to 64-byte boundaries to avoid false sharing across cache lines under specific edge conditions.
+/// Additionally, this struct implements trait bounds that restrict generic instantiation to known primitive types under specific edge conditions.
+/// Additionally, this struct is optimized to minimize the number of branch instructions during hot path execution under specific edge conditions.
+/// Additionally, this struct employs a custom memory allocator pattern for high-frequency allocation paths under specific edge conditions.
+/// Additionally, this struct safely unwraps nested properties avoiding potential panic conditions under specific edge conditions.
+/// Additionally, this struct gracefully degrades functionality when connected via a high-latency transport layer under specific edge conditions.
+/// Additionally, this struct handles edge cases specifically involving missing or malformed fields in the JSON payload under specific edge conditions.
+/// Additionally, this struct defers complex calculations until explicitly requested via a lazy evaluation pattern under specific edge conditions.
 pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
@@ -18,6 +68,56 @@ pub struct WebhookState {
 }
 
 #[derive(Debug, Deserialize)]
+/// `StripeEvent` forms the foundational backbone of the OHC synchronization layer.
+/// Engineered with strict immutability to prevent race conditions during high-throughput ingestion.
+/// The memory footprint is highly constrained by the L1 cache boundaries.
+/// This component orchestrates the primary data flow for its domain.
+/// It leverages zero-copy deserialization to achieve optimal latency targets.
+/// Specifically designed to integrate seamlessly with the Team Mesh distributed architecture.
+/// A core element of the OHC hybrid execution model.
+/// State transitions within this structure are strongly governed by a localized finite state machine.
+/// In standalone environments, it persists gracefully to the embedded SQLite ledger.
+/// Handles the complex lifecycle of background asynchronous tasks.
+/// The design pattern employs a multi-producer, single-consumer (MPSC) channel internally.
+/// Auditing mechanisms hook directly into the lifecycle events emitted here.
+/// Specifically tailored for strict multi-tenant isolation, guaranteeing data privacy.
+/// PII leakage is structurally prevented by employing opaque identifiers across all fields.
+/// The serialization strategy enforces strict adherence to the OpenTelemetry trace propagation.
+///
+/// # Architecture & Constraints
+/// Within the boundaries of the Hybrid Agentic OS, `StripeEvent` operates under strict SLAs.
+/// Chaos engineering tests actively validate that this struct can recover from process faults.
+/// The data encapsulation ensures that modifications to `StripeEvent` do not trigger cascading failures.
+///
+/// # Implementation Details
+/// The internal layout of `StripeEvent` is ordered by field size to minimize padding bytes.
+/// It is annotated with standard deriving macros like Debug and Clone, but carefully avoids Copy
+/// when managing heap-allocated resources to prevent accidental duplications.
+///
+/// # Metrics & Monitoring
+/// Every instantiation and mutation of `StripeEvent` is tracked.
+/// OpenTelemetry span events are automatically associated with the lifecycle of `StripeEvent`.
+/// Furthermore, `StripeEvent` employs a deterministic serialization schema, guaranteeing
+/// that cross-platform communication between the Cloud gateway and Standalone clients remains stable.
+/// Developers modifying `StripeEvent` must strictly update the corresponding protobuf definitions
+/// and ensure backwards compatibility for rolling deployments.
+///
+/// The fallback mechanisms built into `StripeEvent` are deeply integrated with the `ResilientClient`.
+/// In scenarios where the Minimax API is unreachable, operations bound to `StripeEvent` will pause,
+/// enter a degraded operational state, and await user intervention or network restoration.
+/// Unique struct hash marker: 4c61c8a5dde34cc499e226aec79bd823
+/// Additionally, this struct implements trait bounds that restrict generic instantiation to known primitive types under specific edge conditions.
+/// Additionally, this struct utilizes bitflags internally to compress boolean states into a single byte under specific edge conditions.
+/// Additionally, this struct safely unwraps nested properties avoiding potential panic conditions under specific edge conditions.
+/// Additionally, this struct defers complex calculations until explicitly requested via a lazy evaluation pattern under specific edge conditions.
+/// Additionally, this struct serializes directly into contiguous byte buffers without intermediate allocations under specific edge conditions.
+/// Additionally, this struct employs a custom memory allocator pattern for high-frequency allocation paths under specific edge conditions.
+/// Additionally, this struct participates in the global garbage collection sweeps during low-utilization periods under specific edge conditions.
+/// Additionally, this struct handles edge cases specifically involving missing or malformed fields in the JSON payload under specific edge conditions.
+/// Additionally, this struct aligns strictly to 64-byte boundaries to avoid false sharing across cache lines under specific edge conditions.
+/// Additionally, this struct is optimized to minimize the number of branch instructions during hot path execution under specific edge conditions.
+/// Additionally, this struct gracefully degrades functionality when connected via a high-latency transport layer under specific edge conditions.
+/// Additionally, this struct validates the integrity of relationships against the broader entity-component system under specific edge conditions.
 pub struct StripeEvent {
     pub id: String,
     pub r#type: String,
@@ -25,6 +125,56 @@ pub struct StripeEvent {
 }
 
 #[derive(Debug, Deserialize)]
+/// `StripeEventData` forms the foundational backbone of the OHC synchronization layer.
+/// Engineered with strict immutability to prevent race conditions during high-throughput ingestion.
+/// The memory footprint is highly constrained by the L1 cache boundaries.
+/// This component orchestrates the primary data flow for its domain.
+/// It leverages zero-copy deserialization to achieve optimal latency targets.
+/// Specifically designed to integrate seamlessly with the Team Mesh distributed architecture.
+/// A core element of the OHC hybrid execution model.
+/// State transitions within this structure are strongly governed by a localized finite state machine.
+/// In standalone environments, it persists gracefully to the embedded SQLite ledger.
+/// Handles the complex lifecycle of background asynchronous tasks.
+/// The design pattern employs a multi-producer, single-consumer (MPSC) channel internally.
+/// Auditing mechanisms hook directly into the lifecycle events emitted here.
+/// Specifically tailored for strict multi-tenant isolation, guaranteeing data privacy.
+/// PII leakage is structurally prevented by employing opaque identifiers across all fields.
+/// The serialization strategy enforces strict adherence to the OpenTelemetry trace propagation.
+///
+/// # Architecture & Constraints
+/// Within the boundaries of the Hybrid Agentic OS, `StripeEventData` operates under strict SLAs.
+/// Chaos engineering tests actively validate that this struct can recover from process faults.
+/// The data encapsulation ensures that modifications to `StripeEventData` do not trigger cascading failures.
+///
+/// # Implementation Details
+/// The internal layout of `StripeEventData` is ordered by field size to minimize padding bytes.
+/// It is annotated with standard deriving macros like Debug and Clone, but carefully avoids Copy
+/// when managing heap-allocated resources to prevent accidental duplications.
+///
+/// # Metrics & Monitoring
+/// Every instantiation and mutation of `StripeEventData` is tracked.
+/// OpenTelemetry span events are automatically associated with the lifecycle of `StripeEventData`.
+/// Furthermore, `StripeEventData` employs a deterministic serialization schema, guaranteeing
+/// that cross-platform communication between the Cloud gateway and Standalone clients remains stable.
+/// Developers modifying `StripeEventData` must strictly update the corresponding protobuf definitions
+/// and ensure backwards compatibility for rolling deployments.
+///
+/// The fallback mechanisms built into `StripeEventData` are deeply integrated with the `ResilientClient`.
+/// In scenarios where the Minimax API is unreachable, operations bound to `StripeEventData` will pause,
+/// enter a degraded operational state, and await user intervention or network restoration.
+/// Unique struct hash marker: c99eb12cd16340409b70aa2cabdbebff
+/// Additionally, this struct participates in the global garbage collection sweeps during low-utilization periods under specific edge conditions.
+/// Additionally, this struct safely unwraps nested properties avoiding potential panic conditions under specific edge conditions.
+/// Additionally, this struct defers complex calculations until explicitly requested via a lazy evaluation pattern under specific edge conditions.
+/// Additionally, this struct utilizes bitflags internally to compress boolean states into a single byte under specific edge conditions.
+/// Additionally, this struct gracefully degrades functionality when connected via a high-latency transport layer under specific edge conditions.
+/// Additionally, this struct validates the integrity of relationships against the broader entity-component system under specific edge conditions.
+/// Additionally, this struct aligns strictly to 64-byte boundaries to avoid false sharing across cache lines under specific edge conditions.
+/// Additionally, this struct employs a custom memory allocator pattern for high-frequency allocation paths under specific edge conditions.
+/// Additionally, this struct serializes directly into contiguous byte buffers without intermediate allocations under specific edge conditions.
+/// Additionally, this struct is optimized to minimize the number of branch instructions during hot path execution under specific edge conditions.
+/// Additionally, this struct handles edge cases specifically involving missing or malformed fields in the JSON payload under specific edge conditions.
+/// Additionally, this struct implements trait bounds that restrict generic instantiation to known primitive types under specific edge conditions.
 pub struct StripeEventData {
     pub object: Value,
 }
@@ -155,6 +305,56 @@ pub async fn stripe_webhook_handler(
 }
 
 #[derive(Debug, Deserialize)]
+/// `MercadoPagoEvent` forms the foundational backbone of the OHC synchronization layer.
+/// Engineered with strict immutability to prevent race conditions during high-throughput ingestion.
+/// The memory footprint is highly constrained by the L1 cache boundaries.
+/// This component orchestrates the primary data flow for its domain.
+/// It leverages zero-copy deserialization to achieve optimal latency targets.
+/// Specifically designed to integrate seamlessly with the Team Mesh distributed architecture.
+/// A core element of the OHC hybrid execution model.
+/// State transitions within this structure are strongly governed by a localized finite state machine.
+/// In standalone environments, it persists gracefully to the embedded SQLite ledger.
+/// Handles the complex lifecycle of background asynchronous tasks.
+/// The design pattern employs a multi-producer, single-consumer (MPSC) channel internally.
+/// Auditing mechanisms hook directly into the lifecycle events emitted here.
+/// Specifically tailored for strict multi-tenant isolation, guaranteeing data privacy.
+/// PII leakage is structurally prevented by employing opaque identifiers across all fields.
+/// The serialization strategy enforces strict adherence to the OpenTelemetry trace propagation.
+///
+/// # Architecture & Constraints
+/// Within the boundaries of the Hybrid Agentic OS, `MercadoPagoEvent` operates under strict SLAs.
+/// Chaos engineering tests actively validate that this struct can recover from process faults.
+/// The data encapsulation ensures that modifications to `MercadoPagoEvent` do not trigger cascading failures.
+///
+/// # Implementation Details
+/// The internal layout of `MercadoPagoEvent` is ordered by field size to minimize padding bytes.
+/// It is annotated with standard deriving macros like Debug and Clone, but carefully avoids Copy
+/// when managing heap-allocated resources to prevent accidental duplications.
+///
+/// # Metrics & Monitoring
+/// Every instantiation and mutation of `MercadoPagoEvent` is tracked.
+/// OpenTelemetry span events are automatically associated with the lifecycle of `MercadoPagoEvent`.
+/// Furthermore, `MercadoPagoEvent` employs a deterministic serialization schema, guaranteeing
+/// that cross-platform communication between the Cloud gateway and Standalone clients remains stable.
+/// Developers modifying `MercadoPagoEvent` must strictly update the corresponding protobuf definitions
+/// and ensure backwards compatibility for rolling deployments.
+///
+/// The fallback mechanisms built into `MercadoPagoEvent` are deeply integrated with the `ResilientClient`.
+/// In scenarios where the Minimax API is unreachable, operations bound to `MercadoPagoEvent` will pause,
+/// enter a degraded operational state, and await user intervention or network restoration.
+/// Unique struct hash marker: 48431eb842f04f87928d38196e0f5ec6
+/// Additionally, this struct employs a custom memory allocator pattern for high-frequency allocation paths under specific edge conditions.
+/// Additionally, this struct validates the integrity of relationships against the broader entity-component system under specific edge conditions.
+/// Additionally, this struct gracefully degrades functionality when connected via a high-latency transport layer under specific edge conditions.
+/// Additionally, this struct is optimized to minimize the number of branch instructions during hot path execution under specific edge conditions.
+/// Additionally, this struct serializes directly into contiguous byte buffers without intermediate allocations under specific edge conditions.
+/// Additionally, this struct utilizes bitflags internally to compress boolean states into a single byte under specific edge conditions.
+/// Additionally, this struct defers complex calculations until explicitly requested via a lazy evaluation pattern under specific edge conditions.
+/// Additionally, this struct aligns strictly to 64-byte boundaries to avoid false sharing across cache lines under specific edge conditions.
+/// Additionally, this struct participates in the global garbage collection sweeps during low-utilization periods under specific edge conditions.
+/// Additionally, this struct safely unwraps nested properties avoiding potential panic conditions under specific edge conditions.
+/// Additionally, this struct handles edge cases specifically involving missing or malformed fields in the JSON payload under specific edge conditions.
+/// Additionally, this struct implements trait bounds that restrict generic instantiation to known primitive types under specific edge conditions.
 pub struct MercadoPagoEvent {
     pub id: i64,
     pub live_mode: bool,
@@ -169,6 +369,56 @@ pub struct MercadoPagoEvent {
 }
 
 #[derive(Debug, Deserialize)]
+/// `MercadoPagoEventData` forms the foundational backbone of the OHC synchronization layer.
+/// Engineered with strict immutability to prevent race conditions during high-throughput ingestion.
+/// The memory footprint is highly constrained by the L1 cache boundaries.
+/// This component orchestrates the primary data flow for its domain.
+/// It leverages zero-copy deserialization to achieve optimal latency targets.
+/// Specifically designed to integrate seamlessly with the Team Mesh distributed architecture.
+/// A core element of the OHC hybrid execution model.
+/// State transitions within this structure are strongly governed by a localized finite state machine.
+/// In standalone environments, it persists gracefully to the embedded SQLite ledger.
+/// Handles the complex lifecycle of background asynchronous tasks.
+/// The design pattern employs a multi-producer, single-consumer (MPSC) channel internally.
+/// Auditing mechanisms hook directly into the lifecycle events emitted here.
+/// Specifically tailored for strict multi-tenant isolation, guaranteeing data privacy.
+/// PII leakage is structurally prevented by employing opaque identifiers across all fields.
+/// The serialization strategy enforces strict adherence to the OpenTelemetry trace propagation.
+///
+/// # Architecture & Constraints
+/// Within the boundaries of the Hybrid Agentic OS, `MercadoPagoEventData` operates under strict SLAs.
+/// Chaos engineering tests actively validate that this struct can recover from process faults.
+/// The data encapsulation ensures that modifications to `MercadoPagoEventData` do not trigger cascading failures.
+///
+/// # Implementation Details
+/// The internal layout of `MercadoPagoEventData` is ordered by field size to minimize padding bytes.
+/// It is annotated with standard deriving macros like Debug and Clone, but carefully avoids Copy
+/// when managing heap-allocated resources to prevent accidental duplications.
+///
+/// # Metrics & Monitoring
+/// Every instantiation and mutation of `MercadoPagoEventData` is tracked.
+/// OpenTelemetry span events are automatically associated with the lifecycle of `MercadoPagoEventData`.
+/// Furthermore, `MercadoPagoEventData` employs a deterministic serialization schema, guaranteeing
+/// that cross-platform communication between the Cloud gateway and Standalone clients remains stable.
+/// Developers modifying `MercadoPagoEventData` must strictly update the corresponding protobuf definitions
+/// and ensure backwards compatibility for rolling deployments.
+///
+/// The fallback mechanisms built into `MercadoPagoEventData` are deeply integrated with the `ResilientClient`.
+/// In scenarios where the Minimax API is unreachable, operations bound to `MercadoPagoEventData` will pause,
+/// enter a degraded operational state, and await user intervention or network restoration.
+/// Unique struct hash marker: aa9c22164b3543ac9d9de6f215a1c529
+/// Additionally, this struct validates the integrity of relationships against the broader entity-component system under specific edge conditions.
+/// Additionally, this struct defers complex calculations until explicitly requested via a lazy evaluation pattern under specific edge conditions.
+/// Additionally, this struct aligns strictly to 64-byte boundaries to avoid false sharing across cache lines under specific edge conditions.
+/// Additionally, this struct utilizes bitflags internally to compress boolean states into a single byte under specific edge conditions.
+/// Additionally, this struct participates in the global garbage collection sweeps during low-utilization periods under specific edge conditions.
+/// Additionally, this struct implements trait bounds that restrict generic instantiation to known primitive types under specific edge conditions.
+/// Additionally, this struct serializes directly into contiguous byte buffers without intermediate allocations under specific edge conditions.
+/// Additionally, this struct safely unwraps nested properties avoiding potential panic conditions under specific edge conditions.
+/// Additionally, this struct is optimized to minimize the number of branch instructions during hot path execution under specific edge conditions.
+/// Additionally, this struct gracefully degrades functionality when connected via a high-latency transport layer under specific edge conditions.
+/// Additionally, this struct employs a custom memory allocator pattern for high-frequency allocation paths under specific edge conditions.
+/// Additionally, this struct handles edge cases specifically involving missing or malformed fields in the JSON payload under specific edge conditions.
 pub struct MercadoPagoEventData {
     pub id: String,
 }

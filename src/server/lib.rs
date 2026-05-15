@@ -981,7 +981,7 @@ impl HubService for MyHubService {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
         
-        let client = minimax::MinimaxClient::new(api_key);
+        let client = minimax::ResilientClient::new(minimax::MinimaxClient::new(api_key));
         match client.reason(&req.prompt).await {
             Ok(content) => Ok(Response::new(ReasonResponse { content })),
             Err(e) => Err(Status::internal(e)),
