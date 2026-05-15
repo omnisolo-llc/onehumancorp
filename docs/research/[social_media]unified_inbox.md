@@ -1,25 +1,28 @@
-# Title: Unified Social Media Inbox Integration
+### Title
+`[social_media]unified_inbox`: Implement Unified Social Inbox via Meta Graph API
 
-## Problem Statement
-Small business owners struggle to keep up with customer messages scattered across Instagram DMs, Facebook Messenger, WhatsApp, and TikTok. Switching between apps causes delayed responses, lost sales, and poor customer service. They need a single place to view and reply to all messages.
+### Problem Statement
+Small business owners often miss critical customer inquiries because they are scattered across Instagram DMs, Facebook Messenger, and WhatsApp. Manually checking each app is a massive time sink. They need a single, unified inbox where all messages appear in one place, allowing them to reply to customers quickly without switching contexts.
 
-## Research Report
-*   **Tool Candidates**: ManyChat, Meta Business Suite API, Twilio Conversations.
-*   **Evaluation**: Twilio Conversations provides a robust API for WhatsApp and SMS but requires more setup for IG/FB. Meta Business Suite API is free and covers IG/FB directly. ManyChat is user-friendly but adds a subscription cost. Meta's official API is the most direct route, though the OAuth flow is complex.
-*   **Ease of Use**: Once connected, the user never has to leave OHC. The initial setup requires logging into Meta.
-*   **Pricing**: Meta APIs are mostly free for standard usage; WhatsApp Business has conversation-based pricing.
-*   **Modes**: Cloud (OAuth redirects work well). Standalone (OAuth redirects need local handling or proxying).
+### Research Report
+- **Tool**: Meta Graph API
+- **Pros**: Direct access to the largest social platforms (Instagram, Facebook, WhatsApp). High reliability and deep feature set.
+- **Cons**: Complex OAuth flow, strict app review process, and frequent API changes. WhatsApp pricing involves per-conversation charges.
+- **Reputation**: Industry standard, though developer experience can be frustrating due to Meta's aggressive review policies.
+- **Pricing**: Free for standard APIs, WhatsApp Business API has per-conversation costs (approx. $0.01 - $0.08 depending on region).
+- **Ease of Use for Non-Technical Users**: The user simply clicks "Connect Instagram" and authorizes the app. The complexity is hidden behind the scenes.
+- **Modes Supported**: Cloud (webhooks) and Standalone (local polling or proxy).
 
-## Design Doc
-*   **Integration Trigger**: User connects their Meta/WhatsApp accounts via a "Connect Socials" button in OHC Settings.
-*   **Action**: Webhooks receive incoming messages and route them to a unified "Inbox" view in the OHC app. Replies sent from OHC are pushed back to the respective platform.
-*   **User Interface**: A chat-like interface displaying the source of the message (an icon for IG, WhatsApp, etc.).
+### Design Doc
+- **Trigger**: The business owner connects their Meta account via an OAuth flow in the OHC UI.
+- **Action**: The OHC API server registers webhooks (in Cloud mode) or sets up a local polling mechanism/proxy (in Standalone mode) to receive incoming messages. These are stored in the shared PostgreSQL (Cloud) or local SQLite (Standalone).
+- **User View**: A unified "Inbox" tab in the UI displaying all messages chronologically, with indicators for the source platform.
 
-## Implementation Prompt
-Implement a unified inbox feature where users can connect their Instagram, Facebook, and WhatsApp accounts. Incoming messages should appear in a single chronological feed. The user should be able to type a reply and have it sent back to the customer on the original platform. Acceptance criteria include successful account connection, receiving a message, and sending a reply.
+### Implementation Prompt
+Implement a unified inbox feature that allows users to connect their Meta accounts. The system must ingest incoming messages from Instagram, Facebook, and WhatsApp, and present them in a single unified view. Users must be able to reply to messages directly from the OHC interface, and the responses should be routed back to the appropriate platform. Ensure the OAuth flow is seamless and clearly explains the required permissions.
 
-## Priority
-P1
+### Priority
+P0
 
-## Estimated Scope
+### Estimated Scope
 Large

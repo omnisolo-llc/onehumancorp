@@ -1,25 +1,28 @@
-# Title: Automated Booking & Calendar Sync
+### Title
+`[calendar]automated_scheduling`: Implement Two-Way Google Calendar Sync
 
-## Problem Statement
-Service-based small business owners spend too much time going back and forth with clients to find a meeting time. Double bookings happen frequently because personal and business calendars aren't synced. They need a way to let clients book available slots automatically.
+### Problem Statement
+Business owners juggle consultations, classes, and personal appointments. Double-booking is a constant risk, and manually copying appointments from a booking page to their personal calendar is tedious. They need a system that automatically adds new bookings to their calendar and prevents customers from booking times when they are already busy.
 
-## Research Report
-*   **Tool Candidates**: Calendly API, Cal.com, Google Calendar API direct.
-*   **Evaluation**: Cal.com is open-source, highly customizable, and offers a white-label API. Calendly is the industry standard but less flexible for white-labeling. Direct Google Calendar integration requires building the scheduling logic from scratch.
-*   **Ease of Use**: Cal.com API allows us to embed the booking flow seamlessly into OHC so the business owner just sees "Availability Settings".
-*   **Pricing**: Cal.com has team plans; direct Google API is free but high development cost.
-*   **Modes**: Cloud (easy). Standalone (requires managing OAuth tokens locally).
+### Research Report
+- **Tool**: Google Calendar API
+- **Pros**: Ubiquitous, highly reliable, excellent documentation. Supports real-time push notifications for changes.
+- **Cons**: Requires Google Cloud project setup and OAuth verification, which can be daunting if not handled by the platform.
+- **Reputation**: The gold standard for calendar integrations.
+- **Pricing**: Free for standard usage limits (which are very high).
+- **Ease of Use for Non-Technical Users**: Very intuitive. Users authenticate with their Google account and the system handles the rest.
+- **Modes Supported**: Cloud and Standalone.
 
-## Design Doc
-*   **Integration Trigger**: User sets their working hours and connects their Google/Outlook calendar.
-*   **Action**: OHC generates a public booking link. When a client books, it creates an event on the owner's connected calendar and blocks that time in OHC.
-*   **User Interface**: An "Availability" settings page, and a generated public-facing booking page for clients.
+### Design Doc
+- **Trigger**: The business owner clicks "Connect Google Calendar" and completes the OAuth flow.
+- **Action**: The OHC API server fetches existing calendar events to block out busy times on the user's OHC booking page. New bookings made via OHC are pushed to the Google Calendar.
+- **User View**: A "Calendar" or "Availability" settings page showing connected calendars and options to sync specific event types.
 
-## Implementation Prompt
-Build a scheduling feature that allows users to set their weekly availability and connect a third-party calendar (Google/Outlook). Generate a shareable booking link where clients can pick an available time slot. When booked, the event must appear on the connected calendar. Acceptance criteria: user can set hours, connect calendar, and a test booking successfully blocks out that time.
+### Implementation Prompt
+Create a two-way sync integration with Google Calendar. The system must read the user's availability to prevent double-booking on their OHC booking page. When a customer books a service, the event must be automatically created on the business owner's Google Calendar. The OAuth connection process must be straightforward, handling token refresh automatically in the background.
 
-## Priority
-P0
+### Priority
+P1
 
-## Estimated Scope
+### Estimated Scope
 Medium

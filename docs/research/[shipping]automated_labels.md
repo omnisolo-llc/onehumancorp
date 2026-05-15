@@ -1,25 +1,28 @@
-# Title: Automated Shipping Rates and Label Generation
+### Title
+`[shipping]automated_labels`: Implement Shipping Label Generation via Shippo
 
-## Problem Statement
-Business owners selling physical goods waste hours manually entering addresses into carrier websites to buy shipping labels. They need real-time shipping rates at checkout and one-click label printing.
+### Problem Statement
+For product-based businesses, manually calculating shipping rates and copying addresses to carrier websites to buy labels is a massive bottleneck. They need a way to automatically offer accurate shipping rates at checkout and print labels with one click after an order is placed.
 
-## Research Report
-*   **Tool Candidates**: Shippo API, EasyPost API.
-*   **Evaluation**: Both Shippo and EasyPost aggregate dozens of carriers (USPS, UPS, FedEx, DHL). Shippo has slightly better out-of-the-box rates for small users.
-*   **Ease of Use**: Business owner sets up box sizes. The system automatically buys and downloads the PDF label when an order is packed.
-*   **Pricing**: Usually a few cents per label plus the actual postage cost.
-*   **Modes**: Cloud (API keys managed by OHC). Standalone (user needs their own Shippo/EasyPost account).
+### Research Report
+- **Tool**: Shippo API
+- **Pros**: Aggregates dozens of carriers (USPS, UPS, FedEx, international) into a single API. Excellent rate calculation.
+- **Cons**: Support can be slow for complex carrier account issues.
+- **Reputation**: Very strong, widely used by major e-commerce platforms.
+- **Pricing**: Pay-as-you-go (5¢ per label) or flat monthly fees for high volume.
+- **Ease of Use for Non-Technical Users**: Users enter package dimensions and click "Buy Label". Rates are shown instantly.
+- **Modes Supported**: Cloud and Standalone.
 
-## Design Doc
-*   **Integration Trigger**: An order containing physical products is marked as "Packed".
-*   **Action**: OHC requests a shipping label from the API using the customer's address and the predefined box size, then saves the tracking number and PDF.
-*   **User Interface**: A "Print Label" button on the order details page and automatic tracking emails sent to the customer.
+### Design Doc
+- **Trigger**: An order is placed, and the business owner clicks "Fulfill Order".
+- **Action**: The OHC API server requests label generation from Shippo using the saved package dimensions and customer address.
+- **User View**: A "Fulfillment" page showing order details, a "Buy Shipping Label" button, and a tracking link generator.
 
-## Implementation Prompt
-Integrate a shipping API to automatically calculate shipping rates during checkout and generate shipping labels for physical orders. Acceptance criteria: user can configure default package dimensions, checkout calculates accurate rates, and the user can generate and download a PDF shipping label for an order.
+### Implementation Prompt
+Integrate Shippo to provide real-time shipping rates at checkout and automated label generation for the business owner. The system should allow the owner to define standard package sizes. Upon order completion, provide a one-click flow to purchase and print the shipping label, and automatically email the tracking number to the customer.
 
-## Priority
+### Priority
 P2
 
-## Estimated Scope
+### Estimated Scope
 Large

@@ -1,25 +1,28 @@
-# Title: Integrated Email Marketing Campaigns
+### Title
+`[email_marketing]customer_campaigns`: Implement Email Campaigns via Resend
 
-## Problem Statement
-Small business owners want to send promotions or newsletters to their existing customers but find tools like Mailchimp too complex and expensive. They need a simple way to email their customer list directly from where they manage their business.
+### Problem Statement
+Reaching out to past customers with promotions or updates is crucial for repeat business, but complex tools like Mailchimp are overkill and expensive for simple announcements. Business owners need a straightforward way to email their customer list directly from the platform they already use to manage their business.
 
-## Research Report
-*   **Tool Candidates**: SendGrid, Mailgun, Resend.
-*   **Evaluation**: Resend offers a very modern, developer-friendly API and excellent deliverability. SendGrid is legacy but proven. Mailgun is solid for bulk.
-*   **Ease of Use**: By abstracting the email provider, the business owner just types a subject, message, and clicks "Send to all customers". No list exports needed.
-*   **Pricing**: Resend is affordable (free tier up to 3k emails/mo).
-*   **Modes**: Cloud (uses OHC centralized API keys). Standalone (user must provide their own API key, which adds friction).
+### Research Report
+- **Tool**: Resend
+- **Pros**: Developer-friendly, simple API, excellent deliverability, built-in React email templates.
+- **Cons**: Newer player, fewer out-of-the-box marketing features compared to legacy providers.
+- **Reputation**: Highly regarded in the developer community for its modern approach and ease of use.
+- **Pricing**: Generous free tier (3,000 emails/month), then very affordable ($20/month for 50,000 emails).
+- **Ease of Use for Non-Technical Users**: The user only interacts with a simple composer in OHC; the complexity of SMTP and domain verification is abstracted.
+- **Modes Supported**: Cloud and Standalone (via API calls).
 
-## Design Doc
-*   **Integration Trigger**: User navigates to the "Marketing" tab and drafts an email.
-*   **Action**: The system fetches all opted-in customer emails and dispatches the campaign via the email provider API.
-*   **User Interface**: A simple rich-text editor, a recipient selector (e.g., "All Customers", "Recent Customers"), and a "Send" button.
+### Design Doc
+- **Trigger**: The business owner selects a list of customers and clicks "Send Email Campaign".
+- **Action**: The OHC API server formats the email and dispatches it via the Resend API, tracking delivery status.
+- **User View**: A simple email composer with audience selection and a basic performance dashboard (open rates, bounces).
 
-## Implementation Prompt
-Create an email marketing tool within OHC. Users should be able to draft an email using a basic text editor and send it to their customer list. The integration should handle unsubscribes automatically. Acceptance criteria: user can draft an email, select recipients, send it, and the system tracks successful delivery.
+### Implementation Prompt
+Integrate Resend to enable basic email marketing capabilities. Users should be able to select segments of their customer database and send batch emails. Implement a simple, foolproof email composer. Ensure the system handles bounce and complaint webhooks to automatically clean the user's mailing list and maintain high deliverability scores.
 
-## Priority
+### Priority
 P2
 
-## Estimated Scope
+### Estimated Scope
 Medium
