@@ -43,7 +43,12 @@ rust_library(
         "//src/server/integrations:srcs",
         "//src/server/domain:srcs",
         "//src/server/services:srcs",
-    ],
+
+        "db/db_tests_extracted.rs",
+        "hub/hub_tests_extracted.rs",
+        "msgbus/msgbus_tests_extracted.rs",
+        "queue/queue_tests_extracted.rs",
+        ],
     data = ["//src/server/migrations"],
     edition = "2024",
     proc_macro_deps = [

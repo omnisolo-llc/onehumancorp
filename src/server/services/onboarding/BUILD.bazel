@@ -12,6 +12,7 @@ filegroup(
         "provisioner.rs",
         "validation.rs",
         "wizard.rs",
-    ],
+
+        "onboarding_agent/onboarding_agent_tests.rs",],
     visibility = ["//src/server/services:__pkg__"],
 )
