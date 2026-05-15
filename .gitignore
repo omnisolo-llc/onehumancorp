@@ -98,7 +98,10 @@ Chart.lock
 !/README.md
 !/CHANGELOG.md
 !/RELEASE_NOTES.md
-/*.go
+
+# Golang is not allowed in this project
+*.go
+
 
 # Rust build artifacts
 /target/
@@ -118,4 +121,6 @@ debian-binary
 /srcs/
 /scratch/
 *.db
+
 dummy.*
+dummy_*
