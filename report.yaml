@@ -1,5 +1,5 @@
-issue_category: cleanup
+issue_category: audit
 debt_report:
-  description: "Bump version to v0.4.41"
+  description: "Lens Audit for Visual Fidelity"
   impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+  mitigation: "Verified responsive design and fixed drift"
