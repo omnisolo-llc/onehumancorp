@@ -4,7 +4,6 @@ rust_library(
     name = "server_utils",
     srcs = [
         "cache.rs",
-        "dialect.rs",
         "fs.rs",
         "gzip_middleware.rs",
         "json_minify.rs",
