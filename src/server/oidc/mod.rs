@@ -169,7 +169,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     }
     
 
-    let organization_id = extract_organization_id(&serde_json::Value::Object(raw.clone()));
+    let organization_id = extract_organization_id(&raw);
 
     if ::server_config::get().multitenant {
         if let Some(org_id) = &organization_id {
