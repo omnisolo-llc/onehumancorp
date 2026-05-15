@@ -142,6 +142,102 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_worker_pruning_by_event_type() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding BLOB,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+        let now = Utc::now();
+        let stale_time = now - chrono::Duration::days(200);
+
+        // Should be pruned
+        repo.upsert(&ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "prune_task".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "old task".to_string(),
+            embedding: vec![1.0],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: stale_time,
+            last_referenced_at: stale_time,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        }).await.unwrap();
+
+        // Should be KEPT (Advisory report)
+        repo.upsert(&ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "keep_advisory".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "valuable advisory".to_string(),
+            embedding: vec![2.0],
+            source_type: "ADVISORY_REPORT".to_string(),
+            created_at: stale_time,
+            last_referenced_at: stale_time,
+            reference_count: 0,
+            reliability_score: 90,
+            owner_override: false,
+            metadata: None,
+        }).await.unwrap();
+
+        let mut worker = MemoryConsolidationWorker::new(repo.clone());
+        worker.poll_interval = std::time::Duration::from_millis(10);
+        worker.start();
+
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'keep_advisory'").fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 1, "Advisory report should be KEPT at standard threshold");
+
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'prune_task'").fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 0, "Task summary should be PRUNED");
+
+        // Test VERY old advisory report
+        let very_stale_time = now - chrono::Duration::days(400);
+        repo.upsert(&ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "prune_old_advisory".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "very old advisory".to_string(),
+            embedding: vec![3.0],
+            source_type: "ADVISORY_REPORT".to_string(),
+            created_at: very_stale_time,
+            last_referenced_at: very_stale_time,
+            reference_count: 0,
+            reliability_score: 90,
+            owner_override: false,
+            metadata: None,
+        }).await.unwrap();
+
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'prune_old_advisory'").fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 0, "Very old advisory report should be PRUNED");
+    }
+
+    #[tokio::test]
     async fn test_worker_full_pipeline_with_conflict_and_pruning() {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::str::FromStr;

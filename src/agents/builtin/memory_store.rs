@@ -325,18 +325,30 @@ impl VectorRepository {
 
     /// Prunes stale context to prevent unbounded memory growth.
     /// It deletes records older than `older_than` where `owner_override = FALSE`,
-    /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
+    /// `reference_count < 5`, and source type signals relevance.
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+        // Business Event Type signals:
+        // - TASK_SUMMARY: Prunable if old and rarely used.
+        // - SUPPORT_TICKET: Prunable if old.
+        // - ADVISORY_REPORT: High value, keep longer.
+        // - MANUAL: Never prune unless reliability is extremely low.
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE \
+                             (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type IN ('TASK_SUMMARY', 'SUPPORT_TICKET', 'CHAT_LOG')) OR \
+                             (reliability_score < 20 AND owner_override = FALSE) OR \
+                             (last_referenced_at < $1 - INTERVAL '180 days' AND owner_override = FALSE AND source_type = 'ADVISORY_REPORT' AND reference_count < 2)")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE \
+                             (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type IN ('TASK_SUMMARY', 'SUPPORT_TICKET', 'CHAT_LOG')) OR \
+                             (reliability_score < 20 AND owner_override = FALSE) OR \
+                             (last_referenced_at < datetime(?, '-180 days') AND owner_override = FALSE AND source_type = 'ADVISORY_REPORT' AND reference_count < 2)")
+                    .bind(older_than)
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -1145,6 +1157,80 @@ mod get_conflicts_tests {
     use std::str::FromStr;
 
     #[tokio::test]
+    async fn test_auto_resolve_conflicts_recency_tie_breaker() {
+        use std::str::FromStr;
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding BLOB,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        let older = now - chrono::Duration::hours(24);
+        let newer = now;
+
+        let r1 = EmbeddingRecord {
+            id: "rec_older".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "older content".to_string(),
+            embedding: vec![1.0, 1.0, 1.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: older,
+            last_referenced_at: older,
+            reference_count: 5,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+        let r2 = EmbeddingRecord {
+            id: "rec_newer".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "newer content".to_string(),
+            embedding: vec![1.0, 1.0, 1.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: newer,
+            last_referenced_at: newer,
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&r1).await.unwrap();
+        repo.upsert(&r2).await.unwrap();
+
+        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        assert_eq!(resolved, 1);
+
+        let query = "SELECT id FROM consolidated_memory";
+        let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        let row_id: String = rows[0].get("id");
+        assert_eq!(row_id, "rec_newer", "The newer record should win on recency tie-breaker");
+    }
+
+    #[tokio::test]
     async fn test_resolve_conflict_logic() {
         use std::str::FromStr;
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
@@ -1449,14 +1535,14 @@ mod get_conflicts_tests {
             metadata: None,
         };
 
-        // Record 4: Old enough, but source_type is NOT TASK_SUMMARY -> Should be kept
+        // Record 4: Old enough, but source_type is NOT in prunable list -> Should be kept
         let record4 = EmbeddingRecord {
             id: "rec4".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "hello world 4".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
-            source_type: "SUPPORT_TICKET".to_string(),
+            source_type: "PERMANENT_RECORD".to_string(),
             created_at: very_old_time,
             last_referenced_at: very_old_time,
             reference_count: 1,

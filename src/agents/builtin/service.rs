@@ -436,7 +436,7 @@ impl AgentServiceImpl {
         let observation_store = Arc::new(dashmap::DashMap::new());
         
         let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
-        let mut unarc_agent = Agent::new(llm, tools);
+        let mut unarc_agent = Agent::new(llm.clone(), tools);
         unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
@@ -514,7 +514,7 @@ impl AgentService for AgentServiceImpl {
             all_tools
         };
 
-        let mut unarc_agent = Agent::new(llm, tools);
+        let mut unarc_agent = Agent::new(llm.clone(), tools);
         unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
@@ -654,12 +654,19 @@ impl AgentService for AgentServiceImpl {
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
                 let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+                let embedding = match llm.generate_embedding(content).await {
+                    Ok(emb) => emb,
+                    Err(e) => {
+                        tracing::error!("Failed to generate embedding for memory consolidation: {}", e);
+                        vec![]
+                    }
+                };
                 let record = EmbeddingRecord {
                     id: uuid::Uuid::new_v4().to_string(),
                     tenant_id: org_id,
                     agent_id: "agent".to_string(),
                     content: content.clone(),
-                    embedding: vec![],
+                    embedding,
                     source_type: "TASK_SUMMARY".to_string(),
                     created_at: chrono::Utc::now(),
                     last_referenced_at: chrono::Utc::now(),
