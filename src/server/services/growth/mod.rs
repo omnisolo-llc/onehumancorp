@@ -5,3 +5,6 @@ pub mod quota;
 pub mod viral_loop;
 pub mod referral_api;
 pub mod service;
+pub mod email_campaigns;
+pub mod milestones;
+pub mod social_posting;
