@@ -39,3 +39,4 @@ pub mod langgraph;
 pub mod masking_tests;
 pub mod codex_runner;
 pub mod consolidation_worker;
+pub mod json_rpc_server;
