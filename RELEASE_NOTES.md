@@ -1,3 +1,7 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+- Scaling (Cloud): Revert Forge: Shared Task List Database Design (#16676).
+- Privacy/Offline (Standalone): Revert Forge: Shared Task List Database Design (#16676).
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
