@@ -16,6 +16,7 @@ pub fn get_pool() -> PgPool {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = \'\'").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
@@ -49,6 +50,7 @@ impl DB {
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = \'\'").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
