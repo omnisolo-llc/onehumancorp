@@ -2,12 +2,15 @@ load("@rules_flutter//flutter:defs.bzl", "dart_library", "flutter_test")
 
 dart_library(
     name = "app",
-    srcs = glob(["lib/**/*.dart"]),
+    srcs = glob(["lib/**/*.dart"]) + ["pubspec.yaml"],
     pubspec = "pubspec.yaml",
     visibility = ["//visibility:public"],
 )
 
-# Due to restricted file modifications (.bazelignore) and deep
-# pubspec extraction assumptions in rules_flutter, we fallback to
-# native flutter test capabilities locally, while keeping the dart_library
-# target cleanly defined for Bazel syntax checks.
+flutter_test(
+    name = "tests",
+    embed = [":app"],
+    srcs = glob(["test/**/*.dart"]),
+    test_files = ["test/"],
+    visibility = ["//visibility:public"],
+)
