@@ -1,1 +1,1 @@
-Maintainer: Zero WIP exit
+💰 Miser: Zero WIP
