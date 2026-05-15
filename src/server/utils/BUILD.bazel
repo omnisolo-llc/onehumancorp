@@ -32,6 +32,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:dashmap",
         "@crates//:tracing",
+        "@crates//:reqwest",
     ],
 )
 
