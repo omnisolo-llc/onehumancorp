@@ -1,0 +1,651 @@
+INFO: Reading 'startup' options from /app/.bazelrc: --output_user_root=/home/kevin/.bazel-output-root-mono
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=0 --terminal_columns=80
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  Inherited 'build' options: --remote_download_toplevel --action_env=CGO_ENABLED=1 --spawn_strategy=sandboxed,local --sandbox_add_mount_pair=/var/run/docker.sock --incompatible_strict_action_env --announce_rc --linkopt=-fuse-ld=bfd --host_linkopt=-fuse-ld=bfd --features=-supports_start_end_lib --host_features=-supports_start_end_lib --@rules_rust//rust/toolchain/channel=stable --rewind_lost_inputs --action_env=GEMINI_API_KEY --action_env=MINIMAX_API_KEY --action_env=MCP_BUNDLE_DIR --action_env=CI
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  'test' options: --test_output=errors --build_tests_only --test_tag_filters=-e2e,-requires-docker --test_timeout=60,120,300,600 --local_test_jobs=1 --jobs=200 --test_env=GEMINI_API_KEY --test_env=MINIMAX_API_KEY --test_env=MCP_BUNDLE_DIR --test_env=CI --test_env=HOME --test_env=MCPANY_DEBUG --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS --test_env=PATH
+Computing main repo mapping:
+Loading:
+Loading: 0 packages loaded
+Analyzing: target //src/e2e:playwright_onboarding_spec_ts (0 packages loaded, 0 targets configured)
+Analyzing: target //src/e2e:playwright_onboarding_spec_ts (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed target //src/e2e:playwright_onboarding_spec_ts (0 packages loaded, 0 targets configured).
+[1 / 1] no actions running
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 0s local
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 10s local
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 40s local
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 100s local
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 160s local
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 220s local
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 280s local
+[1,860 / 1,861] Testing //src/e2e:playwright_onboarding_spec_ts; 300s local
+
+TIMEOUT: //src/e2e:playwright_onboarding_spec_ts (Summary)
+      /tmp/bazel/8c069df52082beee3c95ca17836fb8e2/execroot/_main/bazel-out/k8-fastbuild/testlogs/src/e2e/playwright_onboarding_spec_ts/test.log
+INFO: From Testing //src/e2e:playwright_onboarding_spec_ts:
+==================== Test output for //src/e2e:playwright_onboarding_spec_ts:
+[playwright] Original browsers path: ../rules_playwright++playwright+playwright/browsers/ubuntu24.04-x64/chromium_headless_shell-1155/../
+[playwright] Starting E2E infrastructure (PG:22150 VK:37814)...
+Unable to find image 'pgvector/pgvector:pg16' locally
+pg16: Pulling from pgvector/pgvector
+84a2afebaf4d: Pulling fs layer
+1a00de3f240e: Pulling fs layer
+63715795656b: Pulling fs layer
+cf9c30bf9650: Pulling fs layer
+442906e7dc4a: Pulling fs layer
+ed0e000a8fd4: Pulling fs layer
+dffc6c281883: Pulling fs layer
+4d3a5f84c681: Pulling fs layer
+ed3a3e9d9431: Pulling fs layer
+995d61980f0c: Pulling fs layer
+5532acd798e6: Pulling fs layer
+7b7e3b130d1d: Pulling fs layer
+b5671f4fb259: Pulling fs layer
+70c8aaf9de13: Pulling fs layer
+8c20357c6451: Pulling fs layer
+de1f62cfa678: Pulling fs layer
+63715795656b: Download complete
+995d61980f0c: Download complete
+cf9c30bf9650: Download complete
+dffc6c281883: Download complete
+8194dcfb262a: Download complete
+ed3a3e9d9431: Download complete
+5532acd798e6: Download complete
+1a00de3f240e: Download complete
+7b7e3b130d1d: Download complete
+70c8aaf9de13: Download complete
+8c20357c6451: Download complete
+b5671f4fb259: Download complete
+ed0e000a8fd4: Download complete
+de1f62cfa678: Download complete
+442906e7dc4a: Download complete
+84a2afebaf4d: Download complete
+ed0e000a8fd4: Pull complete
+84a2afebaf4d: Pull complete
+docker: failed to extract layer (application/vnd.oci.image.layer.v1.tar+gzip sha256:de1f62cfa6782d04f0cb4f0117388e8b392d21b6f5e2599e7144fe45e7cb7f4f) to overlayfs as "extract-348364458-tZyU sha256:61dc9f3b53eda232066363299762a0ac0556835fab8e968bc7bb5c7ff42a886f": failed to convert whiteout file "etc/alternatives/.wh.pager.1.gz": operation not permitted
+
+Run 'docker run --help' for more information
+docker: Error response from daemon: failed to mount /tmp/containerd-mount1160355898: mount source: "overlay", target: "/tmp/containerd-mount1160355898", fstype: overlay, flags: 0, data: "workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/43/work,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/43/fs,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/9/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/6/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/5/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs,index=off", err: invalid argument
+
+Run 'docker run --help' for more information
+[playwright] Waiting for postgres on port 22150...
+[playwright] Initializing database roles...
+Error response from daemon: No such container: e2e_postgres_4bb48d52_1ixiqa
+Error response from daemon: No such container: e2e_postgres_4bb48d52_1ixiqa
+[playwright] Starting server from /tmp/bazel/8c069df52082beee3c95ca17836fb8e2/execroot/_main/bazel-out/k8-fastbuild/bin/src/server/server...
+[playwright] Waiting for server on port 18789...
+[playwright] Running spec: /tmp/bazel/8c069df52082beee3c95ca17836fb8e2/execroot/_main/_tmp/07997a6f3a652a1d8c054d6e099eede3/playwright-workspace/src/e2e/onboarding.spec.ts
+[playwright] Listing all discovered tests:
+Listing tests:
+  [chromium] › ../../../../../../../../../../app/src/e2e/agents.spec.ts:4:7 › Agent Management › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/agents.spec.ts:9:7 › Agent Management › should display hire button
+  [chromium] › ../../../../../../../../../../app/src/e2e/agents.spec.ts:14:7 › Agent Management › should show marketing agent
+  [chromium] › ../../../../../../../../../../app/src/e2e/agents.spec.ts:21:7 › Dashboard › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/agents.spec.ts:26:7 › Dashboard › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/agents.spec.ts:31:7 › Dashboard › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:4:7 › Dashboard › should load dashboard page
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:9:7 › Dashboard › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:16:7 › Business Setup Wizard › should show welcome step
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:21:7 › Business Setup Wizard › should navigate through wizard steps
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:42:7 › Login › should show login form
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:48:7 › Login › should allow password visibility toggle
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:57:7 › Agent Management › should show agents list
+  [chromium] › ../../../../../../../../../../app/src/e2e/app.spec.ts:62:7 › Agent Management › should show hire agent button
+  [chromium] › ../../../../../../../../../../app/src/e2e/autonomous_ops.spec.ts:12:7 › Autonomous Operations CUJ › should process business events and show drafting helper in dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/autonomous_ops.spec.ts:52:7 › Autonomous Operations CUJ › should process OrderPlaced events and flag low stock
+  [chromium] › ../../../../../../../../../../app/src/e2e/autonomous_ops.spec.ts:83:7 › Autonomous Operations CUJ › should handle multiple pending approvals from different departments
+  [chromium] › ../../../../../../../../../../app/src/e2e/autonomous_ops.spec.ts:124:7 › Autonomous Operations CUJ › should show empty state message when no approvals are pending
+  [chromium] › ../../../../../../../../../../app/src/e2e/autonomous_ops.spec.ts:135:7 › Autonomous Operations CUJ › should verify plain language activity feed in dashboard header
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_manager.spec.ts:4:7 › Business Manager UI › should display dashboard with nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_manager.spec.ts:10:7 › Business Manager UI › should navigate to agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_manager.spec.ts:15:7 › Business Manager UI › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_manager.spec.ts:23:7 › Business Manager UI › should display business setup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_manager.spec.ts:30:7 › Navigation › should have working nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_manager.spec.ts:36:7 › Navigation › should navigate to dashboard from nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:12:7 › Business Setup Wizard › should show welcome step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:16:7 › Business Setup Wizard › should display the Setup Wizard hero animation elements
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:23:7 › Business Setup Wizard › should display welcome message
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:27:7 › Business Setup Wizard › should show next button on welcome step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:31:7 › Business Setup Wizard › should navigate to business type step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:36:7 › Business Setup Wizard › should support Instant Build (AI) journey
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:51:7 › Business Setup Wizard › should show business type options
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:58:7 › Business Setup Wizard › should select online store option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:64:7 › Business Setup Wizard › should select service business option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:69:7 › Business Setup Wizard › should select restaurant option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:74:7 › Business Setup Wizard › should select creative portfolio option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:79:7 › Business Setup Wizard › should select local business option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:84:7 › Business Setup Wizard › should navigate through wizard steps
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:92:7 › Business Setup Wizard › should allow going back
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:100:7 › Business Setup Wizard › should show company name input
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:106:7 › Business Setup Wizard › should show what you sell step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:114:7 › Business Setup Wizard › should show physical products option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:122:7 › Business Setup Wizard › should show digital products option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:130:7 › Business Setup Wizard › should show services option
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:138:7 › Business Setup Wizard › should show payments step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:148:7 › Business Setup Wizard › should show admin account step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:160:7 › Business Setup Wizard › should show template selection step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:176:7 › Business Setup Wizard › should show domain step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:197:7 › Business Setup Wizard › should show review and launch step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:220:7 › Business Setup Wizard › should show launch button on final step
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:243:7 › Business Setup Wizard › should show welcome checklist after successful launch
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:294:7 › Business Setup Wizard › should display the Setup Wizard hero animation elements and complete full setup flow
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:345:7 › Business Setup Wizard Validation › should require business type selection
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:354:7 › Business Setup Wizard Validation › should require company name
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:361:7 › Business Setup Wizard Validation › should validate email format
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_1.spec.ts:376:7 › Business Setup Wizard Validation › should validate password strength
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:2:7 › Business Setup Wizard - Part 2 › should use Minimalist template and verify launch successfully triggers
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:30:7 › Business Setup Wizard - Part 2 › should input specific product name "Custom Vegan Cookies" and advance to launch
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:58:7 › Business Setup Wizard - Part 2 › should set product price "24.99" and verify launch
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:86:7 › Business Setup Wizard - Part 2 › should use a "custom domain" option and validate launch step proceeds
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:116:7 › Business Setup Wizard - Part 2 › should select "Use OHC subdomain" and successfully launch wizard
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:148:7 › Business Setup Wizard - Part 2 › E2E Onboarding Persona Journeys › Persona: Maya - The Home Baker (Physical Products)
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:195:7 › Business Setup Wizard - Part 2 › E2E Onboarding Persona Journeys › Persona: Carlos - The Freelance Handyman (Services)
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:232:7 › Business Setup Wizard - Part 2 › E2E Onboarding Persona Journeys › Persona: Priya - The Boutique Owner (Omnichannel)
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:266:7 › Business Setup Wizard - Part 2 › E2E Onboarding Persona Journeys › Persona: Leo - The Music Tutor (Subscriptions)
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:300:7 › Business Setup Wizard - Part 2 › E2E Onboarding Persona Journeys › Persona: Fatima - The Food Cart (Pre-orders)
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:335:7 › Business Setup Wizard - Part 2 › E2E Onboarding Persona Journeys - Portfolio › Persona: Alex - The Artist (Portfolios)
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:370:7 › Business Setup Wizard - Part 2 › Instant Build (AI) Flow › Instant Build Journey - Full Success
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:404:7 › Business Setup Wizard - Part 2 › Instant Build (AI) Flow › Instant Build Journey - Verify Pre-filled Preview Details
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:427:7 › Business Setup Wizard - Part 2 › Instant Build (AI) Flow › Instant Build Journey - Back button behavior
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:452:7 › Business Setup Wizard - Part 2 › Instant Build (AI) Flow › Instant Build Journey - Empty Input Validation
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_setup_2.spec.ts:470:7 › Business Setup Wizard - Part 2 › Instant Build (AI) Flow › Instant Build Journey - Long Bio Input
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_share.spec.ts:4:7 › Business Share & Embed › should display dashboard with nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_share.spec.ts:12:7 › Business Share & Embed › should navigate to agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_share.spec.ts:18:7 › Business Share & Embed › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_share.spec.ts:25:7 › Business Share & Embed › should display setup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_share.spec.ts:32:7 › Agents Page › should show agents list
+  [chromium] › ../../../../../../../../../../app/src/e2e/business_share.spec.ts:38:7 › Agents Page › should show hire agent button
+  [chromium] › ../../../../../../../../../../app/src/e2e/chaos_resilience.spec.ts:12:7 › E2E Chaos Resilience › should handle network spike during website publishing
+  [chromium] › ../../../../../../../../../../app/src/e2e/chaos_resilience.spec.ts:41:7 › E2E Chaos Resilience › should remain functional during database lag
+  [chromium] › ../../../../../../../../../../app/src/e2e/chaos_resilience.spec.ts:61:7 › E2E Chaos Resilience › should handle transient agent failure with automatic retry
+  [chromium] › ../../../../../../../../../../app/src/e2e/chaos_resilience.spec.ts:80:7 › E2E Chaos Resilience › should enforce tenant isolation in records during concurrent access
+  [chromium] › ../../../../../../../../../../app/src/e2e/chaos_resilience.spec.ts:104:7 › E2E Chaos Resilience › should show helper paused state when LLM is unavailable
+  [chromium] › ../../../../../../../../../../app/src/e2e/chat.spec.ts:4:7 › Chat Page › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/chat.spec.ts:9:7 › Chat Page › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/chat.spec.ts:14:7 › Chat Page › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/chat.spec.ts:19:7 › Chat Page › should display business setup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/chat.spec.ts:26:7 › Navigation › should navigate via nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/chat.spec.ts:33:7 › Navigation › should show welcome message on dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_nav.spec.ts:10:7 › Dashboard Navigation UX › should trigger Add Product action via bottom nav button
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_nav.spec.ts:27:7 › Dashboard Navigation UX › should trigger Orders action via bottom nav button
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_nav.spec.ts:34:7 › Dashboard Navigation UX › should trigger Messages action via bottom nav button
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_nav.spec.ts:41:7 › Dashboard Navigation UX › should trigger Analytics action via bottom nav button
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_nav.spec.ts:48:7 › Dashboard Navigation UX › should trigger Share Store action via bottom nav button
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux_extra.spec.ts:4:7 › Dashboard UX Friction Fix Verification › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux_extra.spec.ts:10:7 › Dashboard UX Friction Fix Verification › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux_extra.spec.ts:15:7 › Dashboard UX Friction Fix Verification › should show welcome message
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux_extra.spec.ts:22:7 › Navigation › should navigate to agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux_extra.spec.ts:28:7 › Navigation › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:6:7 › Dashboard UX › should display correctly on mobile and verify plain language labels
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:31:5 › should display Quick Actions on mobile
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:85:5 › should display Menu toggle on mobile and have expected links
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:106:7 › Dashboard Flow Completeness UX › Grandmother test: complete critical journey starting from login
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:126:7 › Dashboard Flow Completeness UX › Grandmother test: Check Orders from login
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:137:7 › Dashboard Flow Completeness UX › Grandmother test: Check Messages from login
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:148:7 › Dashboard Flow Completeness UX › Grandmother test: Check Analytics from login
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard_ux.spec.ts:159:7 › Dashboard Flow Completeness UX › Grandmother test: Share Store from login
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:4:7 › Dashboard Core › should load dashboard page
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:9:7 › Dashboard Core › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:14:7 › Dashboard Core › should show dashboard header
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:19:7 › Dashboard Core › should show welcome message
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:24:7 › Dashboard Core › should show agents working message
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:31:7 › Login Page › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:40:7 › Agents Page › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/dashboard.spec.ts:47:7 › Business Setup › should display setup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/department_tasks.spec.ts:3:5 › Order placement triggers Operations and Customer Success AI agents
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:4:7 › Diagnostics Page › should display diagnostics page
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:9:7 › Diagnostics Page › should show diagnostics header
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:14:7 › Diagnostics Page › should display system status
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:19:7 › Diagnostics Page › should show all systems operational indicator
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:25:7 › Diagnostics Page › should display component health indicators
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:31:7 › Diagnostics Page › should show database status
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:36:7 › Diagnostics Page › should show redis status
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:41:7 › Diagnostics Page › should show server status
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:46:7 › Diagnostics Page › should display uptime metrics
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:51:7 › Diagnostics Page › should show response time metrics
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:56:7 › Diagnostics Page › should show error rate metrics
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:61:7 › Diagnostics Page › should display memory usage
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:66:7 › Diagnostics Page › should display CPU usage
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:71:7 › Diagnostics Page › should display disk usage
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:76:7 › Diagnostics Page › should show network traffic
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:81:7 › Diagnostics Page › should show active connections
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:86:7 › Diagnostics Page › should show request throughput
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:91:7 › Diagnostics Page › should run diagnostics test
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:100:7 › Diagnostics Page › should show test results
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:109:7 › Diagnostics Page › should display logs section
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:114:7 › Diagnostics Page › should show recent errors
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:120:7 › Diagnostics Page › should export diagnostics report
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:129:7 › Diagnostics Page › should refresh diagnostics data
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:137:7 › Diagnostics Page › should show alert configurations
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:142:7 › Diagnostics Page › should configure alert threshold
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:153:7 › Service Manager › should display service manager page
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:158:7 › Service Manager › should show services list
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:164:7 › Service Manager › should show service status
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:170:7 › Service Manager › should start a service
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:179:7 › Service Manager › should stop a service
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:188:7 › Service Manager › should restart a service
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:197:7 › Service Manager › should show service logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:208:7 › Service Manager › should show service configuration
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:219:7 › Service Manager › should update service configuration
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:234:7 › Service Manager › should show service dependencies
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:241:7 › Service Manager › should show service resource usage
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:248:7 › Service Manager › should enable auto-restart for service
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:260:7 › Scaling Configuration › should display scaling page
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:265:7 › Scaling Configuration › should show current scale settings
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:270:7 › Scaling Configuration › should increase instance count
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:279:7 › Scaling Configuration › should decrease instance count
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:288:7 › Scaling Configuration › should set auto-scaling threshold
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:297:7 › Scaling Configuration › should enable auto-scaling
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:306:7 › Scaling Configuration › should show scaling recommendations
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:312:7 › Scaling Configuration › should show scaling history
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:321:7 › Scaling Configuration › should show min/max instance bounds
+  [chromium] › ../../../../../../../../../../app/src/e2e/diagnostics.spec.ts:326:7 › Scaling Configuration › should configure scaling metrics
+  [chromium] › ../../../../../../../../../../app/src/e2e/echo_navigation.spec.ts:6:7 › Dashboard Navigation UX Simplification › Bottom navigation bar is present and has exact required actions
+  [chromium] › ../../../../../../../../../../app/src/e2e/echo_navigation.spec.ts:35:7 › Dashboard Navigation UX Simplification › Clicking Add Product in bottom nav completes action
+  [chromium] › ../../../../../../../../../../app/src/e2e/echo_navigation.spec.ts:51:7 › Dashboard Navigation UX Simplification › Clicking View Orders in bottom nav completes action
+  [chromium] › ../../../../../../../../../../app/src/e2e/echo_navigation.spec.ts:66:7 › Dashboard Navigation UX Simplification › Clicking Check Messages in bottom nav completes action
+  [chromium] › ../../../../../../../../../../app/src/e2e/echo_navigation.spec.ts:80:7 › Dashboard Navigation UX Simplification › Clicking See Analytics in bottom nav completes action
+  [chromium] › ../../../../../../../../../../app/src/e2e/echo_navigation.spec.ts:94:7 › Dashboard Navigation UX Simplification › Clicking Share Store in bottom nav completes action
+  [chromium] › ../../../../../../../../../../app/src/e2e/email_marketing.spec.ts:4:7 › Email Marketing Flow › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/email_marketing.spec.ts:9:7 › Email Marketing Flow › should navigate to login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/email_marketing.spec.ts:14:7 › Email Marketing Flow › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/email_marketing.spec.ts:21:7 › Navigation › should have working nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/email_marketing.spec.ts:28:7 › Navigation › should show welcome message on dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/free_tier.spec.ts:4:7 › Free Tier & Upgrade Funnel › should display product limit soft paywall
+  [chromium] › ../../../../../../../../../../app/src/e2e/free_tier.spec.ts:28:7 › Free Tier & Upgrade Funnel › should display agent limits soft paywall
+  [chromium] › ../../../../../../../../../../app/src/e2e/free_tier.spec.ts:46:7 › Free Tier & Upgrade Funnel › should verify upgrade prompt dismissal
+  [chromium] › ../../../../../../../../../../app/src/e2e/free_tier.spec.ts:68:7 › Free Tier & Upgrade Funnel › should verify upgrade CTA navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/free_tier.spec.ts:87:7 › Free Tier & Upgrade Funnel › should verify free tier text indication on my plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/full_journey_e2e.spec.ts:17:7 › Onboarding Guide E2E Journey › Complete Path to Live Business and Checklist
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_test.spec.ts:4:7 › Grandmother Test - Plain Language Check › should display login page with form
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_test.spec.ts:11:7 › Grandmother Test - Plain Language Check › should display dashboard with nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_test.spec.ts:17:7 › Grandmother Test - Plain Language Check › should show welcome message on dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_test.spec.ts:22:7 › Grandmother Test - Plain Language Check › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_test.spec.ts:27:7 › Grandmother Test - Plain Language Check › should display business setup
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_ux_test.spec.ts:4:7 › Grandmother UX Fixes E2E tests › Login screen shows plain language Fix App Issues button
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_ux_test.spec.ts:10:7 › Grandmother UX Fixes E2E tests › Login screen shows plain language brand name
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_ux_test.spec.ts:15:7 › Grandmother UX Fixes E2E tests › Integrations screen uses plain language for external tools
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_ux_test.spec.ts:27:7 › Grandmother UX Fixes E2E tests › API Docs screen uses Custom Integration label
+  [chromium] › ../../../../../../../../../../app/src/e2e/grandmother_ux_test.spec.ts:39:7 › Grandmother UX Fixes E2E tests › API Docs screen replaces GET /v1/products with Read Product List
+  [chromium] › ../../../../../../../../../../app/src/e2e/grow_business.spec.ts:4:7 › Grow Business Flow › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/grow_business.spec.ts:10:7 › Grow Business Flow › should navigate to agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/grow_business.spec.ts:15:7 › Grow Business Flow › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/grow_business.spec.ts:20:7 › Grow Business Flow › should show welcome message on dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/grow_business.spec.ts:28:7 › Navigation › should have working nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/grow_business.spec.ts:34:7 › Navigation › should navigate to business setup
+  [chromium] › ../../../../../../../../../../app/src/e2e/health_monitoring.spec.ts:21:9 › Health Monitoring Resilience E2E › Agent health status transitions and recovers using real data flow
+  [chromium] › ../../../../../../../../../../app/src/e2e/health_monitoring.spec.ts:40:9 › Health Monitoring Resilience E2E › Health Metrics dashboard component is accessible
+  [chromium] › ../../../../../../../../../../app/src/e2e/health_monitoring.spec.ts:52:9 › Health Monitoring Resilience E2E › Tasks list correctly renders unassigned tasks after agent lifecycle events
+  [chromium] › ../../../../../../../../../../app/src/e2e/health_monitoring.spec.ts:62:9 › Health Monitoring Resilience E2E › System logs stream reflects health monitor execution
+  [chromium] › ../../../../../../../../../../app/src/e2e/health_monitoring.spec.ts:72:9 › Health Monitoring Resilience E2E › Swarm Memory page handles cluster wide failures seamlessly
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:8:7 › Help Center › should display dashboard with nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:13:7 › Help Center › should show dashboard link in nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:18:7 › Help Center › should show agents link in nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:23:7 › Help Center › should show setup link in nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:28:7 › Help Center › should display welcome message
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:32:7 › Help Center › should display agents working message
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:38:7 › Login Page › should display login form
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:48:7 › Agents Page › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:53:7 › Agents Page › should show hire agent button
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:60:7 › Business Setup Page › should display setup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:65:7 › Business Setup Page › should show setup wizard text
+  [chromium] › ../../../../../../../../../../app/src/e2e/help.spec.ts:72:7 › Dashboard › should have working nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/inbox.spec.ts:3:5 › verify omnichannel inbox AI draft flow
+  [chromium] › ../../../../../../../../../../app/src/e2e/inbox.spec.ts:31:5 › verify inbox mobile layout constraints
+  [chromium] › ../../../../../../../../../../app/src/e2e/inbox.spec.ts:53:5 › verify quick reply usage
+  [chromium] › ../../../../../../../../../../app/src/e2e/inbox.spec.ts:72:5 › verify sending custom message clears input
+  [chromium] › ../../../../../../../../../../app/src/e2e/inbox.spec.ts:93:5 › verify empty state when no conversation is selected
+  [chromium] › ../../../../../../../../../../app/src/e2e/inbox.spec.ts:108:5 › verify connecting social media creates inbox conversation and allows reply
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:18:15 › Integrations Page › should display integrations page
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:23:7 › Integrations Page › should show integrations header
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:28:7 › Integrations Page › should display available integrations
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:34:7 › Integrations Page › should show slack integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:39:7 › Integrations Page › should show github integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:44:7 › Integrations Page › should show zapier integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:49:7 › Integrations Page › should show google workspace integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:54:7 › Integrations Page › should show microsoft teams integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:59:7 › Integrations Page › should connect slack integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:66:7 › Integrations Page › should disconnect integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:75:7 › Integrations Page › should show integration status
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:81:7 › Integrations Page › should configure integration settings
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:90:7 › Integrations Page › should show integration usage stats
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:96:7 › Integrations Page › should search integrations
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:104:7 › Integrations Page › should filter integrations by category
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:110:7 › Integrations Page › should show meta integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:114:7 › Integrations Page › should connect meta integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:120:7 › Integrations Page › should show zoom integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:124:7 › Integrations Page › should connect zoom integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:130:7 › Integrations Page › should show twilio integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:134:7 › Integrations Page › should connect twilio integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:140:7 › Integrations Page › should show calendly integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:144:7 › Integrations Page › should connect calendly integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:151:7 › Integrations Page › should show Chatwoot integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:155:7 › Integrations Page › should connect Chatwoot integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:161:7 › Integrations Page › should show Cal.com integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:165:7 › Integrations Page › should connect Cal.com integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:171:7 › Integrations Page › should show Resend integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:175:7 › Integrations Page › should connect Resend integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:181:7 › Integrations Page › should show Shippo integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:185:7 › Integrations Page › should connect Shippo integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:191:7 › Integrations Page › should show Mercado Pago integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:195:7 › Integrations Page › should connect Mercado Pago integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:201:7 › Integrations Page › should show Razorpay integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:205:7 › Integrations Page › should connect Razorpay integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:213:7 › Integrations Page › should show Mailchimp integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:217:7 › Integrations Page › should connect Mailchimp integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:238:7 › Integrations Page › Pipeline Management › should display pipelines page
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:243:7 › Integrations Page › Pipeline Management › should show pipelines header
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:248:7 › Integrations Page › Pipeline Management › should display pipeline list
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:254:7 › Integrations Page › Pipeline Management › should create new pipeline
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:261:7 › Integrations Page › Pipeline Management › should show pipeline stages
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:267:7 › Integrations Page › Pipeline Management › should drag to reorder stages
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:273:7 › Integrations Page › Pipeline Management › should edit pipeline stage
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:282:7 › Integrations Page › Pipeline Management › should delete pipeline stage
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:291:7 › Integrations Page › Pipeline Management › should show pipeline analytics
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:297:7 › Integrations Page › Pipeline Management › should run pipeline manually
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:304:7 › Integrations Page › Pipeline Management › should show pipeline run history
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:311:7 › Integrations Page › Pipeline Management › should pause pipeline
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:318:7 › Integrations Page › Pipeline Management › should resume pipeline
+  [chromium] › ../../../../../../../../../../app/src/e2e/integrations.spec.ts:325:7 › Integrations Page › Pipeline Management › should duplicate pipeline
+  [chromium] › ../../../../../../../../../../app/src/e2e/landing_ux.spec.ts:4:7 › Landing Screen Visual Audit › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/landing_ux.spec.ts:9:7 › Landing Screen Visual Audit › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/landing_ux.spec.ts:14:7 › Landing Screen Visual Audit › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/landing_ux.spec.ts:19:7 › Landing Screen Visual Audit › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/lens_audit.spec.ts:8:7 › Lens Audit E2E Flow › verify Dashboard visual state and full UI lifecycle
+  [chromium] › ../../../../../../../../../../app/src/e2e/lens_audit.spec.ts:15:7 › Lens Audit E2E Flow › verify mock data removal and db connection
+  [chromium] › ../../../../../../../../../../app/src/e2e/lens_audit.spec.ts:21:7 › Lens Audit E2E Flow › verify token and responsive compliance
+  [chromium] › ../../../../../../../../../../app/src/e2e/lens_audit.spec.ts:27:7 › Lens Audit E2E Flow › verify chaos and error handling
+  [chromium] › ../../../../../../../../../../app/src/e2e/lens_audit.spec.ts:33:7 › Lens Audit E2E Flow › verify user guide sync
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_lens.spec.ts:3:5 › lens audit: fully verify login error states
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_lens.spec.ts:30:5 › lens audit: fully verify login mode toggling
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_lens.spec.ts:43:5 › lens audit: fully verify login input states
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_lens.spec.ts:54:5 › lens audit: fully verify sign up mode
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_lens.spec.ts:67:5 › lens audit: fully verify login sso flow
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_lens.spec.ts:76:5 › lens audit: fully verify start business routing
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_ux.spec.ts:4:7 › Login Screen Visual Audit › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_ux.spec.ts:11:7 › Login Screen Visual Audit › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_ux.spec.ts:16:7 › Login Screen Visual Audit › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_ux.spec.ts:23:7 › Navigation › should navigate via nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/login_ux.spec.ts:30:7 › Navigation › should show welcome message
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:4:7 › Login Page › should display login page with form
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:11:7 › Login Page › should display login button
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:16:7 › Login Page › should have working show button
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:26:7 › Dashboard › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:31:7 › Dashboard › should display nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:36:7 › Dashboard › should show welcome message
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:43:7 › Navigation › should navigate to agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/login.spec.ts:49:7 › Navigation › should display business setup
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:4:7 › Logs Page › should display logs page
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:9:7 › Logs Page › should show logs header
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:14:7 › Logs Page › should display log entries
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:20:7 › Logs Page › should show log timestamp
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:26:7 › Logs Page › should show log level
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:32:7 › Logs Page › should filter logs by level
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:40:7 › Logs Page › should search logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:49:7 › Logs Page › should show error logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:55:7 › Logs Page › should show warning logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:61:7 › Logs Page › should show info logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:67:7 › Logs Page › should show debug logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:73:7 › Logs Page › should export logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:82:7 › Logs Page › should download logs as CSV
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:90:7 › Logs Page › should download logs as JSON
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:98:7 › Logs Page › should clear logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:107:7 › Logs Page › should show log details
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:114:7 › Logs Page › should show stack trace for errors
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:122:7 › Logs Page › should filter logs by date range
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:131:7 › Logs Page › should paginate logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:137:7 › Logs Page › should refresh logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:145:7 › Logs Page › should show agent activity logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:151:7 › Logs Page › should show user activity logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:157:7 › Logs Page › should show system logs
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:163:7 › Logs Page › should copy log entry
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:176:7 › Logs Retention › should show log retention settings
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:181:7 › Logs Retention › should set retention period
+  [chromium] › ../../../../../../../../../../app/src/e2e/logs.spec.ts:190:7 › Logs Retention › should enable log archiving
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:4:7 › Meetings Page › should display meetings page
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:9:7 › Meetings Page › should show meetings header
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:14:7 › Meetings Page › should display upcoming meetings
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:20:7 › Meetings Page › should show schedule new meeting button
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:25:7 › Meetings Page › should open meeting scheduler
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:34:7 › Meetings Page › should select meeting date
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:46:7 › Meetings Page › should select meeting time
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:58:7 › Meetings Page › should add meeting participants
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:71:7 › Meetings Page › should set meeting title
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:83:7 › Meetings Page › should join meeting
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:92:7 › Meetings Page › should cancel meeting
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:103:7 › Meetings Page › should show meeting details
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:110:7 › Meetings Page › should reschedule meeting
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:121:7 › Meetings Page › should show past meetings
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:130:7 › Meetings Page › should display meeting calendar view
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:139:7 › Meetings Page › should display meeting recordings
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:148:7 › Meetings Page › should show meeting countdown timer
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:156:7 › Meetings Video › should show video controls
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:161:7 › Meetings Video › should toggle video
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:170:7 › Meetings Video › should toggle audio
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:179:7 › Meetings Video › should share screen
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:188:7 › Meetings Video › should end meeting
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:197:7 › Meetings Video › should show participant list
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:206:7 › Meetings Video › should show chat in meeting
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:215:7 › Meetings Video › should raise hand in meeting
+  [chromium] › ../../../../../../../../../../app/src/e2e/meetings.spec.ts:224:7 › Meetings Video › should record meeting
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:16:7 › Onboarding Wizard › Test 1: Sign-Up & Account Creation to Wizard auto-redirect
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:23:7 › Onboarding Wizard › Test 2: Business Setup Wizard Flow state persistence
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:52:7 › Onboarding Wizard › Test 3: First Product & AI Description
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:79:7 › Onboarding Wizard › Test 4: Domain & Go-Live
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:110:7 › Onboarding Wizard › Test 5: Welcome Checklist
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:156:7 › Onboarding Wizard › Persona: Maya - The Home Baker (Physical Products)
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:203:7 › Onboarding Wizard › Persona: Carlos - The Freelance Handyman (Services)
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:216:7 › Onboarding Wizard › Persona: Priya - The Boutique Owner (Omnichannel)
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:229:7 › Onboarding Wizard › Persona: Leo - The Music Tutor (Subscriptions)
+  [chromium] › ../../../../../../../../../../app/src/e2e/onboarding.spec.ts:242:7 › Onboarding Wizard › Persona: Fatima - The Food Cart (Pre-orders)
+  [chromium] › ../../../../../../../../../../app/src/e2e/playwright_kairos_mesh.spec.ts:3:5 › Broadcast KAIROS mesh message validates payload
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:5:7 › Pricing Page › should display "What does this cost?" wizard flow correctly
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:41:7 › Pricing Page › should display pricing page
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:46:7 › Pricing Page › should show plan comparison
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:51:7 › Pricing Page › should display free plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:56:7 › Pricing Page › should display pro plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:61:7 › Pricing Page › should display enterprise plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:66:7 › Pricing Page › should show plan prices
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:72:7 › Pricing Page › should highlight recommended plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:78:7 › Pricing Page › should show feature list
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:84:7 › Pricing Page › should show agent limits per plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:89:7 › Pricing Page › should show storage limits per plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:94:7 › Pricing Page › should show support level per plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:99:7 › Pricing Page › should select pro plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:108:7 › Pricing Page › should start free plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:117:7 › Pricing Page › should contact sales for enterprise
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:126:7 › Pricing Page › should show annual billing discount
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:135:7 › Pricing Page › should display FAQ section
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:141:7 › Pricing Page › should expand FAQ item
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:150:7 › Pricing Page › should show guarantee badge
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:155:7 › Pricing Page › should show security badge
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:163:7 › My Plan Page › should display over storage quota warning on My Plan dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:193:7 › My Plan Page › should display current plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:198:7 › My Plan Page › should show plan status
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:203:7 › My Plan Page › should show renewal date
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:208:7 › My Plan Page › should show billing history
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:217:7 › My Plan Page › should upgrade plan
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:226:7 › My Plan Page › should cancel subscription
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:235:7 › My Plan Page › should update payment method
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:244:7 › My Plan Page › should download invoice
+  [chromium] › ../../../../../../../../../../app/src/e2e/pricing.spec.ts:253:7 › My Plan Page › should open cost transparency dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/prompt_tuning.spec.ts:4:7 › Prompt Tuning Flow › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/prompt_tuning.spec.ts:9:7 › Prompt Tuning Flow › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/prompt_tuning.spec.ts:14:7 › Prompt Tuning Flow › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/prompt_tuning.spec.ts:21:7 › Navigation › should navigate via nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/prompt_tuning.spec.ts:27:7 › Navigation › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/referrals.spec.ts:4:7 › Referral Program › should display referral dashboard and generate link
+  [chromium] › ../../../../../../../../../../app/src/e2e/referrals.spec.ts:37:7 › Referral Program › should verify Instagram sharing from referrals
+  [chromium] › ../../../../../../../../../../app/src/e2e/referrals.spec.ts:53:7 › Referral Program › should verify invite message copying
+  [chromium] › ../../../../../../../../../../app/src/e2e/referrals.spec.ts:71:7 › Referral Program › should view referral history
+  [chromium] › ../../../../../../../../../../app/src/e2e/referrals.spec.ts:87:7 › Referral Program › should export referral data
+  [chromium] › ../../../../../../../../../../app/src/e2e/scribe_extra.spec.ts:2:5 › dummy e2e test
+  [chromium] › ../../../../../../../../../../app/src/e2e/security.spec.ts:4:7 › Security Settings › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/security.spec.ts:9:7 › Security Settings › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/security.spec.ts:14:7 › Security Settings › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/security.spec.ts:19:7 › Security Settings › should display business setup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/security.spec.ts:26:7 › Navigation › should navigate between pages via nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/security.spec.ts:33:7 › Navigation › should have nav links to all main sections
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:4:7 › Settings Page › should show settings page
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:9:7 › Settings Page › should display general settings section
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:14:7 › Settings Page › should display profile settings section
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:19:7 › Settings Page › should show notification settings
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:24:7 › Settings Page › should enable email notifications
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:33:7 › Settings Page › should enable push notifications
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:41:7 › Settings Page › should display timezone setting
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:46:7 › Settings Page › should change timezone
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:55:7 › Settings Page › should display language setting
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:60:7 › Settings Page › should change language
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:69:7 › Settings Page › should display theme setting
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:74:7 › Settings Page › should switch to dark theme
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:83:7 › Settings Page › should switch to light theme
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:91:7 › Settings Page › should display date format setting
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:96:7 › Settings Page › should change date format
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:104:7 › Settings Page › should save settings
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:110:7 › Settings Page › should show cancel button
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:115:7 › Settings Page › should discard changes on cancel
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:127:7 › Profile Settings › should show profile picture upload
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:132:7 › Profile Settings › should upload profile picture
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:141:7 › Profile Settings › should update display name
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:150:7 › Profile Settings › should update bio
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:159:7 › Profile Settings › should update email
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:168:7 › Profile Settings › should update phone number
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:177:7 › Profile Settings › should change password
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:182:7 › Profile Settings › should show current password field
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:187:7 › Profile Settings › should show new password field
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:192:7 › Profile Settings › should show confirm password field
+  [chromium] › ../../../../../../../../../../app/src/e2e/settings.spec.ts:197:7 › Profile Settings › should validate password match
+  [chromium] › ../../../../../../../../../../app/src/e2e/setup_wizard_comprehensive.spec.ts:5:7 › Business Setup Wizard Comprehensive Flow › should traverse the complete business setup wizard successfully
+  [chromium] › ../../../../../../../../../../app/src/e2e/social_media_autopost.spec.ts:4:7 › Social Media Autoposting Flow › user can connect Instagram and receive an automated post approval task
+  [chromium] › ../../../../../../../../../../app/src/e2e/social_media_autopost.spec.ts:65:7 › Social Media Autoposting Flow › user can connect Facebook
+  [chromium] › ../../../../../../../../../../app/src/e2e/social_media_autopost.spec.ts:81:7 › Social Media Autoposting Flow › user can edit an AI draft
+  [chromium] › ../../../../../../../../../../app/src/e2e/social_media_autopost.spec.ts:101:7 › Social Media Autoposting Flow › user can schedule a post
+  [chromium] › ../../../../../../../../../../app/src/e2e/social_media_autopost.spec.ts:115:7 › Social Media Autoposting Flow › user can approve a post
+  [chromium] › ../../../../../../../../../../app/src/e2e/success_milestones.spec.ts:4:7 › Success Milestones Notifications › should verify milestone functionality when order threshold is reached
+  [chromium] › ../../../../../../../../../../app/src/e2e/success_milestones.spec.ts:37:7 › Success Milestones Notifications › should verify 1st order milestone
+  [chromium] › ../../../../../../../../../../app/src/e2e/success_milestones.spec.ts:51:7 › Success Milestones Notifications › should verify 10th order milestone
+  [chromium] › ../../../../../../../../../../app/src/e2e/success_milestones.spec.ts:72:7 › Success Milestones Notifications › should verify 100 visitors milestone
+  [chromium] › ../../../../../../../../../../app/src/e2e/success_milestones.spec.ts:83:7 › Success Milestones Notifications › should verify milestone dismissal
+  [chromium] › ../../../../../../../../../../app/src/e2e/tasks.spec.ts:4:7 › Task List Page › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/tasks.spec.ts:9:7 › Task List Page › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/tasks.spec.ts:14:7 › Task List Page › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/tasks.spec.ts:19:7 › Task List Page › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/tasks.spec.ts:24:7 › Task List Page › should display business setup
+  [chromium] › ../../../../../../../../../../app/src/e2e/tasks.spec.ts:31:7 › Navigation › should navigate via nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/tasks.spec.ts:38:7 › Navigation › should show welcome message
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_sync.spec.ts:12:7 › 🎨 Canvas: Telemetry Sync UI Tests › should display Standalone-to-Cloud Telemetry Sync header
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_sync.spec.ts:16:7 › 🎨 Canvas: Telemetry Sync UI Tests › should navigate to Telemetry Settings
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_sync.spec.ts:21:7 › 🎨 Canvas: Telemetry Sync UI Tests › should display Advanced Mode toggle
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_sync.spec.ts:27:7 › 🎨 Canvas: Telemetry Sync UI Tests › should allow enabling Advanced Mode
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_sync.spec.ts:34:7 › 🎨 Canvas: Telemetry Sync UI Tests › should return to Dashboard after Settings
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_visualizer.spec.ts:33:7 › 🎨 Canvas: AutoDream Memory Pipeline UI Tests › should display AutoDream Memory Pipeline header when advanced telemetry is shown
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_visualizer.spec.ts:39:7 › 🎨 Canvas: AutoDream Memory Pipeline UI Tests › should display LLM Cache Hits stat card
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_visualizer.spec.ts:43:7 › 🎨 Canvas: AutoDream Memory Pipeline UI Tests › should display RAG Latency stat card
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_visualizer.spec.ts:47:7 › 🎨 Canvas: AutoDream Memory Pipeline UI Tests › should display Dynamic Hybrid Correlation Chart placeholder
+  [chromium] › ../../../../../../../../../../app/src/e2e/telemetry_visualizer.spec.ts:51:7 › 🎨 Canvas: AutoDream Memory Pipeline UI Tests › should apply correct styling properties for AutoDream Memory Pipeline container
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_billing_limits.spec.ts:4:7 › Billing & Rate Limits › should display dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_billing_limits.spec.ts:9:7 › Billing & Rate Limits › should display navigation
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_billing_limits.spec.ts:14:7 › Billing & Rate Limits › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_billing_limits.spec.ts:21:7 › Navigation › should navigate via nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_billing_limits.spec.ts:27:7 › Navigation › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:3:5 › verify wizard UI state propagation to backend
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:77:5 › verify wizard AI agent configuration
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:104:5 › verify wizard prompt tuning
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:136:5 › verify grow business suggestions
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:150:5 › verify website builder flow
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:183:5 › verify login form error message UX wrap behavior
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:203:5 › verify app settings toggle
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:213:5 › verify sign up and sign in toggle
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:233:5 › verify password toggle
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:254:5 › verify login empty submission
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:264:5 › verify checklist flow and integration
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:333:5 › verify checklist connects instagram routing
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:388:5 › verify checklist share link routing
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:443:5 › verify checklist fully completed state
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_e2e_run.spec.ts:502:5 › verify checklist completion progress
+  [chromium] › ../../../../../../../../../../app/src/e2e/test_simple.spec.ts:3:5 › simple test
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:13:7 › User Management › should display user management page
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:17:7 › User Management › should show users list header
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:21:7 › User Management › should display users list
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:26:7 › User Management › should show add user button
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:30:7 › User Management › should enter user email
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:37:7 › User Management › should assign role to user
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:44:7 › User Management › should send invitation
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:52:7 › User Management › should search users
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:58:7 › User Management › should filter users by role
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:63:7 › User Management › should show user details
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:69:7 › User Management › should edit user
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:77:7 › User Management › should delete user
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:85:7 › User Management › should show user role badges
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:90:7 › User Management › should show user status indicators
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:95:7 › User Management › should export users list
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:101:7 › User Management › should show pending invitations
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:107:7 › User Management › should resend invitation
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:115:7 › User Management › should cancel invitation
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:134:7 › Role Management › should show roles list
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:138:7 › Role Management › should display role cards
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:143:7 › Role Management › should show admin role
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:147:7 › Role Management › should show viewer role
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:151:7 › Role Management › should show operator role
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:155:7 › Role Management › should create new role
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:161:7 › Role Management › should assign permissions to role
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:169:7 › Role Management › should delete custom role
+  [chromium] › ../../../../../../../../../../app/src/e2e/users.spec.ts:177:7 › Role Management › should show role user count
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_dashboard_simplification.spec.ts:4:7 › Dashboard UX Simplification (Grandmother Test) › should display dashboard with nav
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_dashboard_simplification.spec.ts:11:7 › Dashboard UX Simplification (Grandmother Test) › should display agents page
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_dashboard_simplification.spec.ts:16:7 › Dashboard UX Simplification (Grandmother Test) › should display login page
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_dashboard_simplification.spec.ts:21:7 › Dashboard UX Simplification (Grandmother Test) › should display business setup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_dashboard_simplification.spec.ts:28:7 › Navigation › should navigate via nav links
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_dashboard_simplification.spec.ts:35:7 › Navigation › should show welcome message on dashboard
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_friction_audit.spec.ts:4:7 › UX Friction Audit › Page Load and Visual Verification
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_grandma_flow.spec.ts:6:7 › Grandmother UX End-to-End Flow Validation › Flow 1: First-time user logs in and sees plain language headers
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_grandma_flow.spec.ts:20:7 › Grandmother UX End-to-End Flow Validation › Flow 2: User opens Quick Actions helper for guidance
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_grandma_flow.spec.ts:35:7 › Grandmother UX End-to-End Flow Validation › Flow 3: User accesses Menu and sees simple connection labels
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_grandma_flow.spec.ts:51:7 › Grandmother UX End-to-End Flow Validation › Flow 4: User navigates to Connect Custom Software to review available connections
+  [chromium] › ../../../../../../../../../../app/src/e2e/ux_grandma_flow.spec.ts:65:7 › Grandmother UX End-to-End Flow Validation › Flow 5: User initiates guided setup process from login screen
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_referral.spec.ts:4:7 › Viral Referral Loop › should navigate to user management and interact with the viral referral loop widget
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_referral.spec.ts:44:7 › Viral Referral Loop › should verify widget hover state micro-animations and layout resilience
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_referral.spec.ts:71:7 › Viral Referral Loop › should assert glassmorphism background token on referral widget
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_referral.spec.ts:88:7 › Viral Referral Loop › should assert proper typography and text colors on referral widget
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_referral.spec.ts:104:7 › Viral Referral Loop › should handle responsive resizing for the referral widget
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_storefront.spec.ts:4:7 › Viral Storefront E2E › user can click viral storefront footer to open signup page
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_storefront.spec.ts:40:7 › Viral Storefront E2E › should assert viral footer exists on desktop storefront
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_storefront.spec.ts:60:7 › Viral Storefront E2E › should assert viral footer exists on mobile storefront
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_storefront.spec.ts:81:7 › Viral Storefront E2E › should verify viral footer text matches precise marketing copy
+  [chromium] › ../../../../../../../../../../app/src/e2e/viral_storefront.spec.ts:101:7 › Viral Storefront E2E › should verify clicking viral footer initiates redirect workflow
+  [chromium] › ../../../../../../../../../../app/src/e2e/website_builder.spec.ts:5:9 › Website Builder Full E2E › Flow 1: Modern Template with Subdomain
+  [chromium] › ../../../../../../../../../../app/src/e2e/website_builder.spec.ts:26:9 › Website Builder Full E2E › Flow 2: Classic Template with Custom Domain
+  [chromium] › ../../../../../../../../../../app/src/e2e/website_builder.spec.ts:45:9 › Website Builder Full E2E › Flow 3: Bold Template with Domain Purchase
+  [chromium] › ../../../../../../../../../../app/src/e2e/website_builder.spec.ts:63:9 › Website Builder Full E2E › Flow 4: Navigation Back and Forth
+  [chromium] › ../../../../../../../../../../app/src/e2e/website_builder.spec.ts:81:9 › Website Builder Full E2E › Flow 5: Advanced Mode Toggling and Raw Export Visibility
+  [chromium] › ../../../../../../../../../../app/src/e2e/wizard_refinement.spec.ts:5:7 › Wizard Refinement E2E › Full Setup Wizard journey (Day One)
+  [chromium] › ../../../../../../../../../../app/src/e2e/wizard_refinement.spec.ts:53:7 › Wizard Refinement E2E › Zero to Live - Full Journey & Dashboard Verification
+  [chromium] › ../../../../../../../../../../app/src/e2e/wizard_refinement.spec.ts:98:7 › Wizard Refinement E2E › AI Helper Configuration
+  [chromium] › ../../../../../../../../../../app/src/e2e/wizard_refinement.spec.ts:124:7 › Wizard Refinement E2E › Prompt Tuning Sandbox
+  [chromium] › ../../../../../../../../../../app/src/e2e/wizard_refinement.spec.ts:152:7 › Wizard Refinement E2E › "Fix This" recovery flow
+  [chromium] › ../../../../../../../../../../app/src/e2e/wizard_refinement.spec.ts:167:7 › Wizard Refinement E2E › Progressive Disclosure (Expert Mode) toggle
+Total: 547 tests in 58 files
+
+Running 10 tests using 1 worker
+Configuration Error: HTML reporter output folder clashes with the tests output folder:
+
+    html reporter folder: /tmp/bazel/8c069df52082beee3c95ca17836fb8e2/execroot/_main/bazel-out/k8-fastbuild/testlogs/src/e2e/playwright_onboarding_spec_ts/test.outputs/playwright-report
+    test results folder: /tmp/bazel/8c069df52082beee3c95ca17836fb8e2/execroot/_main/bazel-out/k8-fastbuild/testlogs/src/e2e/playwright_onboarding_spec_ts/test.outputs
+
+HTML reporter will clear its output directory prior to being generated, which will lead to the artifact loss.
+
+××T-- Test timed out at 2026-05-15 10:26:43 UTC --
+Terminated
+================================================================================
+INFO: Found 1 test target...
+Target //src/e2e:playwright_onboarding_spec_ts up-to-date:
+  bazel-bin/src/e2e/playwright_onboarding_spec_ts
+INFO: Elapsed time: 303.584s, Critical Path: 300.25s
+INFO: 3 processes: 2 internal, 2 local.
+INFO: Build completed, 1 test FAILED, 3 total actions
+//src/e2e:playwright_onboarding_spec_ts                                 TIMEOUT in 300.2s
+  /tmp/bazel/8c069df52082beee3c95ca17836fb8e2/execroot/_main/bazel-out/k8-fastbuild/testlogs/src/e2e/playwright_onboarding_spec_ts/test.log
+
+Executed 1 out of 1 test: 1 fails locally.
