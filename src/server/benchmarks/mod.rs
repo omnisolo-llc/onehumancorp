@@ -1,2 +1,10 @@
 pub mod latency_bench;
 pub mod chaos_bench;
+pub mod ai_job_latency_bench;
+pub mod cache_load_bench;
+pub mod db_pool_contention_bench;
+pub mod mobile_payload_bench;
+pub mod parallel_fetch_bench;
+pub mod queue_contention_bench;
+pub mod token_compression_bench;
+pub mod caching_bench;

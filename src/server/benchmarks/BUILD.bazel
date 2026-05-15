@@ -4,7 +4,14 @@ filegroup(
         "chaos_bench.rs",
         "latency_bench.rs",
         "mod.rs",
-
+        "ai_job_latency_bench.rs",
+        "cache_load_bench.rs",
+        "db_pool_contention_bench.rs",
+        "mobile_payload_bench.rs",
+        "parallel_fetch_bench.rs",
+        "queue_contention_bench.rs",
+        "token_compression_bench.rs",
+        "caching_bench.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
