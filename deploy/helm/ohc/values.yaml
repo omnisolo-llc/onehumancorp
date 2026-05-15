@@ -12,15 +12,15 @@ backend:
     enabled: true
     minReplicas: 3
     maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "200m"
+      cpu: "100m"
       memory: "256Mi"
     limits:
-      cpu: "1000m"
-      memory: "2Gi"
+      cpu: "500m"
+      memory: "1Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -32,14 +32,14 @@ backend:
 resourceQuota:
   enabled: true
   requests:
-    cpu: "20"
-    memory: "20Gi"
-    ephemeralStorage: "50Gi"
+    cpu: "10"
+    memory: "10Gi"
+    ephemeralStorage: "20Gi"
   limits:
-    cpu: "60"
-    memory: "120Gi"
-    ephemeralStorage: "150Gi"
-    pods: "200"
+    cpu: "40"
+    memory: "60Gi"
+    ephemeralStorage: "80Gi"
+    pods: "100"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
@@ -56,16 +56,16 @@ ohcCore:
   autoscaling:
     enabled: true
     minReplicas: 3
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "50m"
+      cpu: "25m"
       memory: "64Mi"
     limits:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "100m"
+      memory: "128Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -161,6 +161,15 @@ kube-prometheus-stack:
     enabled: true
     env:
       GF_LOG_CONSOLE_FORMAT: "json"
+    extraVolumes:
+      - name: custom-css
+        configMap:
+          name: grafana-custom-css
+    extraVolumeMounts:
+      - name: custom-css
+        mountPath: /usr/share/grafana/public/css/custom.css
+        subPath: custom.css
+        readOnly: true
     sidecar:
       dashboards:
         enabled: true
