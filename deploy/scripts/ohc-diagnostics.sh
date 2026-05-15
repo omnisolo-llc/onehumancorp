@@ -26,7 +26,7 @@ fi
 echo -e "\n${DIM}[Running Environment Health Checks]${RESET}"
 
 # Check for essential tools
-TOOLS=("bazelisk" "docker" "go" "sqlite3")
+TOOLS=("bazelisk" "docker" "go" "sqlite3" "node" "python3" "cargo")
 MISSING_TOOLS=0
 for tool in "${TOOLS[@]}"; do
     if command -v $tool >/dev/null 2>&1; then
@@ -34,6 +34,37 @@ for tool in "${TOOLS[@]}"; do
     else
         echo -e "  ${PURPLE}✗ $tool not found${RESET}"
         MISSING_TOOLS=$((MISSING_TOOLS+1))
+    fi
+done
+
+# Check for .env file
+echo -e "\n${DIM}[Verifying Environment Configuration]${RESET}"
+if [ -f ".env" ]; then
+    echo -e "  ${GREEN}✓ .env file found${RESET}"
+else
+    echo -e "  ${PURPLE}✗ .env file not found${RESET}"
+    echo -e "    ${DIM}(Hint: Run 'ohc-env-wizard.sh' to generate one)${RESET}"
+fi
+
+# Check Port Availability
+echo -e "\n${DIM}[Checking Port Availability]${RESET}"
+PORTS=(8080 5432 6379 3000)
+for port in "${PORTS[@]}"; do
+    if command -v lsof >/dev/null 2>&1; then
+        if lsof -i :$port >/dev/null 2>&1; then
+            echo -e "  ${PURPLE}✗ Port $port is currently in use${RESET}"
+        else
+            echo -e "  ${GREEN}✓ Port $port is available${RESET}"
+        fi
+    elif command -v netstat >/dev/null 2>&1; then
+        if netstat -tuln | grep -q ":$port "; then
+            echo -e "  ${PURPLE}✗ Port $port is currently in use${RESET}"
+        else
+            echo -e "  ${GREEN}✓ Port $port is available${RESET}"
+        fi
+    else
+        echo -e "  ${DIM}? Skipping port check (lsof/netstat not installed)${RESET}"
+        break
     fi
 done
 

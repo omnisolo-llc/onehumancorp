@@ -25,8 +25,9 @@ while true; do
     echo -e "  6) Standalone DB Health Check"
     echo -e "  7) Launch Cloud Start"
     echo -e "  8) Seed Database with Mock Data"
-    echo -e "  9) Check Swarm Status"
-    echo -e "  10) Verify Setup"
+    echo -e "  9) Run Interactive Diagnostics"
+    echo -e "  10) Check Swarm Status"
+    echo -e "  11) Verify Setup"
     echo -e "  0) Exit"
     read -p "Choice: " choice
 
@@ -48,8 +49,9 @@ while true; do
             ;;
         7) (set -e; bash "$SCRIPT_DIR/ohc-cloud-start.sh") || echo -e "${PURPLE}Cloud Start returned non-zero exit status ($?).${RESET}" ;;
         8) (set -e; bash "$SCRIPT_DIR/ohc-seed-data.sh") || echo -e "${PURPLE}Data Seeder returned non-zero exit status ($?).${RESET}" ;;
-        9) (set -e; bash "$SCRIPT_DIR/ohc-swarm-status.sh") || echo -e "${PURPLE}Swarm Status returned non-zero exit status ($?).${RESET}" ;;
-        10) (set -e; bash "$SCRIPT_DIR/ohc-verify-setup.sh") || echo -e "${PURPLE}Verify Setup returned non-zero exit status ($?).${RESET}" ;;
+        9) (set -e; bash "$SCRIPT_DIR/ohc-diagnostics.sh") || echo -e "${PURPLE}Diagnostics returned non-zero exit status ($?).${RESET}" ;;
+        10) (set -e; bash "$SCRIPT_DIR/ohc-swarm-status.sh") || echo -e "${PURPLE}Swarm Status returned non-zero exit status ($?).${RESET}" ;;
+        11) (set -e; bash "$SCRIPT_DIR/ohc-verify-setup.sh") || echo -e "${PURPLE}Verify Setup returned non-zero exit status ($?).${RESET}" ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
