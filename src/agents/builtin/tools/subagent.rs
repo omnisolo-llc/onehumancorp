@@ -75,6 +75,34 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
+                } else if mode == "api" {
+            let parent_task_id = args.get("parent_task_id").and_then(|v| v.as_str()).unwrap_or("");
+            let scheduled_at = args.get("scheduled_at").and_then(|v| v.as_str());
+            let payload = json!({
+                "parent_task_id": parent_task_id,
+                "payload": {"instruction": raw_task},
+                "scheduled_at": scheduled_at,
+            });
+
+            let payload_str = payload.to_string();
+
+            let agent_addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:18789".to_string());
+            let endpoint = format!("http://{}/api/queue/subagent", agent_addr);
+
+            let output = self.runner.run("curl", &["-s", "-X", "POST", "-H", "Content-Type: application/json", "-d", &payload_str, &endpoint], None, vec![]).await;
+
+            match output {
+                Ok(out) => {
+                    if out.status.success() {
+                        let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                        Ok(format!("[Subagent (API)] Successfully enqueued task via queue. Summary: {}", stdout))
+                    } else {
+                        let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                        Err(ToolError::LlmRecoverable(format!("Failed to enqueue subagent via API: {}", stderr)))
+                    }
+                }
+                Err(e) => Err(ToolError::LlmRecoverable(format!("CommandRunner failed: {}", e))),
+            }
         } else if mode == "fork" {
             let parent_context_json = args.get("parent_context_json").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -185,7 +213,7 @@ pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
                 },
                 "mode": {
                     "type": "string",
-                    "enum": ["fork", "teammate", "worktree"],
+                    "enum": ["fork", "teammate", "worktree", "api"],
                     "description": "Isolation mode. Fork: exact memory clone. Teammate: parallel worker via queue. Worktree: isolated git branch."
                 }
             },
@@ -291,5 +319,35 @@ mod tests {
                 let _ = tokio::fs::remove_dir_all(parent_dir).await;
             });
         });
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use crate::runner::mock::MockCommandRunner;
+
+    #[tokio::test]
+    async fn test_subagent_api_mode() {
+        let mut runner = MockCommandRunner::new();
+        runner.expect_run()
+            .returning(|_, _, _, _| {
+                Ok(crate::runner::CommandOutput {
+                    status: std::process::ExitStatus::default(),
+                    stdout: b"{\"queue_id\":\"q_123\",\"status\":\"ENQUEUED\"}".to_vec(),
+                    stderr: vec![],
+                })
+            });
+
+        let executor = SubagentExecutor { runner: Arc::new(runner) };
+        let args = json!({
+            "task": "Test API mode",
+            "mode": "api",
+            "parent_task_id": "p_123"
+        });
+
+        let res = executor.execute(args).await.unwrap();
+        assert!(res.contains("Successfully enqueued task via queue"));
+        assert!(res.contains("q_123"));
     }
 }
