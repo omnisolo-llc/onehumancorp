@@ -17,7 +17,7 @@ import (
 )
 
 func TestMeshHandler_Broadcast(t *testing.T) {
-	mesh := orchestration.NewLocalTeammateMesh()
+	mesh := orchestration.NewMemoryMeshTransport()
 	handler := NewMeshHandler(mesh)
 
 	var receivedData []byte
@@ -63,7 +63,7 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 }
 
 func TestMeshHandler_Capabilities(t *testing.T) {
-	mesh := orchestration.NewLocalTeammateMesh()
+	mesh := orchestration.NewMemoryMeshTransport()
 	handler := NewMeshHandler(mesh)
 
 	ctx := context.Background()
@@ -92,7 +92,7 @@ func TestMeshHandler_Capabilities(t *testing.T) {
 }
 
 func TestMeshHandler_Publish(t *testing.T) {
-	mesh := orchestration.NewLocalTeammateMesh()
+	mesh := orchestration.NewMemoryMeshTransport()
 	handler := NewMeshHandler(mesh)
 
 	var receivedData []byte
@@ -125,7 +125,7 @@ func TestMeshHandler_Publish(t *testing.T) {
 }
 
 func TestMeshHandler_Subscribe(t *testing.T) {
-	mesh := orchestration.NewLocalTeammateMesh()
+	mesh := orchestration.NewMemoryMeshTransport()
 	handler := NewMeshHandler(mesh)
 
 	server := httptest.NewServer(http.HandlerFunc(handler.Subscribe))

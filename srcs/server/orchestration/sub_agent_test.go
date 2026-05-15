@@ -10,6 +10,7 @@ import (
 	"testing"
 	"onehumancorp/srcs/server/pb"
 	"time"
+	"net/http"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -158,7 +159,7 @@ func TestTaskOrchestrator_PollAndSpawn(t *testing.T) {
 
 	mesh := &mockMeshTransport{}
 	spawner := NewDefaultSubAgentSpawner(mesh, true, 2)
-	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
+	orchestrator := NewDefaultTaskOrchestrator(store, spawner, mesh)
 
 	err = orchestrator.PollTasks(context.Background())
 	assert.NoError(t, err)
@@ -277,7 +278,7 @@ func TestTaskOrchestrator_StartBackgroundWorker(t *testing.T) {
 	assert.NoError(t, err)
 
 	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, true, 2)
-	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
+	orchestrator := NewDefaultTaskOrchestrator(store, spawner, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	orchestrator.StartBackgroundWorker(ctx)
@@ -308,8 +309,13 @@ func TestTaskOrchestrator_PollTasks_Error(t *testing.T) {
 	store := &errorMockTaskStore{SqliteTaskStore: baseStore}
 
 	spawner := NewDefaultSubAgentSpawner(&mockMeshTransport{}, true, 2)
-	orchestrator := NewDefaultTaskOrchestrator(store, spawner)
+	orchestrator := NewDefaultTaskOrchestrator(store, spawner, nil)
 
 	err := orchestrator.PollTasks(context.Background())
 	assert.Error(t, err)
+}
+
+
+func (m *mockMeshTransport) GetHTTPHandler() http.Handler {
+	return nil
 }

@@ -30,10 +30,20 @@ var (
 		},
 		[]string{"deployment_mode"},
 	)
+
+	MeshLatency = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "ohc_mesh_latency_seconds",
+			Help:    "Latency of teammate mesh broadcasts in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"deployment_mode"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(AutoDreamSyncDuration)
 	prometheus.MustRegister(AutoDreamQueryDuration)
 	prometheus.MustRegister(MeshBroadcastTotal)
+	prometheus.MustRegister(MeshLatency)
 }

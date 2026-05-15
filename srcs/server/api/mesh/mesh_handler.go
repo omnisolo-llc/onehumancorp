@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"onehumancorp/srcs/server/orchestration"
+	"onehumancorp/srcs/server/telemetry"
 )
 
 var upgrader = websocket.Upgrader{
@@ -23,6 +25,16 @@ func NewMeshHandler(transport orchestration.MeshTransport) *MeshHandler {
 }
 
 func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	deploymentMode := r.Header.Get("X-Deployment-Mode")
+	if deploymentMode == "" {
+		deploymentMode = "standalone"
+	}
+
+	defer func() {
+		telemetry.MeshLatency.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -52,10 +64,22 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.MeshBroadcastTotal.WithLabelValues(deploymentMode).Inc()
+
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *MeshHandler) Publish(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	deploymentMode := r.Header.Get("X-Deployment-Mode")
+	if deploymentMode == "" {
+		deploymentMode = "standalone"
+	}
+
+	defer func() {
+		telemetry.MeshLatency.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -79,10 +103,18 @@ func (h *MeshHandler) Publish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.MeshBroadcastTotal.WithLabelValues(deploymentMode).Inc()
+
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *MeshHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
+	if centrifugeHandler := h.Transport.GetHTTPHandler(); centrifugeHandler != nil {
+		// Use centrifuge handler for cloud setup if configured
+		centrifugeHandler.ServeHTTP(w, r)
+		return
+	}
+
 	channel := r.URL.Query().Get("channel")
 	if channel == "" {
 		http.Error(w, "Missing channel parameter", http.StatusBadRequest)

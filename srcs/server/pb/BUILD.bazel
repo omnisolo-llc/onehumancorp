@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "pb",
-    srcs = ["agent.go"],
+    srcs = ["agent.go", "mesh.go"],
     importpath = "onehumancorp/srcs/server/pb",
     visibility = ["//visibility:public"],
 )
