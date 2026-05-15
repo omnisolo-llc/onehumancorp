@@ -1774,6 +1774,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button onclick="showScreen('autodream-docs-screen')">AutoDream CLI Guide</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
                                 <button onclick="alert('Tutorial started')">Video Tutorials</button>
@@ -1913,6 +1914,60 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
+
+
+                    <!-- AutoDream CLI Docs -->
+                    <div id="autodream-docs-screen" class="screen glass" style="display: none; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif;">
+                        <h1>KAIROS AutoDream CLI: Interactive Guide</h1>
+                        <p>Welcome to the AutoDream CLI interactive guide. This tool allows developers and administrators to interface with the AutoDream memory consolidation engine directly from the command line, enabling robust testing, debugging, and manual operations within the OHC ecosystem.</p>
+
+                        <h2>Core Commands and Visual Walkthrough</h2>
+                        <p>This interactive guide outlines the primary CLI commands for interacting with the AutoDream pipeline.</p>
+
+                        <pre style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-family: monospace;">
+graph TD
+    CLI[CLI User] -->|autodream status| Status[Check Pipeline Status]
+    CLI -->|autodream run --force| Run[Force Memory Consolidation]
+    CLI -->|autodream query "agent config"| Query[Query Vector Memory]
+
+    Status --> DB[(pgvector / SQLite)]
+    Run --> LLM[Embedding Service]
+    LLM --> DB
+    Query --> DB
+                        </pre>
+
+                        <h3>1. Checking Pipeline Status</h3>
+                        <p>To view the current status of the AutoDream memory consolidation pipeline:</p>
+                        <pre style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-family: monospace;">
+$ autodream status
+Status: Running
+Last Consolidation: 5 mins ago
+Pending Sessions: 2
+                        </pre>
+
+                        <h3>2. Forcing Memory Consolidation</h3>
+                        <p>If you need to force an immediate embedding pass (e.g., after an important agent session):</p>
+                        <pre style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-family: monospace;">
+$ autodream run --force
+[INFO] Scanning for new session context...
+[INFO] Found 2 pending sessions.
+[INFO] Generating embeddings via Minimax...
+[SUCCESS] 2 sessions vectorized and upserted to autodream_memories.
+                        </pre>
+
+                        <h3>3. Querying Vector Memory</h3>
+                        <p>To interactively query the memory space to verify what the swarm currently "knows":</p>
+                        <pre style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-family: monospace;">
+$ autodream query "KAIROS Master Architecture"
+Top results:
+- [0.92] KAIROS Master Design Doc (Session ID: abc-123)
+- [0.89] Distributed State Machine (Session ID: xyz-789)
+                        </pre>
+
+                        <h2>Integrating with the Hybrid Architecture</h2>
+                        <p>The CLI automatically detects the running environment and degrades gracefully in Standalone Mode.</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
@@ -2221,6 +2276,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <script>
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
+                            'autodream-docs-screen': '/docs/autodream-cli',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
@@ -2261,7 +2317,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'autodream-docs-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
