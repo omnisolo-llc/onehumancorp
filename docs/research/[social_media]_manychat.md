@@ -1,19 +1,15 @@
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
+# [Social Media] ManyChat Unified Inbox
+
+**Title**: Implement ManyChat for Unified Social Inbox
+**Problem Statement**: Small business owners struggle to keep up with customer messages scattered across Instagram DMs, Facebook comments, WhatsApp, and TikTok. They miss sales opportunities because they cannot track all platforms from a single interface.
 **Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
+- **Target Persona**: Businesses relying heavily on social media marketing and DM sales (e.g., boutique clothing, bespoke services).
+- **Evaluation**: ManyChat is a top-tier tool for unifying social channels. It is extremely easy for non-technical users to connect via standard OAuth. It supports Facebook, Instagram, and WhatsApp. Reputation is strong.
+- **Ease of Use**: Very High.
+- **Pricing**: Starts at around $15/mo for basic features, which is highly affordable.
+- **Key Risks**: API rate limits from Meta, complex webhook handling for real-time messaging, reliance on Meta's ever-changing API policies.
+- **Compatibility**: Works seamlessly in Cloud environments; Standalone might require manual webhook config which is too hard for SMBs.
+**Design Doc**: The business owner will navigate to a "Social" tab in OHC and click "Connect ManyChat". They will authenticate via OAuth. Once connected, a unified inbox view within OHC will display all incoming messages. The user can reply directly from OHC, which sends the response back through ManyChat.
+**Implementation Prompt**: Build a unified inbox interface that allows users to see and reply to messages from ManyChat. Acceptance criteria: user can connect their account, see unread messages, and reply to a message successfully.
 **Priority**: P0
 **Estimated Scope**: Large

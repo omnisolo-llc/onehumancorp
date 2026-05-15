@@ -1,18 +1,15 @@
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
-**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
+# [Calendar] Calendly Sync
+
+**Title**: Integrate Calendly for Seamless Scheduling
+**Problem Statement**: Small business owners manually schedule appointments, leading to double-booking and lost time playing "email tag" with clients.
 **Research Report**:
-- **Tool**: Calendly
-- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
-**Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
+- **Target Persona**: Consultants, salon owners, and service providers who need clients to book time with them easily.
+- **Evaluation**: Calendly is the industry standard for scheduling. Non-technical users understand it immediately. It handles timezone conversions and Google/Outlook sync perfectly.
+- **Ease of Use**: Very High. The setup wizard is foolproof.
+- **Pricing**: Free tier available (1 event type); Paid starts at $10/mo.
+- **Key Risks**: Over-reliance on third-party availability logic. If Calendly goes down, bookings stop.
+- **Compatibility**: Cloud integration is seamless via OAuth. Standalone might require manual API key input.
+**Design Doc**: Users will connect their Calendly account in the OHC settings. OHC will display their upcoming appointments on the main dashboard. No complex setup needed.
+**Implementation Prompt**: Create a dashboard widget that displays upcoming appointments from Calendly and allows users to copy their booking link. Acceptance criteria: widget shows next 5 appointments and has a functioning "Copy Link" button.
 **Priority**: P1
 **Estimated Scope**: Medium

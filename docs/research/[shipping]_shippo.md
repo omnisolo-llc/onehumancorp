@@ -1,18 +1,15 @@
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
+# [Shipping & Logistics] Shippo Integration
+
+**Title**: Shippo for Automated Label Generation
+**Problem Statement**: Manually calculating shipping rates and buying labels at the post office is incredibly time-consuming for e-commerce business owners.
 **Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
+- **Target Persona**: E-commerce sellers shipping physical products domestically and internationally.
+- **Evaluation**: Shippo aggregates multiple carriers (USPS, UPS, FedEx, DHL) and provides discounted rates. The UI is straightforward.
+- **Ease of Use**: High. Requires basic package dimensions.
+- **Pricing**: Pay-as-you-go pricing (cents per label) is perfect for small volume.
+- **Key Risks**: Carrier API outages, accurate weight/dimension input is required from the user to avoid surcharge adjustments.
+- **Compatibility**: Works flawlessly in Cloud. Standalone requires secure API key storage.
+**Design Doc**: Within an OHC order, users click "Generate Label". OHC fetches the cheapest rate from Shippo and provides a printable PDF label.
+**Implementation Prompt**: Add a "Buy Label" button on the order details page that fetches rates and generates a shipping label. Acceptance criteria: user can view rates and download a label PDF.
 **Priority**: P1
 **Estimated Scope**: Large
