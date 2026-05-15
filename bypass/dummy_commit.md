@@ -1,1 +1,1 @@
-🧙 Wizard: [feature name]
+Maintainer: Zero WIP exit
