@@ -1,3 +1,4 @@
+load("@rules_rust//rust:defs.bzl", "rust_test")
 filegroup(
     name = "srcs",
     srcs = [
@@ -6,4 +7,9 @@ filegroup(
 
     ],
     visibility = ["//src/server:__pkg__"],
+)
+rust_test(
+    name = "interop_test",
+    srcs = ["dummy.rs"],
+    edition = "2024",
 )
