@@ -557,8 +557,9 @@ impl Hub {
     }
 
     pub fn sanitize_hub_event(&self, raw: serde_json::Value) -> HubEvent {
+        let raw = ::server_telemetry::redact_interface_pii(raw);
         let event_type = raw["type"].as_str().unwrap_or("unknown").to_string();
-        let redacted_raw = ::server_telemetry::redact_interface_pii(raw);
+        let redacted_raw = raw;
         HubEvent {
             r#type: event_type,
             payload: redacted_raw.to_string(),

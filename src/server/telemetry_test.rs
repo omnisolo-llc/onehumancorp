@@ -405,6 +405,49 @@ mod tests {
             violations
         );
     }
+    #[test]
+    fn test_ast_pii_linter_compliance() {
+        // Specifically testing that redact_interface_pii is applied before json marshal
+        // This is an automated compliance guardrail
+        let content = std::fs::read_to_string("src/server/telemetry/mod.rs").unwrap_or_default();
+        let mut violations = Vec::new();
+
+        let lines: Vec<&str> = content.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            if line.contains("serde_json::to_string") || line.contains("json::Marshal") {
+                // Check if redact was called recently before this
+                let mut found_redact = false;
+                for j in (0..=i).rev().take(10) {
+                    if lines[j].contains("redact_interface_pii") || lines[j].contains("RedactInterfacePII") {
+                        found_redact = true;
+                        break;
+                    }
+                }
+                if !found_redact {
+                    violations.push(format!("Line {}: Missing PII redaction before JSON serialization", i + 1));
+                }
+            }
+        }
+
+        let hub_content = std::fs::read_to_string("src/server/hub.rs").unwrap_or_default();
+        let hub_lines: Vec<&str> = hub_content.lines().collect();
+        for (i, line) in hub_lines.iter().enumerate() {
+            if line.contains("pub fn sanitize_hub_event") {
+                let mut found_redact = false;
+                for j in i..std::cmp::min(i + 15, hub_lines.len()) {
+                    if hub_lines[j].contains("redact_interface_pii") {
+                        found_redact = true;
+                        break;
+                    }
+                }
+                if !found_redact {
+                    violations.push(format!("Hub Event Log: Missing PII redaction in sanitize_hub_event"));
+                }
+            }
+        }
+
+        assert!(violations.is_empty(), "Found PII compliance violations:\n{:#?}", violations);
+    }
 
     #[test]
     fn test_init_telemetry_standalone_opt_out() {

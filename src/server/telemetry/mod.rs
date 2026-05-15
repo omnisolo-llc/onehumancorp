@@ -80,7 +80,8 @@ pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dy
     let deployment_mode = get_deployment_mode();
 
     get_queue_length_gauge().add(delta as i64, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode)]);
-    let payload = serde_json::json!({ "delta": delta, "deployment_mode": deployment_mode });
+    let payload_map = serde_json::json!({ "delta": delta, "deployment_mode": deployment_mode });
+    let payload = redact_interface_pii(payload_map);
 
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
