@@ -1740,59 +1740,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Agents</button>
+                        <h1 style="font-family: 'Outfit', sans-serif;">Dashboard</h1>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%);">
+                            <h2 style="font-family: 'Outfit', sans-serif;">My Business</h2>
+                            <p style="font-family: 'Inter', sans-serif;">Welcome back. Your agents are working on your behalf.</p>
+                            <p style="font-family: 'Inter', sans-serif;"><strong>Today's Sales:</strong> $0.00</p>
+                            <p style="font-family: 'Inter', sans-serif;"><strong>Orders to Ship:</strong> 0</p>
+                            <p style="font-family: 'Inter', sans-serif;"><strong>Team Members:</strong> 1</p>
+                            <p style="font-family: 'Inter', sans-serif;"><strong>Ongoing Tasks:</strong> 0</p>
+                            <p style="font-family: 'Inter', sans-serif;"><strong>Needs Your Approval:</strong> 0</p>
                         </div>
-                        <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Start Setup</button>
-                            <button onclick="showScreen('meetings-screen')">Agenda</button>
-                            <button onclick="showScreen('settings-screen')">Settings</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
-                            <button onclick="toggleMenu()">Menu</button>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%);">
+                            <h3 style="font-family: 'Outfit', sans-serif;">Quick Actions <button class="secondary" onclick="document.getElementById('quick-actions-hint').style.display='block'" style="min-width: 44px; min-height: 44px;">?</button></h3>
+                            <p id="quick-actions-hint" style="display: none; font-family: 'Inter', sans-serif;">These buttons are shortcuts to your most common daily tasks.</p>
+                            <button style="min-width: 44px; min-height: 44px;" onclick="showScreen('setup-screen')">Start Setup</button>
+                            <button style="min-width: 44px; min-height: 44px;" onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="facebook-integration" class="card glass">
-                            <h3>📘 Facebook</h3>
-                            <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Agent Activity</h3>
-                            <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
-                            </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
-                        </div>
-                        <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <div class="card glass">
-                                <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Video Tutorials</button>
-                                <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
-                            </div>
+                        <div id="extra-menu" class="card glass" style="display: none; backdrop-filter: blur(20px) saturate(200%);">
+                            <button style="min-width: 44px; min-height: 44px;" onclick="alert('Help')">Help Center</button>
+                            <button style="min-width: 44px; min-height: 44px;" onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button style="min-width: 44px; min-height: 44px;" onclick="alert('Connect Apps')">Connect Apps</button>
+                            <button style="min-width: 44px; min-height: 44px;" onclick="alert('Video')">Video Tutorials</button>
+                            <button style="min-width: 44px; min-height: 44px;" onclick="alert('How-to')">How to use this app</button>
+                            <button style="min-width: 44px; min-height: 44px;" onclick="alert('Updates')">What's New</button>
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
+                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px) saturate(200%);">
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="showScreen('dashboard-screen')">Home</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="console.log('action_add_product')">Add</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;">Orders</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;" onclick="showScreen('inbox-screen')">Chat</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;">Stats</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;">Share</button>
                         </nav>
-                    </div>
 
+                        <div style="display:none">
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px;">Store Tips</button>
+                        </div>
+                    </div>
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
                         <h1>Referral Dashboard</h1>
