@@ -13,6 +13,10 @@ name = "server"
 path = "src/server/main.rs"
 
 [dependencies]
+ohc_builtin_agent_core = { path = "src/agents/builtin/core" }
+ohc_builtin_agent_lib = { path = "src/agents/builtin" }
+ohc_builtin_agent = { path = "src/agents/builtin" }
+server_auth = { path = "src/server/auth" }
 tokio = { workspace = true, features = ["full"] }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }

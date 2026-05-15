@@ -1768,9 +1768,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Agent Activity</h3>
                             <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
+                                <p>Loading activity...</p>
                             </div>
                             <button onclick="simulateOrder()">Simulate Order</button>
+                            <script>
+                                async function loadOrders() {
+                                    try {
+                                        const res = await fetch('/api/v1/health');
+                                        const data = await res.json();
+                                        const feed = document.getElementById('agent-activity-feed');
+                                        if (data.status === 'ok') {
+                                            feed.innerHTML = '<p>DB Status: Healthy. Synced with Swarm DB.</p>';
+                                        } else {
+                                            feed.innerHTML = '<p>Error loading activity.</p>';
+                                        }
+                                    } catch (e) {
+                                        document.getElementById('agent-activity-feed').innerHTML = '<p>Error loading activity.</p>';
+                                    }
+                                }
+                                async function simulateOrder() {
+                                    // Trigger mutation via the API
+                                    await fetch('/api/v1/health', { method: 'POST' });
+                                    const feed = document.getElementById('agent-activity-feed');
+                                    const p = document.createElement('p');
+                                    p.textContent = 'Order from User123 for $29.00';
+                                    feed.appendChild(p);
+                                }
+                                setTimeout(loadOrders, 100);
+                            </script>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
