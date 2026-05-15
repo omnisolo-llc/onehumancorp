@@ -1,0 +1,3999 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Wizard API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/wizard/step1": {
+      "get": {
+        "summary": "Get step 1",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step2": {
+      "get": {
+        "summary": "Get step 2",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step3": {
+      "get": {
+        "summary": "Get step 3",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step4": {
+      "get": {
+        "summary": "Get step 4",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step5": {
+      "get": {
+        "summary": "Get step 5",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step6": {
+      "get": {
+        "summary": "Get step 6",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step7": {
+      "get": {
+        "summary": "Get step 7",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step8": {
+      "get": {
+        "summary": "Get step 8",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step9": {
+      "get": {
+        "summary": "Get step 9",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step10": {
+      "get": {
+        "summary": "Get step 10",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step11": {
+      "get": {
+        "summary": "Get step 11",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step12": {
+      "get": {
+        "summary": "Get step 12",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step13": {
+      "get": {
+        "summary": "Get step 13",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step14": {
+      "get": {
+        "summary": "Get step 14",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step15": {
+      "get": {
+        "summary": "Get step 15",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step16": {
+      "get": {
+        "summary": "Get step 16",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step17": {
+      "get": {
+        "summary": "Get step 17",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step18": {
+      "get": {
+        "summary": "Get step 18",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step19": {
+      "get": {
+        "summary": "Get step 19",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step20": {
+      "get": {
+        "summary": "Get step 20",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step21": {
+      "get": {
+        "summary": "Get step 21",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step22": {
+      "get": {
+        "summary": "Get step 22",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step23": {
+      "get": {
+        "summary": "Get step 23",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step24": {
+      "get": {
+        "summary": "Get step 24",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step25": {
+      "get": {
+        "summary": "Get step 25",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step26": {
+      "get": {
+        "summary": "Get step 26",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step27": {
+      "get": {
+        "summary": "Get step 27",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step28": {
+      "get": {
+        "summary": "Get step 28",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step29": {
+      "get": {
+        "summary": "Get step 29",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step30": {
+      "get": {
+        "summary": "Get step 30",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step31": {
+      "get": {
+        "summary": "Get step 31",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step32": {
+      "get": {
+        "summary": "Get step 32",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step33": {
+      "get": {
+        "summary": "Get step 33",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step34": {
+      "get": {
+        "summary": "Get step 34",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step35": {
+      "get": {
+        "summary": "Get step 35",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step36": {
+      "get": {
+        "summary": "Get step 36",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step37": {
+      "get": {
+        "summary": "Get step 37",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step38": {
+      "get": {
+        "summary": "Get step 38",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step39": {
+      "get": {
+        "summary": "Get step 39",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step40": {
+      "get": {
+        "summary": "Get step 40",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step41": {
+      "get": {
+        "summary": "Get step 41",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step42": {
+      "get": {
+        "summary": "Get step 42",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step43": {
+      "get": {
+        "summary": "Get step 43",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step44": {
+      "get": {
+        "summary": "Get step 44",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step45": {
+      "get": {
+        "summary": "Get step 45",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step46": {
+      "get": {
+        "summary": "Get step 46",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step47": {
+      "get": {
+        "summary": "Get step 47",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step48": {
+      "get": {
+        "summary": "Get step 48",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step49": {
+      "get": {
+        "summary": "Get step 49",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step50": {
+      "get": {
+        "summary": "Get step 50",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step51": {
+      "get": {
+        "summary": "Get step 51",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step52": {
+      "get": {
+        "summary": "Get step 52",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step53": {
+      "get": {
+        "summary": "Get step 53",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step54": {
+      "get": {
+        "summary": "Get step 54",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step55": {
+      "get": {
+        "summary": "Get step 55",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step56": {
+      "get": {
+        "summary": "Get step 56",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step57": {
+      "get": {
+        "summary": "Get step 57",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step58": {
+      "get": {
+        "summary": "Get step 58",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step59": {
+      "get": {
+        "summary": "Get step 59",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step60": {
+      "get": {
+        "summary": "Get step 60",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step61": {
+      "get": {
+        "summary": "Get step 61",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step62": {
+      "get": {
+        "summary": "Get step 62",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step63": {
+      "get": {
+        "summary": "Get step 63",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step64": {
+      "get": {
+        "summary": "Get step 64",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step65": {
+      "get": {
+        "summary": "Get step 65",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step66": {
+      "get": {
+        "summary": "Get step 66",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step67": {
+      "get": {
+        "summary": "Get step 67",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step68": {
+      "get": {
+        "summary": "Get step 68",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step69": {
+      "get": {
+        "summary": "Get step 69",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step70": {
+      "get": {
+        "summary": "Get step 70",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step71": {
+      "get": {
+        "summary": "Get step 71",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step72": {
+      "get": {
+        "summary": "Get step 72",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step73": {
+      "get": {
+        "summary": "Get step 73",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step74": {
+      "get": {
+        "summary": "Get step 74",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step75": {
+      "get": {
+        "summary": "Get step 75",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step76": {
+      "get": {
+        "summary": "Get step 76",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step77": {
+      "get": {
+        "summary": "Get step 77",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step78": {
+      "get": {
+        "summary": "Get step 78",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step79": {
+      "get": {
+        "summary": "Get step 79",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step80": {
+      "get": {
+        "summary": "Get step 80",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step81": {
+      "get": {
+        "summary": "Get step 81",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step82": {
+      "get": {
+        "summary": "Get step 82",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step83": {
+      "get": {
+        "summary": "Get step 83",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step84": {
+      "get": {
+        "summary": "Get step 84",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step85": {
+      "get": {
+        "summary": "Get step 85",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step86": {
+      "get": {
+        "summary": "Get step 86",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step87": {
+      "get": {
+        "summary": "Get step 87",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step88": {
+      "get": {
+        "summary": "Get step 88",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step89": {
+      "get": {
+        "summary": "Get step 89",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step90": {
+      "get": {
+        "summary": "Get step 90",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step91": {
+      "get": {
+        "summary": "Get step 91",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step92": {
+      "get": {
+        "summary": "Get step 92",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step93": {
+      "get": {
+        "summary": "Get step 93",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step94": {
+      "get": {
+        "summary": "Get step 94",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step95": {
+      "get": {
+        "summary": "Get step 95",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step96": {
+      "get": {
+        "summary": "Get step 96",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step97": {
+      "get": {
+        "summary": "Get step 97",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step98": {
+      "get": {
+        "summary": "Get step 98",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step99": {
+      "get": {
+        "summary": "Get step 99",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step100": {
+      "get": {
+        "summary": "Get step 100",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step101": {
+      "get": {
+        "summary": "Get step 101",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step102": {
+      "get": {
+        "summary": "Get step 102",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step103": {
+      "get": {
+        "summary": "Get step 103",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step104": {
+      "get": {
+        "summary": "Get step 104",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step105": {
+      "get": {
+        "summary": "Get step 105",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step106": {
+      "get": {
+        "summary": "Get step 106",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step107": {
+      "get": {
+        "summary": "Get step 107",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step108": {
+      "get": {
+        "summary": "Get step 108",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step109": {
+      "get": {
+        "summary": "Get step 109",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step110": {
+      "get": {
+        "summary": "Get step 110",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step111": {
+      "get": {
+        "summary": "Get step 111",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step112": {
+      "get": {
+        "summary": "Get step 112",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step113": {
+      "get": {
+        "summary": "Get step 113",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step114": {
+      "get": {
+        "summary": "Get step 114",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step115": {
+      "get": {
+        "summary": "Get step 115",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step116": {
+      "get": {
+        "summary": "Get step 116",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step117": {
+      "get": {
+        "summary": "Get step 117",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step118": {
+      "get": {
+        "summary": "Get step 118",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step119": {
+      "get": {
+        "summary": "Get step 119",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step120": {
+      "get": {
+        "summary": "Get step 120",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step121": {
+      "get": {
+        "summary": "Get step 121",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step122": {
+      "get": {
+        "summary": "Get step 122",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step123": {
+      "get": {
+        "summary": "Get step 123",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step124": {
+      "get": {
+        "summary": "Get step 124",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step125": {
+      "get": {
+        "summary": "Get step 125",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step126": {
+      "get": {
+        "summary": "Get step 126",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step127": {
+      "get": {
+        "summary": "Get step 127",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step128": {
+      "get": {
+        "summary": "Get step 128",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step129": {
+      "get": {
+        "summary": "Get step 129",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step130": {
+      "get": {
+        "summary": "Get step 130",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step131": {
+      "get": {
+        "summary": "Get step 131",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step132": {
+      "get": {
+        "summary": "Get step 132",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step133": {
+      "get": {
+        "summary": "Get step 133",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step134": {
+      "get": {
+        "summary": "Get step 134",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step135": {
+      "get": {
+        "summary": "Get step 135",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step136": {
+      "get": {
+        "summary": "Get step 136",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step137": {
+      "get": {
+        "summary": "Get step 137",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step138": {
+      "get": {
+        "summary": "Get step 138",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step139": {
+      "get": {
+        "summary": "Get step 139",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step140": {
+      "get": {
+        "summary": "Get step 140",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step141": {
+      "get": {
+        "summary": "Get step 141",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step142": {
+      "get": {
+        "summary": "Get step 142",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step143": {
+      "get": {
+        "summary": "Get step 143",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step144": {
+      "get": {
+        "summary": "Get step 144",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step145": {
+      "get": {
+        "summary": "Get step 145",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step146": {
+      "get": {
+        "summary": "Get step 146",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step147": {
+      "get": {
+        "summary": "Get step 147",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step148": {
+      "get": {
+        "summary": "Get step 148",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step149": {
+      "get": {
+        "summary": "Get step 149",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step150": {
+      "get": {
+        "summary": "Get step 150",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step151": {
+      "get": {
+        "summary": "Get step 151",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step152": {
+      "get": {
+        "summary": "Get step 152",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step153": {
+      "get": {
+        "summary": "Get step 153",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step154": {
+      "get": {
+        "summary": "Get step 154",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step155": {
+      "get": {
+        "summary": "Get step 155",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step156": {
+      "get": {
+        "summary": "Get step 156",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step157": {
+      "get": {
+        "summary": "Get step 157",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step158": {
+      "get": {
+        "summary": "Get step 158",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step159": {
+      "get": {
+        "summary": "Get step 159",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step160": {
+      "get": {
+        "summary": "Get step 160",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step161": {
+      "get": {
+        "summary": "Get step 161",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step162": {
+      "get": {
+        "summary": "Get step 162",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step163": {
+      "get": {
+        "summary": "Get step 163",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step164": {
+      "get": {
+        "summary": "Get step 164",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step165": {
+      "get": {
+        "summary": "Get step 165",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step166": {
+      "get": {
+        "summary": "Get step 166",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step167": {
+      "get": {
+        "summary": "Get step 167",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step168": {
+      "get": {
+        "summary": "Get step 168",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step169": {
+      "get": {
+        "summary": "Get step 169",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step170": {
+      "get": {
+        "summary": "Get step 170",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step171": {
+      "get": {
+        "summary": "Get step 171",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step172": {
+      "get": {
+        "summary": "Get step 172",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step173": {
+      "get": {
+        "summary": "Get step 173",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step174": {
+      "get": {
+        "summary": "Get step 174",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step175": {
+      "get": {
+        "summary": "Get step 175",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step176": {
+      "get": {
+        "summary": "Get step 176",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step177": {
+      "get": {
+        "summary": "Get step 177",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step178": {
+      "get": {
+        "summary": "Get step 178",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step179": {
+      "get": {
+        "summary": "Get step 179",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step180": {
+      "get": {
+        "summary": "Get step 180",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step181": {
+      "get": {
+        "summary": "Get step 181",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step182": {
+      "get": {
+        "summary": "Get step 182",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step183": {
+      "get": {
+        "summary": "Get step 183",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step184": {
+      "get": {
+        "summary": "Get step 184",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step185": {
+      "get": {
+        "summary": "Get step 185",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step186": {
+      "get": {
+        "summary": "Get step 186",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step187": {
+      "get": {
+        "summary": "Get step 187",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step188": {
+      "get": {
+        "summary": "Get step 188",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step189": {
+      "get": {
+        "summary": "Get step 189",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step190": {
+      "get": {
+        "summary": "Get step 190",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step191": {
+      "get": {
+        "summary": "Get step 191",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step192": {
+      "get": {
+        "summary": "Get step 192",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step193": {
+      "get": {
+        "summary": "Get step 193",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step194": {
+      "get": {
+        "summary": "Get step 194",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step195": {
+      "get": {
+        "summary": "Get step 195",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step196": {
+      "get": {
+        "summary": "Get step 196",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step197": {
+      "get": {
+        "summary": "Get step 197",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step198": {
+      "get": {
+        "summary": "Get step 198",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step199": {
+      "get": {
+        "summary": "Get step 199",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step200": {
+      "get": {
+        "summary": "Get step 200",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step201": {
+      "get": {
+        "summary": "Get step 201",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step202": {
+      "get": {
+        "summary": "Get step 202",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step203": {
+      "get": {
+        "summary": "Get step 203",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step204": {
+      "get": {
+        "summary": "Get step 204",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step205": {
+      "get": {
+        "summary": "Get step 205",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step206": {
+      "get": {
+        "summary": "Get step 206",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step207": {
+      "get": {
+        "summary": "Get step 207",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step208": {
+      "get": {
+        "summary": "Get step 208",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step209": {
+      "get": {
+        "summary": "Get step 209",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step210": {
+      "get": {
+        "summary": "Get step 210",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step211": {
+      "get": {
+        "summary": "Get step 211",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step212": {
+      "get": {
+        "summary": "Get step 212",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step213": {
+      "get": {
+        "summary": "Get step 213",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step214": {
+      "get": {
+        "summary": "Get step 214",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step215": {
+      "get": {
+        "summary": "Get step 215",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step216": {
+      "get": {
+        "summary": "Get step 216",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step217": {
+      "get": {
+        "summary": "Get step 217",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step218": {
+      "get": {
+        "summary": "Get step 218",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step219": {
+      "get": {
+        "summary": "Get step 219",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step220": {
+      "get": {
+        "summary": "Get step 220",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step221": {
+      "get": {
+        "summary": "Get step 221",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step222": {
+      "get": {
+        "summary": "Get step 222",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step223": {
+      "get": {
+        "summary": "Get step 223",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step224": {
+      "get": {
+        "summary": "Get step 224",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step225": {
+      "get": {
+        "summary": "Get step 225",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step226": {
+      "get": {
+        "summary": "Get step 226",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step227": {
+      "get": {
+        "summary": "Get step 227",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step228": {
+      "get": {
+        "summary": "Get step 228",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step229": {
+      "get": {
+        "summary": "Get step 229",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step230": {
+      "get": {
+        "summary": "Get step 230",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step231": {
+      "get": {
+        "summary": "Get step 231",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step232": {
+      "get": {
+        "summary": "Get step 232",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step233": {
+      "get": {
+        "summary": "Get step 233",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step234": {
+      "get": {
+        "summary": "Get step 234",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step235": {
+      "get": {
+        "summary": "Get step 235",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step236": {
+      "get": {
+        "summary": "Get step 236",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step237": {
+      "get": {
+        "summary": "Get step 237",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step238": {
+      "get": {
+        "summary": "Get step 238",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step239": {
+      "get": {
+        "summary": "Get step 239",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step240": {
+      "get": {
+        "summary": "Get step 240",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step241": {
+      "get": {
+        "summary": "Get step 241",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step242": {
+      "get": {
+        "summary": "Get step 242",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step243": {
+      "get": {
+        "summary": "Get step 243",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step244": {
+      "get": {
+        "summary": "Get step 244",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step245": {
+      "get": {
+        "summary": "Get step 245",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step246": {
+      "get": {
+        "summary": "Get step 246",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step247": {
+      "get": {
+        "summary": "Get step 247",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step248": {
+      "get": {
+        "summary": "Get step 248",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step249": {
+      "get": {
+        "summary": "Get step 249",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step250": {
+      "get": {
+        "summary": "Get step 250",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step251": {
+      "get": {
+        "summary": "Get step 251",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step252": {
+      "get": {
+        "summary": "Get step 252",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step253": {
+      "get": {
+        "summary": "Get step 253",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step254": {
+      "get": {
+        "summary": "Get step 254",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step255": {
+      "get": {
+        "summary": "Get step 255",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step256": {
+      "get": {
+        "summary": "Get step 256",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step257": {
+      "get": {
+        "summary": "Get step 257",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step258": {
+      "get": {
+        "summary": "Get step 258",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step259": {
+      "get": {
+        "summary": "Get step 259",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step260": {
+      "get": {
+        "summary": "Get step 260",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step261": {
+      "get": {
+        "summary": "Get step 261",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step262": {
+      "get": {
+        "summary": "Get step 262",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step263": {
+      "get": {
+        "summary": "Get step 263",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step264": {
+      "get": {
+        "summary": "Get step 264",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step265": {
+      "get": {
+        "summary": "Get step 265",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step266": {
+      "get": {
+        "summary": "Get step 266",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step267": {
+      "get": {
+        "summary": "Get step 267",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step268": {
+      "get": {
+        "summary": "Get step 268",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step269": {
+      "get": {
+        "summary": "Get step 269",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step270": {
+      "get": {
+        "summary": "Get step 270",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step271": {
+      "get": {
+        "summary": "Get step 271",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step272": {
+      "get": {
+        "summary": "Get step 272",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step273": {
+      "get": {
+        "summary": "Get step 273",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step274": {
+      "get": {
+        "summary": "Get step 274",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step275": {
+      "get": {
+        "summary": "Get step 275",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step276": {
+      "get": {
+        "summary": "Get step 276",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step277": {
+      "get": {
+        "summary": "Get step 277",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step278": {
+      "get": {
+        "summary": "Get step 278",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step279": {
+      "get": {
+        "summary": "Get step 279",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step280": {
+      "get": {
+        "summary": "Get step 280",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step281": {
+      "get": {
+        "summary": "Get step 281",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step282": {
+      "get": {
+        "summary": "Get step 282",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step283": {
+      "get": {
+        "summary": "Get step 283",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step284": {
+      "get": {
+        "summary": "Get step 284",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step285": {
+      "get": {
+        "summary": "Get step 285",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step286": {
+      "get": {
+        "summary": "Get step 286",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step287": {
+      "get": {
+        "summary": "Get step 287",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step288": {
+      "get": {
+        "summary": "Get step 288",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step289": {
+      "get": {
+        "summary": "Get step 289",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step290": {
+      "get": {
+        "summary": "Get step 290",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step291": {
+      "get": {
+        "summary": "Get step 291",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step292": {
+      "get": {
+        "summary": "Get step 292",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step293": {
+      "get": {
+        "summary": "Get step 293",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step294": {
+      "get": {
+        "summary": "Get step 294",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step295": {
+      "get": {
+        "summary": "Get step 295",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step296": {
+      "get": {
+        "summary": "Get step 296",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step297": {
+      "get": {
+        "summary": "Get step 297",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step298": {
+      "get": {
+        "summary": "Get step 298",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step299": {
+      "get": {
+        "summary": "Get step 299",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step300": {
+      "get": {
+        "summary": "Get step 300",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step301": {
+      "get": {
+        "summary": "Get step 301",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step302": {
+      "get": {
+        "summary": "Get step 302",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step303": {
+      "get": {
+        "summary": "Get step 303",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step304": {
+      "get": {
+        "summary": "Get step 304",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step305": {
+      "get": {
+        "summary": "Get step 305",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step306": {
+      "get": {
+        "summary": "Get step 306",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step307": {
+      "get": {
+        "summary": "Get step 307",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step308": {
+      "get": {
+        "summary": "Get step 308",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step309": {
+      "get": {
+        "summary": "Get step 309",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step310": {
+      "get": {
+        "summary": "Get step 310",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step311": {
+      "get": {
+        "summary": "Get step 311",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step312": {
+      "get": {
+        "summary": "Get step 312",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step313": {
+      "get": {
+        "summary": "Get step 313",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step314": {
+      "get": {
+        "summary": "Get step 314",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step315": {
+      "get": {
+        "summary": "Get step 315",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step316": {
+      "get": {
+        "summary": "Get step 316",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step317": {
+      "get": {
+        "summary": "Get step 317",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step318": {
+      "get": {
+        "summary": "Get step 318",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step319": {
+      "get": {
+        "summary": "Get step 319",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step320": {
+      "get": {
+        "summary": "Get step 320",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step321": {
+      "get": {
+        "summary": "Get step 321",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step322": {
+      "get": {
+        "summary": "Get step 322",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step323": {
+      "get": {
+        "summary": "Get step 323",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step324": {
+      "get": {
+        "summary": "Get step 324",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step325": {
+      "get": {
+        "summary": "Get step 325",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step326": {
+      "get": {
+        "summary": "Get step 326",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step327": {
+      "get": {
+        "summary": "Get step 327",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step328": {
+      "get": {
+        "summary": "Get step 328",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step329": {
+      "get": {
+        "summary": "Get step 329",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step330": {
+      "get": {
+        "summary": "Get step 330",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step331": {
+      "get": {
+        "summary": "Get step 331",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step332": {
+      "get": {
+        "summary": "Get step 332",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step333": {
+      "get": {
+        "summary": "Get step 333",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step334": {
+      "get": {
+        "summary": "Get step 334",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step335": {
+      "get": {
+        "summary": "Get step 335",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step336": {
+      "get": {
+        "summary": "Get step 336",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step337": {
+      "get": {
+        "summary": "Get step 337",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step338": {
+      "get": {
+        "summary": "Get step 338",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step339": {
+      "get": {
+        "summary": "Get step 339",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step340": {
+      "get": {
+        "summary": "Get step 340",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step341": {
+      "get": {
+        "summary": "Get step 341",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step342": {
+      "get": {
+        "summary": "Get step 342",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step343": {
+      "get": {
+        "summary": "Get step 343",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step344": {
+      "get": {
+        "summary": "Get step 344",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step345": {
+      "get": {
+        "summary": "Get step 345",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step346": {
+      "get": {
+        "summary": "Get step 346",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step347": {
+      "get": {
+        "summary": "Get step 347",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step348": {
+      "get": {
+        "summary": "Get step 348",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step349": {
+      "get": {
+        "summary": "Get step 349",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step350": {
+      "get": {
+        "summary": "Get step 350",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step351": {
+      "get": {
+        "summary": "Get step 351",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step352": {
+      "get": {
+        "summary": "Get step 352",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step353": {
+      "get": {
+        "summary": "Get step 353",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step354": {
+      "get": {
+        "summary": "Get step 354",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step355": {
+      "get": {
+        "summary": "Get step 355",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step356": {
+      "get": {
+        "summary": "Get step 356",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step357": {
+      "get": {
+        "summary": "Get step 357",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step358": {
+      "get": {
+        "summary": "Get step 358",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step359": {
+      "get": {
+        "summary": "Get step 359",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step360": {
+      "get": {
+        "summary": "Get step 360",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step361": {
+      "get": {
+        "summary": "Get step 361",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step362": {
+      "get": {
+        "summary": "Get step 362",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step363": {
+      "get": {
+        "summary": "Get step 363",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step364": {
+      "get": {
+        "summary": "Get step 364",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step365": {
+      "get": {
+        "summary": "Get step 365",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step366": {
+      "get": {
+        "summary": "Get step 366",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step367": {
+      "get": {
+        "summary": "Get step 367",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step368": {
+      "get": {
+        "summary": "Get step 368",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step369": {
+      "get": {
+        "summary": "Get step 369",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step370": {
+      "get": {
+        "summary": "Get step 370",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step371": {
+      "get": {
+        "summary": "Get step 371",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step372": {
+      "get": {
+        "summary": "Get step 372",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step373": {
+      "get": {
+        "summary": "Get step 373",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step374": {
+      "get": {
+        "summary": "Get step 374",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step375": {
+      "get": {
+        "summary": "Get step 375",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step376": {
+      "get": {
+        "summary": "Get step 376",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step377": {
+      "get": {
+        "summary": "Get step 377",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step378": {
+      "get": {
+        "summary": "Get step 378",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step379": {
+      "get": {
+        "summary": "Get step 379",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step380": {
+      "get": {
+        "summary": "Get step 380",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step381": {
+      "get": {
+        "summary": "Get step 381",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step382": {
+      "get": {
+        "summary": "Get step 382",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step383": {
+      "get": {
+        "summary": "Get step 383",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step384": {
+      "get": {
+        "summary": "Get step 384",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step385": {
+      "get": {
+        "summary": "Get step 385",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step386": {
+      "get": {
+        "summary": "Get step 386",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step387": {
+      "get": {
+        "summary": "Get step 387",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step388": {
+      "get": {
+        "summary": "Get step 388",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step389": {
+      "get": {
+        "summary": "Get step 389",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step390": {
+      "get": {
+        "summary": "Get step 390",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step391": {
+      "get": {
+        "summary": "Get step 391",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step392": {
+      "get": {
+        "summary": "Get step 392",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step393": {
+      "get": {
+        "summary": "Get step 393",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step394": {
+      "get": {
+        "summary": "Get step 394",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step395": {
+      "get": {
+        "summary": "Get step 395",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step396": {
+      "get": {
+        "summary": "Get step 396",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step397": {
+      "get": {
+        "summary": "Get step 397",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step398": {
+      "get": {
+        "summary": "Get step 398",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/wizard/step399": {
+      "get": {
+        "summary": "Get step 399",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}
