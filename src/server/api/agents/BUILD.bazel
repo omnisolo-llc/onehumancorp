@@ -4,6 +4,7 @@ filegroup(
         "approvals.rs",
         "hire.rs",
         "mod.rs",
+        "simulate.rs",
     ],
     visibility = ["//src/server/api:__pkg__"],
 )

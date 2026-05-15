@@ -1472,6 +1472,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/agents/simulate", axum::Router::new().route("/order", axum::routing::post(api::agents::simulate::simulate_order)).route("/config", axum::routing::post(api::agents::simulate::save_config)).with_state(hub.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
@@ -1892,10 +1893,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
                         <h1>Agents</h1>
+                        <div class="toggle-container" style="margin-bottom: 20px;">
+                            <label>
+                                <input type="checkbox" id="advanced-mode-toggle" onchange="toggleAdvancedMode(this.checked)" />
+                                Enable Advanced Mode
+                            </label>
+                        </div>
                         <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <h3>The Manager (Operations)</h3>
+                            <p>Status: <span style="color: #4ade80;">Active</span></p>
+                            <div class="advanced-settings" style="display: none; margin-top: 10px;">
+                                <label><input type="radio" name="manager_approval" value="auto" checked onchange="saveConfig('manager', 'auto')"/> Auto-execute</label>
+                                <label><input type="radio" name="manager_approval" value="draft" onchange="saveConfig('manager', 'draft')"/> Draft-for-review</label>
+                            </div>
+                        </div>
+                        <div class="card glass">
+                            <h3>The Ambassador (Customer Success)</h3>
+                            <p>Status: <span style="color: #4ade80;">Active</span></p>
+                            <div class="advanced-settings" style="display: none; margin-top: 10px;">
+                                <label><input type="radio" name="ambassador_approval" value="auto" checked onchange="saveConfig('ambassador', 'auto')"/> Auto-execute</label>
+                                <label><input type="radio" name="ambassador_approval" value="draft" onchange="saveConfig('ambassador', 'draft')"/> Draft-for-review</label>
+                            </div>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
@@ -2265,6 +2283,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
+                            }
+                        }
+
+                        function toggleAdvancedMode(isAdvanced) {
+                            const els = document.querySelectorAll('.advanced-settings');
+                            els.forEach(el => el.style.display = isAdvanced ? 'block' : 'none');
+                        }
+
+                        function saveConfig(dept, mode) {
+                            fetch('/api/agents/simulate/config', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ department: dept, mode: mode })
+                            });
+                        }
+
+                        function simulateOrder() {
+                            fetch('/api/agents/simulate/order', { method: 'POST' });
+                            const feed = document.getElementById('agent-activity-feed');
+                            if (feed) {
+                                feed.innerHTML = '<p>Processing...</p>';
+                                setTimeout(() => {
+                                    feed.innerHTML = '<p>Operations processed OrderReceived</p>';
+                                    setTimeout(() => {
+                                        feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
+                                    }, 1000);
+                                }, 500);
                             }
                         }
 
