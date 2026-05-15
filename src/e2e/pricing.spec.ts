@@ -195,6 +195,11 @@ test.describe('My Plan Page', () => {
     await expect(page.locator('text=/my.*plan|current.*plan/i').filter({ visible: true }).first()).toBeVisible();
   });
 
+  test('should show AI Actions Used this month', async ({ page }) => {
+    await page.goto('/my-plan');
+    await expect(page.locator('text=/AI Actions Used this month/i').filter({ visible: true }).first()).toBeVisible();
+  });
+
   test('should show plan status', async ({ page }) => {
     await page.goto('/my-plan');
     await expect(page.locator('text=/active|status/i')).toBeVisible();
