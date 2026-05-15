@@ -66,7 +66,23 @@ impl LocalProxyClient {
 
                             let (success, result, error_details) = match req.tool_id.as_str() {
                                 "shell" => {
-                                    match Command::new("sh").arg("-c").arg(&req.params).output().await {
+                                                                        let bwrap_args = vec![
+                                        "--unshare-all",
+                                        "--ro-bind", "/", "/",
+                                        "--dev", "/dev",
+                                        "--proc", "/proc",
+                                        "--tmpfs", "/tmp",
+                                        "--tmpfs", "/home",
+                                        "--dir", "/home/sandbox",
+                                        "--setenv", "HOME", "/home/sandbox",
+                                        "--bind", "/tmp", "/tmp",
+                                        "--chdir", "/tmp",
+                                        "--tmpfs", "/etc",
+                                        "--tmpfs", "/var",
+                                        "--",
+                                        "bash", "-c", &req.params
+                                    ];
+                                    match Command::new("bwrap").args(&bwrap_args).output().await {
                                         Ok(output) => {
                                             if output.status.success() {
                                                 (true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string())

@@ -40,7 +40,8 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; echo 'hello'\""));
+        assert!(msg.contains("Executing: bwrap"));
+        assert!(msg.contains("bash -c \"set -e; echo 'hello'\""));
     }
 
     #[tokio::test]
