@@ -30,9 +30,11 @@ impl MyAgentManagerService {
         }
 
         let hub_cost = self.hub.clone();
-        let (agents, meetings, cost_res) = tokio::join!(
-            async { self.hub.get_agents() },
-            async { self.hub.get_meetings() },
+        let hub_agents = self.hub.clone();
+        let hub_meetings = self.hub.clone();
+        let (agents_res, meetings_res, cost_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub_agents.get_agents()),
+            tokio::task::spawn_blocking(move || hub_meetings.get_meetings()),
             async {
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
@@ -40,6 +42,8 @@ impl MyAgentManagerService {
                 }).await.unwrap_or((0.0, 0, vec![]))
             }
         );
+        let agents = agents_res.unwrap_or_default();
+        let meetings = meetings_res.unwrap_or_default();
         let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
         let mut agent_costs = Vec::new();
@@ -173,7 +177,10 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IdentitiesResponse>, Status> {
-        let agents = self.hub.get_agents();
+        let hub_clone = self.hub.clone();
+        let agents = tokio::task::spawn_blocking(move || hub_clone.get_agents())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         let now = Utc::now();
         let identities = agents.iter().map(|a| a.clone()).map(|a| AgentIdentity {
             agent_id: a.id.clone(),
