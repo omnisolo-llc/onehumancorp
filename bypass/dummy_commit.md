@@ -1,1 +1,1 @@
-⚙️ Consolidator: [xxx feature]
+Maintainer: Zero WIP exit
