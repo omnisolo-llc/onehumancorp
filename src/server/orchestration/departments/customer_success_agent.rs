@@ -39,6 +39,7 @@ impl Department for CustomerSuccessAgent {
                 reference_count: 1,
                 reliability_score: 80,
                 owner_override: false,
+                archived: false,
                 metadata: None,
             };
             self.orchestrator.write_long_term_memory(record).await?;

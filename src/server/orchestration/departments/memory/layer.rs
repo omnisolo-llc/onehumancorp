@@ -31,6 +31,7 @@ mod tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
+                archived BOOLEAN DEFAULT FALSE,
                 metadata TEXT
             );"
         )
@@ -60,6 +61,7 @@ mod tests {
             reference_count: 1,
             reliability_score: 80,
             owner_override: false,
+            archived: false,
             metadata: None,
         };
         repo.upsert(&rec1).await.expect("Failed to upsert Dept A record");
@@ -77,6 +79,7 @@ mod tests {
             reference_count: 1,
             reliability_score: 80,
             owner_override: false,
+            archived: false,
             metadata: None,
         };
         repo.upsert(&rec2).await.expect("Failed to upsert Dept B record");

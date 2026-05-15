@@ -26,6 +26,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
             reference_count INTEGER DEFAULT 0,
             reliability_score INTEGER DEFAULT 50,
             owner_override BOOLEAN DEFAULT FALSE,
+            archived BOOLEAN DEFAULT FALSE,
             metadata TEXT
         );"
     )
@@ -51,6 +52,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reference_count: 1,
         reliability_score: 50,
         owner_override: false,
+        archived: true,
         metadata: None,
     };
     repo.upsert(&marketing_stale).await.expect("Failed to upsert marketing record");
@@ -68,6 +70,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reference_count: 1,
         reliability_score: 60,
         owner_override: false,
+        archived: false,
         metadata: None,
     };
     repo.upsert(&sales_day1).await.expect("Failed to upsert sales day 1 record");
@@ -85,6 +88,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reference_count: 3,
         reliability_score: 70,
         owner_override: false,
+        archived: false,
         metadata: None,
     };
     repo.upsert(&marketing_day2).await.expect("Failed to upsert marketing day 2 record");
@@ -103,6 +107,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
         reference_count: 2,
         reliability_score: 90, // Higher reliability score makes it the winner
         owner_override: false,
+        archived: false,
         metadata: None,
     };
     repo.upsert(&sales_day3).await.expect("Failed to upsert sales day 3 record");
@@ -157,6 +162,7 @@ async fn test_tenant_isolation_e2e_journey() {
             reference_count INTEGER DEFAULT 0,
             reliability_score INTEGER DEFAULT 50,
             owner_override BOOLEAN DEFAULT FALSE,
+            archived BOOLEAN DEFAULT FALSE,
             metadata TEXT
         );"
     )
@@ -181,6 +187,7 @@ async fn test_tenant_isolation_e2e_journey() {
         reference_count: 1,
         reliability_score: 99,
         owner_override: true,
+        archived: false,
         metadata: None,
     };
     repo.upsert(&tenant_a_record).await.expect("Failed to upsert Tenant A record");
@@ -198,6 +205,7 @@ async fn test_tenant_isolation_e2e_journey() {
         reference_count: 1,
         reliability_score: 99,
         owner_override: true,
+        archived: false,
         metadata: None,
     };
     repo.upsert(&tenant_b_record).await.expect("Failed to upsert Tenant B record");

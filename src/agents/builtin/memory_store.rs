@@ -78,6 +78,10 @@ impl VectorRepository {
         Ok(())
     }
 
+    pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        self.semantic_search(tenant_id, query_embedding, limit).await
+    }
+
     pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
         let mut results = Vec::new();

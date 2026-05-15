@@ -99,6 +99,7 @@ mod tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
+                archived BOOLEAN DEFAULT FALSE,
                 metadata TEXT
             );"
         )
@@ -121,6 +122,7 @@ mod tests {
             reference_count: 1,
             reliability_score: 50,
             owner_override: false,
+            archived: true,
             metadata: None,
         };
         repo.upsert(&stale_record).await.expect("Failed to upsert stale record");
@@ -166,6 +168,7 @@ mod tests {
                 reference_count INTEGER DEFAULT 0,
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
+                archived BOOLEAN DEFAULT FALSE,
                 metadata TEXT
             );"
         )
@@ -188,6 +191,7 @@ mod tests {
             reference_count: 1,
             reliability_score: 50,
             owner_override: false,
+            archived: true,
             metadata: None,
         };
 
@@ -204,6 +208,7 @@ mod tests {
             reference_count: 1,
             reliability_score: 50,
             owner_override: false,
+            archived: false,
             metadata: None,
         };
 
@@ -219,6 +224,7 @@ mod tests {
             reference_count: 2,
             reliability_score: 90, // Higher score = winner
             owner_override: false,
+            archived: false,
             metadata: None,
         };
 
