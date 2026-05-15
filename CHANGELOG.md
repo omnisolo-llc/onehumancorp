@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Disable BuildBuddy configuration in CI workflow to improve CI reliability.
+
+### Privacy/Offline Improvements
+- No specific privacy/offline changes in this release.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
