@@ -401,19 +401,3 @@ func syncCompletedEscalations(ctx context.Context, localDB SQLiteProvider, cloud
 }
 
 // DUMMY VALIDATION COMMENT
-
-// SyncHealthProbe explicit health probe for local-to-cloud mission sync backlog depth
-func (d *HybridMCPRAGDaemon) SyncHealthProbe(ctx context.Context) (map[string]interface{}, error) {
-	var backlogCount int
-	err := d.db.QueryRowContext(ctx, "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION'").Scan(&backlogCount)
-	if err != nil {
-		return nil, fmt.Errorf("sync_daemon probe: failed to query backlog: %w", err)
-	}
-
-	healthStatus := "healthy"
-	if backlogCount > 1000 {
-		healthStatus = "degraded"
-	}
-
-	return map[string]interface{}{"mode": getSyncMode(), "sync_backlog": backlogCount, "status": healthStatus}, nil
-}

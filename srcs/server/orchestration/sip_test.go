@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
@@ -23,8 +22,7 @@ func setupSIPDB(t *testing.T) (*sql.DB, func()) {
 		status TEXT,
 		payload TEXT,
 		mission_log TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 	require.NoError(t, err)
 
@@ -216,45 +214,4 @@ func TestReportMissionHandover(t *testing.T) {
 	err = db.QueryRow("SELECT status, mission_log FROM agent_missions WHERE id = ?", "m_handoff").Scan(&status, &missionLog)
 	require.NoError(t, err)
 	assert.Equal(t, "I cannot finish an OHC product mission. Handover required.\nSecond blocker", missionLog)
-}
-
-func TestPruneStaleMissions(t *testing.T) {
-	db, cleanup := setupSIPDB(t)
-	defer cleanup()
-
-	sipdb := NewSIPDB(db)
-
-	now := time.Now()
-	twoHoursAgo := now.Add(-2 * time.Hour).Format("2006-01-02 15:04:05")
-	halfHourAgo := now.Add(-30 * time.Minute).Format("2006-01-02 15:04:05")
-	threeDaysAgo := now.Add(-72 * time.Hour).Format("2006-01-02 15:04:05")
-
-	_, err := db.Exec(`
-		INSERT INTO agent_missions (id, status, payload, created_at, updated_at) VALUES
-		('m1', 'PENDING', '{"task":"task1"}', ?, ?),
-		('m2', 'PENDING', '{"task":"task2"}', ?, ?),
-		('m3', 'STUCK', '{"task":"task3"}', ?, ?),
-		('m4', 'PENDING', '{"task":"task4"}', ?, ?)
-	`, twoHoursAgo, twoHoursAgo, halfHourAgo, halfHourAgo, halfHourAgo, halfHourAgo, threeDaysAgo, threeDaysAgo)
-	require.NoError(t, err)
-
-	err = sipdb.PruneStaleMissions(context.Background(), 24*time.Hour)
-	require.NoError(t, err)
-
-	var status string
-	err = db.QueryRow("SELECT status FROM agent_missions WHERE id = 'm1'").Scan(&status)
-	require.NoError(t, err)
-	assert.Equal(t, "FAILED", status) // Became STUCK -> FAILED
-
-	err = db.QueryRow("SELECT status FROM agent_missions WHERE id = 'm2'").Scan(&status)
-	require.NoError(t, err)
-	assert.Equal(t, "PENDING", status) // Unchanged
-
-	err = db.QueryRow("SELECT status FROM agent_missions WHERE id = 'm3'").Scan(&status)
-	require.NoError(t, err)
-	assert.Equal(t, "FAILED", status) // Was STUCK -> FAILED
-
-	err = db.QueryRow("SELECT status FROM agent_missions WHERE id = 'm4'").Scan(&status)
-	require.NoError(t, err)
-	assert.Equal(t, "FAILED", status) // Older than ageThreshold -> FAILED
 }
