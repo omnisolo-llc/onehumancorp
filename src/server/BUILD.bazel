@@ -65,6 +65,8 @@ rust_library(
         "//src/proto:hub_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:app_tonic",
+        "//src/proto:docs_tonic",
+        "//src/proto:docs_prost",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:organization_prost",
