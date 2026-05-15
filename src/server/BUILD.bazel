@@ -175,3 +175,14 @@ exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+rust_binary(
+    name = "handover",
+    srcs = ["bin/handover.rs"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:tokio",
+        "@crates//:sqlx",
+    ],
+)
