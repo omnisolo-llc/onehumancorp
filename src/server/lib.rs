@@ -1612,27 +1612,48 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
                         :root {
-                            --primary: #0055ff;
-                            --primary-hover: #0044cc;
-                            --bg: #f4f7fa;
-                            --card-bg: #ffffff;
-                            --text: #1a1a1b;
-                            --text-secondary: #646d7b;
-                            --border: #e1e4e8;
-                            --sidebar-bg: #ffffff;
+                            --primary: #000000;
+                            --primary-hover: #333333;
+                            --bg: #ffffff;
+                            --card-bg: rgba(245, 245, 245, 0.8);
+                            --text: #1a1a1a;
+                            --text-secondary: #666666;
+                            --border: rgba(0, 0, 0, 0.1);
+                            --sidebar-bg: rgba(255, 255, 255, 0.8);
+                        }
+                        @media (prefers-color-scheme: dark) {
+                            :root {
+                                --primary: #ffffff;
+                                --primary-hover: #cccccc;
+                                --bg: #0a0a0a;
+                                --card-bg: rgba(26, 26, 26, 0.8);
+                                --text: #ffffff;
+                                --text-secondary: #a0a0a0;
+                                --border: rgba(255, 255, 255, 0.1);
+                                --sidebar-bg: rgba(10, 10, 10, 0.8);
+                            }
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
+                            padding-bottom: 80px; /* Space for bottom nav on mobile */
+                        }
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: 'Outfit', sans-serif;
+                            color: var(--text);
+                            margin-top: 0;
                         }
                         .glass { 
                             background: var(--card-bg); 
                             border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            border-radius: 16px;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            min-height: 44px; /* Minimum touch target height */
                         }
                         nav { 
                             padding: 0 40px; 
@@ -1645,6 +1666,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 60px;
                             align-items: center;
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                         }
                         nav a { 
                             color: var(--text-secondary); 
@@ -1652,71 +1675,143 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-weight: 500; 
                             cursor: pointer; 
                             font-size: 14px;
-                            transition: color 0.2s;
+                            transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                            min-height: 44px;
+                            display: flex;
+                            align-items: center;
                         }
                         nav a:hover {
-                            color: var(--primary);
+                            color: var(--text);
                         }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
+                        .screen { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; }
+                        @media (min-width: 768px) {
+                            .screen { padding: 40px; }
+                        }
                         .card { 
                             background: var(--card-bg); 
                             padding: 24px; 
-                            border-radius: 8px; 
+                            border-radius: 16px;
                             margin-bottom: 24px; 
                             border: 1px solid var(--border);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                         }
-                        h1, h2, h3 { color: var(--text); margin-top: 0; }
+                        .card:hover {
+                            transform: translateY(-2px);
+                        }
                         input { 
                             width: 100%; 
-                            padding: 10px 14px; 
+                            padding: 12px 16px;
                             margin-bottom: 16px; 
-                            background: #ffffff; 
+                            background: transparent;
                             border: 1px solid var(--border); 
-                            border-radius: 6px; 
+                            border-radius: 8px;
                             color: var(--text); 
                             box-sizing: border-box; 
-                            font-size: 14px;
-                            transition: border-color 0.2s;
+                            font-size: 16px; /* Prevent iOS zoom */
+                            transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                            min-height: 44px;
                         }
                         input:focus {
                             outline: none;
-                            border-color: var(--primary);
+                            border-color: var(--text);
                         }
-                        button { 
-                            padding: 10px 20px; 
+                        button, .btn {
+                            padding: 12px 24px;
                             background: var(--primary); 
                             border: none; 
-                            border-radius: 6px; 
-                            color: white; 
-                            font-weight: 600; 
+                            border-radius: 8px;
+                            color: var(--bg);
+                            font-weight: 500;
                             cursor: pointer; 
                             margin-right: 8px; 
                             margin-bottom: 8px; 
-                            font-size: 14px;
-                            transition: background 0.2s;
+                            font-size: 16px;
+                            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                            min-width: 44px;
+                            min-height: 44px;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
                         }
-                        button:hover {
-                            background: var(--primary-hover);
+                        button:hover, .btn:hover {
+                            opacity: 0.9;
                         }
                         button.secondary { 
                             background: transparent; 
                             border: 1px solid var(--border); 
-                            color: var(--text-secondary); 
+                            color: var(--text);
                         }
                         button.secondary:hover {
-                            background: #f8f9fa;
-                            border-color: var(--text-secondary);
+                            background: rgba(0, 0, 0, 0.05);
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
                         /* Login screen specific */
                         #login-screen {
                             max-width: 400px;
-                            margin-top: 100px;
+                            margin-top: 10vh;
                         }
-                        #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
-                        #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+                        #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 28px; }
+                        #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 16px; }
+
+                        /* Bottom Navigation for Mobile */
+                        .bottom-nav {
+                            display: none;
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            background: var(--sidebar-bg);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            border-top: 1px solid var(--border);
+                            padding-bottom: env(safe-area-inset-bottom);
+                            z-index: 1000;
+                        }
+
+                        @media (max-width: 768px) {
+                            .bottom-nav {
+                                display: flex;
+                                justify-content: space-around;
+                                align-items: center;
+                            }
+                            nav#main-nav {
+                                display: none !important;
+                            }
+                        }
+
+                        .nav-item {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            color: var(--text-secondary);
+                            text-decoration: none;
+                            font-size: 12px;
+                            font-weight: 500;
+                            padding: 8px 0;
+                            min-width: 44px;
+                            min-height: 44px;
+                            flex: 1;
+                            cursor: pointer;
+                            background: transparent;
+                            border: none;
+                            transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+
+                        .nav-item:hover, .nav-item.active {
+                            color: var(--text);
+                        }
+
+                        .nav-item svg {
+                            width: 24px;
+                            height: 24px;
+                            margin-bottom: 4px;
+                            fill: currentColor;
+                        }
                     </style>
                 </head>
                 <body>
@@ -1725,6 +1820,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
                         <a onclick="showScreen('api-screen')">Software</a>
+                    </nav>
+
+                    <nav class="bottom-nav" id="mobile-nav">
+                        <button class="nav-item" onclick="alert('Navigating to Add Product')">
+                            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            <span>Add Product</span>
+                        </button>
+                        <button class="nav-item" onclick="showScreen('dashboard-screen')">
+                            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+                            <span>Orders</span>
+                        </button>
+                        <button class="nav-item" onclick="alert('Navigating to Messages')">
+                            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+                            <span>Messages</span>
+                        </button>
+                        <button class="nav-item" onclick="showScreen('agents-screen')">
+                            <svg viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/></svg>
+                            <span>Analytics</span>
+                        </button>
+                        <button class="nav-item" onclick="alert('Navigating to Share Store')">
+                            <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                            <span>Share Store</span>
+                        </button>
                     </nav>
 
 
