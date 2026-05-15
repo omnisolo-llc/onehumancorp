@@ -75,6 +75,7 @@ rust_binary(
         "//src/proto:mcp_proxy_prost",
         ":server_lib",
         "@crates//:tokio",
+        "@crates//:tracing-subscriber",
     ],
 )
 

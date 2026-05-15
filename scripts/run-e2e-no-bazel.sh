@@ -49,8 +49,9 @@ export DATABASE_URL="postgres://ohc:ohc@localhost:5432/ohc"
 export REDIS_URL="redis://localhost:6379"
 export STANDALONE_MODE="true"
 
-./target/debug/server &
+nohup ./target/debug/server > server.log 2>&1 &
 SERVER_PID=$!
+tail -n 100 server.log
 
 wait_for_port 18789 "App Server"
 
