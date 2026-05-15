@@ -5,6 +5,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 rust_library(
     name = "server_lib",
+    compile_data = ["index.html"],
     srcs = [
         "analytics.rs",
         "autodream_sync.rs",

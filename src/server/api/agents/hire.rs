@@ -1,13 +1,13 @@
-use axum::{
-    extract::{State, Json},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-};
-use std::sync::Arc;
 use crate::hub::Hub;
+use axum::{
+    Router,
+    extract::{Json, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
 pub struct HireAgentRequest {
@@ -40,17 +40,31 @@ async fn hire_handler(
     req: axum::extract::Request,
 ) -> impl IntoResponse {
     let tenant_id = match req.extensions().get::<::server_common::Claims>() {
-        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
+        Some(claims) => claims
+            .organization_id
+            .clone()
+            .unwrap_or_else(|| "system".to_string()),
         None => "system".to_string(),
     };
 
     let (parts, body) = req.into_parts();
     let req2 = axum::extract::Request::from_parts(parts, body);
 
-    let payload: HireAgentRequest = match axum::extract::Json::<HireAgentRequest>::from_request(req2, &()).await {
-        Ok(Json(payload)) => payload,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(HireAgentResponse { status: "error".to_string(), agent_id: "".to_string(), message: "Invalid payload".to_string() })).into_response(),
-    };
+    let payload: HireAgentRequest =
+        match axum::extract::Json::<HireAgentRequest>::from_request(req2, &()).await {
+            Ok(Json(payload)) => payload,
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(HireAgentResponse {
+                        status: "error".to_string(),
+                        agent_id: "".to_string(),
+                        message: "Invalid payload".to_string(),
+                    }),
+                )
+                    .into_response();
+            }
+        };
 
     let now = chrono::Utc::now().timestamp();
     let agent_id = format!("agent-{}", now);

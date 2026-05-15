@@ -4,7 +4,11 @@ use std::sync::Arc;
 pub struct K8sOperatorDelegator;
 
 impl K8sOperatorDelegator {
-    pub async fn spawn_sub_agent_pod(role: &str, instruction: &str, _thread_id: &str) -> Result<String, String> {
+    pub async fn spawn_sub_agent_pod(
+        role: &str,
+        instruction: &str,
+        _thread_id: &str,
+    ) -> Result<String, String> {
         // In a real K8s environment, this would use kube-rs to create a Pod/Job
         // and return the ID. For the sake of this issue, we simulate Context Isolation
         // and Result Aggregation by doing a local mock task execution.
@@ -24,10 +28,17 @@ impl K8sOperatorDelegator {
 
         // We will "register" the result somewhere or return it as part of the execution completion.
         // For the simple mock, we simulate it immediately returning its completion status in the result.
-        Ok(format!("Sub-agent {} (ID: {}) completed: {}", role, pod_id, result_data))
+        Ok(format!(
+            "Sub-agent {} (ID: {}) completed: {}",
+            role, pod_id, result_data
+        ))
     }
 
-    pub async fn spawn_and_wait_sub_agents(manager_role: &str, sub_tasks: Vec<(&str, &str)>, _thread_id: &str) -> Result<String, String> {
+    pub async fn spawn_and_wait_sub_agents(
+        manager_role: &str,
+        sub_tasks: Vec<(&str, &str)>,
+        _thread_id: &str,
+    ) -> Result<String, String> {
         let mut results = Vec::new();
 
         for (role, instruction) in sub_tasks {
@@ -35,6 +46,10 @@ impl K8sOperatorDelegator {
             results.push(pod_result);
         }
 
-        Ok(format!("Manager '{}' coordinated sub-agents. Results:\n{}", manager_role, results.join("\n")))
+        Ok(format!(
+            "Manager '{}' coordinated sub-agents. Results:\n{}",
+            manager_role,
+            results.join("\n")
+        ))
     }
 }

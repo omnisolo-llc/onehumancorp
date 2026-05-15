@@ -1,7 +1,7 @@
+use super::provider::{BlobMetadata, Provider};
 use async_trait::async_trait;
 use chrono::Utc;
 use std::io;
-use super::provider::{BlobMetadata, Provider};
 
 pub struct S3Provider {
     bucket_name: String,
@@ -36,7 +36,10 @@ impl Provider for S3Provider {
 
     async fn get_blob_url(&self, key: &str) -> io::Result<String> {
         // STUB: Return a fake presigned URL
-        Ok(format!("https://s3.amazonaws.com/{}/{}?X-Amz-Signature=stub", self.bucket_name, key))
+        Ok(format!(
+            "https://s3.amazonaws.com/{}/{}?X-Amz-Signature=stub",
+            self.bucket_name, key
+        ))
     }
 
     async fn read_blob(&self, _key: &str) -> io::Result<Vec<u8>> {
