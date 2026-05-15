@@ -2016,7 +2016,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
                             <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
+                            <p>Projected Cost this Month: $1.23</p>
                             <button onclick="showScreen('pricing-screen')">Add Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
