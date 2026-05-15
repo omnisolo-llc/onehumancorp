@@ -4,10 +4,12 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
 use std::sync::OnceLock;
+use futures::future::join_all;
 
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
+static COMPRESSED_NAME_CACHE: OnceLock<HybridCache<String>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -18,6 +20,35 @@ impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
         Self { db, hub }
     }
+}
+
+async fn get_compressed_name(name: String, redis_client: Option<redis::Client>) -> String {
+    let name_cache = COMPRESSED_NAME_CACHE.get_or_init(|| HybridCache::new(redis_client));
+    let cache_key = format!("compress:name:{}", name);
+
+    if let Some(cached) = name_cache.get(&cache_key).await {
+        return cached;
+    }
+
+    let stop_words: std::collections::HashSet<&str> = [
+        "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
+        "for", "with", "by", "about", "as", "of",
+    ]
+    .iter()
+    .cloned()
+    .collect();
+
+    let compressed = name
+        .split_whitespace()
+        .filter(|word| {
+            let clean_word = word.to_lowercase();
+            !stop_words.contains(clean_word.as_str())
+        })
+        .collect::<Vec<&str>>()
+        .join(" ");
+
+    name_cache.set(&cache_key, compressed.clone(), std::time::Duration::from_secs(3600)).await;
+    compressed
 }
 
 #[tonic::async_trait]
@@ -48,9 +79,6 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
-        let hub1 = self.hub.clone();
-        let hub2 = self.hub.clone();
-        let hub3 = self.hub.clone();
         let db1 = self.db.clone();
         let db2 = self.db.clone();
         let db3 = self.db.clone();
@@ -59,6 +87,9 @@ impl DashboardService for MyDashboardService {
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
 
+        let hub1 = self.hub.clone();
+        let hub2 = self.hub.clone();
+        let hub3 = self.hub.clone();
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
@@ -239,7 +270,7 @@ impl DashboardService for MyDashboardService {
         let agents = agents_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res
+        let meetings = meetings_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) =
@@ -253,26 +284,32 @@ impl DashboardService for MyDashboardService {
         let products = if req.mobile_optimized {
             products
                 .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
+                .map(|mut p| {
+                    p.description = String::new();
+                    p.metadata_json = String::new();
+                    p.fulfillment_strategy = String::new();
+                    p.currency = String::new();
+                    p
                 })
                 .collect()
         } else {
             products
+                .into_iter()
+                .map(|mut p| {
+                    p.metadata_json = ::server_utils::json_minify::minify_json_string(&p.metadata_json);
+                    p
+                })
+                .collect()
         };
 
         let orders = if req.mobile_optimized {
             orders
                 .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
+                .map(|mut o| {
+                    o.product_id = String::new();
+                    o.status = String::new();
+                    o.organization_id = String::new();
+                    o
                 })
                 .collect()
         } else {
@@ -280,7 +317,7 @@ impl DashboardService for MyDashboardService {
         };
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
-        for m in _meetings.iter() {
+        for m in meetings.iter() {
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
                 for msg in &m.transcript {
@@ -321,17 +358,6 @@ impl DashboardService for MyDashboardService {
             .collect();
 
         // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
-        let mut original_prompts_len = 0;
-        let mut compressed_prompts_len = 0;
-
-        let stop_words: std::collections::HashSet<&str> = [
-            "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
-            "for", "with", "by", "about", "as", "of",
-        ]
-        .iter()
-        .cloned()
-        .collect();
-
         let org_agents: Vec<_> = agents
             .iter()
             .filter(|a| {
@@ -340,40 +366,30 @@ impl DashboardService for MyDashboardService {
             })
             .collect();
 
-        for agent in org_agents {
-            let prompt = &agent.name;
-            let orig_len = prompt.len();
-            if orig_len > 0 {
-                original_prompts_len += orig_len;
-
-                let compressed = prompt
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
-
-                compressed_prompts_len += compressed.len();
-            }
+        let mut compressed_names_futures = Vec::new();
+        for agent in &org_agents {
+            compressed_names_futures.push(get_compressed_name(agent.name.clone(), self.hub.redis_client.clone()));
         }
 
-        if let Some(ref o) = org {
-            let prompt = &o.name;
-            let orig_len = prompt.len();
-            if orig_len > 0 {
-                original_prompts_len += orig_len;
-                let compressed = prompt
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
-                compressed_prompts_len += compressed.len();
-            }
+        let org_name = org.as_ref().map(|o| o.name.clone()).unwrap_or_default();
+        if !org_name.is_empty() {
+            compressed_names_futures.push(get_compressed_name(org_name.clone(), self.hub.redis_client.clone()));
+        }
+
+        let compressed_results = join_all(compressed_names_futures).await;
+
+        let mut original_prompts_len = 0;
+        let mut compressed_prompts_len = 0;
+
+        let mut idx = 0;
+        for agent in &org_agents {
+            original_prompts_len += agent.name.len();
+            compressed_prompts_len += compressed_results[idx].len();
+            idx += 1;
+        }
+        if !org_name.is_empty() {
+            original_prompts_len += org_name.len();
+            compressed_prompts_len += compressed_results[idx].len();
         }
 
         let mut optimized_total_tokens = total_tokens;
@@ -403,17 +419,16 @@ impl DashboardService for MyDashboardService {
             agents: agent_summaries,
         };
 
-        let mut final_agents = _filtered_agents
-            .into_iter()
-            .map(|a| {
-                let compressed_name = a.name
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+        let mut final_agents_futures = Vec::new();
+        for a in _filtered_agents {
+            let mobile = req.mobile_optimized;
+            let redis_client = self.hub.redis_client.clone();
+            final_agents_futures.push(async move {
+                let compressed_name = if mobile {
+                    String::new()
+                } else {
+                    get_compressed_name(a.name.clone(), redis_client).await
+                };
 
                 ::server_ohc::agent::Agent {
                     id: a.id,
@@ -422,14 +437,9 @@ impl DashboardService for MyDashboardService {
                     status: ::server_ohc::common::AgentStatus::Idle as i32,
                     organization_id: a.organization_id,
                 }
-            })
-            .collect::<Vec<_>>();
-
-        if req.mobile_optimized {
-            for agent in final_agents.iter_mut() {
-                agent.name = String::new();
-            }
+            });
         }
+        let final_agents = join_all(final_agents_futures).await;
 
         let org = if req.mobile_optimized {
             org.map(|mut o| {
@@ -612,12 +622,12 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(database_url).await.unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, name TEXT, description TEXT, price_cents INTEGER, fulfillment_strategy TEXT, currency TEXT, metadata TEXT)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
         // Add dummy data for tests
-        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'system', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, currency, metadata) VALUES ('prod_1', 'system', 'Test Product', 'physical', 10000, 'physical', 'USD', '{}')").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'system', 50.0, 'completed')").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('system', 'System Org', 'free')").execute(&pool).await.unwrap();
 
@@ -737,7 +747,7 @@ mod tests {
         });
         let start1 = std::time::Instant::now();
         let _res1 = service.get_dashboard(request1).await.unwrap().into_inner();
-        let elapsed1 = start1.elapsed();
+        let _elapsed1 = start1.elapsed();
 
         let req2 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         let mut request2 = Request::new(req2);

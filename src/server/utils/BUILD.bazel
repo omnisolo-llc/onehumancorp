@@ -30,6 +30,15 @@ rust_library(
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:tokio",
+        "@crates//:dashmap",
         "@crates//:tracing",
     ],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_utils_test",
+    crate = ":server_utils",
+    edition = "2024",
 )

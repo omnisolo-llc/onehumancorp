@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock, OnceLock};
+use dashmap::DashMap;
 use serde::{de::DeserializeOwned, Serialize};
-use std::time::Duration;
+use std::sync::OnceLock;
+use std::time::{Duration, Instant};
 
 pub struct HybridCache<T> {
-    local: OnceLock<RwLock<HashMap<String, (T, std::time::Instant)>>>,
+    local: OnceLock<DashMap<String, (T, Instant)>>,
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
     max_local_capacity: usize,
@@ -12,7 +12,7 @@ pub struct HybridCache<T> {
 
 impl<T> HybridCache<T>
 where
-    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static
+    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
 {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
         Self {
@@ -34,29 +34,31 @@ where
 
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
         if let Some(client) = &self.redis_client {
-            let conn = self.redis_conn.get_or_try_init(|| async {
-                client.get_multiplexed_tokio_connection().await
-            }).await.ok()?;
+            let conn = self
+                .redis_conn
+                .get_or_try_init(|| async { client.get_multiplexed_tokio_connection().await })
+                .await
+                .ok()?;
             Some(conn.clone())
         } else {
             None
         }
     }
 
-    fn get_local(&self) -> &RwLock<HashMap<String, (T, std::time::Instant)>> {
-        self.local.get_or_init(|| RwLock::new(HashMap::new()))
+    fn get_local(&self) -> &DashMap<String, (T, Instant)> {
+        self.local.get_or_init(|| DashMap::new())
     }
 
     pub async fn get(&self, key: &str) -> Option<T> {
-        // 1. Check local cache
-        {
-            let guard = self.get_local().read().ok()?;
-            if let Some((val, expiry)) = guard.get(key) {
-                if std::time::Instant::now() < *expiry {
-                    return Some(val.clone());
-                }
+        // 1. Check local cache (DashMap provides thread-safe access without manual RwLock)
+        if let Some(entry) = self.get_local().get(key) {
+            let (val, expiry) = entry.value();
+            if Instant::now() < *expiry {
+                return Some(val.clone());
             }
         }
+        // If we found an expired entry, we could remove it here,
+        // but the set_local logic handles capacity-based eviction.
 
         // 2. Check Redis if available
         if let Some(mut conn) = self.get_redis_conn().await {
@@ -88,32 +90,43 @@ where
     }
 
     fn set_local(&self, key: &str, value: T, ttl: Duration) {
-        if let Ok(mut guard) = self.get_local().write() {
-            if guard.len() >= self.max_local_capacity && !guard.contains_key(key) {
-                let now = std::time::Instant::now();
-                let keys_to_remove: Vec<String> = guard.iter()
-                    .filter(|(_, (_, expiry))| *expiry <= now)
-                    .map(|(k, _)| k.clone())
-                    .collect();
+        let local = self.get_local();
+        if local.len() >= self.max_local_capacity && !local.contains_key(key) {
+            // Sampling-based O(1) eviction
+            let mut sample = Vec::with_capacity(5);
+            let mut keys_to_remove = Vec::new();
+            let now = Instant::now();
 
-                for k in keys_to_remove {
-                    guard.remove(&k);
+            // Check a few entries for natural expiration
+            let mut count = 0;
+            for entry in local.iter() {
+                let expiry = entry.value().1;
+                if expiry <= now {
+                    keys_to_remove.push(entry.key().clone());
+                } else {
+                    sample.push((entry.key().clone(), expiry));
                 }
+                count += 1;
+                if count >= 20 { break; }
+            }
 
-                if guard.len() >= self.max_local_capacity {
-                    if let Some(k) = guard.keys().next().cloned() {
-                        guard.remove(&k);
-                    }
+            for k in keys_to_remove {
+                local.remove(&k);
+            }
+
+            // If still over capacity, evict the oldest from our sample
+            if local.len() >= self.max_local_capacity && !sample.is_empty() {
+                sample.sort_by_key(|s| s.1);
+                if let Some((k_to_evict, _)) = sample.first() {
+                    local.remove(k_to_evict);
                 }
             }
-            guard.insert(key.to_string(), (value, std::time::Instant::now() + ttl));
         }
+        local.insert(key.to_string(), (value, Instant::now() + ttl));
     }
 
     pub async fn invalidate(&self, key: &str) {
-        if let Ok(mut guard) = self.get_local().write() {
-            guard.remove(key);
-        }
+        self.get_local().remove(key);
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
             let _: Result<(), _> = conn.del(key).await;
@@ -132,7 +145,7 @@ mod tests {
         cache.set("k2", "v2".to_string(), Duration::from_secs(60)).await;
         cache.set("k3", "v3".to_string(), Duration::from_secs(60)).await;
 
-        let local = cache.get_local().read().unwrap();
+        let local = cache.get_local();
         assert_eq!(local.len(), 2);
     }
 }
