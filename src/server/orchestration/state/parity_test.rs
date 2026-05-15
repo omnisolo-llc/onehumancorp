@@ -255,4 +255,55 @@ mod parity_tests {
             tx1.commit().await.unwrap();
         }
     }
+    #[tokio::test]
+    async fn test_parity_timezone_handling() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let test_id = uuid::Uuid::new_v4().to_string();
+
+        let now_utc = chrono::Utc::now();
+        let formatted_time = now_utc.to_rfc3339();
+
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, created_at) VALUES (?, 'tz_mission', 'tz_title', ?)")
+                .bind(&test_id)
+                .bind(&formatted_time)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let row = sqlx::query("SELECT created_at FROM swarm_tasks WHERE id = ?")
+                .bind(&test_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+            // SQLite might return String for DATETIME depending on schema
+            let fetched_time: String = row.try_get("created_at").unwrap_or_else(|_| "".to_string());
+            assert!(!fetched_time.is_empty());
+        }
+
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&test_id).unwrap();
+            let parsed_time = chrono::DateTime::parse_from_rfc3339(&formatted_time).unwrap().with_timezone(&chrono::Utc);
+
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, created_at) VALUES ($1, 'tz_mission', 'tz_title', $2)")
+                .bind(parsed_id)
+                .bind(parsed_time)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let row = sqlx::query("SELECT created_at FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+            let fetched_time: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap();
+            assert_eq!(parsed_time.timestamp(), fetched_time.timestamp());
+        }
+    }
+
 }
