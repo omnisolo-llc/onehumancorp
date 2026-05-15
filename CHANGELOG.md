@@ -4,6 +4,16 @@
 - Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
 
 # OHC Hybrid Agentic OS - Changelog
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Memory Compaction & Clustering Engine: Added Cross-Department DBSCAN clustering logic via spawn_blocking. Implemented full Memory Compaction Engine with Time Decay, Relevance Clustering, and Summarization.
+- Graph Projection logic for finding semantic overlapping subgraphs.
+
+### Privacy/Offline Improvements
+- Implement hybrid privacy guardrails and tests.
+- Fix Auth Security by Validating OIDC Revocations.
+
 
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
