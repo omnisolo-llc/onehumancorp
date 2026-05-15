@@ -2739,7 +2739,7 @@ mod growth_e2e_tests {
         let launch_called_clone = launch_called.clone();
         let ui_weak = ui.as_weak();
 
-        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password| {
+        ui.on_launch(move |bt, cn, _cd, pp, ae, website_template, product_name, product_price, domain_choice, _admin_name, _admin_password, _price_type| {
             assert_eq!(bt, "Online Store");
             assert_eq!(cn, "My Day One Store");
             assert_eq!(pp, "online");
@@ -2767,7 +2767,8 @@ mod growth_e2e_tests {
             ui.get_product_price(),
             ui.get_domain_choice(),
             ui.get_admin_name(),
-            ui.get_admin_password()
+            ui.get_admin_password(),
+            ui.get_price_type()
         );
 
         assert!(*launch_called.borrow(), "Setup wizard launch function must be executed");
