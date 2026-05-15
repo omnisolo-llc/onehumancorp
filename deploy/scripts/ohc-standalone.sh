@@ -21,7 +21,8 @@ export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=1
 export MALLOC_ARENA_MAX=1
-export RAYON_NUM_THREADS=2
+export RAYON_NUM_THREADS=1
+export JEMALLOC_SYS_WITH_MALLOC_CONF="background_thread:true,metadata_thp:auto,dirty_decay_ms:2000,muzzy_decay_ms:2000"
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
@@ -87,7 +88,7 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
   docker run -d --name ohc-prometheus-agent \
-    --memory="32m" --cpus="0.05" \
+    --memory="24m" --cpus="0.05" \
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
     -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \

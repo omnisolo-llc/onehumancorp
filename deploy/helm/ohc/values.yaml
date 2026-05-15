@@ -1,6 +1,16 @@
 backend:
   image: onehumancorp/server:latest
   replicas: 1
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
   headless: false
   service:
     port: 8080
@@ -8,9 +18,11 @@ backend:
     enabled: true
   vpa:
     enabled: true
+    controlledResources: ["cpu", "memory"]
+    updateMode: "Auto"
   autoscaling:
     enabled: true
-    minReplicas: 3
+    minReplicas: 2
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
@@ -32,14 +44,14 @@ backend:
 resourceQuota:
   enabled: true
   requests:
-    cpu: "20"
-    memory: "20Gi"
-    ephemeralStorage: "50Gi"
+    cpu: "10"
+    memory: "10Gi"
+    ephemeralStorage: "20Gi"
   limits:
-    cpu: "60"
-    memory: "120Gi"
-    ephemeralStorage: "150Gi"
-    pods: "200"
+    cpu: "30"
+    memory: "60Gi"
+    ephemeralStorage: "100Gi"
+    pods: "100"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
@@ -47,15 +59,27 @@ ohcCore:
   enabled: true
   image: onehumancorp/mono-core:latest
   replicas: 1
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
   service:
     port: 18789
   networkPolicy:
     enabled: true
   vpa:
     enabled: true
+    controlledResources: ["cpu", "memory"]
+    updateMode: "Auto"
   autoscaling:
     enabled: true
-    minReplicas: 3
+    minReplicas: 2
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
@@ -91,12 +115,24 @@ chatwoot:
   enabled: true
   image: chatwoot/chatwoot:v3.15.1
   replicas: 1
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
   service:
     port: 3000
   networkPolicy:
     enabled: true
   vpa:
     enabled: true
+    controlledResources: ["cpu", "memory"]
+    updateMode: "Auto"
   autoscaling:
     enabled: true
     minReplicas: 1
@@ -132,6 +168,16 @@ powersync:
   enabled: true
   image: journeyapps/powersync-service:latest
   replicas: 1
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
   service:
     type: ClusterIP
     port: 8081
@@ -140,6 +186,8 @@ powersync:
     enabled: true
   vpa:
     enabled: true
+    controlledResources: ["cpu", "memory"]
+    updateMode: "Auto"
   autoscaling:
     enabled: true
     minReplicas: 1
