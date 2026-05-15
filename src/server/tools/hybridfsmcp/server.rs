@@ -127,7 +127,7 @@ impl HybridFSMcpServer {
 
                     // Add to hybrid_fs_sync_queue
                     let query = "
-                        INSERT INTO hybrid_fs_sync_queue (id, organization_id, local_path, cloud_path, status, created_at, updated_at)
+                        INSERT INTO hybrid_fs_sync_queue (id, tenant_id, local_path, cloud_path, status, created_at, updated_at)
                         VALUES ($1, $2, $3, $4, 'FILE_SYNC_PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     ";
 

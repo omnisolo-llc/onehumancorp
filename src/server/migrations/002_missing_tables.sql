@@ -306,3 +306,5 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     content TEXT NOT NULL DEFAULT '',
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue USING (tenant_id::text = current_setting('app.current_tenant', true));
