@@ -1054,6 +1054,7 @@ mod e2e_sync_tests {
     }
 
 
+}
 
 // -----------------------------------------------------------------------------
 // Advanced Sync Operations and Error Handling
