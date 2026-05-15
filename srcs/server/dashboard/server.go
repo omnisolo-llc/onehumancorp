@@ -89,44 +89,43 @@ func HandleStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var syncResponse = []byte(`{"status":"ok"}`)
+var queryResponse = []byte(`{"results":[]}`)
+var broadcastResponse = []byte(`{"status":"broadcasted"}`)
+
 func HandleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(syncResponse)
+
 	deploymentMode := r.Header.Get("X-Deployment-Mode")
 	if deploymentMode == "" {
 		deploymentMode = "standalone"
 	}
-
-	defer func() {
-		telemetry.AutoDreamSyncDuration.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
-	}()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
+	telemetry.AutoDreamSyncDuration.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
 }
 
 func HandleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(queryResponse)
+
 	deploymentMode := r.Header.Get("X-Deployment-Mode")
 	if deploymentMode == "" {
 		deploymentMode = "standalone"
 	}
-
-	defer func() {
-		telemetry.AutoDreamQueryDuration.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
-	}()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"results":[]}`))
+	telemetry.AutoDreamQueryDuration.WithLabelValues(deploymentMode).Observe(time.Since(start).Seconds())
 }
 
 func HandleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write(broadcastResponse)
+
 	deploymentMode := r.Header.Get("X-Deployment-Mode")
 	if deploymentMode == "" {
 		deploymentMode = "standalone"
 	}
-
 	telemetry.MeshBroadcastTotal.WithLabelValues(deploymentMode).Inc()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"broadcasted"}`))
 }
