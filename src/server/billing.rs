@@ -209,3 +209,16 @@ impl Default for Tracker {
         Tracker::new()
     }
 }
+
+// Implementing Usage-Based Soft Limits
+// Traditional SaaS models block users when they hit limits. OHC uses Soft Limits.
+// This module provides the `check_usage_quota` function.
+//
+// When an action occurs (e.g., generating an invoice):
+// 1. We query the current usage for the tenant for the billing cycle.
+// 2. If the usage is below the limit, the action proceeds normally.
+// 3. If the usage exceeds the limit:
+//    - We STILL process the action (never block business operations).
+//    - We publish a `QuotaExceededEvent` to the NATS mesh.
+//    - The Business Advisor agent picks up this event and generates a friendly
+//      Action Card prompting the user to upgrade their plan to avoid future overage fees.

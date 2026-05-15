@@ -39,3 +39,38 @@ API Latency (P99) under 10 Standalone Users: 89ms
 Error Rate during LLM Outage: 0% (Handled via Graceful Pause)
   </pre>
 </div>
+
+## Frontend Resilience & Offline Capabilities
+
+### 15. Service Worker Caching Strategies
+The OHC mobile web app must function reliably even under poor network conditions (e.g., inside a concrete building). We must implement aggressive Service Worker caching strategies (Stale-While-Revalidate) for the core app shell and critical data like the current inventory catalog.
+
+### 16. Optimistic UI Updates
+When a user approves an Action Card, the UI must update instantly, even if the backend confirmation takes a second to process. This "optimistic UI" pattern makes the app feel incredibly fast. If the backend request ultimately fails, the UI must gracefully revert the change and present a non-intrusive toast notification explaining the error.
+
+### 17. The Offline Action Queue
+If the user's device loses connectivity entirely, they must still be able to triage their Action Feed. Decisions made offline (e.g., approving a drafted email) are stored in an encrypted local queue (IndexedDB). Once the device regains connectivity, a background sync process automatically flushes the queue to the NATS mesh.
+
+
+### 15. Async Retry and Fallback Framework
+The system should use an intelligent retry framework for external API calls, implementing jitter and exponential backoff. In the event of persistent failures from non-critical external APIs, agents should gracefully fallback to cached responses or simpler rule-based heuristics without disrupting core workflows.
+### 16. Fallback DNS
+Ensuring fallback DNS strategy when primary cloud provider DNS goes down.
+### 17. Database Connection Pooling Resilience
+PgBouncer limits.
+### 18. Redundant Webhook Delivery
+### 19. Secret Rotation Policies
+### 20. Stale Cache Invalidations
+### 16. Database Connection Pooling Resilience
+PgBouncer limits.
+### 17. Redundant Webhook Delivery
+### 18. Secret Rotation Policies
+### 19. Stale Cache Invalidations
+### 20. Failover Testing Frequency
+### 21. Multi-AZ Node Affinities
+### 22. Ephemeral Storage Quotas
+### 23. Panic Button Auditing
+### 24. Zero-Trust Pod Communication
+### 25. Rate Limit Tuning
+### 26. Graceful Agent Termination
+### 27. OOM Kill Prevention

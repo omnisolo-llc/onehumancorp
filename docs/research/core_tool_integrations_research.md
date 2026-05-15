@@ -209,3 +209,27 @@ Build a Zoom integration that automatically creates meeting links for online ser
 
 
 </div>
+
+## Expanding Core Tool Integrations for SMB Success
+
+To truly dominate the SMB platform landscape, OHC must offer seamless integration with the specialized tools that businesses already use. While our "All-in-One Swarm" is the goal, transition phases require co-existing with legacy systems.
+
+### CRM and Sales Enablement
+1. **Salesforce Integration:** For higher-tier OHC users transitioning from B2B service models, deep Salesforce integration is necessary. The OHC agent must be able to push new leads, update opportunity stages based on Action Feed approvals, and pull customer history to inform context-aware communication.
+2. **HubSpot Sync:** Many businesses already have extensive email lists in HubSpot. The OHC Generative Promoter must be able to synchronize tags, segment lists, and ideally, trigger HubSpot workflows directly from the OHC event mesh.
+
+### Accounting and Finance
+1. **QuickBooks Online / Xero:** The Accountant agent's value is maximized when it can push finalized P&L data directly into standard accounting software. OHC must generate perfectly formatted journal entries and reconcile bank feeds automatically via these APIs to satisfy external CPAs.
+2. **Gusto Integration:** For payroll, connecting to Gusto allows The Vigilant Manager to analyze labor costs against revenue in real-time, providing actionable insights on staffing efficiency (e.g., "Labor costs were 40% of revenue yesterday; consider reducing staff on Tuesdays").
+
+### Customer Support & Ticketing
+1. **Zendesk / Freshdesk:** For businesses with dedicated support staff, The Ambassador agent can act as the first line of defense (Tier 1). If a ticket requires human escalation, the agent must seamlessly hand off the conversation context to Zendesk, ensuring the human agent has all necessary information without the customer repeating themselves.
+2. **Intercom:** Integrating with Intercom's widget allows OHC to leverage existing chat interfaces on legacy sites while replacing the backend logic with OHC's proactive agent swarm.
+
+### Specialized Niche Tools
+1. **Mindbody (Fitness/Wellness):** For yoga studios or personal trainers, OHC must sync with Mindbody to respect existing class schedules and membership tiers, allowing the OHC Action Feed to manage waitlists and marketing promotions based on class capacity.
+2. **Toast (Restaurants):** For cafes and food trucks, deep integration with Toast POS is non-negotiable. OHC's online ordering must flow directly into the kitchen display system (KDS), and inventory deductions must sync back to the OHC Vigilant Manager instantly.
+3. **Jobber (Home Services):** For contractors, syncing with Jobber allows OHC to pull existing client addresses and job histories, enabling The Ambassador to generate highly accurate quotes based on past work.
+
+### Conclusion on Integrations
+The strategy is "Embrace and Replace." OHC must first integrate flawlessly with these tools to lower the barrier to entry. Over time, as OHC's native agent capabilities surpass the dedicated tools, the business owner will naturally deprecate the external subscriptions, relying solely on the OHC swarm.

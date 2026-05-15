@@ -56,3 +56,23 @@ body {
 
 ### Implementation Prompt
 Implementers should focus on mapping the Swarm worker agents to the Shared Task List, ensuring cross-platform database compatibility (PostgreSQL and SQLite) leveraging row-locking semantics appropriately. Then, construct the Teammate Mesh via a Redis/Centrifugo pub-sub structure for inter-agent communication, and lastly, bridge the ephemeral state into pgvector using the AutoDream LLM pipeline for semantic search indexing. Follow the provided `mermaid` diagram to structure interactions and dependencies between the Triad components.
+
+## Globalization and Localization
+
+### 14. Right-to-Left (RTL) Support from Day One
+To reach a truly global market (specifically the Middle East), the Kairos design system must support Right-to-Left (RTL) languages natively from inception. This requires using logical CSS properties (e.g., `margin-inline-start` instead of `margin-left`) across all components, ensuring the UI flips seamlessly when the language is changed.
+
+### 15. Dynamic Content Truncation
+Different languages take up drastically different amounts of physical space (e.g., German is often much longer than English). UI components, especially Action Cards, must gracefully handle dynamic text expansion. We must implement smart text truncation strategies with "Read More" expanders rather than relying on fixed-height containers that will break layout in other languages.
+
+### 16. Culturally Appropriate Iconography
+Icons are not universally understood. A "shopping cart" icon might make sense in the US, but a "basket" might be preferred elsewhere. The design system must allow for dynamic swapping of icon sets based on the user's selected locale to ensure maximum comprehension and cultural sensitivity.
+
+### 17. Z-Index Management
+### 18. CSS Variable Namespaces
+### 19. Focus Trapping for Accessibility
+### 20. Reduced Motion Preferences
+### 21. Z-Index Management
+### 22. CSS Variable Namespaces
+### 23. Focus Trapping for Accessibility
+### 24. Reduced Motion Preferences

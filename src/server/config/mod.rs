@@ -246,3 +246,21 @@ mod tests {
         }
     }
 }
+
+// Configuration Hierarchy and Secret Management
+// The OHC platform relies on a strict hierarchy for loading configuration:
+// 1. Hardcoded defaults (fallback only).
+// 2. Local `config.toml` files (for local development).
+// 3. Environment variables (e.g., passed via Kubernetes manifests).
+// 4. Remote Secrets Manager (HashiCorp Vault or AWS Secrets Manager).
+//
+// Critical secrets like `STRIPE_SECRET_KEY` or `OPENAI_API_KEY` are never stored
+// in plain text environment variables in production. The `config` module initializes
+// a connection to the Secrets Manager on startup, fetches the necessary credentials,
+// and stores them securely in memory.
+//
+// Dynamic Configuration Reloading:
+// Certain feature flags and rate limit configurations need to be adjusted without
+// restarting the server pods. The config module implements a background watcher that
+// listens for changes in a distributed key-value store (like etcd or Consul) and
+// hot-reloads the relevant `Arc<Config>` structs.

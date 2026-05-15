@@ -1189,3 +1189,17 @@ mod e2e_tenant_isolation_tests {
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
     }
 }
+
+// Deep Dive: Sharding Strategy for Hyper-Growth
+// To support millions of small businesses globally, a single massive PostgreSQL instance
+// will eventually become a bottleneck. The data architecture must be designed from day one
+// to support horizontal sharding based on the `tenant_id`.
+//
+// When initializing the `PgPool`, the application must query a centralized routing service
+// to determine which specific database shard holds the data for the given `tenant_id`.
+// This routing logic is encapsulated within the `TenantConnectionManager`.
+//
+// Migration to a sharded environment requires careful planning. We cannot perform
+// cross-shard JOINs efficiently. Therefore, all queries must be fully bounded by
+// the `tenant_id`, and any aggregate reporting across tenants must be offloaded to
+// the specialized OLAP data warehouse (ClickHouse).

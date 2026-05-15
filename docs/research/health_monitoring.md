@@ -17,3 +17,29 @@ The Health Monitor `run_health_monitor` accepts a mode parameter (`is_cloud`) an
 2. Built a robust map-based retry fallback for cloud mode.
 3. Updated unit tests for strict 100% Rust code coverage.
 4. Delivered a 5-scenario E2E UI verification suite validating task reassignment and offline capabilities.
+
+## Advanced Observability Techniques
+
+### 12. Synthetic Transaction Monitoring
+We cannot rely solely on real user traffic to detect issues. OHC must deploy synthetic "bots" that continuously navigate the platform 24/7, creating test stores, processing fake payments, and triggering agent workflows. If a synthetic transaction fails, an alert is triggered immediately, often before a real user ever encounters the bug.
+
+### 13. Distributed Tracing for LLM Latency
+The biggest bottleneck in the agentic swarm is LLM inference latency. We must use distributed tracing (OpenTelemetry) to precisely measure the time spent in prompt compilation, the round-trip time to the LLM provider (OpenAI/Anthropic), and the time spent parsing the response. This data is critical for deciding when to route requests to faster, smaller models vs. slower, more capable models.
+
+### 14. Anomaly Detection on Business Metrics
+Health monitoring isn't just about server CPU; it's about business health. We must establish baseline metrics for key user actions (e.g., average time to first sale, number of Action Cards approved per day). If the system-wide average for "Action Cards Approved" drops by 20%, it likely indicates a UX bug or a degradation in agent proposal quality, even if all servers are technically "healthy."
+
+
+### 15. Real User Monitoring (RUM) Integrations
+Tracking core web vitals across the generated storefronts is paramount for SEO and user experience. We must deploy Real User Monitoring (RUM) agents on tenant sites to capture First Input Delay (FID), Largest Contentful Paint (LCP), and Cumulative Layout Shift (CLS) natively across the platform.
+
+### 16. Error Budgeting
+For SRE purposes, OHC needs to establish formal Error Budgets. When an error budget for a specific service or agent is exhausted, feature development should temporarily freeze, and engineering resources should pivot to reliability and stability improvements until the budget recovers.
+### 17. Alert Fatigue Mitigation
+### 18. SLO Definition per Agent
+### 19. Node Starvation Monitoring
+### 20. Network Egress Cost Monitoring
+### 21. Alert Fatigue Mitigation
+### 22. SLO Definition per Agent
+### 23. Node Starvation Monitoring
+### 24. Network Egress Cost Monitoring

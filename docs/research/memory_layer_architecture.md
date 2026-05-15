@@ -34,3 +34,26 @@ graph TD
     E -->|prune_stale| C
     E -->|auto_resolve_conflicts| C
 ```
+
+## Security and Privacy in the Memory Layer
+
+### 13. Differential Privacy in Memory Aggregation
+While strict tenant isolation is required for raw data, OHC can leverage aggregated, anonymized memory to improve the underlying foundation models. We must employ Differential Privacy techniques when aggregating data (e.g., determining the average price of a plumbing service in Ohio) to ensure that no individual business's proprietary pricing data can ever be reverse-engineered from the aggregated model.
+
+### 14. Ephemeral Context Windows
+Not all memory needs to be stored permanently. During a live chat session, the agent needs a deep understanding of the current conversation, but that granular detail (e.g., "The customer asked if the blue shirt comes in red") is usually irrelevant a month later. The architecture must support "Ephemeral Context Windows" (e.g., using Redis) for short-term session state, preventing the primary vector database from becoming bloated with conversational noise.
+
+### 15. Automated PII Redaction Before Embedding
+Before any text is passed to an embedding model to be stored in the vector database, it must pass through a strict PII (Personally Identifiable Information) redaction pipeline. Credit card numbers, social security numbers, and specific addresses must be scrubbed or tokenized to ensure the memory layer does not become a toxic liability in the event of a breach.
+
+
+### 16. Contextual Reinforcement Learning
+Feedback from user approvals or rejections in the Action Feed must directly influence the weights in the vector database. Approved actions should have their contextual memory pathways strengthened, while rejected actions should trigger a localized pruning or down-weighting mechanism to ensure agents continually adapt to the owner's preferences.
+### 17. Embedding Distance Metrics
+### 18. Document Chunking Strategies
+### 19. Index Warm-Up Protocols
+### 20. Tokenization Rate Limits
+### 21. Embedding Distance Metrics
+### 22. Document Chunking Strategies
+### 23. Index Warm-Up Protocols
+### 24. Tokenization Rate Limits
