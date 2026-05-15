@@ -26,7 +26,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await expect(page.locator('text=What is your business called?')).toBeVisible();
     await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').fill('Comprehensive Bakery');
     await page.locator('button:has-text("Auto-suggest Description")').click();
-    await page.waitForTimeout(1000); // Wait for auto-generation
+     // Wait for auto-generation
     await page.locator('button:has-text("Next")').filter({ visible: true }).first().click();
 
     // Step 3: Selling Categories
