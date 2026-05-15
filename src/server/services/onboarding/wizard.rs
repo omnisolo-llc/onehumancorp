@@ -4,6 +4,19 @@ use crate::services::onboarding::provisioner;
 
 pub struct InteractiveWizard;
 
+pub struct WizardStep {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub is_completed: bool,
+}
+
+pub struct WizardState {
+    pub current_step: i32,
+    pub steps: Vec<WizardStep>,
+    pub completed_percentage: f32,
+}
+
 impl InteractiveWizard {
     pub fn new() -> Self {
         InteractiveWizard
@@ -52,6 +65,43 @@ impl InteractiveWizard {
         Ok(r#"{"step": 0}"#.to_string())
     }
 
+
+    pub fn get_wizard_progress(&self, state: &WizardState) -> f32 {
+        if state.steps.is_empty() {
+            return 0.0;
+        }
+        let completed = state.steps.iter().filter(|s| s.is_completed).count() as f32;
+        (completed / state.steps.len() as f32) * 100.0
+    }
+
+    pub fn generate_welcome_checklist(&self) -> Vec<WizardStep> {
+        vec![
+            WizardStep {
+                id: "step_1".to_string(),
+                title: "✅ Business live".to_string(),
+                description: "Your business is now live on the internet!".to_string(),
+                is_completed: true,
+            },
+            WizardStep {
+                id: "step_2".to_string(),
+                title: "⬜ Add 3 more products".to_string(),
+                description: "Increase your sales by adding more products.".to_string(),
+                is_completed: false,
+            },
+            WizardStep {
+                id: "step_3".to_string(),
+                title: "⬜ Connect Instagram".to_string(),
+                description: "Reach more customers by connecting your social media.".to_string(),
+                is_completed: false,
+            },
+            WizardStep {
+                id: "step_4".to_string(),
+                title: "⬜ Share your link with a friend".to_string(),
+                description: "Word of mouth is the best marketing.".to_string(),
+                is_completed: false,
+            },
+        ]
+    }
     pub fn reset_environment(&self, is_cloud: bool) -> Result<(), String> {
         provisioner::cleanup_environment(is_cloud)?;
         provisioner::provision_environment(is_cloud)?;
@@ -91,5 +141,21 @@ mod tests {
         assert!(provisioner::check_environment(false).is_ok());
 
         fs::remove_dir_all(".ohc-local-data").unwrap();
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_wizard_progress() {
+        let w = InteractiveWizard::new();
+        let state = WizardState {
+            current_step: 0,
+            steps: w.generate_welcome_checklist(),
+            completed_percentage: 0.0,
+        };
+        assert_eq!(w.get_wizard_progress(&state), 25.0);
     }
 }
