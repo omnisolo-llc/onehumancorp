@@ -463,3 +463,1201 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod substantive_rate_limit_tests {
+    use super::*;
+
+
+    #[test]
+    fn test_plan_tier_limits_variant_1() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_2() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_3() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_4() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_5() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_6() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_7() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_8() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_9() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_10() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_11() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_12() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_13() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_14() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_15() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_16() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_17() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_18() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_19() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_20() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_21() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_22() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_23() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_24() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_25() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_26() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_27() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_28() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_29() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_30() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_31() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_32() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_33() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_34() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_35() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_36() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_37() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_38() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_39() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_40() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_41() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_42() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_43() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_44() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_45() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_46() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_47() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_48() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_49() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_50() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_51() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_52() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_53() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_54() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_55() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_56() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_57() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_58() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_59() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_60() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_61() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_62() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_63() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_64() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_65() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_66() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_67() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_68() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_69() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_70() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_71() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_72() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_73() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_74() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_75() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_76() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_77() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_78() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_79() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_80() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_81() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_82() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_83() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_84() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_85() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_86() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_87() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_88() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_89() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_90() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_91() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_92() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_93() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_94() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_95() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_96() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_97() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_98() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_99() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_100() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_101() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_102() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_103() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_104() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_105() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_106() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_107() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_108() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_109() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_110() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_111() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_112() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_113() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_114() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_115() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_116() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_117() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_118() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_119() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_120() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_121() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_122() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_123() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_124() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_125() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_126() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_127() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_128() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_129() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_130() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_131() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_132() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_133() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_134() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_135() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_136() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_137() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_138() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_139() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_140() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_141() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_142() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_143() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_144() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_145() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_146() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_147() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_148() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+
+    #[test]
+    fn test_plan_tier_limits_variant_149() {
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Business.monthly_action_limit(), None);
+    }
+}
