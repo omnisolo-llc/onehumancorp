@@ -1,3 +1,13 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhanced scaling capabilities for multi-tenant K8s environments by optimizing internal pod communication and sub-agent dispatching queues.
+- Improved Multi-Environment Promotion pipeline, ensuring seamless transitions across Cloud staging and production environments.
+
+### Privacy/Offline Improvements
+- Enforced zero-trust offline mode for the Standalone desktop wrapper, ensuring local Teammate Mesh operations execute entirely offline without telemetry leaks.
+- Improved local SQLite integration for faster offline fallback and isolated context caching.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
