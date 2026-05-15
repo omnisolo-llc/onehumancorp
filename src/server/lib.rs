@@ -1230,7 +1230,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     if use_json {
         subscriber.json().init();
     } else {
-        subscriber.init();
+        subscriber.event_format(crate::telemetry::logging::PIIRedactionFormatter).init();
     }
 
     // Initialize database
