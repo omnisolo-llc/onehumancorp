@@ -197,7 +197,7 @@ impl StateManager for StandaloneStateManager {
         let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") {
+                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") || e.contains("PermissionDenied") {
                     tracing::warn!("Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
                     return Ok(vec![]);
                 }

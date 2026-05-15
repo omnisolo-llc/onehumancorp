@@ -191,6 +191,124 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_corrupt_agent_lock() {
+        use crate::orchestration::state::StateManager;
+        // Implement test logic validating ability to gracefully error when swarm state .agent-lock locks are unavailable
+        // Set up the environment to point lock paths to a corrupted directory
+
+        // The underlying transport lock path relies on std::env::temp_dir() inside MemoryTransport
+        // so we manipulate the actual OS temp dir for the scope of the transport test,
+        // to point to a corrupted read-only structure to simulate .agent-lock unvailability.
+
+        let custom_tmp = std::env::temp_dir().join(format!(".agent-lock-chaos-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&custom_tmp).unwrap();
+
+        // Create a fake lock file that is read-only and unmodifiable
+        let resource_name = "test_chaos_lock";
+        let lock_path = custom_tmp.join(format!("ohc_mesh_lock_{}", resource_name));
+        std::fs::write(&lock_path, "locked:9999999999").unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&lock_path).unwrap().permissions();
+            perms.set_mode(0o400); // Read only
+            std::fs::set_permissions(&lock_path, perms.clone()).unwrap();
+
+            let mut dir_perms = std::fs::metadata(&custom_tmp).unwrap().permissions();
+            dir_perms.set_mode(0o500); // Prevent directory modification (read and execute only)
+            std::fs::set_permissions(&custom_tmp, dir_perms).unwrap();
+        }
+
+        // We use a custom memory transport to point to the corrupted directory
+        struct CorruptedTmpTransport {
+            tmp_dir: std::path::PathBuf,
+        }
+
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent::mesh::transport::MeshTransport for CorruptedTmpTransport {
+            async fn publish(&self, _topic: &str, _message: ohc_builtin_agent::mesh::transport::Message) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+
+            async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+                let lock_path = self.tmp_dir.join(format!("ohc_mesh_lock_{}", resource));
+                let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
+                let payload = format!("{}:{}", owner, expires_at);
+
+                match std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+                    Ok(mut f) => {
+                        use std::io::Write;
+                        let _ = f.write_all(payload.as_bytes());
+                        Ok(true)
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists || e.kind() == std::io::ErrorKind::PermissionDenied => {
+                        if let Ok(owner_bytes) = std::fs::read(&lock_path) {
+                            let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
+                            if let Some((stored_owner, stored_exp)) = current_data.split_once(':') {
+                                if let Ok(exp) = stored_exp.parse::<i64>() {
+                                    if stored_owner == owner || exp <= chrono::Utc::now().timestamp_millis() {
+                                        let _ = std::fs::remove_file(&lock_path); // This will fail due to permissions
+                                        if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+                                            use std::io::Write;
+                                            let _ = f.write_all(payload.as_bytes());
+                                            return Ok(true);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Handle the permission error gracefully by failing to acquire the lock
+                        Ok(false)
+                    }
+                    Err(e) => Err(e.to_string()),
+                }
+            }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+        }
+
+        let mesh_transport = std::sync::Arc::new(CorruptedTmpTransport { tmp_dir: custom_tmp.clone() });
+        let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport));
+
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) });
+
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh.clone());
+
+        // This operation attempts to acquire the lock via the state manager
+        let result = state_manager.pull_available_tasks(10).await;
+
+        // Since the lock acquisition gracefully returns an error caught by the timeout/error handler,
+        // the state manager's internal timeout/error handling will catch it and return an empty list
+        // to gracefully degrade instead of crashing the system.
+        assert!(result.is_ok(), "The state manager should gracefully handle lock acquisition failures caused by .agent-lock corruption");
+        if let Ok(tasks) = result {
+            assert_eq!(tasks.len(), 0, "No tasks should be pulled if the lock couldn't be acquired due to corruption");
+        }
+
+        // Cleanup
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut dir_perms = std::fs::metadata(&custom_tmp).unwrap().permissions();
+            dir_perms.set_mode(0o755);
+            std::fs::set_permissions(&custom_tmp, dir_perms).unwrap();
+
+            let mut file_perms = std::fs::metadata(&lock_path).unwrap().permissions();
+            file_perms.set_mode(0o644);
+            std::fs::set_permissions(&lock_path, file_perms).unwrap();
+        }
+
+        std::fs::remove_dir_all(&custom_tmp).unwrap();
+    }
+
+    #[tokio::test]
     async fn test_sentry_chaos_network_partition() {
         use sqlx::sqlite::SqlitePoolOptions;
         let db_id = uuid::Uuid::new_v4().to_string();

@@ -154,7 +154,13 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
         let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
             Ok(Ok(guard)) => guard,
-            Ok(Err(e)) => return Err(e),
+            Ok(Err(e)) => {
+                if e.contains("is currently locked") || e.contains("Timeout acquiring lock") || e.contains("PermissionDenied") {
+                    tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+                    return Ok(vec![]);
+                }
+                return Err(e);
+            },
             Err(_) => {
                 tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                 return Ok(vec![]);

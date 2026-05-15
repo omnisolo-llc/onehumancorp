@@ -202,6 +202,114 @@ mod chaos_tests {
 
 
     #[tokio::test]
+    async fn test_agent_lock_corruption_handling() {
+        use crate::orchestration::state::StateManager;
+
+        let custom_tmp = std::env::temp_dir().join(format!(".agent-lock-chaos-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&custom_tmp).unwrap();
+
+        let resource_name = "test_chaos_lock_harness";
+        let lock_path = custom_tmp.join(format!("ohc_mesh_lock_{}", resource_name));
+        std::fs::write(&lock_path, "locked:9999999999").unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&lock_path).unwrap().permissions();
+            perms.set_mode(0o400); // Read only
+            std::fs::set_permissions(&lock_path, perms.clone()).unwrap();
+
+            let mut dir_perms = std::fs::metadata(&custom_tmp).unwrap().permissions();
+            dir_perms.set_mode(0o500); // Prevent directory modification (read and execute only)
+            std::fs::set_permissions(&custom_tmp, dir_perms).unwrap();
+        }
+
+        struct CorruptedTmpTransport {
+            tmp_dir: std::path::PathBuf,
+        }
+
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent::mesh::transport::MeshTransport for CorruptedTmpTransport {
+            async fn publish(&self, _topic: &str, _message: ohc_builtin_agent::mesh::transport::Message) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+
+            async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+                let lock_path = self.tmp_dir.join(format!("ohc_mesh_lock_{}", resource));
+                let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
+                let payload = format!("{}:{}", owner, expires_at);
+
+                match std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+                    Ok(mut f) => {
+                        use std::io::Write;
+                        let _ = f.write_all(payload.as_bytes());
+                        Ok(true)
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists || e.kind() == std::io::ErrorKind::PermissionDenied => {
+                        if let Ok(owner_bytes) = std::fs::read(&lock_path) {
+                            let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
+                            if let Some((stored_owner, stored_exp)) = current_data.split_once(':') {
+                                if let Ok(exp) = stored_exp.parse::<i64>() {
+                                    if stored_owner == owner || exp <= chrono::Utc::now().timestamp_millis() {
+                                        let _ = std::fs::remove_file(&lock_path); // This will fail due to permissions
+                                        if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+                                            use std::io::Write;
+                                            let _ = f.write_all(payload.as_bytes());
+                                            return Ok(true);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Handle the permission error gracefully by failing to acquire the lock
+                        Ok(false)
+                    }
+                    Err(e) => Err(e.to_string()),
+                }
+            }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+        }
+
+        let mesh_transport = std::sync::Arc::new(CorruptedTmpTransport { tmp_dir: custom_tmp.clone() });
+        let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport));
+
+        // Use CloudStateManager since Standalone was tested in `chaos.rs`
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = std::sync::Arc::new(DB { pool: dummy_pg_pool, store: DbStore::Postgres });
+
+        let state_manager = CloudStateManager::new(db, mesh.clone());
+
+        // This operation attempts to acquire the lock via the state manager
+        let result = state_manager.pull_available_tasks(10).await;
+
+        // Since the lock acquisition gracefully returns false instead of panicking,
+        // the state manager's internal timeout/error handling will catch it and return an empty list or error
+        assert!(result.is_ok(), "The state manager should gracefully handle lock acquisition failures caused by .agent-lock corruption");
+        if let Ok(tasks) = result {
+            assert_eq!(tasks.len(), 0, "No tasks should be pulled if the lock couldn't be acquired");
+        }
+
+        // Cleanup
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut dir_perms = std::fs::metadata(&custom_tmp).unwrap().permissions();
+            dir_perms.set_mode(0o755);
+            std::fs::set_permissions(&custom_tmp, dir_perms).unwrap();
+
+            let mut file_perms = std::fs::metadata(&lock_path).unwrap().permissions();
+            file_perms.set_mode(0o644);
+            std::fs::set_permissions(&lock_path, file_perms).unwrap();
+        }
+
+        std::fs::remove_dir_all(&custom_tmp).unwrap();
+    }
+
+    #[tokio::test]
     async fn test_pubsub_message_loss() {
         let transport = Arc::new(DroppingMockTransport::new(50)); // 50% drop rate
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
