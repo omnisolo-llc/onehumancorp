@@ -16,6 +16,7 @@ spec:
     containerPolicies:
       - containerName: backend
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
         minAllowed:
           cpu: {{ .Values.backend.resources.requests.cpu | quote }}
           memory: {{ .Values.backend.resources.requests.memory | quote }}
@@ -42,6 +43,7 @@ spec:
     containerPolicies:
       - containerName: ohc-core
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
         minAllowed:
           cpu: {{ .Values.ohcCore.resources.requests.cpu | quote }}
           memory: {{ .Values.ohcCore.resources.requests.memory | quote }}
@@ -68,6 +70,7 @@ spec:
     containerPolicies:
       - containerName: chatwoot
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
         minAllowed:
           cpu: {{ .Values.chatwoot.resources.requests.cpu | quote }}
           memory: {{ .Values.chatwoot.resources.requests.memory | quote }}
@@ -94,6 +97,7 @@ spec:
     containerPolicies:
       - containerName: powersync
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
         minAllowed:
           cpu: {{ .Values.powersync.resources.requests.cpu | quote }}
           memory: {{ .Values.powersync.resources.requests.memory | quote }}

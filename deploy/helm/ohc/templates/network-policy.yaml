@@ -108,6 +108,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.ohcCore.service.port }}
@@ -157,6 +160,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.chatwoot.service.port }}
@@ -206,6 +212,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
       ports:
         - protocol: TCP
           port: {{ .Values.powersync.service.targetPort }}
