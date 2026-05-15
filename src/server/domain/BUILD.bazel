@@ -9,8 +9,17 @@ filegroup(
         "model.rs",
         "organization.rs",
         "sre.rs",
+        "business_journey_catalog.rs",
         "unified_tenant_test.rs",
         "//src/server/domain/repository:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "domain_test",
+    srcs = ["business_journey_catalog.rs"],
+    edition = "2024",
 )
