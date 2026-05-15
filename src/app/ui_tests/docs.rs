@@ -6,17 +6,17 @@ fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwra
 
 #[test] fn docs_flow_config_sync() {
     let ui = create();
-    ui.set_api_key("sk_test_123".into());
+    ui.set_connection_key("sk_test_123".into());
     ui.set_endpoint_url("http://localhost:8080".into());
-    assert_eq!(ui.get_api_key(), "sk_test_123");
+    assert_eq!(ui.get_connection_key(), "sk_test_123");
     assert_eq!(ui.get_endpoint_url(), "http://localhost:8080");
 }
 
 #[test] fn docs_xss_key() {
     let ui = create();
-    let xss = "<script>alert('api_key')</script>";
-    ui.set_api_key(xss.into());
-    assert_eq!(ui.get_api_key(), xss);
+    let xss = "<script>alert('connection_key')</script>";
+    ui.set_connection_key(xss.into());
+    assert_eq!(ui.get_connection_key(), xss);
 }
 
 #[test] fn docs_long_endpoint() {
@@ -31,14 +31,14 @@ fn create() -> app::ApiDocs { crate::ui_tests::init(); app::ApiDocs::new().unwra
 // --- Consolidated Verified Tests ---
 
 #[test]
-fn create_verify_api_key() {
+fn create_verify_connection_key() {
     let ui = create();
-    ui.set_api_key("sk_live_555".into());
-    assert_eq!(ui.get_api_key(), "sk_live_555");
-    ui.set_api_key("sk_sandbox_xyz".into());
-    assert_eq!(ui.get_api_key(), "sk_sandbox_xyz");
-    ui.set_api_key("k11".into());
-    assert_eq!(ui.get_api_key(), "k11");
+    ui.set_connection_key("sk_live_555".into());
+    assert_eq!(ui.get_connection_key(), "sk_live_555");
+    ui.set_connection_key("sk_sandbox_xyz".into());
+    assert_eq!(ui.get_connection_key(), "sk_sandbox_xyz");
+    ui.set_connection_key("k11".into());
+    assert_eq!(ui.get_connection_key(), "k11");
 }
 
 #[test]

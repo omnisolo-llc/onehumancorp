@@ -8203,7 +8203,7 @@ fn test_business_share_flow() {
         assert!(*api_docs_opened.borrow(), "API Docs UI should be opened");
 
         let ui = app::ApiDocs::new().unwrap();
-        assert_eq!(ui.get_api_key(), "sk_live_...");
+        assert_eq!(ui.get_connection_key(), "sk_live_...");
         assert_eq!(ui.get_endpoint_url(), "https://api.ohc.io");
 
         // Advanced Mode Progressive Disclosure Check

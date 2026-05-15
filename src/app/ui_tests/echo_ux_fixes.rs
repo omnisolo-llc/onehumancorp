@@ -86,3 +86,36 @@ fn e2e_flow_ux_fixes() {
 
     assert!(*submit_clicked.borrow(), "Submit should be called from the completed UX flow");
 }
+
+#[test]
+fn test_dashboard_floating_quick_actions() {
+    crate::ui_tests::init();
+    let ui = app::Dashboard::new().unwrap();
+
+    let add_product_called = Rc::new(RefCell::new(false));
+    let add_product_called_clone = add_product_called.clone();
+    ui.on_action_add_product(move || {
+        *add_product_called_clone.borrow_mut() = true;
+    });
+
+    let create_post_called = Rc::new(RefCell::new(false));
+    let create_post_called_clone = create_post_called.clone();
+    ui.on_action_open_social_posting(move || {
+        *create_post_called_clone.borrow_mut() = true;
+    });
+
+    let share_store_called = Rc::new(RefCell::new(false));
+    let share_store_called_clone = share_store_called.clone();
+    ui.on_action_share_store(move || {
+        *share_store_called_clone.borrow_mut() = true;
+    });
+
+    ui.invoke_action_add_product();
+    assert!(*add_product_called.borrow());
+
+    ui.invoke_action_open_social_posting();
+    assert!(*create_post_called.borrow());
+
+    ui.invoke_action_share_store();
+    assert!(*share_store_called.borrow());
+}

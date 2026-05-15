@@ -449,84 +449,62 @@ export component Dashboard inherits Window { // milestones
     }
 }
 
-    // Floating Action Button (Bottom)
-    Rectangle {
-        y: parent.height - 80px;
-        x: parent.width - 80px;
-        width: 60px;
-        height: 60px;
-        background: #8b5cf6;
-        border-radius: 30px;
-        drop-shadow-blur: 10px;
-        drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-        Text {
-            text: "+";
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
-
-        TouchArea {
-            clicked => {
-                // We'll map this floating action button to add product for now
-                action_add_product();
-            }
-        }
-    }
-
-    // Floating Create Post & Share Store (Bottom Left quick actions)
-    HorizontalBox {
-        y: parent.height - 80px;
-        x: 20px;
-        spacing: 16px;
+    // Floating Quick Actions (Bottom Right Stack)
+    VerticalBox {
+        x: parent.width - 160px;
+        y: parent.height - 200px;
+        spacing: 12px;
+        width: 140px;
 
         Rectangle {
-            width: 60px;
-            height: 60px;
-            background: #3b82f6;
-            border-radius: 30px;
-            drop-shadow-blur: 10px;
-            drop-shadow-color: rgba(0, 0, 0, 0.5);
-
-            Text {
-                text: "✍️";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-
-            TouchArea {
-                clicked => {
-                    action_open_social_posting();
-                }
-            }
-        }
-
-        Rectangle {
-            width: 60px;
-            height: 60px;
+            width: 140px;
+            height: 50px;
             background: #10b981; // Emerald
-            border-radius: 30px;
+            border-radius: 25px;
             drop-shadow-blur: 10px;
             drop-shadow-color: rgba(0, 0, 0, 0.5);
 
-            Text {
-                text: "🔗";
-                color: white;
-                font-size: 24px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            HorizontalBox {
+                alignment: center;
+                spacing: 8px;
+                Text { text: "🔗"; color: white; font-size: 16px; vertical-alignment: center; }
+                Text { text: "Share Store"; color: white; font-size: 14px; font-family: "Inter"; font-weight: 700; vertical-alignment: center; }
             }
+            TouchArea { clicked => { action_share_store(); } }
+        }
 
-            TouchArea {
-                clicked => {
-                    action_share_store();
-                }
+        Rectangle {
+            width: 140px;
+            height: 50px;
+            background: #3b82f6;
+            border-radius: 25px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            HorizontalBox {
+                alignment: center;
+                spacing: 8px;
+                Text { text: "✍️"; color: white; font-size: 16px; vertical-alignment: center; }
+                Text { text: "Create Post"; color: white; font-size: 14px; font-family: "Inter"; font-weight: 700; vertical-alignment: center; }
             }
+            TouchArea { clicked => { action_open_social_posting(); } }
+        }
+
+        Rectangle {
+            width: 140px;
+            height: 50px;
+            background: #8b5cf6;
+            border-radius: 25px;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: rgba(0, 0, 0, 0.5);
+
+            HorizontalBox {
+                alignment: center;
+                spacing: 8px;
+                Text { text: "+"; color: white; font-size: 20px; font-weight: 700; vertical-alignment: center; }
+                Text { text: "Add Product"; color: white; font-size: 14px; font-family: "Inter"; font-weight: 700; vertical-alignment: center; }
+            }
+            TouchArea { clicked => { action_add_product(); } }
         }
     }
 
