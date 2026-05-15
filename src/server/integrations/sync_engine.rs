@@ -769,7 +769,6 @@ impl IntegrationPayloadValidator {
     }
 }
 
-#[cfg(test)]
 mod parsing_tests {
     use super::*;
 
@@ -1030,7 +1029,6 @@ impl SyncErrorLogger {
 }
 
 // Ensure the tests verify all these utilities as well.
-#[cfg(test)]
 mod util_tests {
     use super::*;
 
@@ -1044,17 +1042,12 @@ mod util_tests {
     }
 }
 
-#[cfg(test)]
-mod e2e_sync_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_tenant_validation_sync() {
-        // Just mock setup
-    }
 
 
-}
+
+
+
+
 
 // -----------------------------------------------------------------------------
 // Advanced Sync Operations and Error Handling
@@ -1362,7 +1355,6 @@ impl UnifiedDataStore {
 // -----------------------------------------------------------------------------
 // Real Unit and Integration Tests
 // -----------------------------------------------------------------------------
-#[cfg(test)]
 mod tests {
     use super::*;
 
