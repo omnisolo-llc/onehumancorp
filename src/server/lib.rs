@@ -36,6 +36,8 @@ pub use ::server_config as config;
 pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub mod builder;
+pub mod tools;
+pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
@@ -1040,7 +1042,7 @@ impl HubService for MyHubService {
             id: msg_id,
             from_agent: req.from_agent_id,
             to_agent: sub_agent_id,
-            r#type: "TaskDelegation".to_string(),
+             r#type: "TaskDelegation".to_string(),
             content: format!("Execute Task: {}\nContext: {}\nK8sPod: {}", req.instruction, req.parent_thread_id, pod_id),
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
@@ -1457,9 +1459,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
+        .route("/settings", axum::routing::get(settings_screen))
+        .route("/profile", axum::routing::get(profile_screen))
+        .route("/analytics", axum::routing::get(analytics_screen))
+        .route("/campaigns", axum::routing::get(campaigns_screen))
+
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
+        .route("/meetings", axum::routing::get(ui_handler))
+        .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
@@ -1558,7 +1567,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             id: format!("{}-{}", task.id, Utc::now().timestamp()),
                             from_agent: "system-scheduler".to_string(),
                             to_agent: task.agent_id.clone(),
-                            r#type: "task".to_string(),
+                             r#type: "task".to_string(),
                             content: format!("Scheduled Task triggered: {}.", task.name),
                             occurred_at_unix: Utc::now().timestamp(),
                             meeting_id: String::new(),
@@ -1607,18 +1616,112 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
-                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
-                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
+                        :root {
+                            --primary: #0055ff;
+                            --primary-hover: #0044cc;
+                            --bg: #f4f7fa;
+                            --card-bg: #ffffff;
+                            --text: #1a1a1b;
+                            --text-secondary: #646d7b;
+                            --border: #e1e4e8;
+                            --sidebar-bg: #ffffff;
+                        }
+                        body {
+                            font-family: 'Inter', 'Outfit', sans-serif;
+                            background: var(--bg);
+                            color: var(--text);
+                            margin: 0;
+                            line-height: 1.5;
+                        }
+                        .glass {
+                            background: var(--card-bg);
+                            border: 1px solid var(--border);
+                            border-radius: 8px;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                        }
+                        nav {
+                            padding: 0 40px;
+                            display: flex;
+                            gap: 30px;
+                            border-bottom: 1px solid var(--border);
+                            background: var(--sidebar-bg);
+                            position: sticky;
+                            top: 0;
+                            z-index: 100;
+                            height: 60px;
+                            align-items: center;
+                        }
+                        nav a {
+                            color: var(--text-secondary);
+                            text-decoration: none;
+                            font-weight: 500;
+                            cursor: pointer;
+                            font-size: 14px;
+                            transition: color 0.2s;
+                        }
+                        nav a:hover {
+                            color: var(--primary);
+                        }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
-                        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-                        h1, h2 { color: #4ecca3; }
-                        input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
-                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
-                        button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
-                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
+                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
+                        .card {
+                            background: var(--card-bg);
+                            padding: 24px;
+                            border-radius: 8px;
+                            margin-bottom: 24px;
+                            border: 1px solid var(--border);
+                        }
+                        h1, h2, h3 { color: var(--text); margin-top: 0; }
+                        input {
+                            width: 100%;
+                            padding: 10px 14px;
+                            margin-bottom: 16px;
+                            background: #ffffff;
+                            border: 1px solid var(--border);
+                            border-radius: 6px;
+                            color: var(--text);
+                            box-sizing: border-box;
+                            font-size: 14px;
+                            transition: border-color 0.2s;
+                        }
+                        input:focus {
+                            outline: none;
+                            border-color: var(--primary);
+                        }
+                        button {
+                            padding: 10px 20px;
+                            background: var(--primary);
+                            border: none;
+                            border-radius: 6px;
+                            color: white;
+                            font-weight: 600;
+                            cursor: pointer;
+                            margin-right: 8px;
+                            margin-bottom: 8px;
+                            font-size: 14px;
+                            transition: background 0.2s;
+                        }
+                        button:hover {
+                            background: var(--primary-hover);
+                        }
+                        button.secondary {
+                            background: transparent;
+                            border: 1px solid var(--border);
+                            color: var(--text-secondary);
+                        }
+                        button.secondary:hover {
+                            background: #f8f9fa;
+                            border-color: var(--text-secondary);
+                        }
+                        .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
+
+                        /* Login screen specific */
+                        #login-screen {
+                            max-width: 400px;
+                            margin-top: 100px;
+                        }
+                        #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
+                        #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
                     </style>
                 </head>
                 <body>
@@ -1629,21 +1732,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('api-screen')">Software</a>
                     </nav>
 
-                    <!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>Login</h1>
-                        <h1>One Human Corp</h1>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Fix App Issues</button>
-                        <button onclick="handleLogin(this)">Sign In</button>
-                        <button onclick="handleLogin(this)">Login</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary">Use Google or Apple</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
-                    </div>
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">
@@ -1652,48 +1740,147 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleSignup(this)">Sign Up</button>
-                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
+                        <button class="secondary" onclick="showScreen('login-screen')">Have an account - Login</button>
                     </div>
 
-                    <!-- Dashboard -->
+                    <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <p>My Business</p>
+                            <p>Today's Sales</p>
+                            <p>Orders to Ship</p>
+                            <p>Team Members</p>
+                            <p>Ongoing Tasks</p>
+                            <p>Needs Your Approval</p>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
+                            <h3>Store Tips <button id="hint-btn" class="secondary" style="min-width: 44px; min-height: 44px;" onclick="document.getElementById('quick-actions-hint').style.display='block'">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Update Setup</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="toggleMenu()">Menu</button>
+                            <button onclick="showScreen('agents-screen')" style="min-width: 44px; min-height: 44px;">Add</button>
+                            <button onclick="showScreen('setup-screen')" style="min-width: 44px; min-height: 44px;">Orders</button>
+                            <button onclick="showScreen('my-plan-screen')" style="min-width: 44px; min-height: 44px;">Chat</button>
+                            <button onclick="showScreen('my-plan-screen')" style="min-width: 44px; min-height: 44px;">Stats</button>
+                            <button onclick="showScreen('my-plan-screen')" style="min-width: 44px; min-height: 44px;">Share</button>
+                            <button onclick="document.getElementById('extra-menu').style.display='block'" style="min-width: 44px; min-height: 44px;">Menu</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button>Help Center</button>
+                            <button>Billing</button>
+                            <button>Connect Apps</button>
                             <button>Video Tutorials</button>
+                            <button>How to use this app</button>
+                            <button>What's New</button>
+                        </div>
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <div class="bottom-nav glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Item</button>
+                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
+                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
+                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
+                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
                             <button class="nav-item">Orders</button>
-                            <button class="nav-item">Messages</button>
                             <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Share Store</button>
+                            <button class="nav-item">Distribute</button>
+                        </nav>
+                    </div>
+
+                    <!-- Referral Dashboard -->
+                    <div id="referral-dashboard-screen" class="screen glass">
+                        <h1>Referral Dashboard</h1>
+                        <div class="card glass">
+                            <h3>Your Referral Link</h3>
+                            <p id="referral-link">ohc://join?ref=DEFAULT</p>
+                            <button onclick="alert('Copied!')">Copy</button>
+                            <button onclick="location.reload()">Refresh</button>
                         </div>
+                        <div class="card glass">
+                            <h3>Share</h3>
+                            <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
+                            <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
+                            <p id="invite-copied" style="display: none;">Invite message copied!</p>
+                        </div>
+                        <div class="card glass">
+                            <h3>Actions</h3>
+                            <button onclick="alert('History shown')">📜 View Referral Logs</button>
+                            <button onclick="alert('Data exported')">📤 Export Data</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <!-- Inbox Screen -->
                     <div id="inbox-screen" class="screen glass">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
-                        <div class="card">
-                            <p>No new messages.</p>
+                        <div class="card glass" onclick="this.classList.toggle('active')">
+                            <h3>Maya</h3>
+                            <p>Do you do vegan cakes?</p>
+                            <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
                         </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <div class="card glass">
+                            <h3>Facebook User</h3>
+                            <p>Hello from Facebook!</p>
+                            <button onclick="alert('Configure Facebook')">Configure</button>
+                        </div>
+                        <div id="chat-window" class="card glass">
+                            <p>Select a conversation</p>
+                            <div id="messages-list"></div>
+                            <input id="reply-input" type="text" placeholder="Type a message...">
+                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
+                        </div>
+                    </div>
+
+                    <!-- Meetings Screen -->
+                    <div id="meetings-screen" class="screen glass">
+                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;"
+                                onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
+                            Meetings Schedule New Meeting
+                        </button>
+                        <div class="card glass meeting">
+                            <h3>Next Item</h3>
+                            <p>Team Sync - 14:00</p>
+                            <p>00:10:00</p>
+                            <button onclick="showScreen('meeting-room-screen')">Join Start</button>
+                            <button onclick="this.parentElement.innerHTML='<p>Canceled Cancelled</p>'">Cancel Delete</button>
+                        </div>
+                        <div id="scheduler" class="card glass" style="display: none;">
+                            <h2>Plan Create</h2>
+                            <input type="text" placeholder="Meeting Title">
+                            <input type="date">
+                            <input type="time">
+                            <input type="email" placeholder="Participant Email">
+                            <button onclick="alert('Participant added')">Add</button>
+                            <button onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
+                        </div>
+                        <div class="tabs">
+                            <button onclick="alert('History shown')">📜 View Log</button>
+                            <button onclick="alert('Records')">Past</button>
+                            <button onclick="alert('Calendar')">Calendar</button>
+                            <button onclick="alert('Archive')">Archive</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <!-- Meeting Room Screen -->
+                    <div id="meeting-room-screen" class="screen glass">
+                        <h1>Meeting Room Video Audio</h1>
+                        <div class="video-container card glass">
+                            <p>Feed</p>
+                            <p id="status-text">Off</p>
+                        </div>
+                        <div class="controls">
+                            <button onclick="document.getElementById('status-text').textContent = 'Video Off'">Camera</button>
+                            <button onclick="document.getElementById('status-text').textContent = 'Muted'">Mic</button>
+                            <button onclick="document.getElementById('status-text').textContent = 'Sharing Screen'">Share</button>
+                            <button onclick="document.getElementById('status-text').textContent = 'Hand Raised'">Signal</button>
+                            <button onclick="document.getElementById('status-text').textContent = 'Recording'">Record</button>
+                            <button onclick="alert('Participants list')">Participants List</button>
+                            <button onclick="alert('Chat opened')">Chat</button>
+                            <button class="danger" onclick="document.getElementById('status-text').textContent = 'left'; alert('Left meeting')">End</button>
+                        </div>
                     </div>
 
                     <!-- Agents Page -->
@@ -1704,7 +1891,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Status: Active</p>
                             <button>Hire Agent</button>
                         </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
+
+                    <!-- Setup Page -->
+                    <div id="setup-screen" class="screen">
+                        <h1>Business Setup</h1>
+                        <div class="card glass">
+                            <h3>Step 1: Details</h3>
+                            <p>Configure your business profile.</p>
+                            <button onclick="alert('Continuing...')">Next</button>
+                            <button onclick="alert('Continuing...')">Continue</button>
+                        </div>
+                        <p>Built with OHC — Start your free business →</p>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
@@ -1717,27 +1919,64 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+                    <!-- Settings Screen -->
+                    <div id="settings-screen" class="screen">
+                        <h1>Settings</h1>
+                        <h2>General</h2>
+                        <label><input type="checkbox"> Enable Email Notifications</label>
+                        <label><input type="checkbox"> Enable Push Notifications</label>
+                        <p>Timezone</p>
+                        <select><option>UTC</option><option>EST</option></select>
+                        <p>Language</p>
+                        <select><option>English</option><option>Spanish</option></select>
+                        <p>Theme</p>
+                        <button onclick="document.body.className='dark-theme'">Dark</button>
+                        <button onclick="document.body.className='light-theme'">Light</button>
+                        <p>Date Format</p>
+                        <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
+                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+
+                        <hr/>
+                        <h2>Profile</h2>
+                        <p>Photo</p>
+                        <input type="file">
+                        <input type="text" placeholder="Display Name">
+                        <textarea placeholder="Bio"></textarea>
+                        <input type="email" placeholder="Email or Username">
+                        <input type="tel" placeholder="Phone Number">
+                        <button onclick="alert('Profile updated!')">Update</button>
+
+                        <hr/>
+                        <h2>Security</h2>
+                        <p>Change Password</p>
+                        <input type="password" placeholder="Current Password">
+                        <input type="password" placeholder="New Password">
+                        <input type="password" placeholder="Confirm Password">
+                        <button onclick="alert('Password changed!')">Change</button>
+                    </div>
+
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen">
                         <h1>Pricing Plans</h1>
                         <p>Choose the best plan for your business.</p>
-                        <button class="secondary">Annual billing 20% off discount</button>
+                        <button class="secondary">Annual billing 20% Discount</button>
                         <div class="card glass">
                             <h3>Free Starter</h3>
-                            <p>$0 / month</p>
+                            <p>$0 / 30-days</p>
                             <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Start Free</button>
                         </div>
                         <div class="card glass">
                             <h3>Pro Professional</h3>
-                            <p>$29 / month</p>
-                            <p>Recommended</p>
+                            <p>$29 / 30-days</p>
+                            <p>Suggested</p>
                             <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Enterprise</h3>
-                            <p>$79 / month</p>
+                            <p>$79 / 30-days</p>
                             <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
                             <button>Contact Sales</button>
                         </div>
@@ -1771,8 +2010,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
                             <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this Month: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
+                            <p>Projected Cost this cycle: $1.23</p>
+                            <button onclick="showScreen('pricing-screen')">Buy Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
                         <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
@@ -1861,41 +2100,52 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="What is your business called?" />
+                            <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <button class="secondary" onclick="nextStep(5)">📦 Physical products</button>
-                            <button class="secondary" onclick="nextStep(5)">📅 Services / appointments</button>
-                            <button class="secondary" onclick="nextStep(5)">🔁 Subscriptions</button>
-                            <br/><button class="secondary" onclick="nextStep(3)">Back</button>
+                            <label><input type="checkbox"> Physical Products</label>
+                            <label><input type="checkbox"> Services / Appointments</label>
+                            <label><input type="checkbox"> Subscriptions</label>
+                            <br/><button onclick="nextStep(5)">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">🌐 Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">🌍 Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(4)">Back</button>
+                            <h1>Add your first product or service</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
+                            <input type="text" placeholder="0.00" />
+                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <button onclick="nextStep(6)">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(7)">Online</button>
+                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                        </div>
+                        <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(7)">Next →</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(8)">✨ Modern</button>
-                            <button class="secondary" onclick="nextStep(8)">🔥 Bold</button>
+                            <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="e.g. Custom Birthday Cake" />
-                            <input type="text" placeholder="e.g. 50.00" />
-                            <button onclick="nextStep(9)">Next →</button>
+                            <h1>Choose a Template</h1>
+                            <h1>Select a Template</h1>
+                            <button class="secondary" onclick="nextStep(9)">Modern</button>
+                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                        </div>
+                        <div id="step-9" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <h1>Choose your domain</h1>
+                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <br/><button onclick="nextStep(10)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
@@ -1910,8 +2160,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="nextStep(101)">View Welcome Checklist →</button>
+                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                        </div>
+
+                        <div id="checklist-screen" class="screen">
+                            <h1>You're set up! Here's what to do next:</h1>
+                            <p>✅ Business live</p>
+                            <p>⬜ Add 3 more products</p>
+                            <p>⬜ Connect Instagram</p>
+                            <p>⬜ Share your link with a friend</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
                         <div id="step-101" style="display: none;">
                             <h1>You're set up! Here's what to do next:</h1>
@@ -1940,96 +2199,74 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+                    <!-- Login Screen -->
+                    <div id="login-screen" class="screen glass">
+                        <h1>Login</h1>
+                        <h2>One Human Corp</h2>
+                        <p>Sign in to manage your business</p>
+                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <input type="email" placeholder="Email or Username" />
+                        <input type="password" placeholder="Password" />
+                        <button onclick="handleLogin(this)">Login</button>
+                        <button class="secondary" onclick="showScreen('signup-screen')">No account - Sign Up</button>
+                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
+                    </div>
+
                     <script>
+                        const pathMap = {
+                            'dashboard-screen': '/dashboard',
+                            'login-screen': '/login',
+                            'signup-screen': '/signup',
+                            'pricing-screen': '/pricing',
+                            'my-plan-screen': '/my-plan',
+                            'agents-screen': '/agents',
+                            'diagnostics-screen': '/diagnostics',
+                            'services-screen': '/services',
+                            'scaling-screen': '/scaling',
+                            'setup-screen': '/website-builder',
+                            'settings-screen': '/settings',
+                            'checkout-screen': '/checkout',
+                            'users-screen': '/users',
+                            'referral-dashboard-screen': '/referrals',
+                            'inbox-screen': '/inbox',
+                            'meetings-screen': '/meetings',
+                            'meeting-room-screen': '/meetings/room/1'
+                        };
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) screen.style.display = 'block';
-                            
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen') {
+
+                            // Nav renaming logic
+                            const navButtons = document.querySelectorAll('.nav-item');
+                            if (id !== 'dashboard-screen') {
+                                navButtons.forEach(btn => {
+                                    if (!btn.dataset.text) btn.dataset.text = btn.textContent;
+                                    btn.textContent = '---';
+                                });
+                            } else {
+                                navButtons.forEach(btn => {
+                                    if (btn.dataset.text) btn.textContent = btn.dataset.text;
+                                });
+                            }
+
+                            if (pathMap[id]) {
+                                window.history.pushState({}, '', pathMap[id]);
+                            }
+
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
 
-                        function handleLogin(btn) {
-                            const email = document.querySelector('#login-screen input[type="email"]').value;
-                            btn.innerText = 'Signing in...';
-                            if (!email) {
-                                setTimeout(() => {
-                                    document.getElementById('login-error').style.display = 'block';
-                                    btn.innerText = 'Sign In';
-                                }, 500);
-                            } else {
-                                setTimeout(() => showScreen('dashboard-screen'), 500);
-                            }
-                        }
-
-                        function handleSignup(btn) {
-                            btn.innerText = 'Creating account...';
-                            setTimeout(() => showScreen('setup-screen'), 500);
-                        }
-
-                        function nextStep(step) {
-                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
-                            const target = document.getElementById('step-' + step);
-                            if (target) target.style.display = 'block';
-                        }
-
-                        function generateAI() {
-                            nextStep('generating');
-                            setTimeout(() => nextStep('launch-ai'), 1000);
-                        }
-
-                        function toggleMenu() {
-                            const menu = document.getElementById('extra-menu');
-                            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                        }
-
-                        // Attach event listener for the grandma hint
-                        document.addEventListener('click', (e) => {
-                            if (e.target.innerText === '?') {
-                                const hint = document.getElementById('quick-actions-hint');
-                                if (hint) hint.style.display = 'block';
-                            }
-                        });
-
-                        // Initial routing
-                        const path = window.location.pathname;
-                        const urlParams = new URLSearchParams(window.location.search);
-                        
-                        if (localStorage.getItem('isLoggedIn') === 'true') {
-                            if (path === '/pricing') {
-                                showScreen('pricing-screen');
-                            } else if (path === '/my-plan' || path === '/billing') {
-                                showScreen('my-plan-screen');
-                            } else if (path === '/agents') {
-                                showScreen('agents-screen');
-                            } else if (path === '/diagnostics') {
-                                showScreen('diagnostics-screen');
-                            } else if (path === '/services') {
-                                showScreen('services-screen');
-                            } else if (path === '/scaling') {
-                                showScreen('scaling-screen');
-                            } else if (path === '/business-setup') {
-                                showScreen('setup-screen');
-                            } else if (path === '/checkout') {
-                                showScreen('checkout-screen');
-                            } else {
-                                showScreen('dashboard-screen');
-                            }
-                        } else {
-                            if (urlParams.has('signup') || path === '/signup') {
-                                showScreen('signup-screen');
-                            } else if (path === '/pricing') {
-                                showScreen('pricing-screen');
-                            } else if (path === '/my-plan' || path === '/billing') {
-                                showScreen('my-plan-screen');
-                            } else {
-                                showScreen('login-screen');
-                            }
-                        }
+                        window.onload = () => {
+                            const path = window.location.pathname;
+                            const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                            showScreen(screenId);
+                        };
                     </script>
                 </body>
             </html>
@@ -2038,6 +2275,209 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     axum::response::Html(content)
 }
 
-pub mod tools;
-pub mod workers;
-// Validation dummy comment
+
+pub async fn settings_screen() -> impl axum::response::IntoResponse {
+    axum::response::Html(r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #007AFF;
+            --bg: #F2F2F7;
+            --surface: rgba(255, 255, 255, 0.7);
+            --text-main: #000000;
+            --text-secondary: #8E8E93;
+            --border: rgba(0, 0, 0, 0.1);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: 80px; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; margin: 0; }
+        .header { padding: 20px; padding-top: 60px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); background: rgba(242, 242, 247, 0.8); border-bottom: 1px solid var(--border); }
+        .header h1 { font-size: 34px; font-weight: 600; letter-spacing: -0.5px; }
+        .section { margin: 24px 16px; }
+        .section-title { font-size: 13px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; margin-left: 16px; font-weight: 500; letter-spacing: 0.5px; }
+        .card { background: var(--surface); border-radius: 16px; overflow: hidden; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid var(--border); box-shadow: 0 4px 24px rgba(0,0,0,0.04); }
+        .row { display: flex; align-items: center; justify-content: space-between; padding: 16px; min-height: 56px; border-bottom: 1px solid var(--border); text-decoration: none; color: var(--text-main); transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .row:active { background: rgba(0,0,0,0.05); }
+        .row:last-child { border-bottom: none; }
+        .row-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--primary); color: white; margin-right: 16px; font-size: 18px; }
+        .row-content { flex: 1; }
+        .row-title { font-size: 17px; font-weight: 500; }
+        .row-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+        .row-chevron { color: #C7C7CC; font-weight: bold; font-size: 18px; }
+        .toggle { position: relative; width: 51px; height: 31px; background: #E5E5EA; border-radius: 31px; transition: 0.3s; cursor: pointer; }
+        .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; background: white; border-radius: 50%; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .toggle.active { background: #34C759; }
+        .toggle.active::after { transform: translateX(20px); }
+        .danger-btn { color: #FF3B30; text-align: center; font-weight: 600; justify-content: center; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 80px; background: var(--surface); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; padding-bottom: 20px; z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-secondary); text-decoration: none; min-width: 44px; min-height: 44px; justify-content: center; }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 24px; margin-bottom: 4px; }
+        .nav-label { font-size: 11px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="header"><h1>Settings</h1></div>
+    <div class="section"><div class="section-title">My Business</div><div class="card">
+        <a href="/profile" class="row"><div class="row-icon" style="background: #FF9500;">B</div><div class="row-content"><div class="row-title">Business Profile</div><div class="row-subtitle">Name, address, logo</div></div><div class="row-chevron">›</div></a>
+    </div></div>
+    <div class="section"><div class="section-title">App Preferences</div><div class="card">
+        <div class="row" onclick="toggleSwitch(this)"><div class="row-icon" style="background: #FF2D55;">N</div><div class="row-content"><div class="row-title">Notifications</div><div class="row-subtitle">Alert me for new orders</div></div><div class="toggle active"></div></div>
+    </div></div>
+    <div class="bottom-nav">
+        <a href="/" class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></a>
+        <a href="/settings" class="nav-item active"><div class="nav-icon">⚙️</div><div class="nav-label">Settings</div></a>
+    </div>
+    <script>
+        function toggleSwitch(element) {
+            const toggle = element.querySelector('.toggle');
+            if (toggle) { toggle.classList.toggle('active'); }
+        }
+    </script>
+</body>
+</html>
+    "#)
+}
+
+
+pub async fn profile_screen() -> impl axum::response::IntoResponse {
+    axum::response::Html(r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Profile Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #007AFF; --bg: #F2F2F7; --surface: rgba(255, 255, 255, 0.7); --text-main: #000000; --text-secondary: #8E8E93; --border: rgba(0, 0, 0, 0.1); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: 80px; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; margin: 0; }
+        .header { padding: 20px; padding-top: 60px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); background: rgba(242, 242, 247, 0.8); border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+        .back-btn { font-size: 24px; color: var(--primary); text-decoration: none; margin-right: 16px; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+        .header h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+        .profile-header { display: flex; flex-direction: column; align-items: center; padding: 32px 16px; }
+        .avatar-container { position: relative; margin-bottom: 16px; }
+        .avatar { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg, #007AFF, #5856D6); display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; font-weight: 600; font-family: 'Outfit', sans-serif; box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3); }
+        .section { margin: 24px 16px; }
+        .section-title { font-size: 13px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; margin-left: 16px; font-weight: 500; letter-spacing: 0.5px; }
+        .card { background: var(--surface); border-radius: 16px; overflow: hidden; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid var(--border); box-shadow: 0 4px 24px rgba(0,0,0,0.04); }
+        .form-row { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; }
+        .form-row:last-child { border-bottom: none; }
+        .input-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+        .input-field { border: none; background: transparent; font-size: 17px; font-family: 'Inter', sans-serif; color: var(--text-main); outline: none; width: 100%; height: 30px; }
+        .primary-btn { background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; font-family: 'Inter', sans-serif; padding: 16px; width: 100%; display: flex; justify-content: center; align-items: center; min-height: 56px; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3); transition: transform 0.2s; }
+        .primary-btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div class="header"><a href="/settings" class="back-btn">‹</a><h1>Profile</h1></div>
+    <div class="profile-header"><div class="avatar-container"><div class="avatar">J</div></div></div>
+    <div class="section"><div class="section-title">Personal Information</div><div class="card">
+        <div class="form-row"><div class="input-label">Full Name</div><input type="text" class="input-field" value="Jane Doe"></div>
+    </div></div>
+    <div class="section"><button class="primary-btn" onclick="saveProfile()">Save Changes</button></div>
+    <script>
+        function saveProfile() {
+            const btn = document.querySelector('.primary-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "Saving...";
+            setTimeout(() => {
+                btn.innerText = "Saved!";
+                btn.style.background = '#34C759';
+                setTimeout(() => { btn.innerText = originalText; btn.style.background = 'var(--primary)'; }, 2000);
+            }, 800);
+        }
+    </script>
+</body>
+</html>
+    "#)
+}
+
+
+pub async fn analytics_screen() -> impl axum::response::IntoResponse {
+    axum::response::Html(r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Advanced Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #007AFF; --bg: #F2F2F7; --surface: rgba(255, 255, 255, 0.7); --text-main: #000000; --text-secondary: #8E8E93; --border: rgba(0, 0, 0, 0.1); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: 80px; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; margin: 0; }
+        .header { padding: 20px; padding-top: 60px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); background: rgba(242, 242, 247, 0.8); border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+        .back-btn { font-size: 24px; color: var(--primary); text-decoration: none; margin-right: 16px; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+        .header h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+        .section { margin: 24px 16px; }
+        .card { background: var(--surface); border-radius: 16px; padding: 20px; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid var(--border); box-shadow: 0 4px 24px rgba(0,0,0,0.04); margin-bottom: 16px; }
+        .card-title { font-size: 15px; color: var(--text-secondary); font-weight: 500; }
+        .card-value { font-size: 32px; font-family: 'Outfit', sans-serif; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="header"><a href="/" class="back-btn">‹</a><h1>Analytics</h1></div>
+    <div class="section">
+        <div class="card"><div class="card-title">Total Sales</div><div class="card-value">$4,250.00</div></div>
+        <div class="card"><div class="card-title" style="margin-bottom: 16px;">Top Selling Products</div><div>Premium Coffee Beans</div></div>
+    </div>
+</body>
+</html>
+    "#)
+}
+
+
+pub async fn campaigns_screen() -> impl axum::response::IntoResponse {
+    axum::response::Html(r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Email Campaigns</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #007AFF; --bg: #F2F2F7; --surface: rgba(255, 255, 255, 0.7); --text-main: #000000; --text-secondary: #8E8E93; --border: rgba(0, 0, 0, 0.1); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: 80px; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; margin: 0; }
+        .header { padding: 20px; padding-top: 60px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); background: rgba(242, 242, 247, 0.8); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .header-left { display: flex; align-items: center; }
+        .back-btn { font-size: 24px; color: var(--primary); text-decoration: none; margin-right: 16px; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+        .header h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+        .new-btn { background: var(--primary); color: white; border: none; border-radius: 16px; padding: 8px 16px; font-size: 15px; font-weight: 600; font-family: 'Inter', sans-serif; min-height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .section { margin: 24px 16px; }
+        .card { background: var(--surface); border-radius: 16px; padding: 20px; backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid var(--border); box-shadow: 0 4px 24px rgba(0,0,0,0.04); margin-bottom: 16px; display: flex; flex-direction: column; }
+        .campaign-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .campaign-title { font-size: 17px; font-weight: 600; font-family: 'Outfit', sans-serif; }
+        .status-badge { padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-sent { background: rgba(52, 199, 89, 0.1); color: #34C759; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left"><a href="/" class="back-btn">‹</a><h1>Emails</h1></div>
+        <button class="new-btn">+ Create</button>
+    </div>
+    <div class="section">
+        <div class="card">
+            <div class="campaign-header">
+                <div><div class="campaign-title">Spring Sale Announcement</div></div>
+                <div class="status-badge status-sent">Sent</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    "#)
+}
