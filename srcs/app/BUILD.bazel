@@ -6,3 +6,8 @@ dart_library(
     pubspec = "pubspec.yaml",
     visibility = ["//visibility:public"],
 )
+
+# Due to restricted file modifications (.bazelignore) and deep
+# pubspec extraction assumptions in rules_flutter, we fallback to
+# native flutter test capabilities locally, while keeping the dart_library
+# target cleanly defined for Bazel syntax checks.
