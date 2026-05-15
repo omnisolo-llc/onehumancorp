@@ -21,4 +21,6 @@ sh_binary(
 # Per-spec Playwright test targets.
 # Run all:   bazel test //src/e2e:playwright
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
+# Ensure new tests are compiled
+
 define_playwright_tests()
