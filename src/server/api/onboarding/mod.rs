@@ -42,3 +42,18 @@ async fn save_state(
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_generate_logic_placeholder() {
+        let payload = GenerateRequest {
+            name: "Maya Cakes".to_string(),
+            business_type: "Bakery".to_string(),
+        };
+        assert_eq!(payload.name, "Maya Cakes");
+        assert_eq!(payload.business_type, "Bakery");
+    }
+}
