@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
-    use crate::orchestration::departments::types::{DepartmentEvent};
+    use crate::db::DbStore;
     use crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent;
+    use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
     use crate::orchestration::departments::sales_agent::SalesAgent;
+    use crate::orchestration::departments::types::DepartmentEvent;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::MemoryTransport;
     use std::sync::Arc;
     use tokio::sync::RwLock;
     use uuid::Uuid;
-    use crate::db::DbStore;
 
     #[tokio::test]
     async fn test_cross_department_flow() {
@@ -61,12 +61,18 @@ mod tests {
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let pending = orchestrator.get_pending_approvals(&tenant_id).await;
-            if pending.iter().any(|req| req.description.contains("Quote generated for review")) {
+            if pending
+                .iter()
+                .any(|req| req.description.contains("Quote generated for review"))
+            {
                 has_quote = true;
                 break;
             }
         }
 
-        assert!(has_quote, "Cross-department flow should result in a pending quote approval");
+        assert!(
+            has_quote,
+            "Cross-department flow should result in a pending quote approval"
+        );
     }
 }

@@ -1,7 +1,7 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::chat_service_server::ChatService;
 use crate::integrations::registry::IntegrationsRegistry;
+use ::server_ohc::orchestration::chat_service_server::ChatService;
+use ::server_ohc::orchestration::*;
+use tonic::{Request, Response, Status};
 
 pub struct MyChatService {
     registry: std::sync::Arc<IntegrationsRegistry>,
@@ -20,8 +20,11 @@ impl ChatService for MyChatService {
         request: Request<ChatTestRequest>,
     ) -> Result<Response<ChatTestResponse>, Status> {
         let req = request.into_inner();
-        
-        match self.registry.test_connection(&req.integration_id, req.clone()) {
+
+        match self
+            .registry
+            .test_connection(&req.integration_id, req.clone())
+        {
             Ok(_) => Ok(Response::new(ChatTestResponse { success: true })),
             Err(e) => Err(Status::invalid_argument(e)),
         }
@@ -41,8 +44,14 @@ impl ChatService for MyChatService {
         request: Request<ChatSendRequest>,
     ) -> Result<Response<ChatMessage>, Status> {
         let req = request.into_inner();
-        
-        match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
+
+        match self.registry.send_chat_message(
+            &req.integration_id,
+            &req.channel,
+            &req.from_agent,
+            &req.content,
+            &req.thread_id,
+        ) {
             Ok(msg) => Ok(Response::new(msg)),
             Err(e) => Err(Status::internal(e)),
         }

@@ -1,7 +1,7 @@
 use super::shared_tasks::{SharedTaskOrchestrator, SharedTaskV4};
 use crate::db::DB;
-use std::sync::Arc;
 use chrono::Utc;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_shared_task_orchestrator() {
@@ -15,13 +15,29 @@ async fn test_shared_task_orchestrator() {
         return;
     }
 
-    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
 
-    let db = DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
+    let db = DB {
+        pool: pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    };
     let db = Arc::new(db);
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
@@ -50,14 +66,20 @@ async fn test_shared_task_orchestrator() {
         assert_eq!(fetched_task.id, created_task.id);
         assert_eq!(fetched_task.organization_id, "org_123");
 
-        let claimed_task = orchestrator.claim_task("org_123", "agent_123").await.unwrap();
+        let claimed_task = orchestrator
+            .claim_task("org_123", "agent_123")
+            .await
+            .unwrap();
         assert!(claimed_task.is_some());
         let claimed = claimed_task.unwrap();
         assert_eq!(claimed.id, created_task.id);
         assert_eq!(claimed.status, "ASSIGNED");
         assert_eq!(claimed.agent_id.unwrap(), "agent_123");
 
-        let empty_claim = orchestrator.claim_task("org_123", "agent_123").await.unwrap();
+        let empty_claim = orchestrator
+            .claim_task("org_123", "agent_123")
+            .await
+            .unwrap();
         assert!(empty_claim.is_none());
     }
 }
@@ -85,17 +107,34 @@ async fn test_shared_task_orchestrator_sqlite() {
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
-        "#
+        "#,
     )
     .execute(&pool)
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
         .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
         .unwrap();
 
-    let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
+    let db = DB {
+        pool: dummy_pg_pool,
+        store: crate::db::DbStore::Sqlite(pool),
+    };
     let db = Arc::new(db);
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
@@ -117,7 +156,10 @@ async fn test_shared_task_orchestrator_sqlite() {
     let created_task = orchestrator.create_task(task).await.unwrap();
     assert_eq!(created_task.id, "task_1");
 
-    let claimed_task = orchestrator.claim_task("org_123", "agent_123").await.unwrap();
+    let claimed_task = orchestrator
+        .claim_task("org_123", "agent_123")
+        .await
+        .unwrap();
     assert!(claimed_task.is_some());
     let claimed = claimed_task.unwrap();
     assert_eq!(claimed.id, "task_1");
