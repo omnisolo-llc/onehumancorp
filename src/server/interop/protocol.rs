@@ -272,7 +272,7 @@ impl InteropProtocol {
                 match self.bus.publish(msg.clone()).await {
                     Ok(_) => break,
                     Err(e) => {
-                        if pub_retries >= 15 {
+                        if pub_retries >= 3 {
                             cancel();
                             return Err(format!("Failed to publish job dispatch after retries: {}", e));
                         }
@@ -719,7 +719,7 @@ mod tests {
     #[tokio::test]
     async fn test_interop_dispatch_job_retry_failure() {
         let bus = Arc::new(MockFailingBus {
-            failures_left: std::sync::atomic::AtomicUsize::new(20), // More than max retries
+            failures_left: std::sync::atomic::AtomicUsize::new(5), // More than max retries
         });
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "server".to_string());
@@ -785,7 +785,7 @@ mod tests {
     #[tokio::test]
     async fn test_interop_job_status_reporting_retry_failure() {
         let bus = Arc::new(MockFailingBus {
-            failures_left: std::sync::atomic::AtomicUsize::new(20), // More than max retries
+            failures_left: std::sync::atomic::AtomicUsize::new(5), // More than max retries
         });
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
