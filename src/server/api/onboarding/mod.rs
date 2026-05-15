@@ -1,13 +1,15 @@
+use crate::services::onboarding::onboarding_agent::OnboardingAgent;
+use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 use axum::{
-    extract::{State, Json},
-    routing::{post, get},
+    extract::{Json, State},
+    routing::{get, post},
     Router,
 };
 use std::sync::Arc;
-use crate::services::onboarding::onboarding_agent::OnboardingAgent;
-use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
-pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router(
+    agent: Arc<OnboardingAgent>,
+) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
         .route("/state", get(get_state))

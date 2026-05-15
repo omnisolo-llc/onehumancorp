@@ -1,10 +1,11 @@
-use std::sync::RwLock;
+use base64::{engine::general_purpose, Engine as _};
+use chrono::{Duration, Utc};
+use ed25519_dalek::{Signer, SigningKey};
 use serde_json::json;
-use ed25519_dalek::{SigningKey, Signer};
-use base64::{Engine as _, engine::general_purpose};
-use chrono::{Utc, Duration};
+use std::sync::RwLock;
 
-static POWER_SYNC_KEY: RwLock<Option<(SigningKey, ed25519_dalek::VerifyingKey)>> = RwLock::new(None);
+static POWER_SYNC_KEY: RwLock<Option<(SigningKey, ed25519_dalek::VerifyingKey)>> =
+    RwLock::new(None);
 
 fn get_powersync_keys() -> (SigningKey, ed25519_dalek::VerifyingKey) {
     let mut cache = POWER_SYNC_KEY.write().unwrap();
@@ -82,14 +83,19 @@ pub fn generate_powersync_token(sub: &str, org_id: &str) -> Result<String, Strin
     let hdr_bytes = serde_json::to_vec(&hdr).map_err(|e| e.to_string())?;
     let claims_bytes = serde_json::to_vec(&claims).map_err(|e| e.to_string())?;
 
-    let sig_input = format!("{}.{}", 
+    let sig_input = format!(
+        "{}.{}",
         general_purpose::URL_SAFE_NO_PAD.encode(hdr_bytes),
         general_purpose::URL_SAFE_NO_PAD.encode(claims_bytes)
     );
 
     let signature = priv_key.sign(sig_input.as_bytes());
 
-    let token = format!("{}.{}", sig_input, general_purpose::URL_SAFE_NO_PAD.encode(signature.to_bytes()));
+    let token = format!(
+        "{}.{}",
+        sig_input,
+        general_purpose::URL_SAFE_NO_PAD.encode(signature.to_bytes())
+    );
 
     Ok(token)
 }
@@ -101,12 +107,18 @@ mod tests {
     #[test]
     fn test_get_powersync_jwks() {
         let jwks = get_powersync_jwks();
-        let keys = jwks.get("keys").and_then(|k| k.as_array()).expect("expected keys array");
+        let keys = jwks
+            .get("keys")
+            .and_then(|k| k.as_array())
+            .expect("expected keys array");
         assert_eq!(keys.len(), 1);
         let key = keys[0].as_object().expect("expected key object");
         assert_eq!(key.get("kty").and_then(|v| v.as_str()), Some("OKP"));
         assert_eq!(key.get("crv").and_then(|v| v.as_str()), Some("Ed25519"));
-        assert_eq!(key.get("kid").and_then(|v| v.as_str()), Some("powersync-key-1"));
+        assert_eq!(
+            key.get("kid").and_then(|v| v.as_str()),
+            Some("powersync-key-1")
+        );
         assert!(key.contains_key("x"));
     }
 
@@ -114,7 +126,7 @@ mod tests {
     fn test_generate_powersync_token() {
         let token = generate_powersync_token("user-1", "org-1").unwrap();
         assert!(!token.is_empty());
-        
+
         let parts: Vec<&str> = token.split('.').collect();
         assert_eq!(parts.len(), 3);
     }

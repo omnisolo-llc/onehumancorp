@@ -1,10 +1,10 @@
 use async_trait::async_trait;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use reqwest::Client;
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use super::LlmClient;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -63,7 +63,6 @@ static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
-
 
 pub struct AnthropicClient {
     api_key: String,
@@ -273,7 +272,9 @@ impl LlmClient for AnthropicClient {
         // Prompt caching: cache the last user message
         if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user") {
             if let Some(last_content) = last_user.content.last_mut() {
-                last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
+                last_content.cache_control = Some(AnthropicCacheControl {
+                    r#type: "ephemeral",
+                });
             }
         }
 
@@ -283,7 +284,9 @@ impl LlmClient for AnthropicClient {
             vec![AnthropicSystem {
                 r#type: "text",
                 text: req.system.clone(),
-                cache_control: Some(AnthropicCacheControl { r#type: "ephemeral" }),
+                cache_control: Some(AnthropicCacheControl {
+                    r#type: "ephemeral",
+                }),
             }]
         };
 
@@ -297,7 +300,9 @@ impl LlmClient for AnthropicClient {
                 description: t.description.clone(),
                 input_schema: t.parameters.clone(),
                 cache_control: if i == num_tools - 1 {
-                    Some(AnthropicCacheControl { r#type: "ephemeral" })
+                    Some(AnthropicCacheControl {
+                        r#type: "ephemeral",
+                    })
                 } else {
                     None
                 },
@@ -341,11 +346,14 @@ impl LlmClient for AnthropicClient {
         let result = resp.json::<AnthropicResponse>().await;
         if result.is_err() {
             cb.record_failure();
-            return Err(format!("anthropic api error: failed to parse response: {:?}", result.unwrap_err()).into());
+            return Err(format!(
+                "anthropic api error: failed to parse response: {:?}",
+                result.unwrap_err()
+            )
+            .into());
         }
         let result = result.unwrap();
         cb.record_success();
-
 
         // Extract content + tool calls from response
         let mut text_content = String::new();
@@ -363,7 +371,10 @@ impl LlmClient for AnthropicClient {
                         tool_calls.push(ToolCall {
                             id: id.clone(),
                             name: name.clone(),
-                            arguments: block.input.clone().unwrap_or(Value::Object(Default::default())),
+                            arguments: block
+                                .input
+                                .clone()
+                                .unwrap_or(Value::Object(Default::default())),
                         });
                     }
                 }
@@ -382,7 +393,7 @@ impl LlmClient for AnthropicClient {
                 response_id: result.id.clone(),
                 previous_response_id: None,
             },
-                        usage: Usage {
+            usage: Usage {
                 input_tokens: result.usage.input_tokens,
                 output_tokens: result.usage.output_tokens,
                 cache_creation_input_tokens: result.usage.cache_creation_input_tokens,

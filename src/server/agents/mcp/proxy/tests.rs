@@ -1,15 +1,31 @@
-use super::server::ReverseTunnelServer;
 use super::client::LocalProxyClient;
-use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::{McpReverseTunnelService, McpReverseTunnelServiceServer};
+use super::server::ReverseTunnelServer;
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use tonic::transport::{Server, Endpoint};
+use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::{
+    McpReverseTunnelService, McpReverseTunnelServiceServer,
+};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
+use tonic::transport::{Endpoint, Server};
 
 #[tokio::test]
 async fn test_proxy_tunnel() {
-    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
         .max_connections(1)
         .acquire_timeout(std::time::Duration::from_millis(1))
         .connect_lazy("postgres://invalid:invalid@localhost:1/test")
@@ -18,7 +34,9 @@ async fn test_proxy_tunnel() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let server = ReverseTunnelServer { pool: Arc::new(pool) };
+    let server = ReverseTunnelServer {
+        pool: Arc::new(pool),
+    };
 
     tokio::spawn(async move {
         let _ = Server::builder()

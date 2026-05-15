@@ -46,7 +46,8 @@ pub fn auth_mode_from_env() -> AuthMode {
 fn hmac_token(token: &str) -> Vec<u8> {
     let key = std::env::var("OHC_AGENT_AUTH_KEY")
         .unwrap_or_else(|_| "default_auth_key_change_me".to_string());
-    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC can take key of any size");
+    let mut mac =
+        HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC can take key of any size");
     mac.update(token.as_bytes());
     mac.finalize().into_bytes().to_vec()
 }
@@ -64,15 +65,15 @@ fn verify(password: &str, hash: &str) -> Result<bool, String> {
     bcrypt::verify(password, hash).map_err(|e| e.to_string())
 }
 
-use serde::{Deserialize, Serialize};
-use jsonwebtoken::{decode, encode, Header, Validation, DecodingKey, EncodingKey};
-use chrono::{Utc, Duration, DateTime};
-use rand::RngCore;
 use ::server_common::auth_utils::set_org_context;
 use ::server_common::Claims;
-use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::auth_service_server::AuthService;
 use ::server_ohc::orchestration::*;
+use chrono::{DateTime, Duration, Utc};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use rand::RngCore;
+use serde::{Deserialize, Serialize};
+use tonic::{Request, Response, Status};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -175,24 +176,33 @@ impl Store {
         let mut roles = HashMap::new();
         let now = Utc::now();
 
-        roles.insert(ROLE_ADMIN.to_string(), Role {
-            id: ROLE_ADMIN.to_string(),
-            name: ROLE_ADMIN.to_string(),
-            permissions: vec!["*".to_string()],
-            created_at: now,
-        });
-        roles.insert(ROLE_OPERATOR.to_string(), Role {
-            id: ROLE_OPERATOR.to_string(),
-            name: ROLE_OPERATOR.to_string(),
-            permissions: vec!["read".to_string(), "write".to_string()],
-            created_at: now,
-        });
-        roles.insert(ROLE_VIEWER.to_string(), Role {
-            id: ROLE_VIEWER.to_string(),
-            name: ROLE_VIEWER.to_string(),
-            permissions: vec!["read".to_string()],
-            created_at: now,
-        });
+        roles.insert(
+            ROLE_ADMIN.to_string(),
+            Role {
+                id: ROLE_ADMIN.to_string(),
+                name: ROLE_ADMIN.to_string(),
+                permissions: vec!["*".to_string()],
+                created_at: now,
+            },
+        );
+        roles.insert(
+            ROLE_OPERATOR.to_string(),
+            Role {
+                id: ROLE_OPERATOR.to_string(),
+                name: ROLE_OPERATOR.to_string(),
+                permissions: vec!["read".to_string(), "write".to_string()],
+                created_at: now,
+            },
+        );
+        roles.insert(
+            ROLE_VIEWER.to_string(),
+            Role {
+                id: ROLE_VIEWER.to_string(),
+                name: ROLE_VIEWER.to_string(),
+                permissions: vec!["read".to_string()],
+                created_at: now,
+            },
+        );
 
         let issuer_url = std::env::var("OIDC_ISSUER_URL").unwrap_or_default();
         let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
@@ -221,9 +231,11 @@ impl Store {
     fn seed_default_admin(&self, now: DateTime<Utc>) {
         let admin_user = std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
         let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
-        let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
+        let admin_email =
+            std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
 
-        let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
+        let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST })
+            .expect("Failed to hash password");
 
         let id = hex::encode(random_bytes(8));
 
@@ -241,11 +253,30 @@ impl Store {
         };
 
         self.users.write().unwrap().insert(id.clone(), admin);
-        self.by_name.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
-        self.by_email.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
+        self.by_name.write().unwrap().insert(
+            TenantKey {
+                org_id: "".to_string(),
+                key: admin_user,
+            },
+            id.clone(),
+        );
+        self.by_email.write().unwrap().insert(
+            TenantKey {
+                org_id: "".to_string(),
+                key: admin_email,
+            },
+            id,
+        );
     }
 
-    pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+    pub fn create_user(
+        &self,
+        username: String,
+        email: String,
+        password: String,
+        roles: Vec<String>,
+        org_id: String,
+    ) -> Result<User, String> {
         if username.is_empty() {
             return Err("username is required".to_string());
         }
@@ -257,17 +288,24 @@ impl Store {
         let mut by_name = self.by_name.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
 
-        let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
+        let name_key = TenantKey {
+            org_id: org_id.clone(),
+            key: username.clone(),
+        };
         if by_name.contains_key(&name_key) {
             return Err("username already taken".to_string());
         }
 
-        let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
+        let email_key = TenantKey {
+            org_id: org_id.clone(),
+            key: email.clone(),
+        };
         if by_email.contains_key(&email_key) {
             return Err("email already registered".to_string());
         }
 
-        let hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
+        let hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST })
+            .expect("Failed to hash password");
 
         let id = hex::encode(random_bytes(8));
         let now = Utc::now();
@@ -292,19 +330,34 @@ impl Store {
         Ok(user)
     }
 
-    pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+    pub fn authenticate(
+        &self,
+        username: &str,
+        password: &str,
+        org_id: &str,
+    ) -> Result<User, String> {
         let by_name = self.by_name.read().unwrap();
         let users = self.users.read().unwrap();
 
-        let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
+        let name_key = TenantKey {
+            org_id: org_id.to_string(),
+            key: username.to_string(),
+        };
         let mut user_id_opt = by_name.get(&name_key).cloned();
 
         if user_id_opt.is_none() && org_id.is_empty() {
-            user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
+            user_id_opt = by_name
+                .get(&TenantKey {
+                    org_id: "".to_string(),
+                    key: username.to_string(),
+                })
+                .cloned();
         }
 
         let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
-        let user = users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?;
+        let user = users
+            .get(&user_id)
+            .ok_or_else(|| "invalid credentials".to_string())?;
 
         if !user.active {
             return Err("account disabled".to_string());
@@ -341,34 +394,48 @@ impl Store {
 
     pub fn list_users(&self, org_id: &str) -> Vec<User> {
         let users = self.users.read().unwrap();
-        users.values()
-            .filter(|u| {
-                org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
-            })
+        users
+            .values()
+            .filter(|u| org_id.is_empty() || u.organization_id.as_deref() == Some(org_id))
             .cloned()
             .collect()
     }
 
-    pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+    pub fn update_user(
+        &self,
+        id: &str,
+        email_ptr: Option<String>,
+        roles: Option<Vec<String>>,
+        active_ptr: Option<bool>,
+        org_id: &str,
+    ) -> Result<User, String> {
         let mut users = self.users.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
 
-        let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
+        let u = users
+            .get_mut(id)
+            .ok_or_else(|| "user not found".to_string())?;
 
         if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
-                 return Err("user not found".to_string());
-             }
+            if u.organization_id.as_deref() != Some(org_id) {
+                return Err("user not found".to_string());
+            }
         }
 
         if let Some(email) = email_ptr {
             if email != u.email {
                 let org = u.organization_id.clone().unwrap_or_default();
-                let email_key = TenantKey { org_id: org, key: email.clone() };
+                let email_key = TenantKey {
+                    org_id: org,
+                    key: email.clone(),
+                };
                 if by_email.contains_key(&email_key) {
                     return Err("email already registered".to_string());
                 }
-                by_email.remove(&TenantKey { org_id: u.organization_id.clone().unwrap_or_default(), key: u.email.clone() });
+                by_email.remove(&TenantKey {
+                    org_id: u.organization_id.clone().unwrap_or_default(),
+                    key: u.email.clone(),
+                });
                 u.email = email;
                 by_email.insert(email_key, id.to_string());
             }
@@ -396,16 +463,25 @@ impl Store {
         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
 
         if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
-                 return Err("user not found".to_string());
-             }
+            if u.organization_id.as_deref() != Some(org_id) {
+                return Err("user not found".to_string());
+            }
         }
 
         let org = u.organization_id.clone().unwrap_or_default();
-        by_name.remove(&TenantKey { org_id: org.clone(), key: u.username.clone() });
-        by_email.remove(&TenantKey { org_id: org.clone(), key: u.email.clone() });
+        by_name.remove(&TenantKey {
+            org_id: org.clone(),
+            key: u.username.clone(),
+        });
+        by_email.remove(&TenantKey {
+            org_id: org.clone(),
+            key: u.email.clone(),
+        });
         if let Some(ref oidc) = u.oidc_subject {
-            by_oidc.remove(&TenantKey { org_id: org, key: oidc.clone() });
+            by_oidc.remove(&TenantKey {
+                org_id: org,
+                key: oidc.clone(),
+            });
         }
 
         users.remove(id);
@@ -424,32 +500,36 @@ impl Store {
     pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
         let revoked = self.revoked.read().unwrap();
         if let Some(exp) = revoked.get(jti) {
-             if exp > &Utc::now() {
-                 return true;
-             }
+            if exp > &Utc::now() {
+                return true;
+            }
         }
         false
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
-            let now = chrono::Utc::now();
-            let claims = Claims {
-                sub: _user.id.clone(),
-                username: _user.username.clone(),
-                email: _user.email.clone(),
-                roles: _user.roles.clone(),
-                organization_id: _user.organization_id.clone(),
-                session_id: None,
-                iat: now.timestamp(),
-                exp: (now + chrono::Duration::hours(24)).timestamp(),
-                jti: hex::encode(random_bytes(8)),
-            };
+        let now = chrono::Utc::now();
+        let claims = Claims {
+            sub: _user.id.clone(),
+            username: _user.username.clone(),
+            email: _user.email.clone(),
+            roles: _user.roles.clone(),
+            organization_id: _user.organization_id.clone(),
+            session_id: None,
+            iat: now.timestamp(),
+            exp: (now + chrono::Duration::hours(24)).timestamp(),
+            jti: hex::encode(random_bytes(8)),
+        };
 
-            let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-            let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
-                .map_err(|e| e.to_string())?;
+        let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+        let token = jsonwebtoken::encode(
+            &header,
+            &claims,
+            &jsonwebtoken::EncodingKey::from_secret(&self.secret),
+        )
+        .map_err(|e| e.to_string())?;
 
-            Ok(token)
+        Ok(token)
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
@@ -468,42 +548,55 @@ impl Store {
         }
 
         let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
-            let token_data = jsonwebtoken::decode::<Claims>(
-                _token,
-                &jsonwebtoken::DecodingKey::from_secret(&self.secret),
-                &validation
-            );
+        let token_data = jsonwebtoken::decode::<Claims>(
+            _token,
+            &jsonwebtoken::DecodingKey::from_secret(&self.secret),
+            &validation,
+        );
 
-            match token_data {
-                Ok(data) => {
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token: empty claims".to_string());
-                    }
-                    if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
-                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
-                    }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
-                        return Err("token revoked".to_string());
-                    }
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token claims".to_string());
-                    }
-                    Ok(data.claims)
+        match token_data {
+            Ok(data) => {
+                if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
+                    return Err("Invalid token: empty claims".to_string());
                 }
-                Err(_) => {
-                    let oidc_cfg = {
-                        let c = self.oidc_cfg.read().unwrap();
-                        crate::oidc::OIDCConfig {
-                            issuer_url: c.issuer_url.clone(),
-                            client_id: c.client_id.clone(),
-                            enabled: c.enabled,
-                        }
-                    };
-                    if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
-                        return Ok(claims);
-                    }
-                    Err("Invalid token".to_string())
+                if ::server_config::get().multitenant
+                    && data
+                        .claims
+                        .organization_id
+                        .clone()
+                        .unwrap_or_default()
+                        .trim()
+                        .is_empty()
+                {
+                    return Err(
+                        "Invalid token: organization_id is required in cloud mode".to_string()
+                    );
                 }
+                if self.is_revoked(
+                    &data.claims.jti,
+                    &data.claims.organization_id.clone().unwrap_or_default(),
+                ) {
+                    return Err("token revoked".to_string());
+                }
+                if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
+                    return Err("Invalid token claims".to_string());
+                }
+                Ok(data.claims)
+            }
+            Err(_) => {
+                let oidc_cfg = {
+                    let c = self.oidc_cfg.read().unwrap();
+                    crate::oidc::OIDCConfig {
+                        issuer_url: c.issuer_url.clone(),
+                        client_id: c.client_id.clone(),
+                        enabled: c.enabled,
+                    }
+                };
+                if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                    return Ok(claims);
+                }
+                Err("Invalid token".to_string())
+            }
         }
     }
 }
@@ -534,12 +627,14 @@ impl Default for Store {
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
     if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" {
-         return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
+        return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
     }
     Ok((parts[4].to_string(), parts[6].to_string()))
 }
 
-pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Result<String, String> {
+pub fn extract_spiffe_id_from_metadata(
+    md: &tonic::metadata::MetadataMap,
+) -> Result<String, String> {
     md.get("x-spiffe-id")
         .ok_or_else(|| "missing x-spiffe-id header".to_string())?
         .to_str()
@@ -555,61 +650,82 @@ pub struct AuthInfo {
 
 #[tonic::async_trait]
 impl AuthService for AuthServiceServerImpl {
-    async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
+    async fn login(
+        &self,
+        request: Request<LoginRequest>,
+    ) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
 
         if ::server_config::get().multitenant && req.organization_id.is_empty() {
-            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+            return Err(Status::invalid_argument(
+                "organization_id is required in cloud mode to maintain tenant isolation",
+            ));
         }
 
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
-            Ok(user) => {
-                match self.store.issue_token(&user) {
-                    Ok(token) => {
-                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
-                         Ok(Response::new(LoginResponse {
-                             token,
-                             expires_at,
-                         }))
-                    }
-                    Err(e) => Err(Status::internal(e)),
+        match self
+            .store
+            .authenticate(&req.username, &req.password, &req.organization_id)
+        {
+            Ok(user) => match self.store.issue_token(&user) {
+                Ok(token) => {
+                    let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                    Ok(Response::new(LoginResponse { token, expires_at }))
                 }
-            }
+                Err(e) => Err(Status::internal(e)),
+            },
             Err(e) => Err(Status::unauthenticated(e)),
         }
     }
 
-    async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
+    async fn register(
+        &self,
+        request: Request<CreateUserRequest>,
+    ) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
         if ::server_config::get().multitenant && req.organization_id.is_empty() {
-             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+            return Err(Status::invalid_argument(
+                "organization_id is required in cloud mode to maintain tenant isolation",
+            ));
         }
 
-        let user = self.store.create_user(
-            req.email.clone(),
-            req.email.clone(),
-            req.password,
-            vec![ROLE_VIEWER.to_string()],
-            req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        let user = self
+            .store
+            .create_user(
+                req.email.clone(),
+                req.email.clone(),
+                req.password,
+                vec![ROLE_VIEWER.to_string()],
+                req.organization_id.clone(),
+            )
+            .map_err(|e| Status::internal(e))?;
 
-        let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
+        let token = self
+            .store
+            .issue_token(&user)
+            .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(LoginResponse {
-             token,
-             expires_at: (Utc::now() + chrono::Duration::hours(24)).timestamp(),
+            token,
+            expires_at: (Utc::now() + chrono::Duration::hours(24)).timestamp(),
         }))
     }
 
-    async fn logout(&self, _request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+    async fn logout(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
         Ok(Response::new(EmptyResponse {}))
     }
 
     async fn get_me(&self, request: Request<EmptyRequest>) -> Result<Response<UserProto>, Status> {
-        let auth_info = request.extensions().get::<AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id)
+        let user = self
+            .store
+            .get_user(&auth_info.spiffe_id, &auth_info.org_id)
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -625,34 +741,48 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn list_users(&self, request: Request<ListUsersRequest>) -> Result<Response<ListUsersResponse>, Status> {
-        let auth_info = request.extensions().get::<AuthInfo>()
+    async fn list_users(
+        &self,
+        request: Request<ListUsersRequest>,
+    ) -> Result<Response<ListUsersResponse>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
         let users = self.store.list_users(&auth_info.org_id);
-        let proto_users = users.into_iter().map(|u| UserProto {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.roles,
-            active: u.active,
-            organization_id: u.organization_id.unwrap_or_default(),
-            created_at_unix: u.created_at.timestamp(),
-            updated_at_unix: u.updated_at.timestamp(),
-            oidc_subject: u.oidc_subject.unwrap_or_default(),
-        }).collect();
+        let proto_users = users
+            .into_iter()
+            .map(|u| UserProto {
+                id: u.id,
+                username: u.username,
+                email: u.email,
+                roles: u.roles,
+                active: u.active,
+                organization_id: u.organization_id.unwrap_or_default(),
+                created_at_unix: u.created_at.timestamp(),
+                updated_at_unix: u.updated_at.timestamp(),
+                oidc_subject: u.oidc_subject.unwrap_or_default(),
+            })
+            .collect();
         Ok(Response::new(ListUsersResponse { users: proto_users }))
     }
 
-    async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
+    async fn create_user(
+        &self,
+        request: Request<CreateUserRequest>,
+    ) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        let user = self.store.create_user(
-            req.email.clone(),
-            req.email.clone(),
-            "temp".to_string(),
-            vec![],
-            req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        let user = self
+            .store
+            .create_user(
+                req.email.clone(),
+                req.email.clone(),
+                "temp".to_string(),
+                vec![],
+                req.organization_id.clone(),
+            )
+            .map_err(|e| Status::internal(e))?;
         Ok(Response::new(UserProto {
             id: user.id,
             username: user.username,
@@ -666,11 +796,18 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserProto>, Status> {
-        let auth_info = request.extensions().get::<AuthInfo>()
+    async fn get_user(
+        &self,
+        request: Request<GetUserRequest>,
+    ) -> Result<Response<UserProto>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id)
+        let user = self
+            .store
+            .get_user(&request.get_ref().id, &auth_info.org_id)
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -686,13 +823,20 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
-        let org_id = request.extensions().get::<AuthInfo>()
+    async fn update_user(
+        &self,
+        request: Request<UpdateUserRequest>,
+    ) -> Result<Response<UserProto>, Status> {
+        let org_id = request
+            .extensions()
+            .get::<AuthInfo>()
             .map(|ai| ai.org_id.clone())
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let req = request.into_inner();
 
-        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
+        let user = self
+            .store
+            .update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
@@ -708,18 +852,27 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<EmptyResponse>, Status> {
-        let org_id = request.extensions().get::<AuthInfo>()
+    async fn delete_user(
+        &self,
+        request: Request<DeleteUserRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        let org_id = request
+            .extensions()
+            .get::<AuthInfo>()
             .map(|ai| ai.org_id.clone())
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        self.store.delete_user(&request.get_ref().id, &org_id)
+        self.store
+            .delete_user(&request.get_ref().id, &org_id)
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(EmptyResponse {}))
     }
 
-    async fn list_roles(&self, _request: Request<EmptyRequest>) -> Result<Response<ListRolesResponse>, Status> {
+    async fn list_roles(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<ListRolesResponse>, Status> {
         Ok(Response::new(ListRolesResponse {
             roles: vec![
                 RoleProto {
@@ -744,7 +897,10 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn create_role(&self, request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
+    async fn create_role(
+        &self,
+        request: Request<CreateRoleRequest>,
+    ) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
     }
 }

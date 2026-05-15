@@ -1,7 +1,7 @@
+use dashmap::DashMap;
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use dashmap::DashMap;
 
 use super::{Tool, ToolExecutor};
 
@@ -11,13 +11,10 @@ pub struct RecallObservationExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for RecallObservationExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let tool_call_id = args["tool_call_id"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("recall_observation: tool_call_id is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let tool_call_id = args["tool_call_id"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("recall_observation: tool_call_id is required".to_string())
+        })?;
 
         match self.observation_store.get(tool_call_id) {
             Some(content) => Ok(content.clone()),

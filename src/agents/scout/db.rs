@@ -1,6 +1,6 @@
-use sqlx::{Pool, Postgres, Sqlite, Row};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use sqlx::{Pool, Postgres, Row, Sqlite};
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct ToolIntegration {
@@ -77,7 +77,11 @@ impl ScoutDb {
         Ok(())
     }
 
-    pub async fn get_integration(&self, id: &str, tenant_id: Option<&str>) -> Result<Option<ToolIntegration>, sqlx::Error> {
+    pub async fn get_integration(
+        &self,
+        id: &str,
+        tenant_id: Option<&str>,
+    ) -> Result<Option<ToolIntegration>, sqlx::Error> {
         match self {
             Self::Postgres(pool) => {
                 let uuid = match Uuid::parse_str(id) {
@@ -92,7 +96,11 @@ impl ScoutDb {
                         .await?;
                 }
                 let query = "SELECT id, tenant_id, name, description, api_url, integration_code, status, created_at FROM tool_integrations WHERE id = $1";
-                let row = match sqlx::query(query).bind(uuid).fetch_optional(&mut *tx).await? {
+                let row = match sqlx::query(query)
+                    .bind(uuid)
+                    .fetch_optional(&mut *tx)
+                    .await?
+                {
                     Some(r) => r,
                     None => {
                         tx.rollback().await?;
@@ -115,7 +123,12 @@ impl ScoutDb {
             Self::Sqlite(pool) => {
                 let row = if let Some(tenant) = tenant_id {
                     let query = "SELECT id, tenant_id, name, description, api_url, integration_code, status, created_at FROM tool_integrations WHERE id = ? AND tenant_id = ?";
-                    match sqlx::query(query).bind(id).bind(tenant).fetch_optional(pool).await? {
+                    match sqlx::query(query)
+                        .bind(id)
+                        .bind(tenant)
+                        .fetch_optional(pool)
+                        .await?
+                    {
                         Some(r) => r,
                         None => return Ok(None),
                     }

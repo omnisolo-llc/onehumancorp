@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock, OnceLock};
 use serde::{de::DeserializeOwned, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
 
 pub struct HybridCache<T> {
@@ -12,7 +12,7 @@ pub struct HybridCache<T> {
 
 impl<T> HybridCache<T>
 where
-    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static
+    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
 {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
         Self {
@@ -34,9 +34,11 @@ where
 
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
         if let Some(client) = &self.redis_client {
-            let conn = self.redis_conn.get_or_try_init(|| async {
-                client.get_multiplexed_tokio_connection().await
-            }).await.ok()?;
+            let conn = self
+                .redis_conn
+                .get_or_try_init(|| async { client.get_multiplexed_tokio_connection().await })
+                .await
+                .ok()?;
             Some(conn.clone())
         } else {
             None
@@ -91,7 +93,8 @@ where
         if let Ok(mut guard) = self.get_local().write() {
             if guard.len() >= self.max_local_capacity && !guard.contains_key(key) {
                 let now = std::time::Instant::now();
-                let keys_to_remove: Vec<String> = guard.iter()
+                let keys_to_remove: Vec<String> = guard
+                    .iter()
                     .filter(|(_, (_, expiry))| *expiry <= now)
                     .map(|(k, _)| k.clone())
                     .collect();
@@ -128,9 +131,15 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_cache_capacity_eviction() {
         let cache = HybridCache::<String>::with_capacity(None, 2);
-        cache.set("k1", "v1".to_string(), Duration::from_secs(60)).await;
-        cache.set("k2", "v2".to_string(), Duration::from_secs(60)).await;
-        cache.set("k3", "v3".to_string(), Duration::from_secs(60)).await;
+        cache
+            .set("k1", "v1".to_string(), Duration::from_secs(60))
+            .await;
+        cache
+            .set("k2", "v2".to_string(), Duration::from_secs(60))
+            .await;
+        cache
+            .set("k3", "v3".to_string(), Duration::from_secs(60))
+            .await;
 
         let local = cache.get_local().read().unwrap();
         assert_eq!(local.len(), 2);

@@ -11,7 +11,10 @@ pub fn gzip_compress(data: &[u8]) -> std::io::Result<Vec<u8>> {
 
 /// should_compress checks headers to decide if response should be compressed.
 pub fn should_compress(headers: &std::collections::HashMap<String, String>) -> bool {
-    let accept_encoding = headers.get("Accept-Encoding").map(|s| s.as_str()).unwrap_or("");
+    let accept_encoding = headers
+        .get("Accept-Encoding")
+        .map(|s| s.as_str())
+        .unwrap_or("");
     let upgrade = headers.get("Upgrade").map(|s| s.as_str()).unwrap_or("");
     let accept = headers.get("Accept").map(|s| s.as_str()).unwrap_or("");
 
@@ -30,20 +33,20 @@ pub fn should_compress(headers: &std::collections::HashMap<String, String>) -> b
 mod tests {
     use super::*;
     use flate2::read::GzDecoder;
-    use std::io::Read;
     use std::collections::HashMap;
+    use std::io::Read;
 
     #[test]
     fn test_gzip_compress() {
         let data = b"hello world";
         let compressed = gzip_compress(data).unwrap();
-        
+
         assert!(compressed.len() > 0);
-        
+
         let mut decoder = GzDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
         decoder.read_to_end(&mut decompressed).unwrap();
-        
+
         assert_eq!(decompressed, data);
     }
 

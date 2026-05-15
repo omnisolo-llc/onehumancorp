@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use sqlx::{PgPool, Row};
 use chrono::{DateTime, Utc};
+use sqlx::{PgPool, Row};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct AutoDreamSyncRecord {
@@ -18,9 +18,16 @@ pub struct AutoDreamSyncRecord {
 
 #[async_trait]
 pub trait AutoDreamSyncService: Send + Sync {
-    async fn fetch_pending_syncs(&self, limit: i64) -> Result<Vec<AutoDreamSyncRecord>, Box<dyn std::error::Error>>;
-    async fn process_incoming_syncs(&self, records: Vec<AutoDreamSyncRecord>) -> Result<(), Box<dyn std::error::Error>>;
-    async fn mark_records_synced(&self, ids: Vec<String>) -> Result<(), Box<dyn std::error::Error>>;
+    async fn fetch_pending_syncs(
+        &self,
+        limit: i64,
+    ) -> Result<Vec<AutoDreamSyncRecord>, Box<dyn std::error::Error>>;
+    async fn process_incoming_syncs(
+        &self,
+        records: Vec<AutoDreamSyncRecord>,
+    ) -> Result<(), Box<dyn std::error::Error>>;
+    async fn mark_records_synced(&self, ids: Vec<String>)
+        -> Result<(), Box<dyn std::error::Error>>;
 }
 
 pub struct AutoDreamSyncServiceImpl {
@@ -35,7 +42,10 @@ impl AutoDreamSyncServiceImpl {
 
 #[async_trait]
 impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
-    async fn fetch_pending_syncs(&self, limit: i64) -> Result<Vec<AutoDreamSyncRecord>, Box<dyn std::error::Error>> {
+    async fn fetch_pending_syncs(
+        &self,
+        limit: i64,
+    ) -> Result<Vec<AutoDreamSyncRecord>, Box<dyn std::error::Error>> {
         let rows = sqlx::query(
             r#"
             SELECT
@@ -52,7 +62,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
             FROM autodream_memories
             WHERE sync_status = 'pending'
             LIMIT $1
-            "#
+            "#,
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -77,12 +87,18 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
         Ok(records)
     }
 
-    async fn process_incoming_syncs(&self, records: Vec<AutoDreamSyncRecord>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_incoming_syncs(
+        &self,
+        records: Vec<AutoDreamSyncRecord>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system")
+            .await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
         for record in records {
-            let id = uuid::Uuid::parse_str(&record.id).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+            let id = uuid::Uuid::parse_str(&record.id)
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             sqlx::query(
                 r#"
                 INSERT INTO autodream_memories
@@ -117,18 +133,24 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
         Ok(())
     }
 
-    async fn mark_records_synced(&self, ids: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn mark_records_synced(
+        &self,
+        ids: Vec<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system")
+            .await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
         for id_str in ids {
-            let id = uuid::Uuid::parse_str(&id_str).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+            let id = uuid::Uuid::parse_str(&id_str)
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
             sqlx::query(
                 r#"
                 UPDATE autodream_memories
                 SET sync_status = 'synced', last_sync_at = $1
                 WHERE id = $2::uuid
-                "#
+                "#,
             )
             .bind(Utc::now())
             .bind(id)
@@ -153,8 +175,21 @@ mod tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)
             .unwrap();

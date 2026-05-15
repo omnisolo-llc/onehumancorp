@@ -17,7 +17,11 @@ impl BudgetManager {
         }
     }
 
-    pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(
+        mut self,
+        tenant_id: String,
+        store: std::sync::Arc<::server_harness::telemetry::ViolationStore>,
+    ) -> Self {
         self.tenant_id = Some(tenant_id);
         self.telemetry_store = Some(store);
         self
@@ -75,17 +79,17 @@ mod tests {
     #[test]
     fn test_budget_manager() {
         let manager = BudgetManager::new(100.0);
-        
+
         assert_eq!(manager.get_remaining(), 100.0);
-        
+
         assert!(manager.record_spend(50.0).is_ok());
         assert_eq!(manager.get_remaining(), 50.0);
-        
+
         let err = manager.record_spend(60.0).unwrap_err();
         assert!(err.contains("budget exceeded"));
-        
+
         assert_eq!(manager.get_remaining(), 50.0); // Should not change!
-        
+
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 

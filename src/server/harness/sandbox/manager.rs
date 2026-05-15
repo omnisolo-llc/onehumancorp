@@ -53,25 +53,31 @@ impl SandboxAdapter for SandboxManager {
         let mut ast_parser = ASTParser::new();
         if let Err(reason) = ast_parser.parse_for_security(cmd) {
             let details = json!({ "command": cmd, "reason": reason });
-            let _ = self.violation_store.record_violation(
-                "system",
-                "unknown_agent",
-                "unknown_session",
-                "ast_security_violation",
-                details
-            ).await;
+            let _ = self
+                .violation_store
+                .record_violation(
+                    "system",
+                    "unknown_agent",
+                    "unknown_session",
+                    "ast_security_violation",
+                    details,
+                )
+                .await;
             return Err(reason);
         }
 
         if !self.evaluator.evaluate(cmd) {
             let details = json!({ "command": cmd });
-            let _ = self.violation_store.record_violation(
-                "system",
-                "unknown_agent",
-                "unknown_session",
-                "command_execution",
-                details
-            ).await;
+            let _ = self
+                .violation_store
+                .record_violation(
+                    "system",
+                    "unknown_agent",
+                    "unknown_session",
+                    "command_execution",
+                    details,
+                )
+                .await;
             return Err("Command execution denied by sandbox policy".to_string());
         }
 
@@ -79,8 +85,8 @@ impl SandboxAdapter for SandboxManager {
     }
 
     async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
-        let policy: SandboxPolicy = serde_json::from_str(policy_json)
-            .map_err(|e| format!("Invalid policy JSON: {}", e))?;
+        let policy: SandboxPolicy =
+            serde_json::from_str(policy_json).map_err(|e| format!("Invalid policy JSON: {}", e))?;
 
         self.evaluator.update_policy(policy.clone());
         self.wrapper.update_policy(policy);

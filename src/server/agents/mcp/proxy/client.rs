@@ -1,14 +1,16 @@
+use super::blob::{create_blob_provider, BlobProvider};
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer, RegisterProxyRequest, proxy_to_server};
-use tonic::transport::Channel;
-use tonic::Request;
+use ::server_ohc::mcp_proxy::{
+    proxy_to_server, ProxyToServer, RegisterProxyRequest, ServerToProxy,
+};
+use std::process::Stdio;
+use std::sync::Arc;
+use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tokio::process::Command;
-use std::process::Stdio;
-use tracing::{info, warn, error};
-use super::blob::{create_blob_provider, BlobProvider};
-use std::sync::Arc;
+use tonic::transport::Channel;
+use tonic::Request;
+use tracing::{error, info, warn};
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
@@ -18,7 +20,8 @@ pub struct LocalProxyClient {
 
 impl LocalProxyClient {
     pub async fn new(endpoint_url: String, spiffe_id: String) -> Self {
-        let channel = Channel::from_shared(endpoint_url).unwrap()
+        let channel = Channel::from_shared(endpoint_url)
+            .unwrap()
             .connect()
             .await
             .unwrap();
@@ -30,7 +33,10 @@ impl LocalProxyClient {
         }
     }
 
-    pub fn new_with_channel(client: McpReverseTunnelServiceClient<Channel>, spiffe_id: String) -> Self {
+    pub fn new_with_channel(
+        client: McpReverseTunnelServiceClient<Channel>,
+        spiffe_id: String,
+    ) -> Self {
         Self {
             client,
             spiffe_id,
@@ -44,15 +50,24 @@ impl LocalProxyClient {
         // Initial registration
         let reg = RegisterProxyRequest {
             spiffe_id: self.spiffe_id.clone(),
-            supported_tools: vec!["shell".to_string(), "fs_read".to_string(), "fs_write".to_string()],
+            supported_tools: vec![
+                "shell".to_string(),
+                "fs_read".to_string(),
+                "fs_write".to_string(),
+            ],
         };
-        let _ = tx.send(ProxyToServer {
-            request_id: "init".to_string(),
-            payload: Some(proxy_to_server::Payload::Register(reg)),
-        }).await;
+        let _ = tx
+            .send(ProxyToServer {
+                request_id: "init".to_string(),
+                payload: Some(proxy_to_server::Payload::Register(reg)),
+            })
+            .await;
 
         let request_stream = ReceiverStream::new(rx);
-        let mut response = self.client.establish_tunnel(Request::new(request_stream)).await?;
+        let mut response = self
+            .client
+            .establish_tunnel(Request::new(request_stream))
+            .await?;
         let mut in_stream = response.into_inner();
 
         let tx_clone = tx.clone();
@@ -66,45 +81,74 @@ impl LocalProxyClient {
 
                             let (success, result, error_details) = match req.tool_id.as_str() {
                                 "shell" => {
-                                    match Command::new("sh").arg("-c").arg(&req.params).output().await {
+                                    match Command::new("sh")
+                                        .arg("-c")
+                                        .arg(&req.params)
+                                        .output()
+                                        .await
+                                    {
                                         Ok(output) => {
                                             if output.status.success() {
-                                                (true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string())
+                                                (
+                                                    true,
+                                                    String::from_utf8_lossy(&output.stdout)
+                                                        .to_string(),
+                                                    "".to_string(),
+                                                )
                                             } else {
-                                                (false, "".to_string(), String::from_utf8_lossy(&output.stderr).to_string())
+                                                (
+                                                    false,
+                                                    "".to_string(),
+                                                    String::from_utf8_lossy(&output.stderr)
+                                                        .to_string(),
+                                                )
                                             }
                                         }
                                         Err(e) => (false, "".to_string(), e.to_string()),
                                     }
                                 }
-                                "fs_read" => {
-                                    match blob_provider.read_blob(&req.params).await {
-                                        Ok(content) => (true, content, "".to_string()),
-                                        Err(e) => (false, "".to_string(), e.to_string()),
-                                    }
-                                }
+                                "fs_read" => match blob_provider.read_blob(&req.params).await {
+                                    Ok(content) => (true, content, "".to_string()),
+                                    Err(e) => (false, "".to_string(), e.to_string()),
+                                },
                                 "fs_write" => {
                                     let parts: Vec<&str> = req.params.splitn(2, "||").collect();
                                     if parts.len() == 2 {
                                         match blob_provider.write_blob(parts[0], parts[1]).await {
-                                            Ok(_) => (true, "Successfully wrote file".to_string(), "".to_string()),
+                                            Ok(_) => (
+                                                true,
+                                                "Successfully wrote file".to_string(),
+                                                "".to_string(),
+                                            ),
                                             Err(e) => (false, "".to_string(), e.to_string()),
                                         }
                                     } else {
-                                        (false, "".to_string(), "Invalid params for fs_write".to_string())
+                                        (
+                                            false,
+                                            "".to_string(),
+                                            "Invalid params for fs_write".to_string(),
+                                        )
                                     }
                                 }
-                                _ => (false, "".to_string(), format!("Unknown tool: {}", req.tool_id)),
+                                _ => (
+                                    false,
+                                    "".to_string(),
+                                    format!("Unknown tool: {}", req.tool_id),
+                                ),
                             };
 
-                            let _ = tx_clone.send(ProxyToServer {
-                                request_id: msg.request_id,
-                                payload: Some(proxy_to_server::Payload::InvokeResponse(::server_ohc::mcp_proxy::InvokeCommandResponse {
-                                    success,
-                                    result,
-                                    error_details,
-                                })),
-                            }).await;
+                            let _ = tx_clone
+                                .send(ProxyToServer {
+                                    request_id: msg.request_id,
+                                    payload: Some(proxy_to_server::Payload::InvokeResponse(
+                                        ::server_ohc::mcp_proxy::InvokeCommandResponse {
+                                            success,
+                                            result,
+                                            error_details,
+                                        },
+                                    )),
+                                })
+                                .await;
                         }
                     }
                 }

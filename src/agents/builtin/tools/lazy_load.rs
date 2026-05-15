@@ -13,9 +13,11 @@ struct LazyLoadToolsExecutor {
 #[async_trait::async_trait]
 impl ToolExecutor for LazyLoadToolsExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let tool_names = args["tool_names"]
-            .as_array()
-            .ok_or_else(|| ToolError::LlmRecoverable("lazy_load_tools: 'tool_names' must be an array of strings".to_string()))?;
+        let tool_names = args["tool_names"].as_array().ok_or_else(|| {
+            ToolError::LlmRecoverable(
+                "lazy_load_tools: 'tool_names' must be an array of strings".to_string(),
+            )
+        })?;
 
         let mut active = self.active_tools.write().await;
         let mut loaded = Vec::new();

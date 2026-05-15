@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 use super::LlmClient;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -62,7 +62,6 @@ static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
-
 
 pub struct GeminiClient {
     api_key: String,
@@ -224,13 +223,20 @@ impl LlmClient for GeminiClient {
         let result = resp.json::<GeminiResponse>().await;
         if result.is_err() {
             cb.record_failure();
-            return Err(format!("gemini api error: failed to parse response: {:?}", result.unwrap_err()).into());
+            return Err(format!(
+                "gemini api error: failed to parse response: {:?}",
+                result.unwrap_err()
+            )
+            .into());
         }
         let result = result.unwrap();
         cb.record_success();
 
-
-        let candidate = result.candidates.into_iter().next().ok_or("no candidates")?;
+        let candidate = result
+            .candidates
+            .into_iter()
+            .next()
+            .ok_or("no candidates")?;
         let finish_reason = candidate.finish_reason.unwrap_or_default();
 
         let text = candidate
@@ -243,7 +249,7 @@ impl LlmClient for GeminiClient {
 
         let usage = result
             .usage_metadata
-                        .map(|u| Usage {
+            .map(|u| Usage {
                 input_tokens: u.prompt_token_count,
                 output_tokens: u.candidates_token_count,
                 cache_creation_input_tokens: 0,

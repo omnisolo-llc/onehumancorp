@@ -1,17 +1,19 @@
-use flate2::write::GzEncoder;
-use flate2::read::GzDecoder;
-use flate2::Compression;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use std::io::{Write, Read};
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use flate2::Compression;
+use std::io::{Read, Write};
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
 
 pub fn compress_lossless(data: &str) -> Result<String, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
+    encoder
+        .write_all(data.as_bytes())
+        .map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
-    
+
     let b64 = STANDARD.encode(&compressed);
     Ok(format!("{}{}", COMPRESSION_PREFIX, b64))
 }
@@ -23,21 +25,24 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
 
     let b64_data = &data[COMPRESSION_PREFIX.len()..];
     let decoded = STANDARD.decode(b64_data).map_err(|e| e.to_string())?;
-    
+
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
-    
+    decoder
+        .read_to_end(&mut decompressed)
+        .map_err(|e| e.to_string())?;
+
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
 pub fn reduce_tokens(data: &str) -> String {
     let stop_words: std::collections::HashSet<&str> = [
-        "a", "an", "the", "is", "are",
-        "and", "or", "but", "in", "on",
-        "at", "to", "for", "with", "by",
-        "about", "as", "of",
-    ].iter().cloned().collect();
+        "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to", "for", "with",
+        "by", "about", "as", "of",
+    ]
+    .iter()
+    .cloned()
+    .collect();
 
     data.split_whitespace()
         .filter(|word| {
@@ -98,7 +103,10 @@ mod tests {
         // Result should remove "is", "a", "with", "in", "and", "about".
         // Note: 'it' and 'some' are not stop words here.
         let reduced = reduce_tokens(input);
-        assert_eq!(reduced, "This long sentence some stop words it some things.");
+        assert_eq!(
+            reduced,
+            "This long sentence some stop words it some things."
+        );
     }
 
     #[test]

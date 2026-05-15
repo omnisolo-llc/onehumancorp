@@ -3,8 +3,6 @@ use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-
-
 pub struct SubagentExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
 }
@@ -14,15 +12,21 @@ impl ToolExecutor for SubagentExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let raw_task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
         let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
-        
+
         if raw_task.is_empty() {
-            return Err(ToolError::LlmRecoverable("Task cannot be empty".to_string()));
+            return Err(ToolError::LlmRecoverable(
+                "Task cannot be empty".to_string(),
+            ));
         }
 
         // Subagent Orchestration: Claude Code Execution Models: 1) Fork (byte-identical copy of parent context), 2) Teammate (separate terminal pane communicating via file-based mailboxes), 3) Worktree (spawns its own git worktree with an isolated branch). Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
         let task = format!("{}\n\nCRITICAL INSTRUCTION: You are a subagent. When you finish your work, you MUST return a 1k-2k token condensed summary of your findings and actions. NEVER return your full context loop or raw unsummarized output.", raw_task);
 
-        tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, raw_task);
+        tracing::info!(
+            "Spawning subagent in mode '{}' for task: {}",
+            mode,
+            raw_task
+        );
 
         if mode == "worktree" {
             let task_id = uuid::Uuid::new_v4().to_string();
@@ -30,12 +34,26 @@ impl ToolExecutor for SubagentExecutor {
             let worktree_path = format!(".agent-worktrees/{}", task_id);
 
             // Create worktree
-            let _ = self.runner.run("git", &["branch", &branch_name], None, vec![]).await;
+            let _ = self
+                .runner
+                .run("git", &["branch", &branch_name], None, vec![])
+                .await;
 
-            let wt_output = self.runner.run("git", &["worktree", "add", &worktree_path, &branch_name], None, vec![]).await;
+            let wt_output = self
+                .runner
+                .run(
+                    "git",
+                    &["worktree", "add", &worktree_path, &branch_name],
+                    None,
+                    vec![],
+                )
+                .await;
 
             if let Err(e) = wt_output {
-                return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
+                return Err(ToolError::LlmRecoverable(format!(
+                    "Failed to spawn worktree: {}",
+                    e
+                )));
             }
 
             let mut envs = vec![];
@@ -43,7 +61,15 @@ impl ToolExecutor for SubagentExecutor {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--worktree", &worktree_path], None, envs).await;
+            let output = self
+                .runner
+                .run(
+                    "ohc_builtin_agent",
+                    &["--task", &task, "--worktree", &worktree_path],
+                    None,
+                    envs,
+                )
+                .await;
 
             let res = match output {
                 Ok(out) => {
@@ -62,8 +88,19 @@ impl ToolExecutor for SubagentExecutor {
             };
 
             // Cleanup
-            let _ = self.runner.run("git", &["worktree", "remove", "--force", &worktree_path], None, vec![]).await;
-            let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
+            let _ = self
+                .runner
+                .run(
+                    "git",
+                    &["worktree", "remove", "--force", &worktree_path],
+                    None,
+                    vec![],
+                )
+                .await;
+            let _ = self
+                .runner
+                .run("git", &["branch", "-D", &branch_name], None, vec![])
+                .await;
 
             match res {
                 Ok(inner) => {
@@ -76,14 +113,25 @@ impl ToolExecutor for SubagentExecutor {
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "fork" {
-            let parent_context_json = args.get("parent_context_json").and_then(|v| v.as_str()).unwrap_or("");
+            let parent_context_json = args
+                .get("parent_context_json")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--parent-context", &parent_context_json], None, envs).await;
+            let output = self
+                .runner
+                .run(
+                    "ohc_builtin_agent",
+                    &["--task", &task, "--parent-context", &parent_context_json],
+                    None,
+                    envs,
+                )
+                .await;
 
             let res = match output {
                 Ok(out) => {
@@ -106,7 +154,10 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, inner.result))
+                        Ok(format!(
+                            "[Subagent (Fork)] Completed task: {}. Summary: {}",
+                            task, inner.result
+                        ))
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
@@ -115,7 +166,10 @@ impl ToolExecutor for SubagentExecutor {
             let task_id = uuid::Uuid::new_v4().to_string();
             let mailbox_dir = format!(".agent-mailboxes/subagent-{}", task_id);
             if let Err(e) = tokio::fs::create_dir_all(&mailbox_dir).await {
-                return Err(ToolError::LlmRecoverable(format!("Failed to create mailbox directory: {}", e)));
+                return Err(ToolError::LlmRecoverable(format!(
+                    "Failed to create mailbox directory: {}",
+                    e
+                )));
             }
 
             let inbox_path = format!("{}/inbox.txt", mailbox_dir);
@@ -123,7 +177,10 @@ impl ToolExecutor for SubagentExecutor {
 
             // We use the augmented `task` which already includes the 1k-2k token condensed summary rule
             if let Err(e) = tokio::fs::write(&inbox_path, &task).await {
-                return Err(ToolError::LlmRecoverable(format!("Failed to write to inbox: {}", e)));
+                return Err(ToolError::LlmRecoverable(format!(
+                    "Failed to write to inbox: {}",
+                    e
+                )));
             }
 
             let teammate_task = format!(
@@ -142,7 +199,14 @@ When finished or if you need to report progress, write your final summary to {}.
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = runner_clone.run("ohc_builtin_agent", &["--task", &task_clone, "--mailbox", &mailbox_dir_clone], None, envs).await;
+            let output = runner_clone
+                .run(
+                    "ohc_builtin_agent",
+                    &["--task", &task_clone, "--mailbox", &mailbox_dir_clone],
+                    None,
+                    envs,
+                )
+                .await;
 
             let res = match output {
                 Ok(out) => {
@@ -158,13 +222,29 @@ When finished or if you need to report progress, write your final summary to {}.
             };
 
             use tokio::io::AsyncWriteExt;
-            if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
-                let _ = file.write_all(format!("
+            if let Ok(mut file) = tokio::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&outbox_path_clone)
+                .await
+            {
+                let _ = file
+                    .write_all(
+                        format!(
+                            "
 [System: Subagent Process Terminated]
-Final Result: {}", res).as_bytes()).await;
+Final Result: {}",
+                            res
+                        )
+                        .as_bytes(),
+                    )
+                    .await;
             }
 
-            Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
+            Ok(format!(
+                "Teammate subagent spawned. Communicate via {} and {}",
+                inbox_path, outbox_path
+            ))
         } else {
             return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)));
         }
@@ -243,53 +323,62 @@ mod tests {
     #[test]
     fn test_subagent_teammate_mode() {
         temp_env::with_vars(vec![("OHC_AGENT_ADDRESS", Some("127.0.0.1:0"))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        // We set the address to something invalid to quickly trigger connection failure for the background task
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+                    // We set the address to something invalid to quickly trigger connection failure for the background task
 
+                    let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+                    let executor = SubagentExecutor { runner };
+                    let args = json!({
+                        "task": "Do this teammate task",
+                        "mode": "teammate"
+                    });
 
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = SubagentExecutor { runner };
-        let args = json!({
-            "task": "Do this teammate task",
-            "mode": "teammate"
-        });
+                    let result = executor.execute(args).await;
+                    assert!(result.is_ok(), "Expected Ok for teammate mode");
+                    let msg = result.unwrap();
 
-        let result = executor.execute(args).await;
-        assert!(result.is_ok(), "Expected Ok for teammate mode");
-        let msg = result.unwrap();
+                    assert!(
+                        msg.contains("Teammate subagent spawned. Communicate via"),
+                        "Message should contain success notification"
+                    );
 
-        assert!(msg.contains("Teammate subagent spawned. Communicate via"), "Message should contain success notification");
+                    let parts: Vec<&str> = msg.split("Communicate via ").collect();
+                    assert_eq!(parts.len(), 2);
 
-        let parts: Vec<&str> = msg.split("Communicate via ").collect();
-        assert_eq!(parts.len(), 2);
+                    let path_parts: Vec<&str> = parts[1].split(" and ").collect();
+                    assert_eq!(path_parts.len(), 2);
 
-        let path_parts: Vec<&str> = parts[1].split(" and ").collect();
-        assert_eq!(path_parts.len(), 2);
+                    let inbox_path = path_parts[0];
+                    let outbox_path = path_parts[1];
 
-        let inbox_path = path_parts[0];
-        let outbox_path = path_parts[1];
+                    assert!(
+                        std::path::Path::new(inbox_path).exists(),
+                        "Inbox should exist"
+                    );
 
-        assert!(std::path::Path::new(inbox_path).exists(), "Inbox should exist");
+                    // Mock command runner will return success default, no error.
+                    let mut attempts = 0;
+                    let mut found = false;
+                    while attempts < 20 {
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                        if let Ok(content) = tokio::fs::read_to_string(outbox_path).await {
+                            if content.contains("[System: Subagent Process Terminated]") {
+                                found = true;
+                                break;
+                            }
+                        }
+                        attempts += 1;
+                    }
 
-        // Mock command runner will return success default, no error.
-        let mut attempts = 0;
-        let mut found = false;
-        while attempts < 20 {
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            if let Ok(content) = tokio::fs::read_to_string(outbox_path).await {
-                if content.contains("[System: Subagent Process Terminated]") {
-                    found = true;
-                    break;
-                }
-            }
-            attempts += 1;
-        }
+                    assert!(found, "Background task should have written to outbox");
 
-        assert!(found, "Background task should have written to outbox");
-
-        let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
-                let _ = tokio::fs::remove_dir_all(parent_dir).await;
-            });
+                    let parent_dir = std::path::Path::new(inbox_path).parent().unwrap();
+                    let _ = tokio::fs::remove_dir_all(parent_dir).await;
+                });
         });
     }
 }

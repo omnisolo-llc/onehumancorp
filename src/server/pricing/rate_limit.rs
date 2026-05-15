@@ -29,9 +29,9 @@ impl PlanTier {
     pub fn storage_limit_mb(&self) -> Option<u32> {
         match self {
             PlanTier::Free => Some(500),
-            PlanTier::Starter => Some(5000), // 5GB
-            PlanTier::Pro => Some(50000),    // 50GB
-            PlanTier::Business => Some(512000),      // 500GB
+            PlanTier::Starter => Some(5000),    // 5GB
+            PlanTier::Pro => Some(50000),       // 50GB
+            PlanTier::Business => Some(512000), // 500GB
         }
     }
 
@@ -68,24 +68,36 @@ pub struct RedisRateLimiter {
 
 impl RedisRateLimiter {
     pub fn new(client: Client) -> Self {
-        Self { client, connection: OnceCell::new(), telemetry_store: None }
+        Self {
+            client,
+            connection: OnceCell::new(),
+            telemetry_store: None,
+        }
     }
 
-    pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(
+        mut self,
+        store: std::sync::Arc<::server_harness::telemetry::ViolationStore>,
+    ) -> Self {
         self.telemetry_store = Some(store);
         self
     }
 
     async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        let conn = self.connection.get_or_try_init(|| async {
-            self.client.get_multiplexed_async_connection().await
-        }).await.map_err(|e| e.to_string())?;
+        let conn = self
+            .connection
+            .get_or_try_init(|| async { self.client.get_multiplexed_async_connection().await })
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(conn.clone())
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
         let mut conn = self.get_connection().await?;
-        let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
+        let tier: Option<String> = conn
+            .get(format!("tenant:{}:tier", tenant_id))
+            .await
+            .map_err(|e| e.to_string())?;
 
         match tier.as_deref() {
             Some("Starter") => Ok(PlanTier::Starter),
@@ -119,10 +131,16 @@ impl RedisRateLimiter {
             PlanTier::Pro => "Pro",
             PlanTier::Business => "Business",
         };
-        conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
+        conn.set(format!("tenant:{}:tier", tenant_id), tier_str)
+            .await
+            .map_err(|e| e.to_string())
     }
 
-    pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn record_action(
+        &self,
+        tenant_id: &str,
+        agent_id: &str,
+    ) -> Result<RateLimitStatus, String> {
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -130,14 +148,23 @@ impl RedisRateLimiter {
         let month_key = now.format("%Y-%m").to_string();
 
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+        let agent_key = format!(
+            "tenant:{}:agent:{}:actions_used:{}",
+            tenant_id, agent_id, month_key
+        );
 
         let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
         let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
 
         // Expire keys after ~2 months to save space
-        let _ : () = conn.expire(&tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
-        let _ : () = conn.expire(&agent_key, 60 * 60 * 24 * 60).await.unwrap_or(());
+        let _: () = conn
+            .expire(&tenant_key, 60 * 60 * 24 * 60)
+            .await
+            .unwrap_or(());
+        let _: () = conn
+            .expire(&agent_key, 60 * 60 * 24 * 60)
+            .await
+            .unwrap_or(());
 
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
@@ -187,7 +214,8 @@ impl RedisRateLimiter {
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let product_key = format!("tenant:{}:products", tenant_id);
-        let total_products: Option<usize> = conn.get(&product_key).await.map_err(|e| e.to_string())?;
+        let total_products: Option<usize> =
+            conn.get(&product_key).await.map_err(|e| e.to_string())?;
         let total_products = total_products.unwrap_or(0);
 
         if let Some(limit) = tier.max_products() {
@@ -218,7 +246,10 @@ impl RedisRateLimiter {
     pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let product_key = format!("tenant:{}:products", tenant_id);
-        let _ : usize = conn.incr(&product_key, 1).await.map_err(|e| e.to_string())?;
+        let _: usize = conn
+            .incr(&product_key, 1)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -258,17 +289,24 @@ impl RedisRateLimiter {
     pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let agent_key = format!("tenant:{}:agents", tenant_id);
-        let _ : usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
+        let _: usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
+    pub async fn check_storage_quota(
+        &self,
+        tenant_id: &str,
+        delta_bytes: i64,
+    ) -> Result<RateLimitStatus, String> {
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
-        let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
+        let total_storage: i64 = conn
+            .incr(&storage_key, delta_bytes)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if let Some(store) = &self.telemetry_store {
             store.storage_bytes_counter.add(
@@ -348,10 +386,13 @@ mod tests {
                 // Clear any existing products
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let product_key = format!("tenant:{}:products", tenant_id);
-                let _ : () = conn.del(&product_key).await.unwrap_or(());
+                let _: () = conn.del(&product_key).await.unwrap_or(());
 
                 // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+                limiter
+                    .set_tenant_tier(tenant_id, PlanTier::Free)
+                    .await
+                    .unwrap();
 
                 // Check quota initially
                 let status = limiter.check_product_quota(tenant_id).await.unwrap();
@@ -386,10 +427,15 @@ mod tests {
                 // Clear any existing storage used
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
+                let _: () = redis::AsyncCommands::del(&mut conn, &storage_key)
+                    .await
+                    .unwrap_or(());
 
                 // Set tier to Free (500MB limit)
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+                limiter
+                    .set_tenant_tier(tenant_id, PlanTier::Free)
+                    .await
+                    .unwrap();
 
                 // Increment storage by a small amount (100MB)
                 let delta: i64 = 100 * 1024 * 1024;
@@ -399,7 +445,10 @@ mod tests {
 
                 // Increment storage by an amount crossing the 500MB limit
                 let large_delta: i64 = 450 * 1024 * 1024;
-                let status = limiter.check_storage_quota(tenant_id, large_delta).await.unwrap();
+                let status = limiter
+                    .check_storage_quota(tenant_id, large_delta)
+                    .await
+                    .unwrap();
                 assert!(status.is_allowed); // Soft limit allows it
                 assert!(status.soft_limit_reached); // But flag is set
                 assert!(status.user_message.unwrap().contains("500MB storage"));
@@ -417,10 +466,13 @@ mod tests {
                 // Clear any existing agents
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let agent_key = format!("tenant:{}:agents", tenant_id);
-                let _ : () = conn.del(&agent_key).await.unwrap_or(());
+                let _: () = conn.del(&agent_key).await.unwrap_or(());
 
                 // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+                limiter
+                    .set_tenant_tier(tenant_id, PlanTier::Free)
+                    .await
+                    .unwrap();
 
                 // Add 1 agent
                 limiter.record_agent_added(tenant_id).await.unwrap();
@@ -446,10 +498,13 @@ mod tests {
 
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-                let _ : () = conn.del(&tenant_key).await.unwrap_or(());
+                let _: () = conn.del(&tenant_key).await.unwrap_or(());
 
                 // Set tier to Free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+                limiter
+                    .set_tenant_tier(tenant_id, PlanTier::Free)
+                    .await
+                    .unwrap();
 
                 // Record an action
                 let status = limiter.record_action(tenant_id, agent_id).await.unwrap();

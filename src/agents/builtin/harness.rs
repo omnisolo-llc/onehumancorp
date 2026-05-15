@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Policy {
@@ -31,22 +31,37 @@ pub struct Config {
 
 #[async_trait]
 pub trait IsolationStrategy: Send + Sync {
-    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String>;
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        agent_type: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn crate::provider::Transport>>,
+    ) -> Result<(), String>;
 }
 
-pub struct ProcessIsolationStrategy {
-}
+pub struct ProcessIsolationStrategy {}
 
 impl ProcessIsolationStrategy {
     pub fn new() -> Self {
-        ProcessIsolationStrategy { }
+        ProcessIsolationStrategy {}
     }
 }
 
 #[async_trait]
 impl IsolationStrategy for ProcessIsolationStrategy {
-    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String> {
-        let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        agent_type: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn crate::provider::Transport>>,
+    ) -> Result<(), String> {
+        let isolation_sandbox_id = format!(
+            "sandbox-{}-{}",
+            agent_type,
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
 
         let status_msg = serde_json::json!({
             "agent":    agent_type,
@@ -116,7 +131,10 @@ impl IsolationStrategy for ProcessIsolationStrategy {
             }
         });
 
-        let status = child.wait().await.map_err(|e| format!("Failed to wait on child: {}", e))?;
+        let status = child
+            .wait()
+            .await
+            .map_err(|e| format!("Failed to wait on child: {}", e))?;
         let _ = stdout_handle.await;
         let _ = stderr_handle.await;
 
@@ -152,7 +170,11 @@ impl ASTValidator {
         if command.contains("zmodload") {
             return Err("zmodload is not allowed".to_string());
         }
-        if command.contains(">$") || command.contains("<$") || command.contains("`") || command.contains("$(") {
+        if command.contains(">$")
+            || command.contains("<$")
+            || command.contains("`")
+            || command.contains("$(")
+        {
             return Err("subshells and redirections are not allowed in stub".to_string());
         }
         if command.contains("IFS") {
@@ -163,7 +185,7 @@ impl ASTValidator {
         if use_tree_sitter {
             tracing::info!("Using tree-sitter for AST validation...");
             if command.contains("eval") {
-                 return Err("eval is not allowed".to_string());
+                return Err("eval is not allowed".to_string());
             }
         }
         Ok(())
@@ -185,21 +207,24 @@ impl LocalBackend {
     }
 
     pub fn is_bwrap_available(&self) -> bool {
-        static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-        static BWRAP_CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
+        static BWRAP_CHECKED: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
 
         if !BWRAP_CHECKED.load(std::sync::atomic::Ordering::Relaxed) {
-            let is_available = if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
-                false
-            } else {
-                std::process::Command::new("bwrap")
-                    .arg("--version")
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null())
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false)
-            };
+            let is_available =
+                if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+                    false
+                } else {
+                    std::process::Command::new("bwrap")
+                        .arg("--version")
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status()
+                        .map(|s| s.success())
+                        .unwrap_or(false)
+                };
             BWRAP_AVAILABLE.store(is_available, std::sync::atomic::Ordering::Relaxed);
             BWRAP_CHECKED.store(true, std::sync::atomic::Ordering::Relaxed);
         }
@@ -212,9 +237,12 @@ impl LocalBackend {
             "--unshare-uts".to_string(),
             "--unshare-ipc".to_string(),
             "--unshare-cgroup".to_string(),
-            "--proc".to_string(), "/proc".to_string(),
-            "--dev".to_string(), "/dev".to_string(),
-            "--tmpfs".to_string(), "/tmp".to_string(),
+            "--proc".to_string(),
+            "/proc".to_string(),
+            "--dev".to_string(),
+            "/dev".to_string(),
+            "--tmpfs".to_string(),
+            "/tmp".to_string(),
         ];
 
         if !policy.allow_network {
@@ -275,7 +303,6 @@ impl LocalBackend {
 
         args
     }
-
 }
 
 #[async_trait]
@@ -361,7 +388,12 @@ impl Manager {
         }
     }
 
-    pub async fn execute_with_policy(&self, command: &str, policy: Option<&Policy>, backend_type: BackendType) -> Result<ResultModel, String> {
+    pub async fn execute_with_policy(
+        &self,
+        command: &str,
+        policy: Option<&Policy>,
+        backend_type: BackendType,
+    ) -> Result<ResultModel, String> {
         let policy = policy.unwrap_or(&self.config.default_policy);
         match backend_type {
             BackendType::Local => self.local_backend.execute(command, policy).await,
@@ -449,13 +481,13 @@ mod tests {
     #[test]
     fn test_ast_validator() {
         let validator = ASTValidator::new();
-        
+
         assert!(validator.validate("ls -l").is_ok());
         assert!(validator.validate("echo hello").is_ok());
-        
+
         let err = validator.validate("sudo rm -rf /").unwrap_err();
         assert_eq!(err, "sudo is not allowed");
-        
+
         let err = validator.validate("zmodload zsh/clone").unwrap_err();
         assert_eq!(err, "zmodload is not allowed");
     }
@@ -473,9 +505,9 @@ mod tests {
             allow_read: vec![],
             deny_write: vec![],
         };
-        
+
         let args = runner.get_bwrap_args("ls", &policy);
-        
+
         assert!(args.contains(&"--unshare-net".to_string()));
         assert!(args.contains(&"/home/user".to_string()));
         assert!(args.contains(&"/etc".to_string()));
@@ -507,13 +539,22 @@ mod tests {
         let manager = Manager::new(config);
         let command = "echo routing_test";
 
-        let local_res = manager.execute_with_policy(command, None, BackendType::Local).await.unwrap();
+        let local_res = manager
+            .execute_with_policy(command, None, BackendType::Local)
+            .await
+            .unwrap();
         // Since bwrap is not guaranteed to be available in tests, it might be a simulated output.
         // We will just check it executes without error.
         assert!(local_res.exit_code == 0 || local_res.exit_code == -1);
 
-        let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await.unwrap();
-        assert_eq!(docker_res.stdout, format!("Mock Docker Execution: {}", command));
+        let docker_res = manager
+            .execute_with_policy(command, None, BackendType::Docker)
+            .await
+            .unwrap();
+        assert_eq!(
+            docker_res.stdout,
+            format!("Mock Docker Execution: {}", command)
+        );
         assert_eq!(docker_res.exit_code, 0);
     }
 }

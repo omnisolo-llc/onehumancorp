@@ -1,5 +1,5 @@
-use regex::Regex;
 use super::manager::SandboxPolicy;
+use regex::Regex;
 
 pub struct PermissionEvaluator {
     disabled_commands: Vec<String>,
@@ -8,10 +8,7 @@ pub struct PermissionEvaluator {
 
 impl PermissionEvaluator {
     pub fn new() -> Self {
-        let disabled_commands = vec![
-            "rm -rf /".to_string(),
-            "mkfs".to_string(),
-        ];
+        let disabled_commands = vec!["rm -rf /".to_string(), "mkfs".to_string()];
 
         let disabled_patterns = vec![
             Regex::new(r"(?i)\bsudo\b").unwrap(),

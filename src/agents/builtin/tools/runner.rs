@@ -1,7 +1,7 @@
+use async_trait::async_trait;
 use std::io;
 use std::path::Path;
 use std::process::Output;
-use async_trait::async_trait;
 use tokio::process::Command;
 
 #[async_trait]
@@ -41,8 +41,8 @@ impl CommandRunner for RealCommandRunner {
 #[cfg(test)]
 pub mod mock {
     use super::*;
-    use std::sync::{Arc, Mutex};
     use std::collections::VecDeque;
+    use std::sync::{Arc, Mutex};
 
     #[derive(Clone)]
     pub struct MockCommandRunner {
@@ -72,15 +72,22 @@ pub mod mock {
             _current_dir: Option<&Path>,
             _envs: Vec<(String, String)>,
         ) -> io::Result<Output> {
-            *self.last_command.lock().unwrap() = Some((program.to_string(), args.iter().map(|s| s.to_string()).collect()));
-            self.next_responses.lock().unwrap().pop_front().unwrap_or_else(|| {
-                // Default to success
-                Ok(Output {
-                    status: mock_exit_status(0),
-                    stdout: Vec::new(),
-                    stderr: Vec::new(),
+            *self.last_command.lock().unwrap() = Some((
+                program.to_string(),
+                args.iter().map(|s| s.to_string()).collect(),
+            ));
+            self.next_responses
+                .lock()
+                .unwrap()
+                .pop_front()
+                .unwrap_or_else(|| {
+                    // Default to success
+                    Ok(Output {
+                        status: mock_exit_status(0),
+                        stdout: Vec::new(),
+                        stderr: Vec::new(),
+                    })
                 })
-            })
         }
     }
 

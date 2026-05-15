@@ -4,4 +4,4 @@ pub mod permissions;
 pub mod wrapper;
 
 pub use ast::ASTParser;
-pub use manager::{SandboxManager, SandboxAdapter, SandboxPolicy};
+pub use manager::{SandboxAdapter, SandboxManager, SandboxPolicy};

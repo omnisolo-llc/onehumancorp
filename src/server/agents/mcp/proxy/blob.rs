@@ -1,11 +1,18 @@
 use std::env;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::fs;
-use std::path::{Path, PathBuf};
 
 pub trait BlobProvider: Send + Sync {
-    fn read_blob<'a>(&'a self, path: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>>;
-    fn write_blob<'a>(&'a self, path: &'a str, content: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>>;
+    fn read_blob<'a>(
+        &'a self,
+        path: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>>;
+    fn write_blob<'a>(
+        &'a self,
+        path: &'a str,
+        content: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>>;
 }
 
 pub struct LocalBlobProvider {
@@ -24,21 +31,32 @@ impl LocalBlobProvider {
         // Normalize the path by checking if it escapes base_dir
         // For simplicity we check if it contains ..
         if path.contains("..") {
-             return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Path traversal attempt"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Path traversal attempt",
+            ));
         }
         Ok(full_path)
     }
 }
 
 impl BlobProvider for LocalBlobProvider {
-    fn read_blob<'a>(&'a self, path: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>> {
+    fn read_blob<'a>(
+        &'a self,
+        path: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>>
+    {
         Box::pin(async move {
             let full_path = self.resolve_path(path)?;
             fs::read_to_string(full_path).await
         })
     }
 
-    fn write_blob<'a>(&'a self, path: &'a str, content: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>> {
+    fn write_blob<'a>(
+        &'a self,
+        path: &'a str,
+        content: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>> {
         let content = content.to_string();
         Box::pin(async move {
             let full_path = self.resolve_path(path)?;
@@ -58,7 +76,8 @@ pub struct S3BlobProvider {
 
 impl S3BlobProvider {
     pub fn new() -> Self {
-        let endpoint = env::var("S3_ENDPOINT").unwrap_or_else(|_| "https://s3.amazonaws.com".to_string());
+        let endpoint =
+            env::var("S3_ENDPOINT").unwrap_or_else(|_| "https://s3.amazonaws.com".to_string());
         Self {
             bucket: "ohc-multi-tenant-blobs".to_string(),
             endpoint,
@@ -68,36 +87,66 @@ impl S3BlobProvider {
 }
 
 impl BlobProvider for S3BlobProvider {
-    fn read_blob<'a>(&'a self, path: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>> {
+    fn read_blob<'a>(
+        &'a self,
+        path: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>>
+    {
         Box::pin(async move {
             let url = format!("{}/{}/{}", self.endpoint, self.bucket, path);
-            let resp = self.client.get(&url).send().await.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            let resp = self
+                .client
+                .get(&url)
+                .send()
+                .await
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
             if resp.status().is_success() {
-                let text = resp.text().await.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                let text = resp
+                    .text()
+                    .await
+                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
                 Ok(text)
             } else {
-                Err(std::io::Error::new(std::io::ErrorKind::NotFound, format!("S3 read failed: {}", resp.status())))
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("S3 read failed: {}", resp.status()),
+                ))
             }
         })
     }
 
-    fn write_blob<'a>(&'a self, path: &'a str, content: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>> {
+    fn write_blob<'a>(
+        &'a self,
+        path: &'a str,
+        content: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>> {
         let content = content.to_string();
         Box::pin(async move {
             let url = format!("{}/{}/{}", self.endpoint, self.bucket, path);
-            let resp = self.client.put(&url).body(content).send().await.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+            let resp = self
+                .client
+                .put(&url)
+                .body(content)
+                .send()
+                .await
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
             if resp.status().is_success() {
                 Ok(())
             } else {
-                Err(std::io::Error::new(std::io::ErrorKind::Other, format!("S3 write failed: {}", resp.status())))
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("S3 write failed: {}", resp.status()),
+                ))
             }
         })
     }
 }
 
 pub fn create_blob_provider() -> Arc<dyn BlobProvider> {
-    let is_standalone = env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true";
-    let is_multitenant = env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true";
+    let is_standalone =
+        env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true";
+    let is_multitenant =
+        env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true";
 
     if is_multitenant && !is_standalone {
         Arc::new(S3BlobProvider::new())
@@ -109,8 +158,8 @@ pub fn create_blob_provider() -> Arc<dyn BlobProvider> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use mockito::Server;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_local_blob_provider() {
@@ -119,7 +168,10 @@ mod tests {
         let provider = LocalBlobProvider { base_dir };
 
         // Test writing
-        provider.write_blob("test_file.txt", "hello world").await.unwrap();
+        provider
+            .write_blob("test_file.txt", "hello world")
+            .await
+            .unwrap();
 
         // Test reading
         let content = provider.read_blob("test_file.txt").await.unwrap();
@@ -128,22 +180,28 @@ mod tests {
         // Test path traversal
         let err = provider.read_blob("../test_file.txt").await;
         assert!(err.is_err());
-        assert_eq!(err.unwrap_err().kind(), std::io::ErrorKind::PermissionDenied);
+        assert_eq!(
+            err.unwrap_err().kind(),
+            std::io::ErrorKind::PermissionDenied
+        );
     }
-
 
     #[tokio::test]
     async fn test_s3_blob_provider() {
         let mut server = Server::new_async().await;
 
-        let mock_get = server.mock("GET", "/ohc-multi-tenant-blobs/test_s3.txt")
+        let mock_get = server
+            .mock("GET", "/ohc-multi-tenant-blobs/test_s3.txt")
             .with_status(200)
             .with_body("s3 content")
-            .create_async().await;
+            .create_async()
+            .await;
 
-        let mock_put = server.mock("PUT", "/ohc-multi-tenant-blobs/test_s3_write.txt")
+        let mock_put = server
+            .mock("PUT", "/ohc-multi-tenant-blobs/test_s3_write.txt")
             .with_status(200)
-            .create_async().await;
+            .create_async()
+            .await;
 
         let provider = S3BlobProvider {
             bucket: "ohc-multi-tenant-blobs".to_string(),
@@ -157,7 +215,10 @@ mod tests {
         mock_get.assert_async().await;
 
         // Test writing
-        provider.write_blob("test_s3_write.txt", "new content").await.unwrap();
+        provider
+            .write_blob("test_s3_write.txt", "new content")
+            .await
+            .unwrap();
         mock_put.assert_async().await;
     }
 

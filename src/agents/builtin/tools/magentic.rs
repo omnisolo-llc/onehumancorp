@@ -1,8 +1,8 @@
+use super::task::Task;
+use chrono::Utc;
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use super::task::Task;
-use chrono::Utc;
 
 use super::{SharedTaskStore, Tool, ToolExecutor};
 
@@ -12,15 +12,14 @@ pub struct MagenticExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for MagenticExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let action = args["action"].as_str().unwrap_or("");
 
         match action {
             "add" => {
-                let title = args["title"].as_str().ok_or_else(|| ToolError::LlmRecoverable("magentic: title is required for add".to_string()))?;
+                let title = args["title"].as_str().ok_or_else(|| {
+                    ToolError::LlmRecoverable("magentic: title is required for add".to_string())
+                })?;
                 let description = args["description"].as_str().unwrap_or("").to_string();
                 let assignee = args["assignee"].as_str().unwrap_or("").to_string();
 
@@ -41,7 +40,9 @@ impl ToolExecutor for MagenticExecutor {
                 Ok(format!("Added task: {}", id))
             }
             "update" => {
-                let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("magentic: id is required for update".to_string()))?;
+                let id = args["id"].as_str().ok_or_else(|| {
+                    ToolError::LlmRecoverable("magentic: id is required for update".to_string())
+                })?;
                 let status = args["status"].as_str().map(str::to_string);
                 let result = args["result"].as_str().map(str::to_string);
 
@@ -59,7 +60,9 @@ impl ToolExecutor for MagenticExecutor {
                 }
                 Ok(serde_json::to_string_pretty(&tasks).unwrap_or_default())
             }
-            _ => Err(ToolError::LlmRecoverable("magentic: valid action is required (add, update, list)".to_string()))
+            _ => Err(ToolError::LlmRecoverable(
+                "magentic: valid action is required (add, update, list)".to_string(),
+            )),
         }
     }
 }
@@ -111,14 +114,16 @@ pub fn magentic_tool(store: SharedTaskStore) -> Tool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::task::TaskStore;
+    use super::*;
     use tokio::sync::RwLock;
 
     #[tokio::test]
     async fn test_magentic_tool_add() {
         let store = Arc::new(RwLock::new(TaskStore::default()));
-        let executor = MagenticExecutor { store: store.clone() };
+        let executor = MagenticExecutor {
+            store: store.clone(),
+        };
 
         let args = json!({
             "action": "add",
@@ -134,7 +139,9 @@ mod tests {
     #[tokio::test]
     async fn test_magentic_tool_update_and_list() {
         let store = Arc::new(RwLock::new(TaskStore::default()));
-        let executor = MagenticExecutor { store: store.clone() };
+        let executor = MagenticExecutor {
+            store: store.clone(),
+        };
 
         // 1. Add
         let args_add = json!({

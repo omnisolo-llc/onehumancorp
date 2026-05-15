@@ -17,11 +17,17 @@ pub struct Checkpoint {
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
     #[allow(dead_code)]
-    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
+    async fn get_checkpoint(
+        &self,
+        thread_id: &str,
+        checkpoint_id: &str,
+    ) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
     #[allow(unused_variables)]
-    async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> { Ok(()) }
+    async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 pub struct PgCheckpointer {
@@ -59,13 +65,18 @@ impl GitCheckpointer {
     }
 
     fn progress_file_path(&self, thread_id: &str) -> PathBuf {
-        self.repo_path.join(format!(".agent_progress_{}.json", thread_id))
+        self.repo_path
+            .join(format!(".agent_progress_{}.json", thread_id))
     }
 }
 
 #[async_trait]
 impl CheckpointSaver for GitCheckpointer {
-    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+    async fn get_checkpoint(
+        &self,
+        thread_id: &str,
+        checkpoint_id: &str,
+    ) -> Result<Option<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
         let output = Command::new("git")
@@ -88,7 +99,9 @@ impl CheckpointSaver for GitCheckpointer {
         let file_path = self.progress_file_path(&checkpoint.thread_id);
 
         let json_data = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
-        tokio::fs::write(&file_path, json_data).await.map_err(|e| e.to_string())?;
+        tokio::fs::write(&file_path, json_data)
+            .await
+            .map_err(|e| e.to_string())?;
 
         // 1. Stage all changes in the workspace (Claude Code mechanic)
         let _ = Command::new("git")
@@ -109,7 +122,10 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
-            return Err(format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr)));
+            return Err(format!(
+                "Failed to commit: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
         }
 
         let tag_output = Command::new("git")
@@ -121,12 +137,14 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !tag_output.status.success() {
-            return Err(format!("Failed to tag: {}", String::from_utf8_lossy(&tag_output.stderr)));
+            return Err(format!(
+                "Failed to tag: {}",
+                String::from_utf8_lossy(&tag_output.stderr)
+            ));
         }
 
         Ok(())
     }
-
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
         let output = Command::new("git")
@@ -138,7 +156,10 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
-            return Err(format!("Failed to restore workspace (reset): {}", String::from_utf8_lossy(&output.stderr)));
+            return Err(format!(
+                "Failed to restore workspace (reset): {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
         }
 
         let clean_output = Command::new("git")
@@ -149,7 +170,10 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !clean_output.status.success() {
-            return Err(format!("Failed to restore workspace (clean): {}", String::from_utf8_lossy(&clean_output.stderr)));
+            return Err(format!(
+                "Failed to restore workspace (clean): {}",
+                String::from_utf8_lossy(&clean_output.stderr)
+            ));
         }
 
         Ok(())
@@ -175,7 +199,9 @@ impl CheckpointSaver for GitCheckpointer {
 
         for hash in hashes.lines() {
             let hash = hash.trim();
-            if hash.is_empty() { continue; }
+            if hash.is_empty() {
+                continue;
+            }
 
             if let Ok(Some(cp)) = self.get_checkpoint(thread_id, hash).await {
                 checkpoints.push(cp);
@@ -188,7 +214,11 @@ impl CheckpointSaver for GitCheckpointer {
 
 #[async_trait]
 impl CheckpointSaver for PgCheckpointer {
-    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
+    async fn get_checkpoint(
+        &self,
+        thread_id: &str,
+        checkpoint_id: &str,
+    ) -> Result<Option<Checkpoint>, String> {
         let row = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 AND checkpoint_id = $2"
         )
@@ -207,8 +237,10 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
-            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+            let data: serde_json::Value =
+                serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value =
+                serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             Ok(Some(Checkpoint {
                 thread_id,
@@ -244,7 +276,6 @@ impl CheckpointSaver for PgCheckpointer {
         Ok(())
     }
 
-
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let rows = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 ORDER BY created_at DESC"
@@ -264,8 +295,10 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
-            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+            let data: serde_json::Value =
+                serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value =
+                serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             checkpoints.push(Checkpoint {
                 thread_id,
@@ -289,16 +322,16 @@ fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data).map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
-    
+
     use base64::engine::general_purpose::STANDARD;
     use base64::Engine;
-    
+
     let b64 = STANDARD.encode(&compressed);
     let mut result = Vec::new();
     result.push(b'"');
     result.extend_from_slice(b64.as_bytes());
     result.push(b'"');
-    
+
     Ok(result)
 }
 
@@ -319,7 +352,7 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
         Ok(d) => d,
         Err(_) => return Ok(data.to_vec()), // Fallback for raw JSON data
     };
-    
+
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
     if let Err(_) = decoder.read_to_end(&mut decompressed) {
@@ -340,7 +373,7 @@ mod tests {
         let decompressed = decompress_data(&compressed).unwrap();
         assert_eq!(data, decompressed.as_slice());
     }
-    
+
     #[test]
     fn test_decompress_unquoted() {
         let data = b"Hello, world!";
@@ -351,12 +384,12 @@ mod tests {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(data).unwrap();
         let compressed = encoder.finish().unwrap();
-        
+
         use base64::engine::general_purpose::STANDARD;
         use base64::Engine;
-        
+
         let b64 = STANDARD.encode(&compressed);
-        
+
         let decompressed = decompress_data(b64.as_bytes()).unwrap();
         assert_eq!(data, decompressed.as_slice());
     }
@@ -374,10 +407,20 @@ mod tests {
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
         let saver = PgCheckpointer::new(pool);
-        
+
         let cp = Checkpoint {
             thread_id: "thread-1".to_string(),
             checkpoint_id: "cp-1".to_string(),
@@ -394,10 +437,20 @@ mod tests {
     #[tokio::test]
     async fn test_pg_checkpointer_list_checkpoints() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
         let saver = PgCheckpointer::new(pool);
-        
+
         let res = saver.list_checkpoints("thread-list").await;
         assert!(res.is_err());
     }
@@ -436,7 +489,10 @@ mod tests {
 
         saver.put_checkpoint(cp.clone()).await.unwrap();
 
-        let retrieved = saver.get_checkpoint("thread-git-2", "cp-git-2").await.unwrap();
+        let retrieved = saver
+            .get_checkpoint("thread-git-2", "cp-git-2")
+            .await
+            .unwrap();
         assert!(retrieved.is_some());
         let retrieved = retrieved.unwrap();
         assert_eq!(retrieved.thread_id, cp.thread_id);

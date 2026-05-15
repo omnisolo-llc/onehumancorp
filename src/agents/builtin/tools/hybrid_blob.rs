@@ -1,11 +1,11 @@
+use super::{Tool, ToolExecutor};
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
-use std::sync::Arc;
 use std::env;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use super::{Tool, ToolExecutor};
 
 #[async_trait::async_trait]
 pub trait BlobManager: Send + Sync {
@@ -114,7 +114,10 @@ impl BlobManager for HybridBlobManager {
             self.cloud_mock_store.insert(safe_key, data.to_vec());
             Ok(())
         } else {
-            let local_dir = self.local_dir.as_ref().ok_or("Local directory not configured")?;
+            let local_dir = self
+                .local_dir
+                .as_ref()
+                .ok_or("Local directory not configured")?;
             let path = local_dir.join(&safe_key);
 
             if let Some(parent) = path.parent() {
@@ -123,8 +126,12 @@ impl BlobManager for HybridBlobManager {
                 }
             }
 
-            let mut file = fs::File::create(&path).await.map_err(|e| format!("Failed to create file: {}", e))?;
-            file.write_all(data).await.map_err(|e| format!("Failed to write data: {}", e))?;
+            let mut file = fs::File::create(&path)
+                .await
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+            file.write_all(data)
+                .await
+                .map_err(|e| format!("Failed to write data: {}", e))?;
 
             Ok(())
         }
@@ -142,18 +149,24 @@ impl BlobManager for HybridBlobManager {
                 Err("Blob not found in cloud mock".to_string())
             }
         } else {
-            let local_dir = self.local_dir.as_ref().ok_or("Local directory not configured")?;
+            let local_dir = self
+                .local_dir
+                .as_ref()
+                .ok_or("Local directory not configured")?;
             let path = local_dir.join(&safe_key);
 
-            let mut file = fs::File::open(&path).await.map_err(|e| format!("Failed to open file: {}", e))?;
+            let mut file = fs::File::open(&path)
+                .await
+                .map_err(|e| format!("Failed to open file: {}", e))?;
             let mut buffer = Vec::new();
-            file.read_to_end(&mut buffer).await.map_err(|e| format!("Failed to read data: {}", e))?;
+            file.read_to_end(&mut buffer)
+                .await
+                .map_err(|e| format!("Failed to read data: {}", e))?;
 
             Ok(buffer)
         }
     }
 }
-
 
 struct HybridBlobExecutor {
     manager: Arc<dyn BlobManager>,
@@ -161,21 +174,26 @@ struct HybridBlobExecutor {
 
 #[async_trait::async_trait]
 impl ToolExecutor for HybridBlobExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let action = args["Action"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Action is required".to_string()))?;
-        let key = args["Key"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Key is required".to_string()))?;
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let action = args["Action"].as_str().ok_or_else(|| {
+            ToolError::LlmRecoverable("hybrid_blob: Action is required".to_string())
+        })?;
+        let key = args["Key"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Key is required".to_string()))?;
 
         match action {
             "read" => {
-                let data = self.manager.read_blob(key).await.map_err(|e| ToolError::LlmRecoverable(e))?;
+                let data = self
+                    .manager
+                    .read_blob(key)
+                    .await
+                    .map_err(|e| ToolError::LlmRecoverable(e))?;
                 // Attempt to return as UTF-8 string, otherwise base64 encode
                 let content = if let Ok(s) = String::from_utf8(data.clone()) {
                     s
                 } else {
-                    use base64::{Engine as _, engine::general_purpose};
+                    use base64::{engine::general_purpose, Engine as _};
                     general_purpose::STANDARD.encode(&data)
                 };
 
@@ -183,18 +201,25 @@ impl ToolExecutor for HybridBlobExecutor {
                     "status": "read",
                     "key": key,
                     "data": content
-                }).to_string())
+                })
+                .to_string())
             }
             "write" => {
-                let data_str = args["Data"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Data is required for write".to_string()))?;
+                let data_str = args["Data"].as_str().ok_or_else(|| {
+                    ToolError::LlmRecoverable("hybrid_blob: Data is required for write".to_string())
+                })?;
                 let data_bytes = data_str.as_bytes();
 
-                self.manager.write_blob(key, data_bytes).await.map_err(|e| ToolError::LlmRecoverable(e))?;
+                self.manager
+                    .write_blob(key, data_bytes)
+                    .await
+                    .map_err(|e| ToolError::LlmRecoverable(e))?;
 
                 Ok(json!({
                     "status": "written",
                     "key": key
-                }).to_string())
+                })
+                .to_string())
             }
             _ => Err(ToolError::LlmRecoverable("invalid action".to_string())),
         }

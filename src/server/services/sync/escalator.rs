@@ -1,6 +1,6 @@
+use sqlx::Row;
 use std::sync::Arc;
 use tokio::time::{self, Duration};
-use sqlx::Row;
 
 pub struct SyncEscalator {
     pool: sqlx::PgPool,
@@ -15,7 +15,11 @@ impl SyncEscalator {
         }
     }
 
-    pub fn start(self: Arc<Self>, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>, interval: Duration) {
+    pub fn start(
+        self: Arc<Self>,
+        mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
+        interval: Duration,
+    ) {
         tokio::spawn(async move {
             let mut ticker = time::interval(interval);
             loop {
@@ -45,9 +49,14 @@ impl SyncEscalator {
             let tenant_id: String = row.get("tenant_id");
             let payload: String = row.get("payload");
 
-            let payload_str = format!(r#"{{"id": "{}", "tenant_id": "{}", "data": "{}"}}"#, id, tenant_id, payload);
-            
-            let mut req = self.client.post("https://cloud.onehumancorp.com/api/v1/orchestration/escalate")
+            let payload_str = format!(
+                r#"{{"id": "{}", "tenant_id": "{}", "data": "{}"}}"#,
+                id, tenant_id, payload
+            );
+
+            let mut req = self
+                .client
+                .post("https://cloud.onehumancorp.com/api/v1/orchestration/escalate")
                 .header("Content-Type", "application/json")
                 .body(payload_str);
 
@@ -87,7 +96,16 @@ mod tests {
     async fn test_sync_escalator() {
         if let Ok(db_url) = std::env::var("DATABASE_URL") {
             let pool = sqlx::PgPool::connect_lazy(&db_url).unwrap();
-            if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+            if !matches!(
+                tokio::time::timeout(
+                    std::time::Duration::from_millis(500),
+                    sqlx::query("SELECT 1").execute(&pool)
+                )
+                .await,
+                Ok(Ok(_))
+            ) {
+                return;
+            }
             let escalator = Arc::new(SyncEscalator::new(pool));
 
             let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);

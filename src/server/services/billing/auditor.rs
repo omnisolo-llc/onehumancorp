@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::sync::Mutex;
 use ::server_pricing::calculator::{self, CostConfig};
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use opentelemetry::KeyValue;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct AuditEvent {
@@ -85,10 +85,13 @@ impl CostAuditor {
         *total_cost += cost;
 
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
-        let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
+        let current_tokens = agent_output_tokens
+            .entry(event.agent_id.clone())
+            .or_insert(0);
         *current_tokens += event.output_tokens;
 
-        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.llm_cost_counter
+            .add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -131,11 +134,12 @@ impl CostAuditor {
     }
 
     pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> f64 {
-        let savings = calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
-        
+        let savings =
+            calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
+
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
-        
+
         self.storage_savings_counter.add(savings, &[]);
 
         savings
@@ -163,11 +167,17 @@ impl CostAuditor {
             let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
-            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes));
+            result.push((
+                agent_id.clone(),
+                *cost,
+                *output_tokens,
+                roi,
+                efficiency,
+                *storage_bytes,
+            ));
         }
         result
     }
-
 
     pub fn record_agent_storage(&self, agent_id: &str, bytes: i64) {
         let mut agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
@@ -201,7 +211,8 @@ impl CostAuditor {
 
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
         let compute_cost = calculator::calculate_compute_cost(event.compute_hours, &self.config);
-        let network_cost = calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
+        let network_cost =
+            calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
         let total = compute_cost + network_cost;
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
@@ -215,7 +226,8 @@ impl CostAuditor {
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
 
-        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.compute_cost_counter
+            .add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }
@@ -233,7 +245,10 @@ impl CostAuditor {
 
         let mut report = format!("Total Cost: ${:.4}\n", *total_cost);
         report += &format!("Total Savings via Caching: ${:.4}\n", *caching_savings);
-        report += &format!("Total Savings via Storage Compression: ${:.4}\n", *storage_savings);
+        report += &format!(
+            "Total Savings via Storage Compression: ${:.4}\n",
+            *storage_savings
+        );
         report += &format!("Total Compute Cost: ${:.4}\n", *total_compute_cost);
         report += &format!("Total Network Cost: ${:.4}\n", *total_network_cost);
         report += "Agent Costs:\n";
@@ -250,7 +265,10 @@ impl CostAuditor {
             let budget = agent_budgets.get(agent_id);
             if let Some(budget) = budget {
                 if cost > budget {
-                    report += &format!("- {}: ${:.4} (OVER BUDGET){}\n", agent_id, cost, metrics_str);
+                    report += &format!(
+                        "- {}: ${:.4} (OVER BUDGET){}\n",
+                        agent_id, cost, metrics_str
+                    );
                 } else {
                     report += &format!("- {}: ${:.4}{}\n", agent_id, cost, metrics_str);
                 }
@@ -295,7 +313,7 @@ mod tests {
             ..Default::default()
         };
         let auditor = CostAuditor::new(config);
-        
+
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             input_tokens: 1000,
@@ -303,7 +321,6 @@ mod tests {
             cached_input_tokens: 0,
             local_embedding_tokens: 0,
         };
-        
 
         let cost = auditor.record_event(event);
         assert_eq!(cost, 2.0); // 1000*0.001 + 500*0.002 = 1.0 + 1.0 = 2.0
@@ -311,10 +328,10 @@ mod tests {
         auditor.record_revenue("agent1", 5.0);
 
         assert_eq!(auditor.get_agent_cost("agent1"), 2.0);
-        
+
         auditor.set_agent_budget("agent1", 1.0);
         assert!(auditor.is_agent_over_budget("agent1"));
-        
+
         let report = auditor.generate_report();
         assert!(report.contains("OVER BUDGET"));
     }

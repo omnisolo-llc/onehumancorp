@@ -1,13 +1,13 @@
-use crate::db::{DB, DbStore};
+use crate::db::{DbStore, DB};
 use crate::orchestration::mesh::TeammateMesh;
 use ohc_builtin_agent::mesh::transport::Message;
 
 use async_trait::async_trait;
 
+use crate::orchestration::state::cloud::CloudStateManager;
+use crate::orchestration::state::StateManager;
 use std::sync::Arc;
 use tokio::time::Duration;
-use crate::orchestration::state::StateManager;
-use crate::orchestration::state::cloud::CloudStateManager;
 
 // A Mock mesh that emits malformed payload
 struct CorruptedMockMesh {
@@ -30,32 +30,63 @@ impl TeammateMesh for CorruptedMockMesh {
     async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
         Ok(())
     }
-    async fn subscribe(&self, _topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(
+        &self,
+        _topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let counter = self.received_messages.clone();
         tokio::spawn(async move {
-            let corrupted_msg = Message { agent_id: "sys".into(), action: "test".into(), status: "ok".into(),
+            let corrupted_msg = Message {
+                agent_id: "sys".into(),
+                action: "test".into(),
+                status: "ok".into(),
 
                 payload: vec![255, 255, 255, 255, 0, 1, 2, 3], // invalid utf8 / JSON
                 msg_id: "corrupt_1".to_string(),
-
             };
             handler(corrupted_msg);
             counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         });
         Ok(Box::new(|| {}))
     }
-    async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        _resource: &str,
+        _owner: &str,
+        _ttl_seconds: u64,
+    ) -> Result<bool, String> {
         Ok(true)
     }
     async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
         Ok(())
     }
-    async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-    async fn ping(&self) -> Result<(), String> { Ok(()) }
-    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-    async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    async fn register_presence(
+        &self,
+        _agent_id: &str,
+        _status: &str,
+        _ttl_seconds: u64,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        Ok(vec![])
+    }
+    async fn ping(&self) -> Result<(), String> {
+        Ok(())
+    }
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
+    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+    async fn subscribe_state_handoff(
+        &self,
+        _handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
 }
 
 struct RacingLockMesh {
@@ -72,28 +103,71 @@ impl RacingLockMesh {
 
 #[async_trait]
 impl TeammateMesh for RacingLockMesh {
-    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> { self.transport.publish(topic, ohc_builtin_agent::mesh::transport::TeammateMeshEvent { agent_id: "sys".into(), action: topic.into(), status: "ok".into(), payload, msg_id: "m1".into() }).await }
-    async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { self.transport.subscribe(topic, handler).await }
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        self.transport
+            .publish(
+                topic,
+                ohc_builtin_agent::mesh::transport::TeammateMeshEvent {
+                    agent_id: "sys".into(),
+                    action: topic.into(),
+                    status: "ok".into(),
+                    payload,
+                    msg_id: "m1".into(),
+                },
+            )
+            .await
+    }
+    async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.transport.subscribe(topic, handler).await
+    }
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         // Just use the internal memory transport to simulate a real Redis-backed cross-process lock
-        self.transport.acquire_lock(resource, owner, ttl_seconds).await
+        self.transport
+            .acquire_lock(resource, owner, ttl_seconds)
+            .await
     }
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
     }
-    async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-    async fn ping(&self) -> Result<(), String> { Ok(()) }
-    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-    async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    async fn register_presence(
+        &self,
+        _agent_id: &str,
+        _status: &str,
+        _ttl_seconds: u64,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        Ok(vec![])
+    }
+    async fn ping(&self) -> Result<(), String> {
+        Ok(())
+    }
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
+    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+    async fn subscribe_state_handoff(
+        &self,
+        _handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
 }
-
-
-
-
-
 
 // A mock transport that occasionally drops messages to test Pub/Sub message loss resilience
 struct DroppingMockTransport {
@@ -112,45 +186,112 @@ impl DroppingMockTransport {
 
 #[async_trait]
 impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport {
-    async fn publish(&self, topic: &str, event: ohc_builtin_agent::mesh::transport::TeammateMeshEvent) -> Result<(), String> {
+    async fn publish(
+        &self,
+        topic: &str,
+        event: ohc_builtin_agent::mesh::transport::TeammateMeshEvent,
+    ) -> Result<(), String> {
         let rate = self.drop_rate.load(std::sync::atomic::Ordering::SeqCst);
-        let should_drop = (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as usize) % 100 < rate;
+        let should_drop = (std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as usize)
+            % 100
+            < rate;
         if should_drop {
             // Simulate dropping the message
             return Ok(());
         }
         self.transport.publish(topic, event).await
     }
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe(topic, handler).await
     }
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
-    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> { Ok(()) }
-    async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
+        Ok(true)
+    }
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        Ok(())
+    }
+    async fn register_presence(
+        &self,
+        _agent_id: &str,
+        _status: &str,
+        _ttl_seconds: u64,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        Ok(vec![])
+    }
 }
 
 struct SleepingMockMesh;
 
 #[async_trait]
 impl TeammateMesh for SleepingMockMesh {
-    async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-    async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-    async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-    async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+    async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+    async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+    async fn subscribe(
+        &self,
+        _topic: &str,
+        _handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
+    async fn acquire_lock(
+        &self,
+        _resource: &str,
+        _owner: &str,
+        _ttl_seconds: u64,
+    ) -> Result<bool, String> {
         tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
         Ok(true)
     }
-    async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+    async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
+        Ok(())
+    }
 
-    async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-    async fn ping(&self) -> Result<(), String> { Ok(()) }
-    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-    async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    async fn register_presence(
+        &self,
+        _agent_id: &str,
+        _status: &str,
+        _ttl_seconds: u64,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        Ok(vec![])
+    }
+    async fn ping(&self) -> Result<(), String> {
+        Ok(())
+    }
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
+    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> {
+        Ok(())
+    }
+    async fn subscribe_state_handoff(
+        &self,
+        _handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
 }
-
 
 #[cfg(test)]
 mod chaos_tests {
@@ -162,12 +303,19 @@ mod chaos_tests {
         let counter = mesh.received_messages.clone();
 
         // This will spawn a task that immediately receives corrupted message
-        let _ = mesh.subscribe("mesh:test:corrupt", Box::new(|msg| {
-            // Simulate how the orchestrator processes JSON
-            let _parsed: Result<serde_json::Value, _> = serde_json::from_slice(&msg.payload);
-            // It should gracefully error out without panicking
-            assert!(_parsed.is_err());
-        })).await.unwrap();
+        let _ = mesh
+            .subscribe(
+                "mesh:test:corrupt",
+                Box::new(|msg| {
+                    // Simulate how the orchestrator processes JSON
+                    let _parsed: Result<serde_json::Value, _> =
+                        serde_json::from_slice(&msg.payload);
+                    // It should gracefully error out without panicking
+                    assert!(_parsed.is_err());
+                }),
+            )
+            .await
+            .unwrap();
 
         tokio::time::sleep(Duration::from_millis(100)).await;
         assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
@@ -185,7 +333,10 @@ mod chaos_tests {
             let mesh_clone = mesh.clone();
             let owner = format!("agent_{}", i);
             join_handles.push(tokio::spawn(async move {
-                mesh_clone.acquire_lock(resource_name, &owner, 10).await.unwrap_or(false)
+                mesh_clone
+                    .acquire_lock(resource_name, &owner, 10)
+                    .await
+                    .unwrap_or(false)
             }));
         }
 
@@ -197,9 +348,11 @@ mod chaos_tests {
         }
 
         // Ensure exactly ONE agent wins the race condition
-        assert_eq!(winners, 1, "There should be exactly one winner in a lock race");
+        assert_eq!(
+            winners, 1,
+            "There should be exactly one winner in a lock race"
+        );
     }
-
 
     #[tokio::test]
     async fn test_pubsub_message_loss() {
@@ -208,9 +361,15 @@ mod chaos_tests {
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let received_clone = received.clone();
 
-        let _ = mesh.subscribe("mesh:test:loss", Box::new(move |_msg| {
-            received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        })).await.unwrap();
+        let _ = mesh
+            .subscribe(
+                "mesh:test:loss",
+                Box::new(move |_msg| {
+                    received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }),
+            )
+            .await
+            .unwrap();
 
         // Start health responder (simulates ack responder)
         let _ = mesh.start_health_responder().await;
@@ -219,11 +378,11 @@ mod chaos_tests {
         // CentrifugeNode's publish_with_ack implements retries automatically!
         let mut successful_sends = 0;
         for _ in 0..20 {
-             // In CentrifugeNode, publish_with_ack subscribes to ack topic, sends, and waits.
-             // We can just use ping() which wraps publish_with_ack for health!
-             if mesh.ping().await.is_ok() {
-                 successful_sends += 1;
-             }
+            // In CentrifugeNode, publish_with_ack subscribes to ack topic, sends, and waits.
+            // We can just use ping() which wraps publish_with_ack for health!
+            if mesh.ping().await.is_ok() {
+                successful_sends += 1;
+            }
         }
 
         tokio::time::sleep(Duration::from_millis(200)).await;
@@ -232,15 +391,36 @@ mod chaos_tests {
         // We verify that some messages were successfully delivered and ack'd despite high packet loss,
         // and that the retry mechanism helped improve the delivery rate.
 
-        assert!(successful_sends > 0, "System should successfully send at least some messages under chaos");
+        assert!(
+            successful_sends > 0,
+            "System should successfully send at least some messages under chaos"
+        );
         // Because of CentrifugeNode's retries, successful_sends should be roughly 87.5% of 20 (approx 17)
-        assert!(successful_sends >= 10, "Retry logic should recover a significant portion of dropped messages");
+        assert!(
+            successful_sends >= 10,
+            "Retry logic should recover a significant portion of dropped messages"
+        );
     }
 
     #[tokio::test]
     async fn test_cloud_degradation_fallback() {
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .max_connections(1)
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
@@ -253,7 +433,10 @@ mod chaos_tests {
         let state_manager = CloudStateManager::new(db.clone(), mesh);
 
         let start = std::time::Instant::now();
-        let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
+        let tasks = state_manager
+            .pull_available_tasks(10)
+            .await
+            .unwrap_or(vec![]);
         let elapsed = start.elapsed();
 
         // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
@@ -281,7 +464,9 @@ mod chaos_tests {
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
         let state_manager = CloudStateManager::new(db, mesh);
 
-        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+        let result = state_manager
+            .transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None)
+            .await;
 
         // Should fallback safely instead of panicking/blocking forever
         assert!(result.is_err());
@@ -317,15 +502,21 @@ mod chaos_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .max_connections(1)
+                .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
+                .unwrap(),
             store: DbStore::Sqlite(pool),
         });
 
         // The fallback is tested via a timeout on the inner lock block
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
-        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
+        let state_manager =
+            crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
 
-        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+        let result = state_manager
+            .transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None)
+            .await;
 
         assert!(result.is_err());
     }
@@ -338,12 +529,16 @@ mod chaos_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .max_connections(1)
+                .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+                .unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
-        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), mesh);
+        let state_manager =
+            crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), mesh);
 
         let tasks = state_manager.pull_available_tasks(10).await;
 

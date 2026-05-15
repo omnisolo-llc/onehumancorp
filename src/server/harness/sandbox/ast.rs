@@ -14,7 +14,10 @@ impl ASTParser {
     }
 
     pub fn parse_for_security(&mut self, cmd: &str) -> Result<(), String> {
-        let tree = self.parser.parse(cmd, None).ok_or("Failed to parse command")?;
+        let tree = self
+            .parser
+            .parse(cmd, None)
+            .ok_or("Failed to parse command")?;
         let root_node = tree.root_node();
 
         self.walk_node_for_security(root_node, cmd)
@@ -57,12 +60,11 @@ impl ASTParser {
         // Just in case it's not parsed properly, check string content for $[] as fallback, but only if it's text.
         // But doing it robustly:
         if node_kind == "word" || node_kind == "raw_string" {
-             let text = &source[node.start_byte()..node.end_byte()];
-             if text.starts_with("$[") && text.ends_with("]") {
-                  return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
-             }
+            let text = &source[node.start_byte()..node.end_byte()];
+            if text.starts_with("$[") && text.ends_with("]") {
+                return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
+            }
         }
-
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -98,7 +100,10 @@ mod tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("echo 'test' > >(cat)");
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: >() process substitution");
+        assert_eq!(
+            res.unwrap_err(),
+            "Dangerous pattern detected: >() process substitution"
+        );
     }
 
     #[test]
@@ -106,7 +111,10 @@ mod tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("cat < <(echo 'test')");
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: <() process substitution");
+        assert_eq!(
+            res.unwrap_err(),
+            "Dangerous pattern detected: <() process substitution"
+        );
     }
 
     #[test]
@@ -115,6 +123,9 @@ mod tests {
         // $[] might be parsed as word or expansion depending on tree-sitter-bash grammar rules
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
+        assert_eq!(
+            res.unwrap_err(),
+            "Dangerous pattern detected: $[] legacy expansion"
+        );
     }
 }

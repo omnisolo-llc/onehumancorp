@@ -3,36 +3,36 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub mod runner;
+pub mod agent_tool;
+pub mod anthropic_memory;
 pub mod bash;
-pub mod read;
-pub mod write;
 pub mod edit;
+pub mod finance;
+pub mod generative_visibility;
 pub mod glob;
 pub mod grep;
-pub mod webfetch;
-pub mod websearch;
+pub mod head;
+pub mod hybrid_blob;
+pub mod lazy_load;
+pub mod local_fs_sync;
+pub mod magentic;
+pub mod marketing;
+pub mod mcp_dynamic;
+pub mod ollama;
+pub mod read;
+pub mod recall;
+pub mod runner;
+pub mod screenshot;
 pub mod sendmessage;
+pub mod sleep;
+pub mod subagent;
+pub mod tail;
+pub mod task;
 pub mod todowrite;
 pub mod toolsearch;
-pub mod task;
-pub mod agent_tool;
-pub mod sleep;
-pub mod marketing;
-pub mod finance;
-pub mod local_fs_sync;
-pub mod ollama;
-pub mod subagent;
-pub mod head;
-pub mod tail;
-pub mod hybrid_blob;
-pub mod anthropic_memory;
-pub mod lazy_load;
-pub mod screenshot;
-pub mod generative_visibility;
-pub mod magentic;
-pub mod recall;
-pub mod mcp_dynamic;
+pub mod webfetch;
+pub mod websearch;
+pub mod write;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -63,10 +63,7 @@ impl Clone for Tool {
 
 #[async_trait::async_trait]
 pub trait ToolExecutor: Send + Sync {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError>;
+    async fn execute(&self, args: Value) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.
@@ -120,8 +117,14 @@ pub fn all_tools(
         generative_visibility::generative_visibility_tool(),
         magentic::magentic_tool(task_store.clone()),
         recall::recall_observation_tool(observation_store),
-        mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
-        mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
+        mcp_dynamic::mcp_discover_tool(
+            std::env::var("MCP_GATEWAY_URL")
+                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+        ),
+        mcp_dynamic::mcp_invoke_tool(
+            std::env::var("MCP_GATEWAY_URL")
+                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+        ),
     ];
 
     if let Some(accessor) = memory_accessor {
