@@ -3,7 +3,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 rust_library(
     name = "server_pricing",
     srcs = [
-        "budget.rs",
         "cache.rs",
         "calculator.rs",
         "compression.rs",
