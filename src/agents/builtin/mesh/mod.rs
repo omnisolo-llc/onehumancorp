@@ -38,23 +38,11 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("system:job_dispatch:mesh", Message {
-            agent_id: "agent".to_string(),
-            action: "system:job_dispatch:mesh".to_string(),
-            status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await
+        self.transport.publish("system:job_dispatch:mesh", Message { topic: "system:job_dispatch:mesh".to_string(), payload }).await
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("system:coordination", Message {
-            agent_id: "agent".to_string(),
-            action: "system:coordination".to_string(),
-            status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await
+        self.transport.publish("system:coordination", Message { topic: "system:coordination".to_string(), payload }).await
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -66,13 +54,7 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("system:state_handoff", Message {
-            agent_id: "agent".to_string(),
-            action: "system:state_handoff".to_string(),
-            status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await
+        self.transport.publish("system:state_handoff", Message { topic: "system:state_handoff".to_string(), payload }).await
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -112,13 +94,7 @@ impl TeammateMesh for TeammateMeshClient {
             let _ = tx.send(());
         })).await?;
 
-        self.transport.publish("system:health_ping", Message {
-            agent_id: "agent".to_string(),
-            action: "system:health_ping".to_string(),
-            status: "ok".to_string(),
-            payload: buf,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await?;
+        self.transport.publish("system:health_ping", Message { topic: "system:health_ping".to_string(), payload: buf }).await?;
 
         match tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await {
             Ok(Some(_)) => {
@@ -150,13 +126,7 @@ impl TeammateMesh for TeammateMeshClient {
                     let t_clone = transport_clone.clone();
                     let ack_topic_clone = ack_topic.clone();
                     tokio::spawn(async move {
-                        let _ = t_clone.publish(&ack_topic_clone, Message {
-                            agent_id: "health_responder".to_string(),
-                            action: ack_topic_clone.clone(),
-                            status: "ok".to_string(),
-                            payload: buf,
-                            msg_id: uuid::Uuid::new_v4().to_string(),
-                        }).await;
+                        let _ = t_clone.publish(&ack_topic_clone, Message { topic: ack_topic_clone.clone(), payload: buf }).await;
                     });
                 }
             }
@@ -165,7 +135,11 @@ impl TeammateMesh for TeammateMeshClient {
 
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
-        let job_id = uuid::Uuid::new_v4().to_string();
+        let job_id = if let Ok(dispatch) = crate::proto::interop::JobDispatch::decode(&payload[..]) {
+            dispatch.job_id
+        } else {
+            uuid::Uuid::new_v4().to_string()
+        };
         let ack_topic = format!("system:job_ack:{}", job_id);
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
@@ -196,13 +170,7 @@ impl TeammateMesh for TeammateMeshClient {
                 return Err("Failed to receive ack after retries".to_string());
             }
 
-            let event = Message {
-                agent_id: "agent".to_string(),
-                action: topic.to_string(),
-                status: "pending".to_string(),
-                payload: buf.clone(),
-                msg_id: job_id.clone(),
-            };
+            let event = Message { topic: topic.to_string(), payload: buf.clone() };
 
             if let Err(e) = self.transport.publish(topic, event).await {
                 cancel();
@@ -374,13 +342,7 @@ mod tests {
                     let ack_topic = format!("system:job_ack:{}", dispatch.job_id);
                     let t_clone = t.clone();
                     tokio::spawn(async move {
-                        let _ = t_clone.publish(&ack_topic, crate::mesh::transport::Message {
-                            agent_id: "test".to_string(),
-                            action: ack_topic.clone(),
-                            status: "ok".to_string(),
-                            payload: b"ack".to_vec(),
-                            msg_id: uuid::Uuid::new_v4().to_string(),
-                        }).await;
+                        let _ = t_clone.publish(&ack_topic, crate::mesh::transport::Message { topic: ack_topic.clone(), payload: b"ack".to_vec() }).await;
                     });
                 }
             })).await;

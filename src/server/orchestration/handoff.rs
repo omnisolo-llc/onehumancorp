@@ -31,7 +31,7 @@ impl HandoffManager {
 
                 let db_clone = db.clone();
                 let mesh = mesh_clone.clone();
-                let msg_id_for_ack = msg.msg_id.clone();
+                let msg_id_for_ack = handoff.state_id.clone();
 
                 // Send ACK immediately to prevent sender backoff/timeouts
                 let ack_topic = format!("mesh:ack:{}", msg_id_for_ack);

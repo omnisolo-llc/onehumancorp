@@ -65,11 +65,8 @@ mod tests {
 
                 // On success, emulate transport
                 let _ = self.transport.publish(topic, Message {
-                    agent_id: "agent".to_string(),
-                    action: topic.to_string(),
-                    status: "pending".to_string(),
+                    topic: topic.to_string(),
                     payload: payload.clone(),
-                    msg_id: "test".to_string(),
                 }).await;
 
                 Ok(())

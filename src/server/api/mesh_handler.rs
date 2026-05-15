@@ -26,14 +26,14 @@ pub async fn mesh_ws_handler(
 #[derive(serde::Deserialize)]
 pub struct BroadcastRequest {
     pub topic: String,
-    pub message: MeshMessage,
+    pub message: Vec<u8>,
 }
 
 pub async fn broadcast_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    match transport.publish(&payload.topic, ohc_builtin_agent::mesh::transport::Message { topic: payload.topic.clone(), payload: payload.message }).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -133,13 +133,7 @@ mod tests {
         let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
 
         // Test sending a message from client to server (publish)
-        let test_msg = MeshMessage {
-            agent_id: "test".to_string(),
-            action: "test_chan".to_string(),
-            status: "ok".to_string(),
-            payload: b"ws_test".to_vec(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
+        let test_msg = MeshMessage { topic: "test_chan".to_string().to_string(), payload: b"ws_test".to_vec().to_vec() };
         let mut buf = Vec::new();
         test_msg.encode(&mut buf).unwrap();
         let b64 = base64::engine::general_purpose::STANDARD.encode(&buf);
@@ -148,13 +142,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Test receiving a message from server to client (subscribe)
-        let srv_msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "test".to_string(),
-            action: "test_chan".to_string(),
-            status: "ok".to_string(),
-            payload: b"srv_test".to_vec(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
+        let srv_msg = ohc_builtin_agent::mesh::transport::Message { topic: "test_chan".to_string(), payload: b"srv_test".to_vec() };
         transport_clone.publish("test_chan", srv_msg.clone()).await.unwrap();
 
         let mut found = false;
@@ -164,7 +152,7 @@ mod tests {
                     let buf = base64::engine::general_purpose::STANDARD.decode(&text).unwrap();
                     let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
                     if received_mesh_msg.payload == b"srv_test" {
-                        assert_eq!(received_mesh_msg.action, "test_chan");
+                        assert_eq!(received_mesh_msg.topic, "test_chan");
                         found = true;
                         break;
                     }

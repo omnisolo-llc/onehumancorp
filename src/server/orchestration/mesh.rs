@@ -1,5 +1,5 @@
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
-use ::server_ohc::orchestration::TeammateMeshEvent;
+
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use opentelemetry::trace::{Tracer, TraceContextExt};
@@ -47,13 +47,7 @@ impl TeammateMesh for CentrifugeNode {
         let tracer = global::tracer("ohc.orchestration.mesh");
         let _span = tracer.start("publish");
         self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
-        self.transport.publish(topic, TeammateMeshEvent {
-            agent_id: "sys".to_string(),
-            action: topic.to_string(),
-            status: "ok".to_string(),
-            payload,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await
+        self.transport.publish(topic, ohc_builtin_agent::mesh::transport::Message { topic: topic.to_string(), payload }).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
@@ -77,8 +71,15 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
-        let msg_id = uuid::Uuid::new_v4().to_string();
-        let ack_topic = format!("mesh:ack:{}", msg_id);
+        use prost::Message as ProstMessage;
+        let job_id = if let Ok(dispatch) = crate::interop::protocol::proto::JobDispatch::decode(&payload[..]) {
+            dispatch.job_id
+        } else if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&payload[..]) {
+            ping.source_node_id
+        } else {
+            "unknown".to_string()
+        };
+        let ack_topic = format!("mesh:ack:{}", job_id);
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -95,13 +96,7 @@ impl TeammateMesh for CentrifugeNode {
                 return Err("Failed to receive ack after retries".to_string());
             }
 
-            let event = TeammateMeshEvent {
-                agent_id: "sys".to_string(),
-                action: topic.to_string(),
-                status: "pending".to_string(),
-                payload: payload.clone(),
-                msg_id: msg_id.clone(),
-            };
+            let event = ohc_builtin_agent::mesh::transport::Message { topic: topic.to_string(), payload: payload.clone() };
 
             if let Err(e) = self.transport.publish(topic, event).await {
                 cancel();
@@ -127,26 +122,43 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn ping(&self) -> Result<(), String> {
-        self.publish_with_ack("mesh:health:ping", b"ping".to_vec()).await
+        use prost::Message as ProstMessage;
+        let node_id = uuid::Uuid::new_v4().to_string();
+        let ping = crate::interop::protocol::proto::HealthPing {
+            source_node_id: node_id.clone(),
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+        let mut buf = Vec::new();
+        ping.encode(&mut buf).unwrap();
+
+        let ack_topic = format!("mesh:ack:{}", node_id);
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            let _ = tx.send(());
+        })).await?;
+
+        let msg = ohc_builtin_agent::mesh::transport::Message { topic: "mesh:health:ping".to_string(), payload: buf };
+        self.transport.publish("mesh:health:ping", msg).await?;
+
+        match tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await {
+            Ok(Some(_)) => { cancel(); Ok(()) }
+            _ => { cancel(); Err("Timeout".to_string()) }
+        }
     }
 
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let transport_clone = self.transport.clone();
 
         self.transport.subscribe("mesh:health:ping", Box::new(move |msg: Message| {
-            let msg_id = msg.msg_id.clone();
-            let ack_topic = format!("mesh:ack:{}", msg_id);
-
-            let t_clone = transport_clone.clone();
-            tokio::spawn(async move {
-                let _ = t_clone.publish(&ack_topic, TeammateMeshEvent {
-                    agent_id: "health_responder".to_string(),
-                    action: ack_topic.clone(),
-                    status: "ok".to_string(),
-                    payload: b"pong".to_vec(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                }).await;
-            });
+            use prost::Message as ProstMessage;
+            if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+                let ack_topic = format!("mesh:ack:{}", ping.source_node_id);
+                let t_clone = transport_clone.clone();
+                tokio::spawn(async move {
+                    let _ = t_clone.publish(&ack_topic, ohc_builtin_agent::mesh::transport::Message { topic: ack_topic.clone(), payload: b"pong".to_vec() }).await;
+                });
+            }
         })).await
     }
 

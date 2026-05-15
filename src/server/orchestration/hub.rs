@@ -15,7 +15,7 @@ impl RedisMeshTransport {
 
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
-    async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+    async fn publish(&self, topic: &str, message: ohc_builtin_agent::mesh::transport::Message) -> Result<(), String> {
         self.inner.publish(topic, message).await
     }
 
@@ -54,7 +54,7 @@ impl MemoryMeshTransport {
 
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
-    async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+    async fn publish(&self, topic: &str, message: ohc_builtin_agent::mesh::transport::Message) -> Result<(), String> {
         self.inner.publish(topic, message).await
     }
 

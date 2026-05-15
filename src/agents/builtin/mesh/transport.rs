@@ -4,7 +4,13 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use dashmap::DashMap;
 
-pub use crate::proto::hub::TeammateMeshEvent as Message;
+#[derive(Clone, prost::Message)]
+pub struct Message {
+    #[prost(string, tag = "1")]
+    pub topic: String,
+    #[prost(bytes, tag = "2")]
+    pub payload: Vec<u8>,
+}
 
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
@@ -270,16 +276,9 @@ impl MeshTransport for PgTransport {
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
 
-        let msg_id = if message.msg_id.is_empty() {
-            None
-        } else {
-            Some(message.msg_id.clone())
-        };
-
-        sqlx::query("INSERT INTO mesh_messages (topic, payload, msg_id) VALUES ($1, $2, $3)")
+        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES ($1, $2)")
             .bind(topic)
             .bind(buf)
-            .bind(msg_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -494,16 +493,9 @@ impl MeshTransport for SqliteTransport {
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
 
-        let msg_id = if message.msg_id.is_empty() {
-            None
-        } else {
-            Some(message.msg_id.clone())
-        };
-
-        sqlx::query("INSERT INTO mesh_messages (topic, payload, msg_id) VALUES (?, ?, ?)")
+        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES (?, ?)")
             .bind(topic)
             .bind(buf)
-            .bind(msg_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -947,7 +939,7 @@ mod tests {
             let received_clone = received.clone();
 
             let handler = Box::new(move |msg: Message| {
-                if msg.action == "ipc_test_topic" && msg.payload == b"ipc_hello" {
+                if msg.topic == "ipc_test_topic" && msg.payload == b"ipc_hello" {
                     received_clone.store(true, Ordering::SeqCst);
                 }
             });
@@ -955,13 +947,7 @@ mod tests {
             let cancel = transport.subscribe("ipc_test_topic", handler).await.unwrap();
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-            let msg = Message {
-                agent_id: "test".to_string(),
-                action: "ipc_test_topic".to_string(),
-                status: "ok".to_string(),
-                payload: b"ipc_hello".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
+            let msg = Message { topic: "ipc_test_topic".to_string().to_string(), payload: b"ipc_hello".to_vec() };
 
             let _ = transport.publish("ipc_test_topic", msg).await;
 
@@ -978,13 +964,7 @@ mod tests {
         let transport_res = PgTransport::new(&db_url).await;
 
         if let Ok(transport) = transport_res {
-            let msg = Message {
-                agent_id: "test".to_string(),
-                action: "ipc_checkpoint_topic".to_string(),
-                status: "ok".to_string(),
-                payload: b"ipc_checkpoint".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
+            let msg = Message { topic: "ipc_checkpoint_topic".to_string().to_string(), payload: b"ipc_checkpoint".to_vec() };
 
             let _ = transport.publish("ipc_checkpoint_topic", msg).await;
 
@@ -1027,20 +1007,14 @@ mod tests {
         let received_clone = received.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.action == "test_topic" && msg.payload == b"hello" {
+            if msg.topic == "test_topic" && msg.payload == b"hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
 
         let cancel = transport.subscribe("test_topic", handler).await.unwrap();
 
-        let msg = Message {
-            agent_id: "test".to_string(),
-            action: "test_topic".to_string(),
-            status: "ok".to_string(),
-            payload: b"hello".to_vec(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
+        let msg = Message { topic: "test_topic".to_string().to_string(), payload: b"hello".to_vec() };
 
         transport.publish("test_topic", msg).await.unwrap();
 
@@ -1070,7 +1044,7 @@ mod tests {
             let received_clone = received.clone();
 
             let handler = Box::new(move |msg: Message| {
-                if msg.action == "sqlite_test_topic" && msg.payload == b"sqlite_hello" {
+                if msg.topic == "sqlite_test_topic" && msg.payload == b"sqlite_hello" {
                     received_clone.store(true, Ordering::SeqCst);
                 }
             });
@@ -1078,13 +1052,7 @@ mod tests {
             let cancel = transport.subscribe("sqlite_test_topic", handler).await.unwrap();
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-            let msg = Message {
-                agent_id: "test".to_string(),
-                action: "sqlite_test_topic".to_string(),
-                status: "ok".to_string(),
-                payload: b"sqlite_hello".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
+            let msg = Message { topic: "sqlite_test_topic".to_string().to_string(), payload: b"sqlite_hello".to_vec() };
 
             let _ = transport.publish("sqlite_test_topic", msg).await;
 
@@ -1101,13 +1069,7 @@ mod tests {
         let transport_res = SqliteTransport::new(pool).await;
 
         if let Ok(transport) = transport_res {
-            let msg = Message {
-                agent_id: "test".to_string(),
-                action: "sqlite_checkpoint_topic".to_string(),
-                status: "ok".to_string(),
-                payload: b"sqlite_checkpoint".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
+            let msg = Message { topic: "sqlite_checkpoint_topic".to_string().to_string(), payload: b"sqlite_checkpoint".to_vec() };
 
             let _ = transport.publish("sqlite_checkpoint_topic", msg).await;
 
@@ -1280,13 +1242,7 @@ mod tests {
         // Wait for subscription to propagate
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let msg = Message {
-            agent_id: "test".to_string(),
-            action: "test_topic_redis".to_string(),
-            status: "ok".to_string(),
-            payload: b"hello redis".to_vec(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
+        let msg = Message { topic: "test_topic_redis".to_string().to_string(), payload: b"hello redis".to_vec() };
 
         transport.publish("test_topic_redis", msg.clone()).await.unwrap();
 
@@ -1295,7 +1251,7 @@ mod tests {
 
         assert!(result.is_ok());
         if let Ok(Some(received_msg)) = result {
-             assert_eq!(received_msg.action, "test_topic_redis");
+             assert_eq!(received_msg.topic, "test_topic_redis");
              assert_eq!(received_msg.payload, b"hello redis");
         } else {
              panic!("Did not receive message");

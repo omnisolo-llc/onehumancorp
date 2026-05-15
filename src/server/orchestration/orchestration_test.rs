@@ -107,7 +107,12 @@ async fn test_task_decomposition_service() {
     tokio::spawn(async move {
         let mesh_inner = mesh_clone.clone();
         let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
-            let msg_id = msg.msg_id.clone();
+            use prost::Message as ProstMessage;
+            let msg_id = if let Ok(dispatch) = crate::interop::protocol::proto::JobDispatch::decode(&msg.payload[..]) {
+                dispatch.job_id
+            } else {
+                "unknown".to_string()
+            };
             let ack_topic = format!("mesh:ack:{}", msg_id);
             let mesh_inner2 = mesh_inner.clone();
             tokio::spawn(async move {
@@ -260,7 +265,12 @@ async fn test_task_decomposition_dag_blocked() {
     tokio::spawn(async move {
         let mesh_inner = mesh_clone.clone();
         let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
-            let msg_id = msg.msg_id.clone();
+            use prost::Message as ProstMessage;
+            let msg_id = if let Ok(dispatch) = crate::interop::protocol::proto::JobDispatch::decode(&msg.payload[..]) {
+                dispatch.job_id
+            } else {
+                "unknown".to_string()
+            };
             let ack_topic = format!("mesh:ack:{}", msg_id);
             let mesh_inner2 = mesh_inner.clone();
             tokio::spawn(async move {
@@ -421,7 +431,12 @@ async fn test_task_decomposition_service_fail_task() {
     tokio::spawn(async move {
         let mesh_inner = mesh_clone.clone();
         let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
-            let msg_id = msg.msg_id.clone();
+            use prost::Message as ProstMessage;
+            let msg_id = if let Ok(dispatch) = crate::interop::protocol::proto::JobDispatch::decode(&msg.payload[..]) {
+                dispatch.job_id
+            } else {
+                "unknown".to_string()
+            };
             let ack_topic = format!("mesh:ack:{}", msg_id);
             let mesh_inner2 = mesh_inner.clone();
             tokio::spawn(async move {

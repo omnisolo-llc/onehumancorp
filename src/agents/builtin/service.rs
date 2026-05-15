@@ -925,13 +925,7 @@ mod tests {
         // The MemoryTransport internally executes local subscribers immediately.
         // It's a bit tricky to assert side-effects of tokio::spawn inside without mocking the entire service,
         // but we verify the publish is correctly handled by the framework without crashing.
-        let result = transport.publish("task.assigned", crate::mesh::transport::Message {
-            agent_id: "agent".to_string(),
-            action: "task.assigned".to_string(),
-            status: "ok".to_string(),
-            payload: buf,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await;
+        let result = transport.publish("task.assigned", crate::mesh::transport::Message { topic: "task.assigned".to_string(), payload: buf }).await;
 
         assert!(result.is_ok());
 
@@ -961,13 +955,7 @@ pub async fn start_builtin_agent(
                                 let mut buf = Vec::new();
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
-                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message {
-                                        agent_id: "agent".to_string(),
-                                        action: "agent_events".to_string(),
-                                        status: "ok".to_string(),
-                                        payload: buf,
-                                        msg_id: uuid::Uuid::new_v4().to_string(),
-                                    }).await;
+                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message { topic: "agent_events".to_string(), payload: buf }).await;
                                 }
                             }
                         }
@@ -1040,13 +1028,7 @@ pub async fn start_builtin_agent(
                                         let mut buf = Vec::new();
                                         use prost::Message;
                                         let _ = evt.encode(&mut buf);
-                                        let _ = transport.publish("agent_events", crate::mesh::transport::Message {
-                                            agent_id: "agent".to_string(),
-                                            action: "agent_events".to_string(),
-                                            status: "ok".to_string(),
-                                            payload: buf,
-                                            msg_id: uuid::Uuid::new_v4().to_string(),
-                                        }).await;
+                                        let _ = transport.publish("agent_events", crate::mesh::transport::Message { topic: "agent_events".to_string(), payload: buf }).await;
                                     }
                                     Err(e) => {
                                         tracing::error!("Stream error running task from task.assigned: {}", e);

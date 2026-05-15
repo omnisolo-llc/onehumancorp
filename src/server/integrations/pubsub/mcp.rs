@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::MeshTransport;
-use ::server_ohc::orchestration::TeammateMeshEvent;
+
 
 pub struct PubSubManager {
     transport: Arc<dyn MeshTransport>,
@@ -31,24 +31,7 @@ impl PubSubManager {
     pub async fn publish(&self, tenant_id: &str, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
-        use prost::Message as ProstMessage;
-        let event = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "mcp".to_string(),
-            action: "publish".to_string(),
-            status: "ok".to_string(),
-            payload: payload.clone(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-        let mut buf = Vec::new();
-        let _ = event.encode(&mut buf);
-
-        let message = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "mcp".to_string(),
-            action: formatted_topic.clone(),
-            status: "ok".to_string(),
-            payload: buf,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
+        let message = ohc_builtin_agent::mesh::transport::Message { topic: formatted_topic.clone(), payload: payload };
         self.transport.publish(&formatted_topic, message).await
     }
 
@@ -56,19 +39,13 @@ impl PubSubManager {
         &self,
         tenant_id: &str,
         topic: &str,
-        handler: Box<dyn Fn(TeammateMeshEvent) + Send + Sync>,
+        handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
-        let wrapped_handler = Box::new(move |msg: TeammateMeshEvent| {
+        let wrapped_handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
             use prost::Message as ProstMessage;
-            if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
-                let mut new_msg = msg.clone();
-                new_msg.payload = event.payload;
-                handler(new_msg);
-            } else {
-                handler(msg);
-            }
+            handler(msg);
         });
 
         self.transport.subscribe(&formatted_topic, wrapped_handler).await
@@ -122,9 +99,9 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: TeammateMeshEvent| {
+        let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
             // In standalone, topic is NOT prefixed
-            if msg.action == "test_topic" && msg.payload == b"hello" {
+            if msg.topic == "test_topic" && msg.payload == b"hello" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
@@ -152,9 +129,9 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let handler = Box::new(move |msg: TeammateMeshEvent| {
+        let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
             // In cloud, topic IS prefixed with tenant_id
-            if msg.action == "tenant_123:test_topic" && msg.payload == b"hello" {
+            if msg.topic == "tenant_123:test_topic" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         });
