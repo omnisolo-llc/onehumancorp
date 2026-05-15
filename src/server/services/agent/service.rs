@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::agent_manager_service_server::AgentManagerService;
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
 use crate::hub::Hub;
@@ -9,7 +9,7 @@ pub struct MyAgentManagerService {
     hub: Arc<Hub>,
     skills: RwLock<Vec<SkillPack>>,
     snapshots: RwLock<Vec<OrgSnapshot>>,
-    snapshot_cache: crate::utils::cache::HybridCache<DashboardSnapshot>,
+    snapshot_cache: ::server_utils::cache::HybridCache<DashboardSnapshot>,
 }
 
 impl MyAgentManagerService {
@@ -19,7 +19,7 @@ impl MyAgentManagerService {
             hub,
             skills: RwLock::new(Vec::new()),
             snapshots: RwLock::new(Vec::new()),
-            snapshot_cache: crate::utils::cache::HybridCache::new(redis_client),
+            snapshot_cache: ::server_utils::cache::HybridCache::new(redis_client),
         }
     }
 
@@ -43,7 +43,7 @@ impl MyAgentManagerService {
         let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
         let mut agent_costs = Vec::new();
-        for (name, cost, _token_used, roi, efficiency) in agent_costs_data {
+        for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
             let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
             agent_costs.push(AgentCostSummary {
                 name,
@@ -86,8 +86,8 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<HireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         if req.name.is_empty() || req.role.is_empty() {
@@ -113,8 +113,8 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<FireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         if req.agent_id.is_empty() {
@@ -130,8 +130,8 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<DelegateTaskRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
@@ -233,8 +233,8 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         let hub1 = self.hub.clone();
@@ -280,8 +280,8 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id_req = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         Ok(Response::new(self.get_snapshot(&org_id_req).await?))
     }
@@ -290,8 +290,8 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<RestoreSnapshotRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = crate::auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
-        let (tenant_id, _) = crate::auth::parse_spiffe_id(&spiffe_id_str).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         if req.snapshot_id.is_empty() {

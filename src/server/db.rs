@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
-use crate::utils::auth_utils::set_org_context;
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -119,24 +119,29 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
-            // Enforce SQLCipher for Standalone mode
-            if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
-                let key = if let Some(k) = database_url.split("key=").nth(1) {
-                    k.split('&').next().unwrap_or("").to_string()
-                } else {
-                    std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
-                };
+            // Enforce SQLCipher for Standalone mode unconditionally
+            let key = if let Some(k) = database_url.split("key=").nth(1) {
+                k.split('&').next().unwrap_or("").to_string()
+            } else {
+                std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+            };
 
-                if key.is_empty() {
-                    panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
-                }
-
-                conn_opts = conn_opts.pragma("key", key);
-                // Force full encryption of the database
-                conn_opts = conn_opts.pragma("cipher", "sqlcipher");
+            if key.is_empty() {
+                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
             }
 
+            conn_opts = conn_opts.pragma("key", key);
+            // Force full encryption of the database
+            conn_opts = conn_opts.pragma("cipher", "sqlcipher");
+
             let sqlite_pool = SqlitePoolOptions::new()
+                .after_connect(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("PRAGMA secure_delete = ON").await?;
+                        Ok(())
+                    })
+                })
                 .connect_with(conn_opts)
                 .await?;
 
@@ -151,12 +156,27 @@ impl DB {
                 }
             }
 
-            let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-                .acquire_timeout(std::time::Duration::from_millis(500))
-
-                .connect(&pg_url)
-                .await?;
+            let mut attempt = 0;
+            let max_attempts = 30;
+            let pool = loop {
+                match sqlx::postgres::PgPoolOptions::new()
+                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                    .acquire_timeout(std::time::Duration::from_millis(2000))
+                    .connect(&pg_url)
+                    .await
+                {
+                    Ok(p) => break p,
+                    Err(e) => {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(e.into());
+                        }
+                        tracing::warn!("Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...", attempt, max_attempts, e);
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                }
+            };
 
             let _ = GLOBAL_POOL.set(pool.clone());
             Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
@@ -182,10 +202,10 @@ impl DB {
                     if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
                         attempt += 1;
                         if attempt >= max_attempts {
-                            let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
+                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
                             return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
                         }
-                        let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
                     } else {
@@ -393,6 +413,8 @@ impl DB {
                         title TEXT,
                         price REAL,
                         inventory_count INTEGER,
+                        supplier_name TEXT,
+                        supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -818,7 +840,7 @@ pub async fn insert_autodream_memory(
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
@@ -826,7 +848,7 @@ pub async fn insert_autodream_memory(
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
+                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
@@ -968,6 +990,7 @@ mod autodream_db_tests {
         // we use a SQLite in-memory test to verify connection pools don't reuse tenant state
         // and verify our query bindings safely isolate the tenant parameter natively.
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
@@ -1018,6 +1041,7 @@ mod autodream_db_tests {
             .pragma("key", "secure_test_key_123");
 
         let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(opts)
             .await;
 

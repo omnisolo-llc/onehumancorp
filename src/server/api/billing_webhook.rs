@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use serde_json::Value;
 
-use crate::pricing::rate_limit::{PlanTier, RedisRateLimiter};
+use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
 
 #[derive(Clone)]
@@ -81,7 +81,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&*pool)
                             .await
                             .map(|_| ())
                     }
@@ -124,7 +124,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&*pool)
                             .await
                             .map(|_| ())
                     }

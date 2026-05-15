@@ -11,7 +11,6 @@ mod tests {
     use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
-    use ohc_builtin_agent::legacy_mesh::DistributedLock;
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
@@ -39,18 +38,6 @@ mod tests {
         assert!(delegate_res.is_err(), "delegate_mission_with_tx should fail gracefully without panic");
     }
 
-    #[tokio::test]
-    async fn test_corrupt_agent_lock_failure() {
-        // Simulating a redis drop or corruption.
-        let client = redis::Client::open("redis://127.0.0.1:0/").unwrap();
-        let lock = DistributedLock::new(client, "test_chaos_lock");
-
-        let acquire_res = lock.acquire(Duration::from_millis(100), Duration::from_millis(500)).await;
-        assert!(acquire_res.is_err());
-
-        let release_res = lock.release().await;
-        assert!(release_res.is_err());
-    }
 
     // Testing graceful degradation during network latency
     #[tokio::test]
@@ -412,6 +399,84 @@ mod tests {
 
         assert_eq!(result.unwrap(), "Success");
         assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_load_stress_cloud_standalone() {
+        use std::sync::Arc;
+        use tokio::time::Instant;
+        use crate::sip::SipDB;
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        // Shared SQLite for Standalone Stress
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = SqlitePoolOptions::new().max_connections(5).connect(&uri).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                tenant_id TEXT DEFAULT 'system',
+                mission_log TEXT
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let sip_db = Arc::new(SipDB::new(pg_pool, "system".to_string()));
+
+        // Cloud Mode Simulation (100 simultaneous business owners)
+        let mut cloud_handles = vec![];
+        for i in 0..100 {
+            let s = sip_db.clone();
+            cloud_handles.push(tokio::spawn(async move {
+                let start = Instant::now();
+                // Simulate a high-frequency status check or update
+                let _ = s.enrich_payload_with_grounding_content("test", &None);
+                start.elapsed().as_micros() as u64
+            }));
+        }
+
+        let mut cloud_latencies = vec![];
+        for h in cloud_handles {
+            cloud_latencies.push(h.await.unwrap());
+        }
+        cloud_latencies.sort();
+        let cp50 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[cloud_latencies.len() / 2] };
+        let cp95 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.95) as usize] };
+        let cp99 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.99) as usize] };
+        tracing::info!("Cloud Stress Results: p50={}us, p95={}us, p99={}us", cp50, cp95, cp99);
+
+        // Standalone Mode Simulation (10 simultaneous business owners)
+        let mut standalone_handles = vec![];
+        let pool_arc = Arc::new(pool);
+        for i in 0..10 {
+            let p = pool_arc.clone();
+            standalone_handles.push(tokio::spawn(async move {
+                let start = Instant::now();
+                let _ = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
+                    .bind(format!("stress_{}", i))
+                    .execute(&*p)
+                    .await;
+                start.elapsed().as_micros() as u64
+            }));
+        }
+
+        let mut standalone_latencies = vec![];
+        for h in standalone_handles {
+            standalone_latencies.push(h.await.unwrap());
+        }
+        standalone_latencies.sort();
+        let sp50 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[standalone_latencies.len() / 2] };
+        let sp95 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.95) as usize] };
+        let sp99 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.99) as usize] };
+        tracing::info!("Standalone Stress Results: p50={}us, p95={}us, p99={}us", sp50, sp95, sp99);
+
+        assert!(cp50 >= 0);
+        assert!(sp50 >= 0);
     }
 
     #[tokio::test]

@@ -118,6 +118,10 @@ message MeshEvent {
   int64 timestamp = 4;
 }
 
+message PublishMeshEventRequest {
+  MeshEvent event = 1;
+}
+
 // TeammateMeshEvent for rich payload task broadcasting
 message TeammateMeshEvent {
   string agent_id = 1;
@@ -245,6 +249,7 @@ service HubService {
   rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
   rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
+  rpc PublishMeshEvent(PublishMeshEventRequest) returns (PublishMessageResponse);
   rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
   rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
   
@@ -729,15 +734,15 @@ message TeamInvitesResponse {
   repeated TeamInviteProto invites = 1;
 }
 
-message ViralCoefficientResponse {
+message ReferralScoreResponse {
   int32 total_referrals = 1;
   int32 total_conversions = 2;
   int32 unique_inviters = 3;
-  double k_factor = 4;
+  double score = 4;
 }
 
-message ViralCoefficientMetricsResponse {
-  double viral_coefficient = 1;
+message ReferralScoreMetricsResponse {
+  double referral_score = 1;
   string organization_id = 2;
 }
 
@@ -773,6 +778,9 @@ message GetQuotaRequest {
 message QuotaMetrics {
   int32 used = 1;
   int32 max = 2;
+  bool soft_limit_reached = 3;
+  string upgrade_message = 4;
+  bool is_allowed = 5;
 }
 
 message WaitlistEntry {
@@ -806,8 +814,8 @@ service GrowthService {
   rpc CreateTeamInvite(CreateTeamInviteRequest) returns (TeamInviteProto);
   rpc AcceptTeamInvite(GrowthIdRequest) returns (TeamInviteProto);
   
-  rpc GetViralCoefficient(EmptyRequest) returns (ViralCoefficientResponse);
-  rpc GetViralCoefficientMetrics(EmptyRequest) returns (ViralCoefficientMetricsResponse);
+  rpc GetReferralScore(EmptyRequest) returns (ReferralScoreResponse);
+  rpc GetReferralScoreMetrics(EmptyRequest) returns (ReferralScoreMetricsResponse);
   
   rpc GetOnboardingFunnel(EmptyRequest) returns (OnboardingFunnelsResponse);
   rpc CreateOnboardingFunnel(CreateOnboardingRequest) returns (OnboardingFunnel);
@@ -1119,6 +1127,9 @@ message AnalyticsSummaryResponse {
   int32 pending_approvals = 6;
   int32 active_handoffs = 7;
   int64 token_velocity = 8;
+  bool soft_limit_reached = 9;
+  string upgrade_message = 10;
+  bool is_allowed = 11;
 }
 
 service OrgService {

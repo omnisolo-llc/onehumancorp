@@ -1,5 +1,5 @@
 use crate::db::{DbStore, DB};
-use crate::ohc::orchestration::SyncStateHandoff;
+use ::server_ohc::orchestration::SyncStateHandoff;
 use crate::orchestration::mesh::TeammateMesh;
 use ohc_builtin_agent::mesh::transport::Message as MeshMessage;
 use prost::Message;
@@ -83,7 +83,7 @@ impl HandoffManager {
                             },
                             "shared_tasks" => {
                                 // For shared_tasks, serialized_state is a SharedTask protobuf
-                                let payload_str = if let Ok(task) = crate::ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
+                                let payload_str = if let Ok(task) = ::server_ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
                                     task.payload
                                 } else {
                                     String::from_utf8_lossy(&handoff.serialized_state).to_string()
@@ -449,7 +449,7 @@ mod tests {
 
         let cancel = manager.start_listener().await.unwrap();
 
-        let shared_task = crate::ohc::orchestration::SharedTask {
+        let shared_task = ::server_ohc::orchestration::SharedTask {
             id: "task_123".to_string(),
             organization_id: "org_1".to_string(),
             parent_plan_id: "".to_string(),

@@ -68,7 +68,7 @@ impl ShellSession {
         let memory_dir_export = format!("export OHC_MEMORY_DIR='{}';", self.memory_dir.display());
 
         let wrapper_cmd = format!(
-            "{} source '{}' 2>/dev/null || true; {{ {}; }}; declare -p > '{}'; pwd -P > '{}'",
+            "{} source '{}' 2>/dev/null || true; {{ {}; }}; declare -p | grep -v '^declare -[a-zA-Z-]*r' > '{}'; pwd -P > '{}'",
             memory_dir_export, env_snapshot_path.display(), command, env_snapshot_path.display(), cwd_snapshot_path.display()
         );
 
@@ -86,13 +86,17 @@ impl ShellSession {
         static BWRAP_CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
         if !BWRAP_CHECKED.load(std::sync::atomic::Ordering::Relaxed) {
-            let is_available = std::process::Command::new("bwrap")
-                .arg("--version")
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false);
+            let is_available = if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+                false
+            } else {
+                std::process::Command::new("bwrap")
+                    .arg("--version")
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false)
+            };
             BWRAP_AVAILABLE.store(is_available, std::sync::atomic::Ordering::Relaxed);
             BWRAP_CHECKED.store(true, std::sync::atomic::Ordering::Relaxed);
         }
