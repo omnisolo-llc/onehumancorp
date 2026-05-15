@@ -3,9 +3,9 @@ use crate::proto::hub::TeammateMeshEvent as Message;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use sqlx::Row;
-use std::sync::Arc;
 use tokio::sync::broadcast;
 
+#[derive(Clone)]
 pub struct PgTransport {
     pool: sqlx::PgPool,
     subs: DashMap<String, broadcast::Sender<Message>>,

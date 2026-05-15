@@ -1,10 +1,9 @@
+use redis::AsyncCommands;
 use super::MeshTransport;
 use crate::proto::hub::TeammateMeshEvent as Message;
 use async_trait::async_trait;
-use dashmap::DashMap;
-use std::sync::Arc;
-use tokio::sync::broadcast;
 
+#[derive(Clone)]
 pub struct RedisTransport {
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
@@ -35,7 +34,7 @@ impl MeshTransport for RedisTransport {
         let mut buf = Vec::new();
         message.encode(&mut buf).unwrap();
 
-        let _: () = conn.publish(topic, buf).await.map_err(|e| e.to_string())?;
+        let _: () = redis::AsyncCommands::publish(&mut *conn, topic, buf).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 

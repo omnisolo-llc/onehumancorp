@@ -1,10 +1,8 @@
 use super::MeshTransport;
 use crate::proto::hub::TeammateMeshEvent as Message;
 use async_trait::async_trait;
-use dashmap::DashMap;
-use std::sync::Arc;
-use tokio::sync::broadcast;
 
+#[derive(Clone)]
 pub struct NatsTransport {
     client: async_nats::Client,
     kv: async_nats::jetstream::kv::Store,

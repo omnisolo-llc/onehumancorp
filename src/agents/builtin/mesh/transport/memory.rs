@@ -2,9 +2,9 @@ use super::MeshTransport;
 use crate::proto::hub::TeammateMeshEvent as Message;
 use async_trait::async_trait;
 use dashmap::DashMap;
-use std::sync::Arc;
 use tokio::sync::broadcast;
 
+#[derive(Clone)]
 pub struct MemoryTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
     presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)

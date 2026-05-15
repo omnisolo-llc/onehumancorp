@@ -7,6 +7,7 @@ use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::sync::broadcast;
 
+#[derive(Clone)]
 pub struct UdpTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
     socket: Arc<UdpSocket>,
