@@ -1464,6 +1464,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/agents", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
+                .route("/api/docs/openapi.json", axum::routing::get(api::help::openapi_handler))
+        .route("/api/docs/videos", axum::routing::get(api::help::videos_handler))
+        .route("/api/help/chat", axum::routing::post(api::help::chat_handler))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
@@ -1717,6 +1720,306 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+
+                        /* Scribe Docs Help Center CSS */
+                        .help-center-button {
+                            position: fixed;
+                            bottom: 24px;
+                            right: 24px;
+                            width: 56px;
+                            height: 56px;
+                            border-radius: 28px;
+                            background: var(--primary);
+                            color: white;
+                            font-size: 24px;
+                            border: none;
+                            box-shadow: 0 4px 12px rgba(0,85,255,0.3);
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 1000;
+                            transition: transform 0.2s;
+                        }
+                        .help-center-button:hover { transform: scale(1.05); }
+
+                        .tooltip-registry-element {
+                            position: relative;
+                            cursor: help;
+                        }
+                        .tooltip-registry-element::after {
+                            content: attr(data-tooltip);
+                            position: absolute;
+                            bottom: 100%;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background: #1a1a1b;
+                            color: white;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            font-size: 12px;
+                            white-space: nowrap;
+                            opacity: 0;
+                            pointer-events: none;
+                            transition: opacity 0.2s;
+                            z-index: 2000;
+                            margin-bottom: 8px;
+                            font-family: 'Inter', sans-serif;
+                            font-weight: normal;
+                        }
+                        .tooltip-registry-element:hover::after { opacity: 1; }
+
+                        /* Mobile tooltip fallback */
+                        @media (max-width: 768px) {
+                            .tooltip-registry-element:active::after { opacity: 1; }
+                        }
+
+                        .walkthrough-overlay {
+                            position: fixed;
+                            top: 0; left: 0; right: 0; bottom: 0;
+                            background: rgba(0,0,0,0.5);
+                            z-index: 3000;
+                            display: none;
+                        }
+                        .walkthrough-highlight {
+                            position: relative;
+                            z-index: 3001 !important;
+                            background: white !important;
+                            border-radius: 4px;
+                            box-shadow: 0 0 0 4px rgba(0,85,255,0.5);
+                        }
+                        .walkthrough-bubble {
+                            position: absolute;
+                            background: white;
+                            border: 1px solid var(--border);
+                            border-radius: 8px;
+                            padding: 16px;
+                            width: 250px;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            z-index: 3002;
+                            display: none;
+                            font-family: 'Inter', sans-serif;
+                        }
+                        .walkthrough-bubble h3 { font-size: 16px; margin-bottom: 8px; font-family: 'Outfit', sans-serif; }
+                        .walkthrough-bubble p { font-size: 14px; color: var(--text-secondary); margin-top: 0; margin-bottom: 12px; }
+                        .walkthrough-bubble button { margin-bottom: 0; }
+
+                        .chat-widget {
+                            position: fixed;
+                            bottom: 90px;
+                            right: 24px;
+                            width: 320px;
+                            background: var(--card-bg);
+                            border: 1px solid var(--border);
+                            border-radius: 12px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+                            z-index: 1000;
+                            display: none;
+                            flex-direction: column;
+                            overflow: hidden;
+                        }
+                        .chat-widget-header {
+                            background: var(--primary);
+                            color: white;
+                            padding: 16px;
+                            font-family: 'Outfit', sans-serif;
+                            font-weight: 600;
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        .chat-widget-header button {
+                            background: none; border: none; color: white; padding: 0; cursor: pointer; margin: 0; font-size: 16px;
+                        }
+                        .chat-messages {
+                            padding: 16px;
+                            height: 250px;
+                            overflow-y: auto;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 12px;
+                            font-size: 14px;
+                        }
+                        .chat-msg { padding: 10px 14px; border-radius: 8px; max-width: 85%; }
+                        .chat-msg.user { background: var(--bg); align-self: flex-end; border: 1px solid var(--border); }
+                        .chat-msg.agent { background: #e6f0ff; align-self: flex-start; color: var(--primary-hover); }
+                        .chat-input {
+                            display: flex;
+                            border-top: 1px solid var(--border);
+                            padding: 12px;
+                        }
+                        .chat-input input { margin-bottom: 0; border-radius: 6px 0 0 6px; border-right: none; }
+                        .chat-input button { margin-bottom: 0; margin-right: 0; border-radius: 0 6px 6px 0; }
+
+                        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+                        .video-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--card-bg); }
+                        .video-placeholder { background: #000; color: white; height: 160px; display: flex; align-items: center; justify-content: center; font-size: 48px; }
+                        .video-info { padding: 16px; }
+                        .video-info h3 { margin-bottom: 4px; font-size: 16px; }
+                        .video-info p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+
+                        .help-search-box {
+                            display: flex; margin-bottom: 24px;
+                        }
+                        .help-search-box input { margin-bottom: 0; border-radius: 6px 0 0 6px; }
+                        .help-search-box button { margin-bottom: 0; border-radius: 0 6px 6px 0; margin-right: 0; }
+
+                        .help-category { margin-bottom: 32px; }
+                        .help-category h2 { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 16px; }
+                        .help-article { padding: 16px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: background 0.2s; }
+                        .help-article:hover { background: var(--bg); }
+                        .help-article h3 { font-size: 16px; margin-bottom: 4px; }
+                        .help-article p { font-size: 14px; color: var(--text-secondary); margin: 0; }
+
+
+                        /* Scribe Docs Help Center CSS */
+                        .help-center-button {
+                            position: fixed;
+                            bottom: 24px;
+                            right: 24px;
+                            width: 56px;
+                            height: 56px;
+                            border-radius: 28px;
+                            background: var(--primary);
+                            color: white;
+                            font-size: 24px;
+                            border: none;
+                            box-shadow: 0 4px 12px rgba(0,85,255,0.3);
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 1000;
+                            transition: transform 0.2s;
+                        }
+                        .help-center-button:hover { transform: scale(1.05); }
+
+                        .tooltip-registry-element {
+                            position: relative;
+                            cursor: help;
+                        }
+                        .tooltip-registry-element::after {
+                            content: attr(data-tooltip);
+                            position: absolute;
+                            bottom: 100%;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background: #1a1a1b;
+                            color: white;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            font-size: 12px;
+                            white-space: nowrap;
+                            opacity: 0;
+                            pointer-events: none;
+                            transition: opacity 0.2s;
+                            z-index: 2000;
+                            margin-bottom: 8px;
+                            font-family: 'Inter', sans-serif;
+                            font-weight: normal;
+                        }
+                        .tooltip-registry-element:hover::after { opacity: 1; }
+
+                        /* Mobile tooltip fallback */
+                        @media (max-width: 768px) {
+                            .tooltip-registry-element:active::after { opacity: 1; }
+                        }
+
+                        .walkthrough-overlay {
+                            position: fixed;
+                            top: 0; left: 0; right: 0; bottom: 0;
+                            background: rgba(0,0,0,0.5);
+                            z-index: 3000;
+                            display: none;
+                        }
+                        .walkthrough-highlight {
+                            position: relative;
+                            z-index: 3001 !important;
+                            background: white !important;
+                            border-radius: 4px;
+                            box-shadow: 0 0 0 4px rgba(0,85,255,0.5);
+                        }
+                        .walkthrough-bubble {
+                            position: absolute;
+                            background: white;
+                            border: 1px solid var(--border);
+                            border-radius: 8px;
+                            padding: 16px;
+                            width: 250px;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            z-index: 3002;
+                            display: none;
+                            font-family: 'Inter', sans-serif;
+                        }
+                        .walkthrough-bubble h3 { font-size: 16px; margin-bottom: 8px; font-family: 'Outfit', sans-serif; }
+                        .walkthrough-bubble p { font-size: 14px; color: var(--text-secondary); margin-top: 0; margin-bottom: 12px; }
+                        .walkthrough-bubble button { margin-bottom: 0; }
+
+                        .chat-widget {
+                            position: fixed;
+                            bottom: 90px;
+                            right: 24px;
+                            width: 320px;
+                            background: var(--card-bg);
+                            border: 1px solid var(--border);
+                            border-radius: 12px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+                            z-index: 1000;
+                            display: none;
+                            flex-direction: column;
+                            overflow: hidden;
+                        }
+                        .chat-widget-header {
+                            background: var(--primary);
+                            color: white;
+                            padding: 16px;
+                            font-family: 'Outfit', sans-serif;
+                            font-weight: 600;
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        .chat-widget-header button {
+                            background: none; border: none; color: white; padding: 0; cursor: pointer; margin: 0; font-size: 16px;
+                        }
+                        .chat-messages {
+                            padding: 16px;
+                            height: 250px;
+                            overflow-y: auto;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 12px;
+                            font-size: 14px;
+                        }
+                        .chat-msg { padding: 10px 14px; border-radius: 8px; max-width: 85%; }
+                        .chat-msg.user { background: var(--bg); align-self: flex-end; border: 1px solid var(--border); }
+                        .chat-msg.agent { background: #e6f0ff; align-self: flex-start; color: var(--primary-hover); }
+                        .chat-input {
+                            display: flex;
+                            border-top: 1px solid var(--border);
+                            padding: 12px;
+                        }
+                        .chat-input input { margin-bottom: 0; border-radius: 6px 0 0 6px; border-right: none; }
+                        .chat-input button { margin-bottom: 0; margin-right: 0; border-radius: 0 6px 6px 0; }
+
+                        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+                        .video-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--card-bg); }
+                        .video-placeholder { background: #000; color: white; height: 160px; display: flex; align-items: center; justify-content: center; font-size: 48px; }
+                        .video-info { padding: 16px; }
+                        .video-info h3 { margin-bottom: 4px; font-size: 16px; }
+                        .video-info p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+
+                        .help-search-box {
+                            display: flex; margin-bottom: 24px;
+                        }
+                        .help-search-box input { margin-bottom: 0; border-radius: 6px 0 0 6px; }
+                        .help-search-box button { margin-bottom: 0; border-radius: 0 6px 6px 0; margin-right: 0; }
+
+                        .help-category { margin-bottom: 32px; }
+                        .help-category h2 { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 16px; }
+                        .help-article { padding: 16px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: background 0.2s; }
+                        .help-article:hover { background: var(--bg); }
+                        .help-article h3 { font-size: 16px; margin-bottom: 4px; }
+                        .help-article p { font-size: 14px; color: var(--text-secondary); margin: 0; }
+
                     </style>
                 </head>
                 <body>
@@ -1724,7 +2027,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('help-center-screen')">Help Center</a>
+                        <a onclick="showScreen('api-docs-screen')">Software</a>
+                        <a onclick="showScreen('changelog-screen')">What's New</a>
                     </nav>
 
 
@@ -2218,8 +2523,582 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
+
+
+                    <!-- Scribe Docs: Help Center -->
+                    <div id="help-center-screen" class="screen">
+                        <h1>Help Center</h1>
+                        <p>How can we help you grow your business today?</p>
+                        <div class="help-search-box">
+                            <input type="text" id="helpSearchInput" placeholder="Search for answers..." onkeyup="searchHelp()" />
+                            <button onclick="searchHelp()">Search</button>
+                        </div>
+
+                        <div id="help-results" style="display: none; margin-bottom: 32px;">
+                            <h2>Search Results</h2>
+                            <div id="help-results-container"></div>
+                        </div>
+
+                        <div id="help-categories">
+                            <div class="help-category" data-category="Getting Started">
+                                <h2>Getting Started</h2>
+                                <div class="help-article" onclick="openArticle('Setup Your Store')">
+                                    <h3>Setup Your Store</h3>
+                                    <p>Learn the basics of setting up your first products and accepting payments.</p>
+                                </div>
+                                <div class="help-article" onclick="openArticle('Connecting Your Bank')">
+                                    <h3>Connecting Your Bank</h3>
+                                    <p>How to link your bank account to receive payouts.</p>
+                                </div>
+                            </div>
+                            <div class="help-category" data-category="Payments">
+                                <h2>Payments & Billing</h2>
+                                <div class="help-article" onclick="openArticle('Refunds')">
+                                    <h3>Issuing Refunds</h3>
+                                    <p>How to process a refund for a customer.</p>
+                                </div>
+                            </div>
+                            <div class="help-category" data-category="AI Agents">
+                                <h2>AI Support Agents</h2>
+                                <div class="help-article" onclick="openArticle('Train Agent')">
+                                    <h3>Training your AI Agent</h3>
+                                    <p>How to give your AI Agent the right information about your business.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2>Video Tutorials</h2>
+                        <div class="video-grid" id="video-tutorials-container">
+                            <!-- Videos populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Scribe Docs: API Docs (Advanced) -->
+                    <div id="api-docs-screen" class="screen">
+                        <h1>Software Integrations (Advanced)</h1>
+                        <p>For technical teams: Connect your custom website or app to OHC using our APIs.</p>
+                        <div class="card glass">
+                            <h2>Authentication</h2>
+                            <p>Use your Connection Key to authenticate API requests via the `Authorization: Bearer` header.</p>
+                            <code>curl -H "Authorization: Bearer YOUR_KEY" https://api.onehumancorp.com/v1/store</code>
+                        </div>
+                        <div class="card glass">
+                            <h2>Endpoints</h2>
+                            <ul>
+                                <li><code>GET /v1/products</code> - List your products</li>
+                                <li><code>POST /v1/checkout</code> - Create a checkout session</li>
+                                <li><code>GET /v1/customers</code> - List your customers</li>
+                            </ul>
+                            <button>Generate Connection Key</button>
+                        </div>
+                    </div>
+
+                    <!-- Scribe Docs: Changelog -->
+                    <div id="changelog-screen" class="screen">
+                        <h1>What's New</h1>
+                        <p>Recent updates and improvements to OneHumanCorp.</p>
+                        <div class="card glass">
+                            <h2>New AI Support Agent features</h2>
+                            <p><em>May 2024</em></p>
+                            <p>You can now train your AI Support Agent using your existing website content. Just paste your website address, and the agent will learn about your business automatically!</p>
+                        </div>
+                        <div class="card glass">
+                            <h2>Mobile App Improvements</h2>
+                            <p><em>April 2024</em></p>
+                            <p>We've made the dashboard faster and easier to read on your mobile phone.</p>
+                        </div>
+                        <button class="secondary" onclick="window.open('/changelog', '_blank')">View Full History</button>
+                    </div>
+
+                    <!-- Scribe Docs: Floating Chat & Walkthrough -->
+                    <button class="help-center-button tooltip-registry-element" data-tooltip-id="help-floating-btn" onclick="toggleChatWidget()">?</button>
+
+                    <div class="chat-widget" id="chat-widget">
+                        <div class="chat-widget-header">
+                            Ask anything
+                            <button onclick="toggleChatWidget()">✕</button>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="chat-msg agent">Hi! I'm your OHC Help Agent. How can I assist you today?</div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="chatInput" placeholder="Type your question..." onkeypress="handleChatEnter(event)" />
+                            <button onclick="sendChatMessage()">Send</button>
+                        </div>
+                    </div>
+
+                    <div class="walkthrough-overlay" id="walkthrough-overlay"></div>
+                    <div class="walkthrough-bubble" id="walkthrough-bubble">
+                        <h3 id="walkthrough-title">Step Title</h3>
+                        <p id="walkthrough-desc">Step description goes here.</p>
+                        <button onclick="nextWalkthroughStep()" id="walkthrough-next-btn">Next</button>
+                        <button class="secondary" onclick="endWalkthrough()">Skip</button>
+                    </div>
+
+
+                    <!-- Swagger UI CSS and JS -->
+                    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+                    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js" crossorigin></script>
+
+                    <!-- Scribe Docs: Help Center -->
+                    <div id="help-center-screen" class="screen">
+                        <h1>Help Center</h1>
+                        <p>How can we help you grow your business today?</p>
+                        <div class="help-search-box">
+                            <input type="text" id="helpSearchInput" placeholder="Search for answers..." onkeyup="searchHelp()" />
+                            <button onclick="searchHelp()">Search</button>
+                        </div>
+
+                        <div id="help-results" style="display: none; margin-bottom: 32px;">
+                            <h2>Search Results</h2>
+                            <div id="help-results-container"></div>
+                        </div>
+
+                        <div id="help-categories">
+                            <div class="help-category" data-category="Getting Started">
+                                <h2>Getting Started</h2>
+                                <div class="help-article" onclick="openArticle('Setup Your Store')">
+                                    <h3>Setup Your Store</h3>
+                                    <p>Learn the basics of setting up your first products and accepting payments.</p>
+                                </div>
+                                <div class="help-article" onclick="openArticle('Connecting Your Bank')">
+                                    <h3>Connecting Your Bank</h3>
+                                    <p>How to link your bank account to receive payouts.</p>
+                                </div>
+                            </div>
+                            <div class="help-category" data-category="Payments">
+                                <h2>Payments & Billing</h2>
+                                <div class="help-article" onclick="openArticle('Refunds')">
+                                    <h3>Issuing Refunds</h3>
+                                    <p>How to process a refund for a customer.</p>
+                                </div>
+                            </div>
+                            <div class="help-category" data-category="AI Agents">
+                                <h2>AI Support Agents</h2>
+                                <div class="help-article" onclick="openArticle('Train Agent')">
+                                    <h3>Training your AI Agent</h3>
+                                    <p>How to give your AI Agent the right information about your business.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h2>Video Tutorials</h2>
+                        <div class="video-grid" id="video-tutorials-container">
+                            <!-- Videos populated by backend fetch -->
+                        </div>
+                    </div>
+
+                    <!-- Scribe Docs: API Docs (Advanced) -->
+                    <div id="api-docs-screen" class="screen">
+                        <h1>Software Integrations (Advanced)</h1>
+                        <p>For technical teams: Connect your custom website or app to OHC using our APIs.</p>
+                        <div class="card glass">
+                            <h2>Interactive OpenAPI Reference</h2>
+                            <div id="swagger-ui"></div>
+                        </div>
+                    </div>
+
+                    <!-- Scribe Docs: Changelog -->
+                    <div id="changelog-screen" class="screen">
+                        <h1>What's New</h1>
+                        <p>Recent updates and improvements to OneHumanCorp.</p>
+                        <div class="card glass">
+                            <h2>New AI Support Agent features</h2>
+                            <p><em>May 2024</em></p>
+                            <p>You can now train your AI Support Agent using your existing website content. Just paste your website address, and the agent will learn about your business automatically!</p>
+                        </div>
+                        <div class="card glass">
+                            <h2>Mobile App Improvements</h2>
+                            <p><em>April 2024</em></p>
+                            <p>We've made the dashboard faster and easier to read on your mobile phone.</p>
+                        </div>
+                        <button class="secondary" onclick="window.open('/changelog', '_blank')">View Full History</button>
+                    </div>
+
+                    <!-- Scribe Docs: Floating Chat & Walkthrough -->
+                    <button class="help-center-button tooltip-registry-element" data-tooltip-id="help-floating-btn" onclick="toggleChatWidget()">?</button>
+
+                    <div class="chat-widget" id="chat-widget">
+                        <div class="chat-widget-header">
+                            Ask anything
+                            <button onclick="toggleChatWidget()">✕</button>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="chat-msg agent">Hi! I'm your OHC Help Agent. How can I assist you today?</div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="chatInput" placeholder="Type your question..." onkeypress="handleChatEnter(event)" />
+                            <button onclick="sendChatMessage()">Send</button>
+                        </div>
+                    </div>
+
+                    <div class="walkthrough-overlay" id="walkthrough-overlay"></div>
+                    <div class="walkthrough-bubble" id="walkthrough-bubble">
+                        <h3 id="walkthrough-title">Step Title</h3>
+                        <p id="walkthrough-desc">Step description goes here.</p>
+                        <button onclick="nextWalkthroughStep()" id="walkthrough-next-btn">Next</button>
+                        <button class="secondary" onclick="endWalkthrough()">Skip</button>
+                    </div>
+
                     <script>
-                        const pathMap = {
+
+                        // --- Scribe Docs Logic ---
+                        // Tooltip Registry
+                        const TooltipRegistry = {
+                            'help-floating-btn': 'Need help? Chat with our AI Agent!',
+                            'nav-dashboard': 'Go back to your main overview',
+                            'nav-setup': 'Guided setup to start accepting payments',
+                        };
+
+                        // Interactive Walkthroughs
+                        const Walkthroughs = {
+                            'setup-store': [
+                                { title: "Welcome to OHC", desc: "Let's set up your store in 3 easy steps. First, go to the Setup Wizard.", elementId: "nav-setup", path: "/setup-screen" },
+                                { title: "Describe Your Business", desc: "Tell us what you do, and our AI will build your site.", elementId: "step-1", path: "/setup-screen" }
+                            ],
+                            'accept-payment': [
+                                { title: "Get Paid", desc: "Share your checkout link with a customer to get paid instantly.", elementId: "nav-dashboard", path: "/dashboard" }
+                            ]
+                        };
+
+                        let currentWalkthrough = [];
+                        let currentWalkthroughStep = 0;
+
+                        function startWalkthrough(id) {
+                            if (!Walkthroughs[id]) return;
+                            currentWalkthrough = Walkthroughs[id];
+                            currentWalkthroughStep = 0;
+                            document.getElementById('walkthrough-overlay').style.display = 'block';
+                            document.getElementById('walkthrough-bubble').style.display = 'block';
+                            renderWalkthroughStep();
+                        }
+
+                        function renderWalkthroughStep() {
+                            if (currentWalkthroughStep >= currentWalkthrough.length) {
+                                endWalkthrough();
+                                return;
+                            }
+                            const step = currentWalkthrough[currentWalkthroughStep];
+                            document.getElementById('walkthrough-title').innerText = step.title;
+                            document.getElementById('walkthrough-desc').innerText = step.desc;
+
+                            // Try to show screen if needed
+                            if (step.path) {
+                                // A real implementation would parse the path and map to screen ID
+                                // For now, we assume elementId exists on the current screen or is a nav item.
+                            }
+
+                            // Highlight element
+                            document.querySelectorAll('.walkthrough-highlight').forEach(el => el.classList.remove('walkthrough-highlight'));
+                            const target = document.getElementById(step.elementId) || document.querySelector(`[data-tooltip-id="${step.elementId}"]`);
+                            if (target) {
+                                target.classList.add('walkthrough-highlight');
+                                const rect = target.getBoundingClientRect();
+                                const bubble = document.getElementById('walkthrough-bubble');
+                                bubble.style.top = (rect.bottom + 12) + 'px';
+                                bubble.style.left = rect.left + 'px';
+                            } else {
+                                const bubble = document.getElementById('walkthrough-bubble');
+                                bubble.style.top = '50%';
+                                bubble.style.left = '50%';
+                                bubble.style.transform = 'translate(-50%, -50%)';
+                            }
+                        }
+
+                        function nextWalkthroughStep() {
+                            currentWalkthroughStep++;
+                            renderWalkthroughStep();
+                        }
+
+                        function endWalkthrough() {
+                            document.getElementById('walkthrough-overlay').style.display = 'none';
+                            document.getElementById('walkthrough-bubble').style.display = 'none';
+                            document.querySelectorAll('.walkthrough-highlight').forEach(el => el.classList.remove('walkthrough-highlight'));
+                            currentWalkthrough = [];
+                        }
+
+                        // Help Center Search
+                        const HelpArticles = [
+                            { title: "Setup Your Store", desc: "Learn the basics of setting up your first products and accepting payments.", content: "Go to the Setup Wizard..." },
+                            { title: "Connecting Your Bank", desc: "How to link your bank account to receive payouts.", content: "Go to Settings..." },
+                            { title: "Issuing Refunds", desc: "How to process a refund for a customer.", content: "Go to your dashboard..." },
+                            { title: "Training your AI Agent", desc: "How to give your AI Agent the right information about your business.", content: "Go to Agents..." }
+                        ];
+
+                        function searchHelp() {
+                            const query = document.getElementById('helpSearchInput').value.toLowerCase();
+                            const resultsContainer = document.getElementById('help-results-container');
+                            const resultsSection = document.getElementById('help-results');
+
+                            if (query.length < 2) {
+                                resultsSection.style.display = 'none';
+                                return;
+                            }
+
+                            resultsContainer.innerHTML = '';
+                            const matches = HelpArticles.filter(a => a.title.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query));
+
+                            if (matches.length > 0) {
+                                matches.forEach(m => {
+                                    resultsContainer.innerHTML += `
+                                        <div class="help-article" onclick="openArticle('${m.title}')">
+                                            <h3>${m.title}</h3>
+                                            <p>${m.desc}</p>
+                                        </div>
+                                    `;
+                                });
+                            } else {
+                                resultsContainer.innerHTML = '<p>No results found.</p>';
+                            }
+                            resultsSection.style.display = 'block';
+                        }
+
+                        function openArticle(title) {
+                            alert("Opening Help Article: " + title);
+                        }
+
+                        // Video Tutorials
+                        const Videos = [
+                            { id: 'v1', title: "How to accept your first payment", duration: "1:20" },
+                            { id: 'v2', title: "Setting up your AI Agent", duration: "0:55" },
+                            { id: 'v3', title: "Understanding your billing plan", duration: "1:45" }
+                        ];
+
+                        function renderVideos() {
+                            const container = document.getElementById('video-tutorials-container');
+                            if (!container) return;
+                            Videos.forEach(v => {
+                                container.innerHTML += `
+                                    <div class="video-card">
+                                        <div class="video-placeholder">▶</div>
+                                        <div class="video-info">
+                                            <h3>${v.title}</h3>
+                                            <p>${v.duration}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+
+                        // AI Help Chat Mock
+                        function toggleChatWidget() {
+                            const w = document.getElementById('chat-widget');
+                            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+                        }
+
+                        function sendChatMessage() {
+                            const input = document.getElementById('chatInput');
+                            const val = input.value.trim();
+                            if (!val) return;
+
+                            const msgs = document.getElementById('chat-messages');
+                            msgs.innerHTML += "<div class=\"chat-msg user\">" + val + "</div>";
+                            input.value = '';
+                            msgs.scrollTop = msgs.scrollHeight;
+
+                            setTimeout(() => {
+                                let reply = "I can help with that! Please check our Setup Wizard to get started.";
+                                if (val.toLowerCase().includes("refund")) {
+                                    reply = "To issue a refund, go to your dashboard and select the transaction. <a href='#' onclick='openArticle(\"Issuing Refunds\")'>Read the full article →</a>";
+                                } else if (val.toLowerCase().includes("agent")) {
+                                    reply = "You can train your AI agent by giving it your website link! <a href='#' onclick='openArticle(\"Training your AI Agent\")'>Read the full article →</a>";
+                                }
+                                msgs.innerHTML += "<div class=\"chat-msg agent\">" + reply + "</div>";
+                                msgs.scrollTop = msgs.scrollHeight;
+                            }, 800);
+                        }
+
+                        function handleChatEnter(e) {
+                            if (e.key === 'Enter') sendChatMessage();
+                        }
+
+                        // Initialize Scribe Docs
+                        setTimeout(() => {
+                            renderVideos();
+                        }, 100);
+
+
+                        // --- Scribe Docs Logic ---
+                        // Tooltip Registry
+                        const TooltipRegistry = {
+                            'help-floating-btn': 'Need help? Chat with our AI Agent!',
+                            'nav-dashboard': 'Go back to your main overview',
+                            'nav-setup': 'Guided setup to start accepting payments',
+                            'nav-help': 'Find answers to common questions',
+                            'nav-api': 'Developer API Documentation',
+                            'btn-add-product': 'Add a new product to your catalog'
+                        };
+
+                        // Interactive Walkthroughs
+                        const Walkthroughs = {
+                            'setup-store': [
+                                { title: "Welcome to OHC", desc: "Let's set up your store in 3 easy steps. First, go to the Setup Wizard.", elementId: "nav-setup", path: "/setup-screen" },
+                                { title: "Describe Your Business", desc: "Tell us what you do, and our AI will build your site.", elementId: "step-1", path: "/setup-screen" }
+                            ],
+                            'accept-payment': [
+                                { title: "Get Paid", desc: "Share your checkout link with a customer to get paid instantly.", elementId: "nav-dashboard", path: "/dashboard" }
+                            ],
+                            'activate-agent': [
+                                { title: "AI Support Agent", desc: "Navigate to the Agents page to hire your first AI.", elementId: "nav-agents", path: "/agents" },
+                                { title: "Train your AI", desc: "Click 'Hire Agent' and provide your website link.", elementId: "btn-hire-agent", path: "/agents" }
+                            ]
+                        };
+
+                        let currentWalkthrough = [];
+                        let currentWalkthroughStep = 0;
+
+                        function startWalkthrough(id) {
+                            if (!Walkthroughs[id]) return;
+                            currentWalkthrough = Walkthroughs[id];
+                            currentWalkthroughStep = 0;
+                            document.getElementById('walkthrough-overlay').style.display = 'block';
+                            document.getElementById('walkthrough-bubble').style.display = 'block';
+                            renderWalkthroughStep();
+                        }
+
+                        function renderWalkthroughStep() {
+                            if (currentWalkthroughStep >= currentWalkthrough.length) {
+                                endWalkthrough();
+                                return;
+                            }
+                            const step = currentWalkthrough[currentWalkthroughStep];
+                            document.getElementById('walkthrough-title').innerText = step.title;
+                            document.getElementById('walkthrough-desc').innerText = step.desc;
+
+                            document.querySelectorAll('.walkthrough-highlight').forEach(el => el.classList.remove('walkthrough-highlight'));
+                            const target = document.getElementById(step.elementId) || document.querySelector(`[data-tooltip-id="${step.elementId}"]`);
+                            if (target) {
+                                target.classList.add('walkthrough-highlight');
+                                const rect = target.getBoundingClientRect();
+                                const bubble = document.getElementById('walkthrough-bubble');
+                                bubble.style.top = (rect.bottom + 12) + 'px';
+                                bubble.style.left = rect.left + 'px';
+                            } else {
+                                const bubble = document.getElementById('walkthrough-bubble');
+                                bubble.style.top = '50%';
+                                bubble.style.left = '50%';
+                                bubble.style.transform = 'translate(-50%, -50%)';
+                            }
+                        }
+
+                        function nextWalkthroughStep() {
+                            currentWalkthroughStep++;
+                            renderWalkthroughStep();
+                        }
+
+                        function endWalkthrough() {
+                            document.getElementById('walkthrough-overlay').style.display = 'none';
+                            document.getElementById('walkthrough-bubble').style.display = 'none';
+                            document.querySelectorAll('.walkthrough-highlight').forEach(el => el.classList.remove('walkthrough-highlight'));
+                            currentWalkthrough = [];
+                        }
+
+                        // Help Center Search
+                        const HelpArticles = [
+                            { title: "Setup Your Store", desc: "Learn the basics of setting up your first products and accepting payments.", content: "Go to the Setup Wizard..." },
+                            { title: "Connecting Your Bank", desc: "How to link your bank account to receive payouts.", content: "Go to Settings..." },
+                            { title: "Issuing Refunds", desc: "How to process a refund for a customer.", content: "Go to your dashboard..." },
+                            { title: "Training your AI Agent", desc: "How to give your AI Agent the right information about your business.", content: "Go to Agents..." }
+                        ];
+
+                        function searchHelp() {
+                            const query = document.getElementById('helpSearchInput').value.toLowerCase();
+                            const resultsContainer = document.getElementById('help-results-container');
+                            const resultsSection = document.getElementById('help-results');
+
+                            if (query.length < 2) {
+                                resultsSection.style.display = 'none';
+                                return;
+                            }
+
+                            resultsContainer.innerHTML = '';
+                            const matches = HelpArticles.filter(a => a.title.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query));
+
+                            if (matches.length > 0) {
+                                matches.forEach(m => {
+                                    resultsContainer.innerHTML += "<div class=\"help-article\" onclick=\"openArticle('" + m.title + "')\"><h3>" + m.title + "</h3><p>" + m.desc + "</p></div>";
+                                });
+                            } else {
+                                resultsContainer.innerHTML = '<p>No results found.</p>';
+                            }
+                            resultsSection.style.display = 'block';
+                        }
+
+                        function openArticle(title) {
+                            alert("Opening Help Article: " + title);
+                        }
+
+                        // Video Tutorials Dynamic Fetch
+                        function renderVideos() {
+                            const container = document.getElementById('video-tutorials-container');
+                            if (!container) return;
+
+                            fetch('/api/docs/videos').then(r => r.json()).then(Videos => {
+                                Videos.forEach(v => {
+                                    container.innerHTML += "<div class=\"video-card\"><div class=\"video-placeholder\">▶</div><div class=\"video-info\"><h3>" + v.title + "</h3><p>" + v.duration + "</p></div></div>";
+                                });
+                            }).catch(err => {
+                                container.innerHTML = "<p>Could not load videos.</p>";
+                            });
+                        }
+
+                        // AI Help Chat Backend Fetch
+                        function toggleChatWidget() {
+                            const w = document.getElementById('chat-widget');
+                            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+                        }
+
+                        function sendChatMessage() {
+                            const input = document.getElementById('chatInput');
+                            const val = input.value.trim();
+                            if (!val) return;
+
+                            const msgs = document.getElementById('chat-messages');
+                            msgs.innerHTML += "<div class=\"chat-msg user\">" + val + "</div>";
+                            input.value = '';
+                            msgs.scrollTop = msgs.scrollHeight;
+
+                            fetch('/api/help/chat', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ query: val })
+                            }).then(r => r.json()).then(data => {
+                                msgs.innerHTML += "<div class=\"chat-msg agent\">" + data.reply + "</div>";
+                                msgs.scrollTop = msgs.scrollHeight;
+                            }).catch(err => {
+                                msgs.innerHTML += "<div class=\"chat-msg agent\">Sorry, I couldn't reach the backend.</div>";
+                                msgs.scrollTop = msgs.scrollHeight;
+                            });
+                        }
+
+                        function handleChatEnter(e) {
+                            if (e.key === 'Enter') sendChatMessage();
+                        }
+
+                        // Initialize Scribe Docs
+                        setTimeout(() => {
+                            renderVideos();
+
+                            if (typeof SwaggerUIBundle !== 'undefined') {
+                                SwaggerUIBundle({
+                                    url: "/api/docs/openapi.json",
+                                    dom_id: '#swagger-ui',
+                                    deepLinking: true,
+                                    presets: [
+                                        SwaggerUIBundle.presets.apis,
+                                        SwaggerUIBundle.SwaggerUIStandalonePreset
+                                    ],
+                                });
+                            }
+                        }, 500);
+
+                            const pathMap = {
+                            'help-center-screen': '/help',
+                            'api-docs-screen': '/api-docs',
+                            'changelog-screen': '/changelog',
+                            'help-center-screen': '/help',
+                            'api-docs-screen': '/api-docs',
+                            'changelog-screen': '/changelog',
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
