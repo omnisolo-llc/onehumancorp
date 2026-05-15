@@ -4,6 +4,7 @@ filegroup(
         "e2e_journey_test.rs",
         "layer.rs",
         "mod.rs",
+        "archiver.rs",
     ],
     visibility = ["//src/server/orchestration/departments:__pkg__"],
 )
