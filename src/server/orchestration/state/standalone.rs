@@ -141,15 +141,26 @@ impl StateManager for StandaloneStateManager {
 
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
-        let transition_future = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
-            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
-        };
+        let mut attempts = 0;
+        let max_attempts = 3;
 
-        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => Err(e),
-            Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
+        loop {
+            attempts += 1;
+            let transition_future = async {
+                let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+                self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
+            };
+
+            match tokio::time::timeout(std::time::Duration::from_secs(60), transition_future).await {
+                Ok(Ok(())) => return Ok(()),
+                Ok(Err(e)) => {
+                    if attempts >= max_attempts { return Err(e); }
+                }
+                Err(_) => {
+                    if attempts >= max_attempts { return Err("Timeout acquiring lock or writing database transition".to_string()); }
+                }
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
     }
 
@@ -159,156 +170,198 @@ impl StateManager for StandaloneStateManager {
             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
         };
 
-        let lock_key = "ohc:lock:system:pull_tasks".to_string();
-        let acquire_and_fetch = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
+        let mut attempts = 0;
+        let max_attempts = 3;
 
-            let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+        loop {
+            attempts += 1;
+            let lock_key = "ohc:lock:system:pull_tasks".to_string();
+            let acquire_and_fetch = async {
+                let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
 
-            let now_rfc = Utc::now().to_rfc3339();
-            let rows = sqlx::query(
-                r#"
-                UPDATE swarm_tasks
-                SET status = 'IN_PROGRESS', updated_at = ?
-                WHERE id IN (
-                    SELECT t.id
-                    FROM swarm_tasks t
-                    WHERE t.status = 'PENDING'
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM json_each(t.dependencies) as dep_id
-                        JOIN swarm_tasks dep ON dep.id = dep_id.value
-                        WHERE dep.status != 'COMPLETED'
-                    )
-                    LIMIT ?
-                )
-                RETURNING *
-                "#
-            )
-            .bind(now_rfc)
-            .bind(limit)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
-            Ok::<_, String>((lock_guard, tx, rows))
-        };
-
-        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
-            Ok(Ok(result)) => result,
-            Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") {
-                    tracing::warn!("Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
-                    return Ok(vec![]);
-                }
-                return Err(e);
-            },
-            Err(_) => {
-                tracing::warn!("Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
-                return Ok(vec![]);
-            }
-        };
-
-        let mut tasks = Vec::new();
-        let mut task_ids = Vec::new();
-
-        for row in rows {
-            let id: String = row.get("id");
-            let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
-            let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
-
-            // Check dependencies again explicitly in Rust just to be perfectly safe
-            let mut all_completed = true;
-            if !dependencies.is_empty() {
-                let placeholders = dependencies.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
-                let query = format!(
-                    "SELECT count(*) FROM swarm_tasks WHERE id IN ({}) AND status = 'COMPLETED'",
-                    placeholders
-                );
-
-                let mut db_query = sqlx::query_scalar::<_, i32>(&query);
-                for dep in &dependencies {
-                    db_query = db_query.bind(dep);
-                }
-
-                let completed_count: i32 = db_query
-                    .fetch_one(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
-                if completed_count as usize != dependencies.len() {
-                    all_completed = false;
-                }
-            }
-
-            if all_completed {
-                let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
-                task_ids.push((id.clone(), tenant_id.clone()));
-
-                let payload_str: String = row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
-                let created_at: String = row.try_get("created_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
-                let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at).unwrap_or_default().with_timezone(&Utc);
-                let updated_at: String = row.try_get("updated_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
-                let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap_or_default().with_timezone(&Utc);
-
-                let t = SharedTask {
-                    id: id.clone(),
-                    organization_id: tenant_id,
-                    mission_id: row.get("mission_id"),
-                    parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
-                    dependencies,
-                    title: row.get("title"),
-                    description: row.try_get("description").unwrap_or_default(),
-                    assigned_agent_id: row.try_get("assigned_agent_id").unwrap_or_default(),
-                    status: row.get("status"),
-                    priority: row.try_get("priority").unwrap_or_else(|_| "P2".to_string()),
-                    payload: payload_str,
-                    locked_until: None,
-                    ultraplan_phase: None,
-                    deliberation_log: None,
-                    depth: None,
-                    created_at: dt_created,
-                    updated_at: dt_updated,
-                    action_risk: None,
-                    approval_status: None,
-                    proposed_content: None,
-                };
-                tasks.push(t);
-                if tasks.len() as i64 >= limit {
-                    break;
-                }
-            }
-        }
-
-        // Transitions are recorded after the UPDATE ... RETURNING
-        if !task_ids.is_empty() {
-            let now = Utc::now();
-            let now_rfc = now.to_rfc3339();
-            for (id_str, tenant_id) in task_ids {
-                let trans_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
+                let now_rfc = Utc::now().to_rfc3339();
+                let rows = sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, occurred_at)
-                    VALUES (?, ?, ?, 'swarm_task', 'PENDING', 'IN_PROGRESS', ?)
+                    UPDATE swarm_tasks
+                    SET status = 'IN_PROGRESS', updated_at = ?
+                    WHERE id IN (
+                        SELECT t.id
+                        FROM swarm_tasks t
+                        WHERE t.status = 'PENDING'
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM json_each(t.dependencies) as dep_id
+                            JOIN swarm_tasks dep ON dep.id = dep_id.value
+                            WHERE dep.status != 'COMPLETED'
+                        )
+                        LIMIT ?
+                    )
+                    RETURNING *
                     "#
                 )
-                .bind(trans_id)
-                .bind(&tenant_id)
-                .bind(&id_str)
-                .bind(&now_rfc)
-                .execute(&mut *tx)
+                .bind(now_rfc)
+                .bind(limit)
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                Ok::<_, String>((lock_guard, tx, rows))
+            };
+
+            let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_and_fetch).await {
+                Ok(Ok(result)) => result,
+                Ok(Err(e)) => {
+                    if attempts >= max_attempts {
+                        if e.contains("Timeout acquiring lock") {
+                            tracing::warn!("Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                            return Ok(vec![]);
+                        }
+                        return Err(e);
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    continue;
+                },
+                Err(_) => {
+                    if attempts >= max_attempts {
+                        tracing::warn!("Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                        return Ok(vec![]);
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    continue;
+                }
+            };
+
+            let mut tasks = Vec::new();
+            let mut task_ids = Vec::new();
+            let mut tx_failed = false;
+
+            for row in rows {
+                let id: String = row.get("id");
+                let deps_str: String = row.try_get("dependencies").unwrap_or_else(|_| "[]".to_string());
+                let dependencies: Vec<String> = serde_json::from_str(&deps_str).unwrap_or_default();
+
+                // Check dependencies again explicitly in Rust just to be perfectly safe
+                let mut all_completed = true;
+                if !dependencies.is_empty() {
+                    let placeholders = dependencies.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+                    let query = format!(
+                        "SELECT count(*) FROM swarm_tasks WHERE id IN ({}) AND status = 'COMPLETED'",
+                        placeholders
+                    );
+
+                    let mut db_query = sqlx::query_scalar::<_, i32>(&query);
+                    for dep in &dependencies {
+                        db_query = db_query.bind(dep);
+                    }
+
+                    match db_query.fetch_one(&mut *tx).await {
+                        Ok(completed_count) => {
+                            if completed_count as usize != dependencies.len() {
+                                all_completed = false;
+                            }
+                        },
+                        Err(_) => {
+                            tx_failed = true;
+                            break;
+                        }
+                    }
+                }
+
+                if all_completed {
+                    let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+                    task_ids.push((id.clone(), tenant_id.clone()));
+
+                    let payload_str: String = row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                    let created_at: String = row.try_get("created_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
+                    let dt_created = chrono::DateTime::parse_from_rfc3339(&created_at).unwrap_or_default().with_timezone(&Utc);
+                    let updated_at: String = row.try_get("updated_at").unwrap_or_else(|_| Utc::now().to_rfc3339());
+                    let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap_or_default().with_timezone(&Utc);
+
+                    let t = SharedTask {
+                        id: id.clone(),
+                        organization_id: tenant_id,
+                        mission_id: row.get("mission_id"),
+                        parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
+                        dependencies,
+                        title: row.get("title"),
+                        description: row.try_get("description").unwrap_or_default(),
+                        assigned_agent_id: row.try_get("assigned_agent_id").unwrap_or_default(),
+                        status: row.get("status"),
+                        priority: row.try_get("priority").unwrap_or_else(|_| "P2".to_string()),
+                        payload: payload_str,
+                        locked_until: None,
+                        ultraplan_phase: None,
+                        deliberation_log: None,
+                        depth: None,
+                        created_at: dt_created,
+                        updated_at: dt_updated,
+                        action_risk: None,
+                        approval_status: None,
+                        proposed_content: None,
+                    };
+                    tasks.push(t);
+                    if tasks.len() as i64 >= limit {
+                        break;
+                    }
+                }
             }
+
+            if tx_failed {
+                if attempts >= max_attempts {
+                    return Err("Failed processing dependencies".to_string());
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                continue;
+            }
+
+            // Transitions are recorded after the UPDATE ... RETURNING
+            if !task_ids.is_empty() {
+                let now = Utc::now();
+                let now_rfc = now.to_rfc3339();
+                for (id_str, tenant_id) in task_ids {
+                    let trans_id = uuid::Uuid::new_v4().to_string();
+                    if let Err(_) = sqlx::query(
+                        r#"
+                        INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, occurred_at)
+                        VALUES (?, ?, ?, 'swarm_task', 'PENDING', 'IN_PROGRESS', ?)
+                        "#
+                    )
+                    .bind(trans_id)
+                    .bind(&tenant_id)
+                    .bind(&id_str)
+                    .bind(&now_rfc)
+                    .execute(&mut *tx)
+                    .await {
+                        tx_failed = true;
+                        break;
+                    }
+                }
+
+                if tx_failed {
+                    if attempts >= max_attempts {
+                        return Err("Failed inserting state machine transitions".to_string());
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    continue;
+                }
+            }
+
+            if let Err(e) = tx.commit().await {
+                if attempts >= max_attempts {
+                    return Err(e.to_string());
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                continue;
+            }
+
+            // Update the returned tasks statuses to match what we committed (IN_PROGRESS)
+            for t in &mut tasks {
+                t.status = "IN_PROGRESS".to_string();
+            }
+
+            return Ok(tasks);
         }
-
-        tx.commit().await.map_err(|e| e.to_string())?;
-
-        // Update the returned tasks statuses to match what we committed (IN_PROGRESS)
-        for t in &mut tasks {
-            t.status = "IN_PROGRESS".to_string();
-        }
-
-        Ok(tasks)
     }
 }
