@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhanced scaling capabilities for multi-tenant K8s environments.
+
+### Privacy/Offline Improvements
+- Improved privacy and offline execution modes for Standalone desktop binaries.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements

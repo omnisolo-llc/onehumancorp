@@ -1,4 +1,4 @@
-# OHC Hybrid Agentic OS Release Notes: v0.4.41
+# OHC Hybrid Agentic OS Release Notes: v0.4.42
 
 ## Cloud (Scaling) Improvements
 - Enhanced backend scaling capabilities.
