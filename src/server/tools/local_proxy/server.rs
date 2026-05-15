@@ -1,12 +1,15 @@
 use ::server_ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use tracing::Instrument;
+use std::process::Command;
+use sqlx::PgPool;
 
 pub struct LocalProxyServer {
+    pub pool: Option<PgPool>,
 }
 
 impl LocalProxyServer {
-    pub fn new() -> Self {
-        Self { }
+    pub fn new(pool: Option<PgPool>) -> Self {
+        Self { pool }
     }
 
     pub fn get_tools(&self) -> Vec<McpToolProto> {
@@ -31,12 +34,41 @@ impl LocalProxyServer {
                 let context_id = params["context_id"].as_str().ok_or_else(|| tonic::Status::invalid_argument("context_id is required"))?;
 
                 async {
+                    let output = Command::new("sh")
+                        .arg("-c")
+                        .arg(command)
+                        .output();
+
+                    let (status, stdout, stderr) = match output {
+                        Ok(out) => {
+                            (
+                                out.status.success(),
+                                String::from_utf8_lossy(&out.stdout).to_string(),
+                                String::from_utf8_lossy(&out.stderr).to_string(),
+                            )
+                        }
+                        Err(e) => (false, "".to_string(), e.to_string()),
+                    };
+
+                    if let Some(pool) = &self.pool {
+                        let _ = sqlx::query(
+                            "INSERT INTO local_execution_logs (context_id, command, stdout, stderr, success, created_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)"
+                        )
+                        .bind(context_id)
+                        .bind(command)
+                        .bind(&stdout)
+                        .bind(&stderr)
+                        .bind(status)
+                        .execute(pool)
+                        .await;
+                    }
 
                     let resp = serde_json::json!({
-                        "status": "success",
+                        "status": if status { "success" } else { "error" },
                         "command": command,
                         "context_id": context_id,
-                        "message": "command proxied successfully"
+                        "stdout": stdout,
+                        "stderr": stderr,
                     });
                     Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                 }

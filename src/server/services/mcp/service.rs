@@ -20,9 +20,9 @@ impl MyMcpService {
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
+            local_proxy_server: Arc::new(LocalProxyServer::new(Some(hub.pool.clone()))),
             hub,
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
-            local_proxy_server: Arc::new(LocalProxyServer::new()),
         }
     }
 }

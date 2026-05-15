@@ -514,3 +514,63 @@ mod tests {
     }
 }
 
+
+impl SipDB {
+    pub async fn record_local_execution_sqlite(&self, context_id: &str, command: &str, stdout: &str, stderr: &str, success: bool) -> Result<(), sqlx::Error> {
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let backoff = std::time::Duration::from_millis(50);
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+
+        loop {
+            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+                let _permit = if is_standalone {
+                    Some(get_sqlite_limiter().acquire().await.unwrap())
+                } else {
+                    None
+                };
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await.map_err(|e| sqlx::Error::Configuration(Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))))?;
+
+                // Use robust schema handling mapping for local db environments
+                sqlx::query(
+                    "INSERT INTO local_execution_logs (context_id, command, stdout, stderr, success, created_at, organization_id) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6)"
+                )
+                .bind(context_id)
+                .bind(command)
+                .bind(stdout)
+                .bind(stderr)
+                .bind(success)
+                .bind(&self.org_id)
+                .execute(&mut *tx)
+                .await?;
+
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }).await;
+
+            match res {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                    } else {
+                        return Err(err);
+                    }
+                }
+                Err(_) => {
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(sqlx::Error::PoolTimedOut);
+                    }
+                    tokio::time::sleep(backoff).await;
+                }
+            }
+        }
+    }
+}
