@@ -24,7 +24,7 @@ func TestPostgresRLSIntegration(t *testing.T) {
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		t.Skipf("Skipping integration test due to ping failure: %v", err)
+		t.Fatalf("Skipping integration test due to ping failure: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -28,8 +27,7 @@ func (m *MockLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]f
 }
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
-	slog.Info("Starting OHC Server...")
+	log.Println("Starting OHC Server...")
 
 	// Initialize SQLite database
 	dbPath := ":memory:"
