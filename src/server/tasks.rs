@@ -301,18 +301,33 @@ impl TaskManager {
             if let Some(new_payload) = &new_payload_opt {
                 match &db.store {
                     crate::db::DbStore::Postgres => {
-                        let _res = sqlx::query(
-                            "UPDATE shared_tasks_decomposition SET approval_status = $1, status = $2, payload = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
-                        )
-                        .bind(&new_approval_status)
-                        .bind(&new_status)
-                        .bind(new_payload)
-                        .bind(new_updated_at)
-                        .bind(task_id)
-                        .bind(&org_id)
-                        .execute(&db.pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                        let org_id_clone = org_id.clone();
+                        let new_approval_status = new_approval_status.clone();
+                        let new_status = new_status.clone();
+                        let new_payload = new_payload.clone();
+                        let task_id = task_id.to_string();
+
+                        db.with_context::<_, _, _, sqlx::Error>(&org_id_clone, |db| {
+                            let new_approval_status = new_approval_status.clone();
+                            let new_status = new_status.clone();
+                            let new_payload = new_payload.clone();
+                            let task_id = task_id.clone();
+                            let org_id_clone = org_id_clone.clone();
+
+                            Box::pin(async move {
+                                sqlx::query(
+                                    "UPDATE shared_tasks_decomposition SET approval_status = $1, status = $2, payload = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
+                                )
+                                .bind(new_approval_status)
+                                .bind(new_status)
+                                .bind(new_payload)
+                                .bind(new_updated_at)
+                                .bind(task_id)
+                                .bind(org_id_clone)
+                                .execute(&db.pool)
+                                .await
+                            })
+                        }).await.map_err(|e| e.to_string())?;
                     }
                     crate::db::DbStore::Sqlite(pool) => {
                         let _res = sqlx::query(

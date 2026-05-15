@@ -48,70 +48,62 @@ impl DB {
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            // Ensure secure directory creation for SQLite database in Standalone mode
-            let path_str_opt = if let Some(p) = database_url.strip_prefix("sqlite://") {
-                Some(p)
+            let db_path_str = if let Some(p) = database_url.strip_prefix("sqlite://") {
+                p.split('?').next().unwrap_or(p)
             } else if let Some(p) = database_url.strip_prefix("sqlite:") {
-                Some(p)
+                p.split('?').next().unwrap_or(p)
             } else {
-                None
+                "ohc-standalone.db"
             };
-            if let Some(path_str) = path_str_opt {
-                let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
-                if let Some(parent) = db_path.parent() {
-                    if !parent.as_os_str().is_empty() {
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::DirBuilderExt;
-                            let mut builder = std::fs::DirBuilder::new();
-                            // Enforce strict 0700 permissions for standalone SQLite
-                            builder.recursive(true).mode(0o700);
-                            if let Err(e) = builder.create(parent) {
-                                tracing::error!("Failed to securely create DB directory: {}", e);
-                                return Err(e.into());
-                            }
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            if let Err(e) = std::fs::create_dir_all(parent) {
-                                tracing::error!("Failed to create DB directory: {}", e);
-                                return Err(e.into());
-                            }
-                        }
-                    }
-                }
 
-                // Securely create the database file with restricted permissions initially to avoid TOCTOU
-                #[cfg(unix)]
-                {
-                    use std::fs::OpenOptions;
-                    use std::os::unix::fs::OpenOptionsExt;
-                    use std::os::unix::fs::PermissionsExt;
-                    if let Ok(file) = OpenOptions::new()
-                        .read(true)
-                        .write(true)
-                        .create(true)
-                        .mode(0o600)
-                        .open(&db_path)
+            let db_path = std::path::Path::new(db_path_str);
+            if let Some(parent) = db_path.parent() {
+                if !parent.as_os_str().is_empty() {
+                    #[cfg(unix)]
                     {
-                        if let Ok(metadata) = file.metadata() {
-                            let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
-                                perms.set_mode(0o600);
-                                if let Err(e) = file.set_permissions(perms) {
-                                    tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                                    return Err(e.into());
-                                }
-                            }
-                        }
+                        use std::os::unix::fs::DirBuilderExt;
+                        let mut builder = std::fs::DirBuilder::new();
+                        builder.recursive(true).mode(0o700);
+                        builder.create(parent).map_err(|e| {
+                            tracing::error!("CRITICAL SECURITY ERROR: Failed to securely create DB directory: {}", e);
+                            e
+                        })?;
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        std::fs::create_dir_all(parent).map_err(|e| {
+                            tracing::error!("Failed to create DB directory: {}", e);
+                            e
+                        })?;
                     }
                 }
-                #[cfg(not(unix))]
-                {
-                    let _ = std::fs::File::create(&db_path);
+            }
+
+            #[cfg(unix)]
+            {
+                use std::fs::OpenOptions;
+                use std::os::unix::fs::OpenOptionsExt;
+                use std::os::unix::fs::PermissionsExt;
+                let file = OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .mode(0o600)
+                    .open(db_path)
+                    .map_err(|e| {
+                        tracing::error!("CRITICAL SECURITY ERROR: Failed to securely open/create database file: {}", e);
+                        e
+                    })?;
+                let metadata = file.metadata()?;
+                let mut perms = metadata.permissions();
+                if perms.mode() & 0o777 != 0o600 {
+                    perms.set_mode(0o600);
+                    file.set_permissions(perms).map_err(|e| {
+                        tracing::error!("CRITICAL SECURITY ERROR: Failed to enforce 0600 permissions on database: {}", e);
+                        e
+                    })?;
                 }
             }
 
@@ -119,7 +111,6 @@ impl DB {
                 .create_if_missing(true)
                 .extension("sqlite_vec");
 
-            // Enforce SQLCipher for Standalone mode unconditionally
             let key = if let Some(k) = database_url.split("key=").nth(1) {
                 k.split('&').next().unwrap_or("").to_string()
             } else {
@@ -130,9 +121,8 @@ impl DB {
                 panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
             }
 
-            conn_opts = conn_opts.pragma("key", key);
-            // Force full encryption of the database
-            conn_opts = conn_opts.pragma("cipher", "sqlcipher");
+            conn_opts = conn_opts.pragma("key", key)
+                .pragma("cipher", "sqlcipher");
 
             let sqlite_pool = SqlitePoolOptions::new()
                 .after_connect(|conn, _meta| {
@@ -704,6 +694,38 @@ impl DB {
         };
 
         Ok(result)
+    }
+
+    /// Helper to execute a closure with the appropriate tenant context set.
+    /// In Cloud mode, this ensures `app.current_tenant` is set before execution.
+    pub async fn with_context<'a, F, Fut, T, E>(&'a self, org_id: &str, mut f: F) -> Result<T, E>
+    where
+        F: FnMut(&'a DB) -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+        E: From<sqlx::Error>,
+    {
+        match &self.store {
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(E::from)?;
+                set_org_context(&mut *tx, org_id).await.map_err(E::from)?;
+                let res = f(self).await;
+                if res.is_ok() {
+                    tx.commit().await.map_err(E::from)?;
+                } else {
+                    let _ = tx.rollback().await;
+                }
+                res
+            }
+            DbStore::Sqlite(_) => f(self).await,
+        }
+    }
+
+    pub async fn get_tenant_id_from_context(&self, org_id: &str) -> String {
+        if org_id.is_empty() {
+             "default".to_string()
+        } else {
+             org_id.to_string()
+        }
     }
 
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {

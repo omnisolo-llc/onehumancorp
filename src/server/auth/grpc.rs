@@ -54,7 +54,12 @@ impl AuthConfig {
         let token = &auth_str["Bearer ".len()..];
         if token.is_empty() { return Err(Status::unauthenticated("empty token")); }
         
-        let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+        let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+            if ::server_config::get().multitenant {
+                 panic!("CRITICAL SECURITY ERROR: JWT_SECRET must be set in Cloud Mode.");
+            }
+            ::server_config::get().jwt_secret.clone().unwrap_or_else(|| "ohc-builtin-agent-2025".to_string())
+        });
         let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
         
@@ -89,7 +94,12 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
+    let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        if ::server_config::get().multitenant {
+             panic!("CRITICAL SECURITY ERROR: JWT_SECRET must be set in Cloud Mode.");
+        }
+        ::server_config::get().jwt_secret.clone().unwrap_or_else(|| "ohc-builtin-agent-2025".to_string())
+    });
     let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
@@ -117,7 +127,15 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     match domain {
         "onehumancorp.io" | "ohc.local" | "ohc.os" => {}
         _ if domain == "ohc.global" || domain.ends_with(".ohc.global") => {}
-        _ => return Err(Status::permission_denied(format!("untrusted SPIFFE domain {:?} in {}", domain, id))),
+        _ => {
+             // Strict check for bootstrap domain if configured
+             if let Some(ref bootstrap_domain) = ::server_config::get().bootstrap_org_domain {
+                 if domain == bootstrap_domain || domain.ends_with(&format!(".{}", bootstrap_domain)) {
+                     return Ok(());
+                 }
+             }
+             return Err(Status::permission_denied(format!("untrusted SPIFFE domain {:?} in {}", domain, id)));
+        }
     }
     
     Ok(())

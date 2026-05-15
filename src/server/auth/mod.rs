@@ -129,7 +129,11 @@ impl Store {
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
                 if ::server_config::get().multitenant {
-                    panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+                    panic!("CRITICAL SECURITY ERROR: JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management. Terminating for safety.");
+                }
+
+                if let Some(cfg_secret) = &::server_config::get().jwt_secret {
+                    return hex::decode(cfg_secret).expect("Invalid JWT secret hex in config");
                 }
 
                 let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -142,13 +146,12 @@ impl Store {
                 }
 
                 let new_secret = if let Ok(sqlite_key) = std::env::var("OHC_SQLITE_KEY") {
-                    tracing::warn!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
+                    tracing::warn!("Deriving JWT secret from OHC_SQLITE_KEY for Standalone Mode; writing to .ohc_jwt_secret");
                     let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::warn!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
-                    panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                    panic!("CRITICAL SECURITY ERROR: Neither JWT_SECRET nor OHC_SQLITE_KEY are set. Secure operation is impossible.");
                 };
 
                 #[cfg(unix)]
@@ -547,6 +550,7 @@ pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Res
         .map(|s| s.to_string())
 }
 
+#[derive(Debug, Clone)]
 pub struct AuthInfo {
     pub spiffe_id: String,
     pub org_id: String,

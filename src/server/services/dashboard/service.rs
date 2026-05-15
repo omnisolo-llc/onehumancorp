@@ -87,12 +87,18 @@ impl DashboardService for MyDashboardService {
                     return Ok::<_, String>(products);
                 }
 
-                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
+                let q = "SELECT id, tenant_id as organization_id, title as name, description, COALESCE(price_cents, 0) as price_cents, 'standard' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
+                        let res: Result<Vec<sqlx::postgres::PgRow>, sqlx::Error> = db1.with_context(&org_id, |db| {
+                            let org_id = org_id.clone();
+                            Box::pin(async move {
+                                sqlx::query(q).bind(&org_id).fetch_all(&db.pool).await
+                            })
+                        }).await;
+                        if let Ok(rows) = res {
                             for r in rows {
                                 let p = ::server_ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -148,7 +154,13 @@ impl DashboardService for MyDashboardService {
                 let mut results = Vec::new();
                 match &db2.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
+                        let res: Result<Vec<sqlx::postgres::PgRow>, sqlx::Error> = db2.with_context(&org_id, |db| {
+                            let org_id = org_id.clone();
+                            Box::pin(async move {
+                                sqlx::query(q).bind(&org_id).fetch_all(&db.pool).await
+                            })
+                        }).await;
+                        if let Ok(rows) = res {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
@@ -193,14 +205,18 @@ impl DashboardService for MyDashboardService {
                     return Ok::<_, String>(org);
                 }
 
-                let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
+                let q = "SELECT id as tenant_id, name as business_name, tier FROM tenants WHERE id = $1 LIMIT 1";
                 use sqlx::Row;
                 let mut org = None;
                 match &db3.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(Some(row)) =
-                            sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await
-                        {
+                        let res: Result<Option<sqlx::postgres::PgRow>, sqlx::Error> = db3.with_context(&org_id, |db| {
+                            let org_id = org_id.clone();
+                            Box::pin(async move {
+                                sqlx::query(q).bind(&org_id).fetch_optional(&db.pool).await
+                            })
+                        }).await;
+                        if let Ok(Some(row)) = res {
                             org = Some(::server_ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
@@ -495,11 +511,18 @@ impl DashboardService for MyDashboardService {
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1")
-            .bind(&org_id)
-            .fetch_optional(&self.db.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let db = self.db.clone();
+        let org_id_clone = org_id.clone();
+        let res: Result<Option<sqlx::postgres::PgRow>, sqlx::Error> = db.with_context(&org_id, |db| {
+            let org_id = org_id_clone.clone();
+            Box::pin(async move {
+                sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
+                    .bind(&org_id)
+                    .fetch_optional(&db.pool)
+                    .await
+            })
+        }).await;
+        let res = res.map_err(|e| Status::internal(e.to_string()))?;
 
         if let Some(row) = res {
             let state_json: serde_json::Value = row
@@ -569,15 +592,24 @@ impl DashboardService for MyDashboardService {
         let state_json_val: serde_json::Value = serde_json::from_str(&state.state_json)
             .map_err(|e| Status::invalid_argument(e.to_string()))?;
 
-        let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async {
-            sqlx::query(
-                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
-            )
-            .bind(state.current_step)
-            .bind(state_json_val)
-            .bind(&state.organization_id)
-            .execute(&self.db.pool)
-            .await
+        let db = self.db.clone();
+        let org_id = state.organization_id.clone();
+        let current_step = state.current_step;
+        let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async move {
+            db.with_context::<_, _, _, sqlx::Error>(&org_id, |db| {
+                let state_json_val = state_json_val.clone();
+                let org_id = org_id.clone();
+                Box::pin(async move {
+                    sqlx::query(
+                        "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3"
+                    )
+                    .bind(current_step)
+                    .bind(state_json_val)
+                    .bind(&org_id)
+                    .execute(&db.pool)
+                    .await
+                })
+            }).await
         }).await;
 
         match update_res {

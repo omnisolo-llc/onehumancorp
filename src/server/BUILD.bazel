@@ -22,6 +22,7 @@ rust_library(
         "queue.rs",
         "queue_test.rs",
         "scheduler.rs",
+        "security_isolation_test.rs",
         "seeder.rs",
         "settings.rs",
         "sip.rs",

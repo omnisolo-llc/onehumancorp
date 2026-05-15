@@ -23,6 +23,8 @@ pub mod analytics;
 pub use ::server_telemetry as telemetry;
 #[cfg(test)]
 pub mod telemetry_test;
+#[cfg(test)]
+pub mod security_isolation_test;
 pub mod chaos;
 pub mod integrations;
 pub use ::server_utils as utils;
@@ -110,16 +112,21 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
         .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
 
     let spiffe_id_str = spiffe_id.to_str()
-        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
+        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?.to_string();
 
-    match ::server_auth::parse_spiffe_id(spiffe_id_str) {
-        Ok((_org_id, _agent_id)) => {
-            tracing::info!("Authenticated SPIFFE ID successfully.");
+    match ::server_auth::parse_spiffe_id(&spiffe_id_str) {
+        Ok((org_id, agent_id)) => {
+            tracing::info!("Authenticated SPIFFE ID successfully for agent {} in org {}.", agent_id, org_id);
+            let mut req = req;
+            req.extensions_mut().insert(::server_auth::AuthInfo {
+                spiffe_id: spiffe_id_str,
+                org_id,
+                agent_id,
+            });
+            Ok(req)
         }
-        Err(e) => return Err(e),
+        Err(e) => Err(e),
     }
-
-    Ok(req)
 }
 
 pub mod proto {
@@ -464,7 +471,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<SaveWizardStateRequest>,
     ) -> Result<tonic::Response<SaveWizardStateResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
+        let auth_info = request.extensions().get::<::server_auth::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
         let org_id = auth_info.org_id.clone();
@@ -483,19 +490,19 @@ impl HubService for MyHubService {
 
         let tenant_id = org_id.clone();
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let pool = self.hub.pool.clone();
+        let mut tx = pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .bind(&user_id)
         .bind(current_step)
         .bind(&state_json)
@@ -514,7 +521,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<GetWizardStateRequest>,
     ) -> Result<tonic::Response<GetWizardStateResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
+        let auth_info = request.extensions().get::<::server_auth::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
         let org_id = auth_info.org_id.clone();
@@ -523,14 +530,14 @@ impl HubService for MyHubService {
         }
         let tenant_id = org_id.clone();
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let pool = self.hub.pool.clone();
+        let mut tx = pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -561,7 +568,7 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<ResetWizardStateRequest>,
     ) -> Result<tonic::Response<ResetWizardStateResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
+        let auth_info = request.extensions().get::<::server_auth::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
         let org_id = auth_info.org_id.clone();
@@ -570,14 +577,14 @@ impl HubService for MyHubService {
         }
         let tenant_id = org_id.clone();
 
-        let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        let pool = self.hub.pool.clone();
+        let mut tx = pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1590,7 +1597,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
+        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::with_interceptor(::server_auth::AuthServiceServerImpl::new(store), spiffe_interceptor))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))

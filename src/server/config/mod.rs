@@ -121,6 +121,15 @@ impl ModeEnforcer for StandaloneModeEnforcer {
     };
     cfg.database_url = Some(sqlite_url);
 
+    if cfg.jwt_secret.is_none() {
+        let sqlite_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+        use hmac::{Hmac, Mac};
+        use sha2::Sha256;
+        let mut mac = Hmac::<Sha256>::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
+        mac.update(sqlite_key.as_bytes());
+        cfg.jwt_secret = Some(hex::encode(mac.finalize().into_bytes()));
+    }
+
     // Set proper file permissions for local storage wrapper in standalone mode atomically
     #[cfg(unix)]
     {
