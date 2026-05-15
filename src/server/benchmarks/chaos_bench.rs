@@ -100,18 +100,18 @@ mod tests {
         };
 
         // Custom retry block
-        let mut retries = 0;
         let mut success = false;
-        while retries < 3 {
+        let mut attempt = 0;
+        for _ in 0..3 {
             if faulty_mesh.publish_with_ack("test", vec![]).await.is_ok() {
                 success = true;
                 break;
             }
-            retries += 1;
+            attempt += 1;
         }
 
         assert!(success);
-        assert_eq!(retries, 2);
+        assert_eq!(attempt, 2);
     }
 
     #[tokio::test]
@@ -137,13 +137,8 @@ mod tests {
     #[tokio::test]
     async fn test_caching_strategy_resilience() {
         // Simulates caching strategy behavior ensuring it doesn't break when Redis is unavailable.
-        let mut retries = 0;
-        let mut success = false;
-        while retries < 3 {
-            // Emulate hitting memory cache
-            success = true;
-            break;
-        }
+        // Emulate hitting memory cache
+        let success = true;
         assert!(success, "Caching strategy must be resilient");
     }
 

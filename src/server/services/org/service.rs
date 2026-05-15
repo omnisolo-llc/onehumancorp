@@ -164,16 +164,16 @@ mod tests {
         let mut request1 = Request::new(EmptyRequest {});
         request1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
-        let start = std::time::Instant::now();
+
         let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
-        let elapsed1 = start.elapsed();
+
 
         let mut request2 = Request::new(EmptyRequest {});
         request2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
-        let start2 = std::time::Instant::now();
+
         let _res2 = service.get_analytics(request2).await.unwrap().into_inner();
-        let elapsed2 = start2.elapsed();
+
 
         // The second call should be faster, but we just verify it works properly via caching
         assert!(_res1.total_agents == _res2.total_agents);

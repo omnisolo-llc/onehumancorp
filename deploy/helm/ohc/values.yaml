@@ -14,6 +14,7 @@ backend:
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
+    targetMemoryAverageValue: "512Mi"
   resources:
     requests:
       cpu: "200m"
@@ -59,6 +60,7 @@ ohcCore:
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
+    targetMemoryAverageValue: "512Mi"
   resources:
     requests:
       cpu: "50m"
@@ -103,6 +105,7 @@ chatwoot:
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
+    targetMemoryAverageValue: "512Mi"
   resources:
     requests:
       cpu: "500m"
@@ -146,6 +149,7 @@ powersync:
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
+    targetMemoryAverageValue: "512Mi"
   resources:
     requests:
       cpu: "50m"

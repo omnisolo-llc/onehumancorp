@@ -23,8 +23,8 @@ spec:
       resource:
         name: memory
         target:
-          type: Utilization
-          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+          type: AverageValue
+          averageValue: {{ .Values.backend.autoscaling.targetMemoryAverageValue }}
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
@@ -52,8 +52,8 @@ spec:
       resource:
         name: memory
         target:
-          type: Utilization
-          averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
+          type: AverageValue
+          averageValue: {{ .Values.ohcCore.autoscaling.targetMemoryAverageValue }}
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
@@ -82,8 +82,8 @@ spec:
       resource:
         name: memory
         target:
-          type: Utilization
-          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
+          type: AverageValue
+          averageValue: {{ .Values.chatwoot.autoscaling.targetMemoryAverageValue }}
 {{- end }}
 {{- end }}
 ---
@@ -113,7 +113,7 @@ spec:
       resource:
         name: memory
         target:
-          type: Utilization
-          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
+          type: AverageValue
+          averageValue: {{ .Values.powersync.autoscaling.targetMemoryAverageValue }}
 {{- end }}
 {{- end }}

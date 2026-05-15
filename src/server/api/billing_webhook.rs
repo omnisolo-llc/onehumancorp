@@ -64,7 +64,8 @@ pub async fn stripe_webhook_handler(
 
 
                 // Update Redis Rate Limiter
-                if let Err(_e) = state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
+                if let Err(e) = state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
+                    tracing::error!("Failed to set tenant tier: {}", e);
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -81,7 +82,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(&pool.clone())
                             .await
                             .map(|_| ())
                     }
@@ -95,7 +96,8 @@ pub async fn stripe_webhook_handler(
                     }
                 };
 
-                if let Err(_e) = res {
+                if let Err(e) = res {
+                    tracing::error!("Failed to update tenant tier in DB: {}", e);
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -114,7 +116,8 @@ pub async fn stripe_webhook_handler(
             if let Some(tenant_id) = tenant_id_opt {
 
                 // Update Redis
-                if let Err(_e) = state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
+                if let Err(e) = state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
+                    tracing::error!("Failed to reset tenant tier to Free: {}", e);
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -124,7 +127,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(&pool.clone())
                             .await
                             .map(|_| ())
                     }
@@ -138,7 +141,8 @@ pub async fn stripe_webhook_handler(
                     }
                 };
 
-                if let Err(_e) = res {
+                if let Err(e) = res {
+                    tracing::error!("Failed to reset tenant tier to Free in DB: {}", e);
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -174,9 +178,9 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    State(state): State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
+
     match payload.action.as_str() {
         "payment.created" | "payment.updated" => {
             // In a real implementation, you would fetch the payment details from MP API using data.id

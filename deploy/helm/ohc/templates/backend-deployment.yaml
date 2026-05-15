@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-backend
+        ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
     spec:
       containers:
         - name: backend

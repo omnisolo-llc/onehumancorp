@@ -430,7 +430,7 @@ mod tests {
 
         // Cloud Mode Simulation (100 simultaneous business owners)
         let mut cloud_handles = vec![];
-        for i in 0..100 {
+        for _ in 0..100 {
             let s = sip_db.clone();
             cloud_handles.push(tokio::spawn(async move {
                 let start = Instant::now();
@@ -475,8 +475,8 @@ mod tests {
         let sp99 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.99) as usize] };
         tracing::info!("Standalone Stress Results: p50={}us, p95={}us, p99={}us", sp50, sp95, sp99);
 
-        assert!(cp50 >= 0);
-        assert!(sp50 >= 0);
+
+
     }
 
     #[tokio::test]

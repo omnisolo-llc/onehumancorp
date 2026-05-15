@@ -735,9 +735,9 @@ mod tests {
             org_id: "system".to_string(),
             agent_id: "test".to_string(),
         });
-        let start1 = std::time::Instant::now();
+
         let _res1 = service.get_dashboard(request1).await.unwrap().into_inner();
-        let elapsed1 = start1.elapsed();
+
 
         let req2 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         let mut request2 = Request::new(req2);

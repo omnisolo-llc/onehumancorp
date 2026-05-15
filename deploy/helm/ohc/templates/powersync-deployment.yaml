@@ -12,6 +12,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-powersync
+        ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
     spec:
       containers:
         - name: powersync

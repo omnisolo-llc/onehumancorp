@@ -82,6 +82,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-chatwoot
+        ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
     spec:
       containers:
         - name: chatwoot
@@ -170,6 +171,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-chatwoot-worker
+        ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
     spec:
       containers:
         - name: chatwoot-worker
