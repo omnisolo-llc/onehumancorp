@@ -2,6 +2,9 @@
 mod tests {
     use super::*;
     use std::time::Duration;
+    use crate::queue::{JobPayloadHandler, InMemJobQueue, WorkerPool, TaskQueueService, SharedTaskModel, QueueManager, SubAgentJob, JobQueue};
+    use std::sync::Arc;
+    use async_trait::async_trait;
 
     struct MockHandler;
 
