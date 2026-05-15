@@ -1,2 +1,1 @@
-Implementer: Zero WIP exit
-Trigger CI retry
+Maintainer: Zero WIP exit
