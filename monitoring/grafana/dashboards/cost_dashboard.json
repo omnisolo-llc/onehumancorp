@@ -19,22 +19,6 @@
   "links": [],
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 999999,
-      "options": {
-        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>",
-        "mode": "html"
-      },
-      "transparent": true
-    },
-    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -84,7 +68,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 0
       },
       "id": 2,
       "options": {
@@ -159,7 +143,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 2
+        "y": 0
       },
       "id": 3,
       "options": {
@@ -234,7 +218,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 8
       },
       "id": 4,
       "options": {
@@ -309,7 +293,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 8
       },
       "id": 5,
       "options": {
