@@ -12,6 +12,7 @@ filegroup(
         "shared_tasks.rs",
         "shared_tasks_test.rs",
         "tasks.rs",
+        "tasks_tests.rs",
         "//src/server/orchestration/departments:srcs",        "//src/server/orchestration/queue:srcs",        "//src/server/orchestration/state:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
