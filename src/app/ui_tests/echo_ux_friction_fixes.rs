@@ -46,10 +46,10 @@ fn test_echo_grandmother_e2e_flow() {
     // 3. Move to Business Manager via Quick Action
     let add_product_invoked = Rc::new(RefCell::new(false));
     let add_clone = add_product_invoked.clone();
-    dashboard_ui.on_action_add_product(move || {
+    dashboard_ui.on_action_build_website(move || {
         *add_clone.borrow_mut() = true;
     });
-    dashboard_ui.invoke_action_add_product();
+    dashboard_ui.invoke_action_build_website();
     assert!(*add_product_invoked.borrow(), "Add Product action not triggered");
 
     // 4. Business Manager interactions

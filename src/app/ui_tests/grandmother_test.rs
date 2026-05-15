@@ -246,11 +246,11 @@ fn test_dashboard_grandmother_ux_labels() {
     ui.invoke_action_check_messages();
     assert!(*action_check_messages_invoked.borrow(), "Check Messages action failed");
 
-    let action_add_product_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
-    let action_add_product_invoked_clone = action_add_product_invoked.clone();
-    ui.on_action_add_product(move || { *action_add_product_invoked_clone.borrow_mut() = true; });
-    ui.invoke_action_add_product();
-    assert!(*action_add_product_invoked.borrow(), "Add Product action failed");
+    let action_build_website_invoked = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let action_build_website_invoked_clone = action_build_website_invoked.clone();
+    ui.on_action_build_website(move || { *action_build_website_invoked_clone.borrow_mut() = true; });
+    ui.invoke_action_build_website();
+    assert!(*action_build_website_invoked.borrow(), "Add Product action failed");
 }
 
 #[test]

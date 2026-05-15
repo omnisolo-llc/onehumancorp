@@ -2450,7 +2450,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let add_product_called_clone = add_product_called.clone();
 
                 let dashboard_handle_clone_add_product = dashboard_handle.clone();
-                dashboard.on_action_add_product(move || {
+                dashboard.on_action_build_website(move || {
                     *add_product_called_clone.borrow_mut() = true;
 
                     let dashboard_handle_inner = dashboard_handle_clone_add_product.clone();
@@ -2488,6 +2488,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }).unwrap();
                     });
+                });
+
+                let dashboard_handle_for_build = dashboard_handle.clone();
+                dashboard.on_action_build_website(move || {
+                    if let Some(ui) = dashboard_handle_for_build.upgrade() {
+                        if let Some(wb_ui) = GLOBAL_WEBSITE_BUILDER.with(|g| g.borrow().clone()) {
+                            if let Some(wb) = wb_ui.upgrade() {
+                                let _ = wb.show();
+                            }
+                        }
+                    }
                 });
 
                 let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
@@ -4327,7 +4338,7 @@ mod e2e_tests {
         let ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -4832,6 +4843,16 @@ mod tests {
 
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+
+        let website_builder_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let website_builder_opened_clone = website_builder_opened.clone();
+        dashboard_ui.on_action_build_website(move || {
+            *website_builder_opened_clone.borrow_mut() = true;
+        });
+        dashboard_ui.invoke_action_build_website();
+        assert!(*website_builder_opened.borrow(), "Website builder should be opened from Dashboard");
 
         let ui = app::WebsiteBuilder::new().unwrap();
 
@@ -5561,7 +5582,7 @@ mod docs_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
 
         let help_center_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let help_center_opened_clone = help_center_opened.clone();
@@ -5626,7 +5647,7 @@ mod docs_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -6255,14 +6276,14 @@ dashboard_ui.on_action_grow_business(move || {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let dashboard_handle_add_product = dashboard_ui.as_weak();
 
-        dashboard_ui.on_action_add_product(move || {
+        dashboard_ui.on_action_build_website(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
                 ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
 
         assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
@@ -6369,7 +6390,7 @@ dashboard_ui.on_action_grow_business(move || {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -6449,7 +6470,7 @@ mod dashboard_docs_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -6598,14 +6619,14 @@ mod remaining_e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let dashboard_handle_add_product = dashboard_ui.as_weak();
 
-        dashboard_ui.on_action_add_product(move || {
+        dashboard_ui.on_action_build_website(move || {
             if let Some(ui) = dashboard_handle_add_product.upgrade() {
                 ui.set_upgrade_prompt_message("You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.".into());
                 ui.set_show_upgrade_prompt(true);
             }
         });
 
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         assert!(dashboard_ui.get_show_upgrade_prompt(), "Upgrade prompt should show when adding product beyond free tier limit");
         assert_eq!(dashboard_ui.get_upgrade_prompt_message(), "You've reached your free tier limit of 10 products. Upgrade to Starter to unlock the full potential of your storefront.");
 
@@ -6815,7 +6836,7 @@ mod remaining_e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -6878,7 +6899,7 @@ mod remaining_e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -7064,7 +7085,7 @@ mod remaining_e2e_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -7431,10 +7452,10 @@ mod e2e_hybrid_blob_tests {
 
         let website_builder_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let website_builder_opened_clone = website_builder_opened.clone();
-        dashboard_ui.on_action_add_product(move || {
+        dashboard_ui.on_action_build_website(move || {
             *website_builder_opened_clone.borrow_mut() = true;
         });
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         assert!(*website_builder_opened.borrow(), "Website builder should be opened from Dashboard");
 
         let builder_ui = app::WebsiteBuilder::new().unwrap();
@@ -7911,7 +7932,7 @@ mod e2e_hybrid_blob_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_product_called_clone = add_product_called.clone();
-        dashboard_ui.on_action_add_product(move || { *add_product_called_clone.borrow_mut() = true; });
+        dashboard_ui.on_action_build_website(move || { *add_product_called_clone.borrow_mut() = true; });
         let view_orders_called = std::rc::Rc::new(std::cell::RefCell::new(false));
         let view_orders_called_clone = view_orders_called.clone();
         dashboard_ui.on_action_view_orders(move || { *view_orders_called_clone.borrow_mut() = true; });
@@ -8255,11 +8276,11 @@ fn test_business_share_flow() {
         let business_manager_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
         let business_manager_opened_clone = business_manager_opened.clone();
 
-        dashboard_ui.on_action_add_product(move || {
+        dashboard_ui.on_action_build_website(move || {
             *business_manager_opened_clone.borrow_mut() = true;
         });
 
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         assert!(*business_manager_opened.borrow(), "Business manager should be opened from Dashboard Add action");
 
         let manager_ui = app::BusinessManager::new().unwrap();
@@ -8644,7 +8665,7 @@ mod e2e_login_to_dashboard_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let manager_ui = app::BusinessManager::new().unwrap();
 
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         manager_ui.invoke_select_type("SERVICE".into());
         manager_ui.invoke_next_step();
 
@@ -8667,7 +8688,7 @@ mod e2e_login_to_dashboard_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let manager_ui = app::BusinessManager::new().unwrap();
 
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         manager_ui.invoke_select_type("DIGITAL".into());
         manager_ui.invoke_next_step();
         manager_ui.set_product_name("E-book".into());
@@ -8693,7 +8714,7 @@ mod e2e_login_to_dashboard_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let manager_ui = app::BusinessManager::new().unwrap();
 
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         manager_ui.invoke_select_type("PHYSICAL".into());
         manager_ui.invoke_next_step();
         manager_ui.set_product_name("Shirt".into());
@@ -8719,7 +8740,7 @@ mod e2e_login_to_dashboard_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let manager_ui = app::BusinessManager::new().unwrap();
 
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         manager_ui.invoke_select_type("SERVICE".into());
         manager_ui.invoke_next_step();
         assert_eq!(manager_ui.get_step(), 1);
@@ -8774,10 +8795,10 @@ mod e2e_login_to_dashboard_tests {
         let dashboard_ui = app::Dashboard::new().unwrap();
         let add_product_clicked = std::rc::Rc::new(std::cell::RefCell::new(false));
         let clicked_clone = add_product_clicked.clone();
-        dashboard_ui.on_action_add_product(move || {
+        dashboard_ui.on_action_build_website(move || {
             *clicked_clone.borrow_mut() = true;
         });
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         assert!(*add_product_clicked.borrow());
     }
 
@@ -8809,10 +8830,10 @@ mod e2e_login_to_dashboard_tests {
 
         let invoked_add = std::rc::Rc::new(std::cell::RefCell::new(false));
         let add_clone = invoked_add.clone();
-        dashboard_ui.on_action_add_product(move || {
+        dashboard_ui.on_action_build_website(move || {
             *add_clone.borrow_mut() = true;
         });
-        dashboard_ui.invoke_action_add_product();
+        dashboard_ui.invoke_action_build_website();
         assert!(*invoked_add.borrow());
 
         // Assert step 0

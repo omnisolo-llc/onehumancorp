@@ -33,7 +33,7 @@ fn e2e_flow_ux_fixes() {
     let add_product_clicked = Rc::new(RefCell::new(false));
     let add_product_clicked_clone = add_product_clicked.clone();
 
-    dashboard.on_action_add_product(move || {
+    dashboard.on_action_build_website(move || {
         *add_product_clicked_clone.borrow_mut() = true;
     });
 
@@ -43,7 +43,7 @@ fn e2e_flow_ux_fixes() {
     assert_eq!(dashboard.get_telemetry_cache_hits(), slint::SharedString::from("95%"));
 
     // Click Add Product to open Business Manager
-    dashboard.invoke_action_add_product();
+    dashboard.invoke_action_build_website();
     assert!(*add_product_clicked.borrow(), "Add Product action should be triggered");
 
     // Open Business Manager
