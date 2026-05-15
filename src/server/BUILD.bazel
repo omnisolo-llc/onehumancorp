@@ -6,6 +6,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "server_lib",
     srcs = [
+        "ui/mod.rs",
         "analytics.rs",
         "autodream_sync.rs",
         "billing.rs",
@@ -50,6 +51,7 @@ rust_library(
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],
+    compile_data = ["ui/index.html"],
     deps = [
         "//src/server/utils:server_utils",
         "//src/server/config:server_config",
