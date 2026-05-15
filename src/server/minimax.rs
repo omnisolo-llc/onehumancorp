@@ -393,23 +393,55 @@ impl ResilientClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
-        match self.primary.reason(prompt).await {
-            Ok(res) => Ok(res),
-            Err(e) => {
-                tracing::warn!("Primary LLM failed: {}. Falling back to local.", e);
-                self.fallback.reason(prompt).await
+        let max_attempts = 3;
+        let mut attempt = 0;
+
+        while attempt < max_attempts {
+            let timeout_duration = std::time::Duration::from_secs(60);
+            let reason_future = self.primary.reason(prompt);
+            match tokio::time::timeout(timeout_duration, reason_future).await {
+                Ok(Ok(res)) => return Ok(res),
+                Ok(Err(e)) => {
+                    tracing::warn!("Primary LLM failed: {}", e);
+                },
+                Err(_) => {
+                    tracing::warn!("Primary LLM timeout.");
+                }
+            }
+            attempt += 1;
+            if attempt < max_attempts {
+                tokio::time::sleep(std::time::Duration::from_millis(500 * attempt as u64)).await;
             }
         }
+
+        tracing::warn!("Primary LLM exhausted retries. Falling back to local.");
+        self.fallback.reason(prompt).await
     }
 
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
-        match self.primary.generate_embedding(text).await {
-            Ok(res) => Ok(res),
-            Err(e) => {
-                tracing::warn!("Primary LLM failed: {}. Falling back to local.", e);
-                self.fallback.generate_embedding(text).await
+        let max_attempts = 3;
+        let mut attempt = 0;
+
+        while attempt < max_attempts {
+            let timeout_duration = std::time::Duration::from_secs(60);
+            let embedding_future = self.primary.generate_embedding(text);
+            match tokio::time::timeout(timeout_duration, embedding_future).await {
+                Ok(Ok(res)) => return Ok(res),
+                Ok(Err(e)) => {
+                    tracing::warn!("Primary LLM failed: {}", e);
+                },
+                Err(_) => {
+                    tracing::warn!("Primary LLM timeout.");
+                }
+            }
+            attempt += 1;
+            if attempt < max_attempts {
+                tokio::time::sleep(std::time::Duration::from_millis(500 * attempt as u64)).await;
             }
         }
+
+        tracing::warn!("Primary LLM exhausted retries. Falling back to local.");
+        self.fallback.generate_embedding(text).await
     }
 }
 
