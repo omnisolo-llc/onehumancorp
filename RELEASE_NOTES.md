@@ -1,3 +1,7 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+- Scaling (Cloud): Multi-Environment Promotion and hybrid deployments optimized.
+- Privacy/Offline (Standalone): Enhanced privacy with secure Standalone desktop beta builds.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements

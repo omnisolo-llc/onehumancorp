@@ -1,4 +1,11 @@
-# OHC Hybrid Agentic OS Release Notes: v0.4.41
+# OHC Hybrid Agentic OS Release Notes: v0.4.42
+
+## Cloud (Scaling) Improvements
+- Multi-Environment Promotion and hybrid deployments optimized.
+
+## Standalone (Privacy) Improvements
+- Enhanced privacy with secure Standalone desktop beta builds.
+
 
 ## Cloud (Scaling) Improvements
 - Enhanced backend scaling capabilities.

@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Multi-Environment Promotion and hybrid deployments optimized.
+
+### Standalone Privacy Improvements
+- Enhanced privacy with secure Standalone desktop beta builds.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
