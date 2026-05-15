@@ -19,15 +19,13 @@ pub async fn run_health_monitor(
             _ => false,
         };
 
-        if !ping_ok {
-            tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
-        }
+
 
         // Hybrid mode health check
         if let Ok(Ok(health)) = tokio::time::timeout(std::time::Duration::from_millis(50), monitor_hub.check_health()).await {
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
-                    tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
+                    tracing::warn!("HEALTH MONITOR: Hybrid mode is degraded. Escalating to Warning!");
                 }
             }
         }
@@ -37,8 +35,6 @@ pub async fn run_health_monitor(
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
                     tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
-                } else if sync_errors > 0 {
-                    tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
                 }
             }
         }
@@ -46,9 +42,7 @@ pub async fn run_health_monitor(
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
-                if agents.is_empty() {
-                    tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
-                }
+
 
                 let mut active_agent_ids = std::collections::HashSet::new();
                 for (agent_id, _status) in agents {
@@ -68,8 +62,6 @@ pub async fn run_health_monitor(
                     let threshold = if is_cloud { 3 } else { 1 };
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
-                    } else {
-                        tracing::trace!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
@@ -80,10 +72,10 @@ pub async fn run_health_monitor(
                 }
             }
             Ok(Err(e)) => {
-                tracing::trace!("HEALTH MONITOR: Failed to get active agents: {}", e);
+                tracing::warn!("HEALTH MONITOR: Failed to get active agents: {}", e);
             }
             Err(_) => {
-                tracing::trace!("HEALTH MONITOR: Timed out waiting for active agents list from transport");
+                tracing::warn!("HEALTH MONITOR: Timed out waiting for active agents list from transport");
             }
         }
     }

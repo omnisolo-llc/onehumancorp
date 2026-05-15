@@ -840,15 +840,22 @@ pub async fn insert_autodream_memory(
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < ?")
+                let mut affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK'")
+                    .execute(sqlite_pool)
+                    .await?.rows_affected();
+                affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
-                    .await?.rows_affected()
+                    .await?.rows_affected();
+                affected
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < $1")
+                let mut affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK'")
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+                affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
@@ -1187,5 +1194,42 @@ mod e2e_tenant_isolation_tests {
         // If the pool initialized without the `before_acquire` hook, this is a success.
         // Discarding `DISCARD ALL` safely scopes context explicitly for each execution.
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_logic() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        sqlx::query("CREATE TABLE agent_missions (id TEXT PRIMARY KEY, status TEXT, updated_at TEXT)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, updated_at) VALUES ('1', 'STUCK', '2023-01-01T00:00:00Z')")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, updated_at) VALUES ('2', 'PENDING', '2023-01-01T00:00:00Z')")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, updated_at) VALUES ('3', 'PENDING', '2099-01-01T00:00:00Z')")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let db = DB::new_sqlite(pool.clone());
+        let affected = db.cleanup_stagnant_missions(3600).await.unwrap();
+        assert_eq!(affected, 2);
     }
 }
