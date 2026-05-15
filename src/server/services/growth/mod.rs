@@ -3,5 +3,6 @@ pub mod experiments;
 pub mod invites;
 pub mod quota;
 pub mod viral_loop;
+pub mod milestones;
 pub mod referral_api;
 pub mod service;
