@@ -1,7 +1,8 @@
 filegroup(
     name = "srcs",
     srcs = [
-        "cloud_synchronizer.rs",
+        "cloud_synchronizer/mod.rs",
+        "cloud_synchronizer/tests.rs",
         "escalator.rs",
         "local_repository.rs",
         "local_repository_impl.rs",

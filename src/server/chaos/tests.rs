@@ -1,14 +1,4 @@
-pub struct ChaosEngine {}
-
-impl ChaosEngine {
-    pub async fn new() -> Self {
-        ChaosEngine {}
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::time::Duration;
+use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
 
@@ -494,4 +484,3 @@ mod tests {
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
-}

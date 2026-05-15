@@ -3,7 +3,8 @@ filegroup(
     srcs = [
         "agent_memory_pipeline.rs",
         "competitor_audit.rs",
-        "department_workers.rs",
+        "department_workers/mod.rs",
+        "department_workers/tests.rs",
         "maintenance.rs",
         "memory.rs",
         "mod.rs",
