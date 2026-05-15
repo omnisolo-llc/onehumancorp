@@ -3,7 +3,7 @@ filegroup(
     srcs = [
         "mod.rs",
         "protocol.rs",
-
+        "protocol_tests.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
