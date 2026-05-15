@@ -1914,14 +1914,114 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
 
-                    <!-- API Screen -->
-                    <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
+                                        <!-- Integrations Screen -->
+                    <div id="integrations-screen" class="screen">
+                        <h1>Integrations</h1>
+                        <p>Connect your favorite tools.</p>
+
+                        <div style="margin-bottom: 20px;">
+                            <select id="integration-category-filter" onchange="filterIntegrations(this.value)">
+                                <option value="all">All Categories</option>
+                                <option value="communication">Communication</option>
+                                <option value="development">Development</option>
+                                <option value="productivity">Productivity</option>
+                                <option value="social">Social Media</option>
+                                <option value="video">Video</option>
+                                <option value="scheduling">Scheduling</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="shipping">Shipping</option>
+                                <option value="payment">Payment</option>
+                            </select>
+                        </div>
+
+                        <div id="integrations-list">
+                            <div class="card glass integration app" data-category="communication">
+                                <h3>Slack</h3>
+                                <p>Connect to Slack for notifications.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="development">
+                                <h3>GitHub</h3>
+                                <p>Sync your repositories.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="productivity">
+                                <h3>Zapier</h3>
+                                <p>Automate your workflows.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="productivity">
+                                <h3>Google Workspace</h3>
+                                <p>Connect Google Docs, Sheets, etc.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="communication">
+                                <h3>Microsoft Teams</h3>
+                                <p>Connect to Teams for meetings.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="social">
+                                <h3>Meta</h3>
+                                <p>Connect Facebook, Instagram, WhatsApp.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="video">
+                                <h3>Zoom</h3>
+                                <p>Generate meeting links automatically.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="communication">
+                                <h3>Twilio</h3>
+                                <p>Send SMS notifications.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="scheduling">
+                                <h3>Calendly</h3>
+                                <p>Sync your calendar availability.</p>
+                                <button onclick="connectIntegration(this)">Connect</button>
+                            </div>
+                            <div class="card glass integration app" data-category="communication">
+                                <h3>Chatwoot</h3>
+                                <p>Customer support inbox.</p>
+                                <button onclick="connectIntegration(this)">Configure</button>
+                            </div>
+                            <div class="card glass integration app" data-category="scheduling">
+                                <h3>Cal.com</h3>
+                                <p>Open source scheduling infrastructure.</p>
+                                <button onclick="connectIntegration(this)">Configure</button>
+                            </div>
+                            <div class="card glass integration app" data-category="marketing">
+                                <h3>Resend</h3>
+                                <p>Email marketing campaigns.</p>
+                                <button onclick="connectIntegration(this)">Configure</button>
+                            </div>
+                            <div class="card glass integration app" data-category="shipping">
+                                <h3>Shippo</h3>
+                                <p>Automated shipping labels.</p>
+                                <button onclick="connectIntegration(this)">Configure</button>
+                            </div>
+                            <div class="card glass integration app" data-category="payment">
+                                <h3>Mercado Pago</h3>
+                                <p>LATAM payment processing.</p>
+                                <button onclick="connectIntegration(this)">Configure</button>
+                            </div>
+                            <div class="card glass integration app" data-category="payment">
+                                <h3>Razorpay</h3>
+                                <p>India payment processing.</p>
+                                <button onclick="connectIntegration(this)">Configure</button>
+                            </div>
+                            <div class="card glass integration app" data-category="marketing">
+                                <h3>Mailchimp</h3>
+                                <p>Email marketing.</p>
+                                <button onclick="connectIntegration(this)">Configure</button>
+                            </div>
+                        </div>
+                        <div class="card glass">
+                            <h3>Integration Status</h3>
+                            <p>All systems operational.</p>
+                            <h3>Integration Usage Stats</h3>
+                            <p>API requests: 1,234 / 10,000</p>
+                        </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
@@ -2238,6 +2338,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
+
+
+                            function filterIntegrations(category) {
+                                const list = document.getElementById('integrations-list');
+                                const integrations = list.getElementsByClassName('integration');
+                                for (let i = 0; i < integrations.length; i++) {
+                                    if (category === 'all' || integrations[i].getAttribute('data-category') === category) {
+                                        integrations[i].style.display = 'block';
+                                    } else {
+                                        integrations[i].style.display = 'none';
+                                    }
+                                }
+                            }
+
+                            function connectIntegration(btn) {
+                                btn.innerText = "Connecting...";
+                                btn.disabled = true;
+                                setTimeout(() => {
+                                    btn.innerText = "Connected";
+                                }, 500);
+                            }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
