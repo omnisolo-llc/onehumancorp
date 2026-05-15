@@ -24,9 +24,16 @@ pub enum AgentEvent {
     RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum PermissionArchitecture {
+    Permissive,
+    Restrictive,
+}
+
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
+    pub permission_architecture: PermissionArchitecture,
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     pub max_retries: usize,
@@ -77,6 +84,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
 impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
+            permission_architecture: PermissionArchitecture::Permissive,
             agent_id: "default-agent".to_string(),
             max_retries: 2,
             model: String::new(),
@@ -2263,6 +2271,14 @@ impl Agent {
 
     // Anthropic Mechanic: 3-Stage Tool Gating
     fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
+        // Architectural Decision 5: Permission Architecture (Permissive vs Restrictive)
+        // If Restrictive, ALL mutating tools require explicit user confirmation.
+        if cfg.permission_architecture == PermissionArchitecture::Restrictive && !is_read_only {
+            if !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("Permission Architecture is Restrictive. Mutating tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
+        }
+
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
             return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
@@ -3294,6 +3310,39 @@ mod tests {
 
         // We can verify that it produced the final answer, meaning it survived the loop and compaction.
         assert_eq!(result.unwrap(), "final answer");
+    }
+
+    #[test]
+    fn test_permission_architecture() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true; // Make sure it doesn't fail on project trust
+        let tc = ToolCall {
+            id: "call_1".to_string(),
+            name: "mutating_tool".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+
+        // Permissive (default)
+        cfg.permission_architecture = PermissionArchitecture::Permissive;
+        assert!(Agent::check_tool_gating(&tc, false, &cfg).is_ok(), "Permissive mode should allow mutating tool");
+
+        // Restrictive without approval
+        cfg.permission_architecture = PermissionArchitecture::Restrictive;
+        let res = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res.is_err(), "Restrictive mode should block unapproved mutating tool");
+        if let Err(crate::types::ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("Permission Architecture is Restrictive"));
+        } else {
+            panic!("Expected UserFixable error");
+        }
+
+        // Restrictive with approval
+        cfg.approved_tool_calls.push("call_1".to_string());
+        assert!(Agent::check_tool_gating(&tc, false, &cfg).is_ok(), "Restrictive mode should allow approved mutating tool");
+
+        // Read-only tools should be allowed even in Restrictive mode
+        cfg.approved_tool_calls.clear();
+        assert!(Agent::check_tool_gating(&tc, true, &cfg).is_ok(), "Restrictive mode should allow read-only tool without approval");
     }
 
     #[tokio::test]
