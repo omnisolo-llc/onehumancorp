@@ -61,6 +61,41 @@ impl InteractiveWizard {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn test_comprehensive_onboarding_wizard_state_persistence() {
+        let w = InteractiveWizard::new();
+        // 1. Initial State
+        let state = w.get_onboarding_state("org-123").unwrap();
+        assert!(state.contains("step"));
+
+        // 2. Save new state
+        let res = w.save_onboarding_state("org-123", "usr-1", 5, "{\"theme\":\"modern\"}");
+        assert!(res.is_ok());
+
+        // 3. Generate UI HTML for both cloud and standalone
+        let ui_cloud = w.generate_wizard_ui(true);
+        assert!(ui_cloud.contains("Cloud-native"));
+        assert!(ui_cloud.contains("backdrop-filter: blur(20px)"));
+
+        let ui_standalone = w.generate_wizard_ui(false);
+        assert!(ui_standalone.contains("Standalone"));
+
+        // 4. Test run_interactive_setup properties
+        let cfg_cloud = w.run_interactive_setup(true).unwrap();
+        assert_eq!(cfg_cloud.get("db").unwrap(), "postgres");
+
+        let cfg_standalone = w.run_interactive_setup(false).unwrap();
+        assert_eq!(cfg_standalone.get("db").unwrap(), "sqlite");
+    }
+
+    #[test]
+    fn test_wizard_environment_reset() {
+        let w = InteractiveWizard::new();
+        // Ensure reset passes
+        assert!(w.reset_environment(true).is_ok());
+    }
+
     use super::*;
     use std::fs;
 

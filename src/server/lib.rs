@@ -2106,7 +2106,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
+                            <input type="text" id="biz-name-input" placeholder="What is your business called?" oninput="onboardingState.companyName = this.value" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
@@ -2121,9 +2121,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px;">Product Photo</label>
+                                <div style="width: 100%; height: 150px; border: 2px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary);" onclick="alert('Photo uploader opened with cropping tool')">
+                                    Tap to upload & crop photo
+                                </div>
+                            </div>
+                            <input type="text" id="product-name-input" placeholder="Product name (e.g., Chocolate Cake)" oninput="onboardingState.firstProductName = this.value" style="width: 100%; margin-bottom: 10px; box-sizing: border-box;" />
+
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <select id="currency-select" style="padding: 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text);">
+                                    <option value="USD">$</option>
+                                    <option value="EUR">€</option>
+                                    <option value="GBP">£</option>
+                                </select>
+                                <input type="number" id="product-price-input" placeholder="0.00" step="0.01" style="flex: 1; margin: 0; box-sizing: border-box;" oninput="onboardingState.firstProductPrice = this.value" />
+                            </div>
+
+                            <div id="ai-desc-container" style="display: none; background: rgba(0,85,255,0.05); border: 1px solid rgba(0,85,255,0.2); padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                                <p style="margin: 0 0 5px 0; font-size: 12px; color: var(--primary);">✨ AI Generated Description</p>
+                                <textarea id="product-desc-input" style="width: 100%; box-sizing: border-box; height: 60px; border: none; background: transparent; resize: none; margin: 0;"></textarea>
+                            </div>
+
+                            <button onclick="generateProductDesc()" style="width: 100%; margin-bottom: 10px;">✨ Auto-generate description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
@@ -2142,32 +2162,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <div style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 0;">
+                                <div class="card glass" style="min-width: 200px; cursor: pointer; border: 2px solid transparent;" onclick="selectTemplate(this, 'modern')">
+                                    <div style="height: 120px; background: linear-gradient(to bottom right, #f0f0f0, #e0e0e0); border-radius: 4px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-family: sans-serif; color: #333;">[Modern Preview]</div>
+                                    <h3 style="margin: 0; text-align: center;">Modern</h3>
+                                </div>
+                                <div class="card glass" style="min-width: 200px; cursor: pointer; border: 2px solid transparent;" onclick="selectTemplate(this, 'bold')">
+                                    <div style="height: 120px; background: linear-gradient(to bottom right, #333, #111); border-radius: 4px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-family: sans-serif; color: #fff;">[Bold Preview]</div>
+                                    <h3 style="margin: 0; text-align: center;">Bold</h3>
+                                </div>
+                                <div class="card glass" style="min-width: 200px; cursor: pointer; border: 2px solid transparent;" onclick="selectTemplate(this, 'elegant')">
+                                    <div style="height: 120px; background: linear-gradient(to bottom right, #f9f6f0, #e9e6d0); border-radius: 4px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-family: serif; color: #554;">[Elegant Preview]</div>
+                                    <h3 style="margin: 0; text-align: center;">Elegant</h3>
+                                </div>
+                            </div>
+                            <br/><button onclick="nextStep(9)">Next →</button>
+                            <button class="secondary" onclick="nextStep(7)">Back</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
                             <button onclick="nextStep(100)">Publish my business →</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <h1 style="font-size: 32px; margin-bottom: 10px;">🎉 Congratulations!</h1>
+                            <p style="font-size: 18px; color: var(--text-secondary);">Your business is officially live.</p>
+
+                            <div class="card glass" style="margin: 20px 0; text-align: center;">
+                                <p style="margin-bottom: 10px; font-weight: bold;">Your shareable link:</p>
+                                <div style="display: flex; gap: 10px; align-items: center; justify-content: center;">
+                                    <input type="text" id="shareable-link" readonly value="https://mybusiness.ohc.app" style="background: rgba(0,0,0,0.05); border: 1px solid var(--border); padding: 10px; border-radius: 4px; color: var(--text); flex: 1; max-width: 300px; margin: 0;">
+                                    <button onclick="copyShareableLink()" style="margin: 0; padding: 10px 20px;">Copy</button>
+                                </div>
+                            </div>
+
+                            <button onclick="showScreen('checklist-screen')" style="width: 100%; margin-bottom: 10px;">View Welcome Checklist →</button>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')" style="width: 100%;">Go to Dashboard</button>
                         </div>
 
                         <div id="checklist-screen" class="screen">
@@ -2219,6 +2248,151 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        let onboardingState = {
+                            businessType: '',
+                            companyName: '',
+                            products: [],
+                            email: '',
+                            password: '',
+                            theme: '',
+                            domain: '',
+                            firstProductName: '',
+                            firstProductPrice: '',
+                            firstProductDesc: ''
+                        };
+
+                        function nextStep(step) {
+                            if (step === 'generating') {
+                                document.querySelectorAll('#setup-screen > div').forEach(div => div.style.display = 'none');
+                                document.getElementById('step-generating').style.display = 'block';
+                                setTimeout(() => {
+                                    document.querySelectorAll('#setup-screen > div').forEach(div => div.style.display = 'none');
+                                    document.getElementById('step-launch-ai').style.display = 'block';
+                                }, 1500);
+                                return;
+                            }
+
+                            if (step === 9) {
+                                const sanitizedName = (onboardingState.companyName || 'mybusiness').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                const previewEl = document.getElementById('preview-domain-name');
+                                if (previewEl) previewEl.textContent = `${sanitizedName}.ohc.app`;
+                            }
+
+                            if (step === 100) {
+                                document.querySelectorAll('#setup-screen > div').forEach(div => div.style.display = 'none');
+                                document.getElementById('step-100').style.display = 'block';
+                                return;
+                            }
+
+                            document.querySelectorAll('#setup-screen > div').forEach(div => div.style.display = 'none');
+                            const stepEl = document.getElementById('step-' + step);
+                            if (stepEl) stepEl.style.display = 'block';
+                        }
+
+                        function generateAI() {
+                            nextStep('generating');
+                        }
+
+                        function handleLogin(btn) {
+                            showScreen('dashboard-screen');
+                        }
+
+                        function selectTemplate(el, theme) {
+                            document.querySelectorAll('#step-8 .card').forEach(c => c.style.borderColor = 'transparent');
+                            el.style.borderColor = 'var(--primary)';
+                            onboardingState.theme = theme;
+                            // Optionally update preview with business name
+                            const name = document.getElementById('biz-name-input')?.value || 'Your Business';
+                            el.querySelector('div').innerHTML = `<b>${name}</b><br/>${theme} theme`;
+                        }
+
+                        function generateProductDesc() {
+                            const name = document.getElementById('product-name-input').value;
+                            if (!name) {
+                                alert('Please enter a product name first!');
+                                return;
+                            }
+                            const btn = event.target;
+                            btn.textContent = 'Generating...';
+                            btn.disabled = true;
+
+                            setTimeout(() => {
+                                document.getElementById('ai-desc-container').style.display = 'block';
+                                document.getElementById('product-desc-input').value = `A premium ${name} crafted with the finest ingredients and utmost care. Perfect for any occasion.`;
+                                btn.textContent = '✨ Auto-generate description';
+                                btn.disabled = false;
+                                onboardingState.firstProductDesc = document.getElementById('product-desc-input').value;
+                            }, 1000);
+                        }
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const currencySelect = document.getElementById('currency-select');
+                            if (currencySelect) {
+                                const formatter = new Intl.NumberFormat(navigator.language || 'en-US', { style: 'currency', currency: 'USD' });
+                                const currencyOpts = Array.from(currencySelect.options).map(o => o.value);
+                                const userCurrency = formatter.resolvedOptions().currency;
+                                if (currencyOpts.includes(userCurrency)) {
+                                    currencySelect.value = userCurrency;
+                                }
+                            }
+                        });
+
+                        function copyShareableLink() {
+                            const linkInput = document.getElementById('shareable-link');
+                            linkInput.select();
+                            document.execCommand('copy');
+                            const btn = event.target;
+                            const originalText = btn.textContent;
+                            btn.textContent = 'Copied!';
+
+                            const colors = ['#0055ff', '#ff3366', '#00cc66', '#ffcc00'];
+                            for (let i = 0; i < 50; i++) {
+                                const confetti = document.createElement('div');
+                                confetti.style.position = 'fixed';
+                                confetti.style.width = '10px';
+                                confetti.style.height = '10px';
+                                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                                confetti.style.left = Math.random() * window.innerWidth + 'px';
+                                confetti.style.top = '-10px';
+                                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                                confetti.style.zIndex = '9999';
+                                confetti.style.pointerEvents = 'none';
+                                document.body.appendChild(confetti);
+
+                                const animationDuration = Math.random() * 2 + 1;
+                                confetti.animate([
+                                    { transform: 'translate3d(0,0,0) rotate(0deg)', opacity: 1 },
+                                    { transform: `translate3d(${Math.random()*200 - 100}px, ${window.innerHeight}px, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }
+                                ], {
+                                    duration: animationDuration * 1000,
+                                    easing: 'cubic-bezier(.37,0,.63,1)'
+                                });
+
+                                setTimeout(() => confetti.remove(), animationDuration * 1000);
+                            }
+
+                            setTimeout(() => { btn.textContent = originalText; }, 2000);
+                        }
+
+                        function selectDomainType(type) {
+                            const cards = document.querySelectorAll('#step-9 .card');
+                            cards.forEach(c => c.style.borderColor = 'transparent');
+                            event.currentTarget.style.borderColor = 'var(--primary)';
+                            onboardingState.domainType = type;
+                        }
+
+                        function finalizeAndPublish() {
+                            const btn = event.target;
+                            btn.textContent = 'Publishing...';
+                            btn.disabled = true;
+
+                            setTimeout(() => {
+                                const sanitizedName = (onboardingState.companyName || 'mybusiness').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                document.getElementById('shareable-link').value = `https://${sanitizedName}.ohc.app`;
+                                nextStep(100);
+                            }, 1500);
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2258,7 +2432,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             if (pathMap[id]) {
-                                window.history.pushState({}, '', pathMap[id]);
+                                if (window.location.protocol !== 'about:') { window.history.pushState({}, '', pathMap[id]); }
                             }
 
                             if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
@@ -2279,4 +2453,158 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         "#,
     };
     axum::response::Html(content)
+}
+
+pub mod onboarding_analytics {
+    use std::collections::HashMap;
+    use std::time::SystemTime;
+
+    #[derive(Debug, Clone)]
+    pub struct OnboardingSession {
+        pub session_id: String,
+        pub user_id: Option<String>,
+        pub start_time: u64,
+        pub end_time: Option<u64>,
+        pub steps_completed: Vec<i32>,
+        pub exit_step: Option<i32>,
+        pub time_spent_per_step: HashMap<i32, u64>,
+        pub device_type: String,
+    }
+
+    pub struct AnalyticsEngine {
+        sessions: Vec<OnboardingSession>,
+    }
+
+    impl AnalyticsEngine {
+        pub fn new() -> Self {
+            AnalyticsEngine {
+                sessions: Vec::new(),
+            }
+        }
+
+        pub fn record_session(&mut self, session: OnboardingSession) {
+            self.sessions.push(session);
+        }
+
+        pub fn calculate_dropoff_rates(&self) -> HashMap<i32, f64> {
+            let mut dropoffs = HashMap::new();
+            let total = self.sessions.len() as f64;
+            if total == 0.0 { return dropoffs; }
+
+            for session in &self.sessions {
+                if let Some(exit) = session.exit_step {
+                    *dropoffs.entry(exit).or_insert(0.0) += 1.0;
+                }
+            }
+
+            for val in dropoffs.values_mut() {
+                *val = (*val / total) * 100.0;
+            }
+
+            dropoffs
+        }
+
+        pub fn average_time_to_complete(&self) -> Option<u64> {
+            let completed: Vec<&OnboardingSession> = self.sessions.iter().filter(|s| s.exit_step.is_none()).collect();
+            if completed.is_empty() { return None; }
+
+            let total_time: u64 = completed.iter().map(|s| s.end_time.unwrap_or(0) - s.start_time).sum();
+            Some(total_time / completed.len() as u64)
+        }
+    }
+}
+
+pub mod advanced_onboarding {
+    use std::collections::HashMap;
+    use serde::{Serialize, Deserialize};
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct BusinessProfile {
+        pub name: String,
+        pub business_type: String,
+        pub currency: String,
+        pub has_physical_location: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct ProductItem {
+        pub name: String,
+        pub price: f64,
+        pub generated_description: Option<String>,
+        pub photo_url: Option<String>,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct OnboardingState {
+        pub user_id: String,
+        pub profile: Option<BusinessProfile>,
+        pub products: Vec<ProductItem>,
+        pub selected_theme: Option<String>,
+        pub selected_domain: Option<String>,
+        pub is_completed: bool,
+    }
+
+    pub struct OnboardingManager {
+        states: HashMap<String, OnboardingState>,
+    }
+
+    impl OnboardingManager {
+        pub fn new() -> Self {
+            OnboardingManager {
+                states: HashMap::new(),
+            }
+        }
+
+        pub fn get_state(&self, session_id: &str) -> Option<&OnboardingState> {
+            self.states.get(session_id)
+        }
+
+        pub fn init_session(&mut self, session_id: &str, user_id: &str) {
+            self.states.insert(session_id.to_string(), OnboardingState {
+                user_id: user_id.to_string(),
+                profile: None,
+                products: Vec::new(),
+                selected_theme: None,
+                selected_domain: None,
+                is_completed: false,
+            });
+        }
+
+        pub fn update_profile(&mut self, session_id: &str, profile: BusinessProfile) -> Result<(), String> {
+            let state = self.states.get_mut(session_id).ok_or("Session not found")?;
+            state.profile = Some(profile);
+            Ok(())
+        }
+
+        pub fn add_product(&mut self, session_id: &str, product: ProductItem) -> Result<(), String> {
+            let state = self.states.get_mut(session_id).ok_or("Session not found")?;
+            state.products.push(product);
+            Ok(())
+        }
+
+        pub fn select_theme(&mut self, session_id: &str, theme: &str) -> Result<(), String> {
+            let state = self.states.get_mut(session_id).ok_or("Session not found")?;
+            state.selected_theme = Some(theme.to_string());
+            Ok(())
+        }
+
+        pub fn configure_domain(&mut self, session_id: &str, domain: &str) -> Result<(), String> {
+            let state = self.states.get_mut(session_id).ok_or("Session not found")?;
+            state.selected_domain = Some(domain.to_string());
+            Ok(())
+        }
+
+        pub fn finalize(&mut self, session_id: &str) -> Result<(), String> {
+            let state = self.states.get_mut(session_id).ok_or("Session not found")?;
+            if state.profile.is_none() || state.products.is_empty() || state.selected_theme.is_none() || state.selected_domain.is_none() {
+                return Err("Missing required onboarding data".to_string());
+            }
+            state.is_completed = true;
+            Ok(())
+        }
+
+        pub fn generate_ai_description(&self, product_name: &str) -> String {
+            format!("A premium {} crafted with care.", product_name)
+        }
+    }
 }
