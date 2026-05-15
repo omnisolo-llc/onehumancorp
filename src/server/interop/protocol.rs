@@ -87,7 +87,7 @@ impl InteropProtocol {
                         break Err(format!("Failed to publish state handoff after retries: {}", e));
                     }
                     retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
                     delay_ms *= 2; // Exponential backoff
                 }
             }
@@ -102,7 +102,6 @@ impl InteropProtocol {
 
         result
     }
-
     /// Resumes a mission after a mode switch
     pub async fn resume_mission(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         // Handoff uses the same mechanism to synchronize state
@@ -152,7 +151,7 @@ impl InteropProtocol {
                                     break;
                                 }
                                 retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
                                 delay_ms *= 2; // Exponential backoff
                             }
                         });
@@ -203,13 +202,12 @@ impl InteropProtocol {
                 cancel();
                 return Ok(true);
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
 
         cancel();
         Ok(false)
     }
-
     /// Dispatches a background job and waits for acknowledgment
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
@@ -255,7 +253,7 @@ impl InteropProtocol {
                         return Err(format!("Failed to publish job dispatch after retries: {}", e));
                     }
                     retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
                     delay_ms *= 2; // Exponential backoff
                 }
             }
@@ -268,7 +266,7 @@ impl InteropProtocol {
                 cancel();
                 return Ok(true);
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
 
         cancel();
@@ -307,7 +305,7 @@ impl InteropProtocol {
                                     break;
                                 }
                                 retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
                                 delay_ms *= 2; // Exponential backoff
                             }
                         });
@@ -350,7 +348,7 @@ impl InteropProtocol {
                         return Err(format!("Failed to publish job status update after retries: {}", e));
                     }
                     retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
                     delay_ms *= 2; // Exponential backoff
                 }
             }
@@ -929,7 +927,7 @@ mod tests {
             payload: buf,
         }).await.unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
     }
 
@@ -967,7 +965,7 @@ mod tests {
             payload: buf,
         }).await.unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
     }
 
@@ -1007,7 +1005,7 @@ mod tests {
             payload: buf,
         }).await.unwrap();
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
     }
 
@@ -1089,6 +1087,6 @@ mod tests {
         let result = protocol.handoff("m1", "t1", vec![]).await;
         assert!(result.is_ok());
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
     }

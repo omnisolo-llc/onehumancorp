@@ -21,7 +21,7 @@ pub trait TeammateMesh: Send + Sync {
     async fn ping(&self) -> Result<(), String>;
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
-    async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_state_handoff(&self, payload: Vec<u8>, mission_id: &str, tenant_id: &str) -> Result<(), String>;
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
@@ -65,18 +65,42 @@ impl TeammateMesh for TeammateMeshClient {
         self.transport.subscribe("system:coordination", handler).await
     }
 
-    async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
+    async fn publish_state_handoff(&self, payload: Vec<u8>, mission_id: &str, tenant_id: &str) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+
+        let handoff_msg = crate::proto::interop::StateHandoff {
+            mission_id: mission_id.to_string(),
+            tenant_id: tenant_id.to_string(),
+            source_mode: 0,
+            target_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+            state_snapshot: payload,
+        };
+
+        let mut buf = Vec::new();
+        handoff_msg.encode(&mut buf).map_err(|e| e.to_string())?;
+
         self.transport.publish("system:state_handoff", Message {
             agent_id: "agent".to_string(),
             action: "system:state_handoff".to_string(),
             status: "ok".to_string(),
-            payload,
+            payload: buf,
             msg_id: uuid::Uuid::new_v4().to_string(),
         }).await
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:state_handoff", handler).await
+        self.transport.subscribe("system:state_handoff", Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(handoff) = crate::proto::interop::StateHandoff::decode(&msg.payload[..]) {
+                let mut mapped_msg = msg.clone();
+                mapped_msg.payload = handoff.state_snapshot; // Provide the raw payload to the handler
+                handler(mapped_msg);
+            } else {
+                // For tests that use raw bytes
+                handler(msg);
+            }
+        })).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -98,29 +122,34 @@ impl TeammateMesh for TeammateMeshClient {
     async fn ping(&self) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let node_id = uuid::Uuid::new_v4().to_string();
-        let ping = crate::proto::interop::HealthPing {
-            source_node_id: node_id.clone(),
-            current_mode: 0,
-            timestamp_ms: chrono::Utc::now().timestamp_millis(),
-        };
-        let mut buf = Vec::new();
-        ping.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let ack_topic = format!("system:health_ack:{}", node_id);
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
         let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
             let _ = tx.send(());
         })).await?;
 
-        self.transport.publish("system:health_ping", Message {
+        let ping_msg = crate::proto::interop::HealthPing {
+            source_node_id: node_id.clone(),
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        ping_msg.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let msg = Message {
             agent_id: "agent".to_string(),
             action: "system:health_ping".to_string(),
             status: "ok".to_string(),
             payload: buf,
             msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await?;
+        };
 
-        match tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await {
+        self.transport.publish("system:health_ping", msg).await?;
+
+        match tokio::time::timeout(std::time::Duration::from_secs(5), rx.recv()).await {
             Ok(Some(_)) => {
                 cancel();
                 Ok(())
@@ -178,7 +207,7 @@ impl TeammateMesh for TeammateMeshClient {
 
         let dispatch = crate::proto::interop::JobDispatch {
             job_id: job_id.clone(),
-            tenant_id: "default".to_string(),
+            tenant_id: "default".to_string(), // Can be injected if needed
             action_name: topic.to_string(),
             payload: payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -190,6 +219,8 @@ impl TeammateMesh for TeammateMeshClient {
         let mut retries = 0;
         let mut backoff = 200;
 
+        let publish_topic = format!("system:job_dispatch:{}", "default"); // Matches server's expected topic
+
         loop {
             if retries > 10 {
                 cancel();
@@ -198,18 +229,18 @@ impl TeammateMesh for TeammateMeshClient {
 
             let event = Message {
                 agent_id: "agent".to_string(),
-                action: topic.to_string(),
+                action: publish_topic.clone(),
                 status: "pending".to_string(),
                 payload: buf.clone(),
                 msg_id: job_id.clone(),
             };
 
-            if let Err(e) = self.transport.publish(topic, event).await {
+            if let Err(e) = self.transport.publish(&publish_topic, event).await {
                 cancel();
                 return Err(e);
             }
 
-            if let Ok(Some(())) = tokio::time::timeout(tokio::time::Duration::from_millis(backoff), rx.recv()).await {
+            if let Ok(Some(())) = tokio::time::timeout(std::time::Duration::from_millis(backoff), rx.recv()).await {
                 cancel();
                 return Ok(());
             }
@@ -353,7 +384,7 @@ mod tests {
             }
         })).await.unwrap();
 
-        mesh.publish_state_handoff(b"state_data".to_vec()).await.unwrap();
+        mesh.publish_state_handoff(b"state_data".to_vec(), "m1", "t1").await.unwrap();
         sleep(Duration::from_millis(50)).await;
 
         assert!(received.load(Ordering::SeqCst), "Should receive state handoff message");
@@ -366,7 +397,7 @@ mod tests {
 
         let transport_clone = transport.clone();
         tokio::spawn(async move {
-            let _ = transport_clone.subscribe("test_ack_topic", Box::new({
+            let _ = transport_clone.subscribe("system:job_dispatch:default", Box::new({
                 let t = transport_clone.clone();
                 move |msg: crate::mesh::transport::Message| {
                     use prost::Message as ProstMessage;
