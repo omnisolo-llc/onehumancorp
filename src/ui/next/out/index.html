@@ -1,1 +1,379 @@
-placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OneHuman Corp - Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary-bg: #f8f9fa;
+    --card-bg: rgba(255, 255, 255, 0.7);
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --action-color: #2563eb;
+    --glass-blur: blur(20px);
+    --glass-saturate: saturate(200%);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop') no-repeat center center fixed;
+    background-size: cover;
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+  }
+
+  /* Glassmorphism Classes */
+  .glass {
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur) var(--glass-saturate);
+    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: var(--glass-blur) var(--glass-saturate);
+    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+  }
+
+  /* Dashboard Layout */
+  .container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  header {
+    padding: 20px 0;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .metric-card {
+    padding: 24px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .metric-title {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .metric-value {
+    font-size: 36px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .section-title {
+    font-size: 24px;
+    margin: 32px 0 16px;
+  }
+
+  /* List Items */
+  .list-item {
+    padding: 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .list-item:last-child {
+    border-bottom: none;
+  }
+
+  .list-item:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Buttons */
+  button, .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-primary {
+    background: var(--action-color);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+  }
+
+  /* Mobile Navigation */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    z-index: 1000;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    min-height: 44px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 12px;
+  }
+
+  .nav-item.active {
+    color: var(--action-color);
+  }
+
+  .nav-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+
+  .hint-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.8);
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--action-color);
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .hint-text {
+    display: none;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: absolute;
+    top: 50px;
+    right: 0;
+    z-index: 100;
+    font-size: 14px;
+    width: 250px;
+  }
+
+  .hint-container {
+    position: relative;
+  }
+
+  .hint-container.open .hint-text {
+    display: block;
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Async Loading State */
+  .skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 8px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Responsive */
+  @media (min-width: 768px) {
+    .mobile-nav {
+      top: 0;
+      bottom: auto;
+      border-radius: 0;
+      justify-content: flex-end;
+      gap: 20px;
+      padding: 0 40px;
+    }
+    .nav-item {
+      flex-direction: row;
+      gap: 8px;
+    }
+    body {
+      padding-bottom: 0;
+      padding-top: 80px;
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+  }
+</style>
+</head>
+<body>
+<nav class="mobile-nav glass" id="main-nav">
+  <a href="#home" class="nav-item active" data-testid="nav-home">
+    <span class="nav-icon">🏠</span>
+    <span>Home</span>
+  </a>
+  <a href="#orders" class="nav-item" data-testid="nav-orders">
+    <span class="nav-icon">📦</span>
+    <span>View Orders</span>
+  </a>
+  <a href="#add" class="nav-item" data-testid="nav-add">
+    <span class="nav-icon">➕</span>
+    <span>Add Product</span>
+  </a>
+  <a href="#messages" class="nav-item" data-testid="nav-messages">
+    <span class="nav-icon">💬</span>
+    <span>Messages</span>
+  </a>
+  <a href="#share" class="nav-item" data-testid="nav-share">
+    <span class="nav-icon">🔗</span>
+    <span>Share Store</span>
+  </a>
+</nav>
+
+<div class="container">
+  <header>
+    <h1 id="greeting">Welcome to your store</h1>
+    <div class="hint-container" id="tour-hint">
+      <button class="hint-icon" onclick="toggleHint('tour-hint')" data-testid="hint-btn">?</button>
+      <div class="hint-text">Tap "Add Product" below to start selling right away!</div>
+    </div>
+  </header>
+
+  <div class="glass-panel metric-card" data-testid="metric-sales">
+    <div class="metric-title">Today's Sales</div>
+    <div class="metric-value" id="today-sales">$0.00</div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div>
+      <h2 class="section-title">Recent Orders</h2>
+      <div class="glass-panel" id="recent-orders" data-testid="recent-orders">
+        <!-- Will be populated by JS -->
+        <div class="list-item skeleton" style="height: 60px;"></div>
+        <div class="list-item skeleton" style="height: 60px;"></div>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="section-title">Store Tasks</h2>
+      <div class="glass-panel" id="store-tasks" data-testid="store-tasks">
+        <!-- Static tasks for the Grandmother test -->
+        <div class="list-item">
+          <div>
+            <div style="font-weight: 500;">Connect my Instagram</div>
+            <div style="font-size: 14px; color: var(--text-secondary);">Show products on your social media</div>
+          </div>
+          <button class="btn btn-primary" data-testid="btn-connect-ig">Connect</button>
+        </div>
+        <div class="list-item">
+          <div>
+            <div style="font-weight: 500;">Get order notifications</div>
+            <div style="font-size: 14px; color: var(--text-secondary);">We will text you when you get a sale</div>
+          </div>
+          <button class="btn btn-primary" data-testid="btn-notifications">Enable</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="error-container" style="display: none; margin-top: 20px;">
+    <div class="glass-panel" style="background: rgba(254, 226, 226, 0.9); border-color: rgba(239, 68, 68, 0.5); padding: 16px;">
+      <h3 style="color: #991b1b; margin-bottom: 8px;">We couldn't save your changes</h3>
+      <p style="color: #7f1d1d; margin-bottom: 12px;" id="error-message">Your internet connection might be weak.</p>
+      <button class="btn" style="background: #ef4444; color: white;" onclick="hideError()">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleHint(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+  }
+
+  function hideError() {
+    document.getElementById('error-container').style.display = 'none';
+  }
+
+  function showError(message) {
+    document.getElementById('error-message').textContent = message;
+    document.getElementById('error-container').style.display = 'block';
+  }
+
+  // Simulate async loading with meaningful state (shimmer effect -> real data)
+  setTimeout(() => {
+    document.getElementById('today-sales').textContent = '$1,245.00';
+
+    const ordersContainer = document.getElementById('recent-orders');
+    ordersContainer.innerHTML = `
+      <div class="list-item">
+        <div>
+          <div style="font-weight: 500;">Order #1001</div>
+          <div style="font-size: 14px; color: var(--text-secondary);">John Doe - 2 items</div>
+        </div>
+        <div style="font-weight: 600;">$45.00</div>
+      </div>
+      <div class="list-item">
+        <div>
+          <div style="font-weight: 500;">Order #1002</div>
+          <div style="font-size: 14px; color: var(--text-secondary);">Jane Smith - 1 item</div>
+        </div>
+        <div style="font-weight: 600;">$120.00</div>
+      </div>
+    `;
+
+    // Demonstrate Error State Rewrite ("API error" -> "Plain language")
+    // Let's pretend an API call failed
+    setTimeout(() => {
+      showError("We couldn't connect to your Instagram. Please check your password and try again.");
+    }, 2000);
+
+  }, 1000);
+</script>
+</body>
+</html>
