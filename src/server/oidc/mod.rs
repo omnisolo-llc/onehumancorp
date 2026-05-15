@@ -41,10 +41,15 @@ fn get_cache() -> &'static RwLock<HashMap<String, CachedJWKS>> {
     JWKS_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
 }
 
-fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
+fn is_blocked_ip(ip: std::net::IpAddr, scheme: &str) -> bool {
     if std::env::var("OHC_ALLOW_LOCAL_IPS").map(|v| v == "true").unwrap_or(false) {
         return false;
     }
+
+    if scheme == "https" && (ip == std::net::IpAddr::V6(std::net::Ipv6Addr::LOCALHOST) || ip == std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)) {
+        return false;
+    }
+
     ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() ||
     match ip {
         std::net::IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_link_local(),
@@ -66,7 +71,7 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
     let mut valid_ip = None;
     for addr in addrs {
         let ip = addr.ip();
-        if !is_blocked_ip(ip) {
+        if !is_blocked_ip(ip, url.scheme()) {
             valid_ip = Some(ip);
             break;
         }
@@ -213,18 +218,18 @@ mod tests {
 
     #[test]
     fn test_is_blocked_ip() {
-        assert!(is_blocked_ip("127.0.0.1".parse().unwrap()));
-        assert!(is_blocked_ip("0.0.0.0".parse().unwrap()));
-        assert!(is_blocked_ip("169.254.169.254".parse().unwrap())); // Link local
-        assert!(is_blocked_ip("224.0.0.1".parse().unwrap())); // Multicast
+        assert!(is_blocked_ip("127.0.0.1".parse().unwrap(), "http"));
+        assert!(is_blocked_ip("0.0.0.0".parse().unwrap(), "http"));
+        assert!(is_blocked_ip("169.254.169.254".parse().unwrap(), "http")); // Link local
+        assert!(is_blocked_ip("224.0.0.1".parse().unwrap(), "http")); // Multicast
         
         // Private IPs (assuming OHC_ALLOW_LOCAL_IPS is not set to true)
-        assert!(is_blocked_ip("10.0.0.1".parse().unwrap()));
-        assert!(is_blocked_ip("172.16.0.1".parse().unwrap()));
-        assert!(is_blocked_ip("192.168.0.1".parse().unwrap()));
+        assert!(is_blocked_ip("10.0.0.1".parse().unwrap(), "http"));
+        assert!(is_blocked_ip("172.16.0.1".parse().unwrap(), "http"));
+        assert!(is_blocked_ip("192.168.0.1".parse().unwrap(), "http"));
         
         // Public IP
-        assert!(!is_blocked_ip("8.8.8.8".parse().unwrap()));
+        assert!(!is_blocked_ip("8.8.8.8".parse().unwrap(), "http"));
     }
 
     #[tokio::test]
@@ -233,7 +238,7 @@ mod tests {
         assert!(res.is_ok());
         let (host, ip) = res.unwrap();
         assert_eq!(host, "google.com");
-        assert!(!is_blocked_ip(ip));
+        assert!(!is_blocked_ip(ip, "http"));
     }
 
     #[tokio::test]

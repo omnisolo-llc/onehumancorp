@@ -518,7 +518,7 @@ mod tests {
 
         let db = std::sync::Arc::new(crate::db::DB {
             store: crate::db::DbStore::Sqlite(pool.clone()),
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) }).connect_lazy("postgres://dummy").unwrap(),
         });
 
         let tm = TaskManager::with_db(db);
