@@ -19,10 +19,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.15"
           memory: 64M
         reservations:
-          cpus: "0.1"
+          cpus: "0.08"
           memory: 64M
     build:
       context: ..
@@ -50,10 +50,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.15"
           memory: 128M
         reservations:
-          cpus: "0.1"
+          cpus: "0.08"
           memory: 64M
     image: onehumancorp/server:latest
     environment:
@@ -115,7 +115,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.1"
+          cpus: "0.08"
           memory: 32M
 
   redis:
@@ -135,7 +135,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.1"
+          cpus: "0.08"
           memory: 64M
 
   postgres:
@@ -164,7 +164,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.3"
+          cpus: "0.25"
           memory: 128M
 
   powersync:
@@ -188,7 +188,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.15"
           memory: 128M
 
   chatwoot-migrate:
@@ -238,7 +238,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.15"
           memory: 128M
 
   chatwoot-worker:
@@ -263,7 +263,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
+          cpus: "0.15"
           memory: 128M
 
   prometheus:
@@ -283,7 +283,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.05"
+          cpus: "0.04"
           memory: 64M
 
   grafana:
@@ -307,7 +307,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.05"
+          cpus: "0.04"
           memory: 64M
 
 
@@ -325,7 +325,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.1"
+          cpus: "0.08"
           memory: 128M
 
   telemetry-mcp-bridge:
@@ -345,7 +345,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.1"
+          cpus: "0.08"
           memory: 64M
 
 volumes:

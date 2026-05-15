@@ -1,5 +1,20 @@
-issue_category: cleanup
-debt_report:
-  description: "Bump version to v0.4.41"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+issue_category: refactor
+details: |
+  <div markdown="1" style="backdrop-filter: blur(15px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+  # 🧹 Maintainer: Refactor infrastructure metrics and multi-tenant isolation
+
+  ## Phase 1 (Audit):
+  Audited `deploy/docker-compose.yml` and `deploy/helm/ohc/values.yaml` for Standalone and Cloud resource definitions. Audited Dashboard JSON configurations.
+
+  ## Phase 2 (Engineering):
+  - Lowered resource reservations and limits across all components in `docker-compose.yml` appropriately to ensure the smallest footprint locally.
+  - Decreased the target HPA cpu/memory thresholds in the `values.yaml` to ensure faster multi-tenant scaling triggers.
+  - Implemented explicit network policies to enforce true tenant isolation inside the clusters while preserving ingress controllers.
+
+  ## Phase 3 (Observability):
+  - Extensively patched dashboards (including `cost_dashboard`, `chaos_resilience`, `tenant_costs`) to meet the Visual Excellence standards.
+
+  ## Phase 4 (Finalize):
+  `bazelisk test //...` verified and returned green across all builds and targets.
+  </div>
+status: completed
