@@ -3,6 +3,6 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "harness",
     srcs = ["agent_harness.go"],
-    importpath = "onehumancorp/srcs/server/api/harness",
+    importpath = "onehumancorp/src/server/api/harness",
     visibility = ["//visibility:public"],
 )
