@@ -29,16 +29,28 @@ async fn start_onboarding(
 }
 
 async fn get_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    Ok(Json(serde_json::json!({
-        "state": "{}"
-    })))
+    let org_id = auth_info.org_id;
+    match agent.get_onboarding_state(&org_id).await {
+        Ok(state) => {
+            let parsed = serde_json::from_str(&state).unwrap_or(serde_json::json!({}));
+            Ok(Json(serde_json::json!({ "state": parsed })))
+        },
+        Err(_) => Ok(Json(serde_json::json!({ "state": "{}" })))
+    }
 }
 
 async fn save_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    Ok(axum::http::StatusCode::NO_CONTENT)
+    let org_id = auth_info.org_id;
+    let user_id = auth_info.spiffe_id;
+    match agent.save_onboarding_state(&org_id, &user_id, 1, &payload.to_string()).await {
+        Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    }
 }

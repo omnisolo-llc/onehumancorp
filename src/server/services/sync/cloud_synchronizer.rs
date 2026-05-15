@@ -1,12 +1,19 @@
-use std::sync::Arc;
 use crate::services::sync::local_repository::LocalRepository;
+use ::server_telemetry::{
+    record_sync_daemon_batch_size, record_sync_daemon_error_total, record_sync_escalation,
+    record_sync_latency, record_sync_payload_size,
+};
 use sqlx::PgPool;
-use ::server_telemetry::{record_sync_escalation, record_sync_daemon_batch_size, record_sync_latency, record_sync_payload_size, record_sync_daemon_error_total};
+use std::sync::Arc;
 use std::time::Instant;
 
 #[async_trait::async_trait]
 pub trait SyncHttpClient: Send + Sync {
-    async fn post_json(&self, url: &str, payload: &serde_json::Value) -> Result<(u16, serde_json::Value), String>;
+    async fn post_json(
+        &self,
+        url: &str,
+        payload: &serde_json::Value,
+    ) -> Result<(u16, serde_json::Value), String>;
     async fn get_json(&self, url: &str) -> Result<(u16, serde_json::Value), String>;
 }
 
@@ -24,15 +31,30 @@ impl DefaultSyncClient {
 
 #[async_trait::async_trait]
 impl SyncHttpClient for DefaultSyncClient {
-    async fn post_json(&self, url: &str, payload: &serde_json::Value) -> Result<(u16, serde_json::Value), String> {
-        let res = self.client.post(url).json(payload).send().await.map_err(|e| e.to_string())?;
+    async fn post_json(
+        &self,
+        url: &str,
+        payload: &serde_json::Value,
+    ) -> Result<(u16, serde_json::Value), String> {
+        let res = self
+            .client
+            .post(url)
+            .json(payload)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
         let status = res.status().as_u16();
         let body = res.json().await.unwrap_or_default();
         Ok((status, body))
     }
 
     async fn get_json(&self, url: &str) -> Result<(u16, serde_json::Value), String> {
-        let res = self.client.get(url).send().await.map_err(|e| e.to_string())?;
+        let res = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
         let status = res.status().as_u16();
         let body = res.json().await.unwrap_or_default();
         Ok((status, body))
@@ -66,7 +88,12 @@ impl CloudSynchronizerImpl {
     }
 
     #[cfg(test)]
-    pub fn with_client(repo: Arc<dyn LocalRepository>, cloud_url: String, pool: Option<PgPool>, client: Box<dyn SyncHttpClient>) -> Self {
+    pub fn with_client(
+        repo: Arc<dyn LocalRepository>,
+        cloud_url: String,
+        pool: Option<PgPool>,
+        client: Box<dyn SyncHttpClient>,
+    ) -> Self {
         Self {
             repo,
             client,
@@ -79,7 +106,11 @@ impl CloudSynchronizerImpl {
         let pending = self.repo.get_pending_sync(organization_id, 50).await?;
 
         let batch_size = pending.len() as f32;
-        let mode = if self.cloud_url.is_empty() { "Standalone" } else { "Cloud" };
+        let mode = if self.cloud_url.is_empty() {
+            "Standalone"
+        } else {
+            "Cloud"
+        };
 
         if let Some(pool) = &self.pool {
             let _ = record_sync_daemon_batch_size(pool, batch_size, mode).await;
@@ -143,26 +174,41 @@ impl CloudSynchronizerImpl {
                 Ok((status, json)) => {
                     if status >= 200 && status < 300 {
                         if let Some(cloud_id) = json.get("cloud_id").and_then(|v| v.as_str()) {
-                            let repo_res = self.repo.mark_synced(organization_id, &mission.id, cloud_id).await;
+                            let repo_res = self
+                                .repo
+                                .mark_synced(organization_id, &mission.id, cloud_id)
+                                .await;
                             if let Err(e) = repo_res {
                                 if let Some(pool) = &self.pool {
-                                    let _ = record_sync_daemon_error_total(pool, 1.0, mode, "DB_ERROR").await;
+                                    let _ =
+                                        record_sync_daemon_error_total(pool, 1.0, mode, "DB_ERROR")
+                                            .await;
                                 }
                                 return Err(e);
                             }
                         }
                     } else {
                         if let Some(pool) = &self.pool {
-                            let _ = record_sync_daemon_error_total(pool, 1.0, mode, "HTTP_ERROR").await;
+                            let _ =
+                                record_sync_daemon_error_total(pool, 1.0, mode, "HTTP_ERROR").await;
                         }
-                        self.repo.mark_sync_error(organization_id, &mission.id, &format!("HTTP {}", status)).await?;
+                        self.repo
+                            .mark_sync_error(
+                                organization_id,
+                                &mission.id,
+                                &format!("HTTP {}", status),
+                            )
+                            .await?;
                     }
                 }
                 Err(e) => {
                     if let Some(pool) = &self.pool {
-                        let _ = record_sync_daemon_error_total(pool, 1.0, mode, "API_TIMEOUT").await;
+                        let _ =
+                            record_sync_daemon_error_total(pool, 1.0, mode, "API_TIMEOUT").await;
                     }
-                    self.repo.mark_sync_error(organization_id, &mission.id, &e).await?;
+                    self.repo
+                        .mark_sync_error(organization_id, &mission.id, &e)
+                        .await?;
                 }
             }
         }
@@ -182,7 +228,9 @@ impl CloudSynchronizerImpl {
                 if let Ok((status, json)) = resp {
                     if status >= 200 && status < 300 {
                         if let Some(mission_status) = json.get("status").and_then(|v| v.as_str()) {
-                            self.repo.update_local_status(organization_id, &mission.id, mission_status).await?;
+                            self.repo
+                                .update_local_status(organization_id, &mission.id, mission_status)
+                                .await?;
                         }
                     }
                 }
@@ -213,9 +261,9 @@ impl CloudSynchronizer for CloudSynchronizerImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
-    use std::collections::HashMap;
     use crate::services::sync::local_repository::LocalMission;
+    use std::collections::HashMap;
+    use std::sync::Mutex;
 
     struct MockLocalRepository {
         pending: Mutex<Vec<LocalMission>>,
@@ -239,26 +287,57 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LocalRepository for MockLocalRepository {
-        async fn get_pending_sync(&self, _organization_id: &str, _limit: i32) -> Result<Vec<LocalMission>, String> {
+        async fn get_pending_sync(
+            &self,
+            _organization_id: &str,
+            _limit: i32,
+        ) -> Result<Vec<LocalMission>, String> {
             Ok(self.pending.lock().unwrap().clone())
         }
 
-        async fn mark_synced(&self, _organization_id: &str, local_id: &str, cloud_id: &str) -> Result<(), String> {
-            self.synced.lock().unwrap().insert(local_id.to_string(), cloud_id.to_string());
+        async fn mark_synced(
+            &self,
+            _organization_id: &str,
+            local_id: &str,
+            cloud_id: &str,
+        ) -> Result<(), String> {
+            self.synced
+                .lock()
+                .unwrap()
+                .insert(local_id.to_string(), cloud_id.to_string());
             Ok(())
         }
 
-        async fn mark_sync_error(&self, _organization_id: &str, local_id: &str, sync_error: &str) -> Result<(), String> {
-            self.errors.lock().unwrap().insert(local_id.to_string(), sync_error.to_string());
+        async fn mark_sync_error(
+            &self,
+            _organization_id: &str,
+            local_id: &str,
+            sync_error: &str,
+        ) -> Result<(), String> {
+            self.errors
+                .lock()
+                .unwrap()
+                .insert(local_id.to_string(), sync_error.to_string());
             Ok(())
         }
 
-        async fn get_active_escalations(&self, _organization_id: &str) -> Result<Vec<LocalMission>, String> {
+        async fn get_active_escalations(
+            &self,
+            _organization_id: &str,
+        ) -> Result<Vec<LocalMission>, String> {
             Ok(self.active.lock().unwrap().clone())
         }
 
-        async fn update_local_status(&self, _organization_id: &str, local_id: &str, new_status: &str) -> Result<(), String> {
-            self.status.lock().unwrap().insert(local_id.to_string(), new_status.to_string());
+        async fn update_local_status(
+            &self,
+            _organization_id: &str,
+            local_id: &str,
+            new_status: &str,
+        ) -> Result<(), String> {
+            self.status
+                .lock()
+                .unwrap()
+                .insert(local_id.to_string(), new_status.to_string());
             Ok(())
         }
     }
@@ -277,22 +356,42 @@ mod tests {
         }
 
         fn add_post_response(&self, url: &str, res: Result<(u16, serde_json::Value), String>) {
-            self.post_responses.lock().unwrap().insert(url.to_string(), res);
+            self.post_responses
+                .lock()
+                .unwrap()
+                .insert(url.to_string(), res);
         }
 
         fn add_get_response(&self, url: &str, res: Result<(u16, serde_json::Value), String>) {
-            self.get_responses.lock().unwrap().insert(url.to_string(), res);
+            self.get_responses
+                .lock()
+                .unwrap()
+                .insert(url.to_string(), res);
         }
     }
 
     #[async_trait::async_trait]
     impl SyncHttpClient for MockSyncHttpClient {
-        async fn post_json(&self, url: &str, _payload: &serde_json::Value) -> Result<(u16, serde_json::Value), String> {
-            self.post_responses.lock().unwrap().get(url).cloned().unwrap_or(Err("Not found".to_string()))
+        async fn post_json(
+            &self,
+            url: &str,
+            _payload: &serde_json::Value,
+        ) -> Result<(u16, serde_json::Value), String> {
+            self.post_responses
+                .lock()
+                .unwrap()
+                .get(url)
+                .cloned()
+                .unwrap_or(Err("Not found".to_string()))
         }
 
         async fn get_json(&self, url: &str) -> Result<(u16, serde_json::Value), String> {
-            self.get_responses.lock().unwrap().get(url).cloned().unwrap_or(Err("Not found".to_string()))
+            self.get_responses
+                .lock()
+                .unwrap()
+                .get(url)
+                .cloned()
+                .unwrap_or(Err("Not found".to_string()))
         }
     }
 
@@ -303,7 +402,11 @@ mod tests {
             id: "local_1".to_string(),
             organization_id: "test_org".to_string(),
             status: "PENDING".to_string(),
-            payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
+            payload: crate::services::sync::local_repository::MissionPayload {
+                role: "SYSTEM".to_string(),
+                task: "test".to_string(),
+                context: None,
+            },
             created_at: chrono::Utc::now(),
             synced_to_cloud: false,
             cloud_mission_id: None,
@@ -314,10 +417,15 @@ mod tests {
         let mock_client = MockSyncHttpClient::new();
         mock_client.add_post_response(
             "http://cloud_api/api/v1/missions/escalate",
-            Ok((200, serde_json::json!({"cloud_id": "cloud_1"})))
+            Ok((200, serde_json::json!({"cloud_id": "cloud_1"}))),
         );
 
-        let sync = CloudSynchronizerImpl::with_client(repo.clone(), "http://cloud_api".to_string(), None, Box::new(mock_client));
+        let sync = CloudSynchronizerImpl::with_client(
+            repo.clone(),
+            "http://cloud_api".to_string(),
+            None,
+            Box::new(mock_client),
+        );
 
         let res = sync.push_pending_missions("test_org").await;
         assert!(res.is_ok());
@@ -333,7 +441,11 @@ mod tests {
             id: "local_1".to_string(),
             organization_id: "test_org".to_string(),
             status: "PENDING".to_string(),
-            payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
+            payload: crate::services::sync::local_repository::MissionPayload {
+                role: "SYSTEM".to_string(),
+                task: "test".to_string(),
+                context: None,
+            },
             created_at: chrono::Utc::now(),
             synced_to_cloud: false,
             cloud_mission_id: None,
@@ -344,15 +456,26 @@ mod tests {
         let mock_client = MockSyncHttpClient::new();
         mock_client.add_post_response(
             "http://cloud_api/api/v1/missions/escalate",
-            Ok((500, serde_json::json!({})))
+            Ok((500, serde_json::json!({}))),
         );
 
-        let sync = CloudSynchronizerImpl::with_client(repo.clone(), "http://cloud_api".to_string(), None, Box::new(mock_client));
+        let sync = CloudSynchronizerImpl::with_client(
+            repo.clone(),
+            "http://cloud_api".to_string(),
+            None,
+            Box::new(mock_client),
+        );
 
         let res = sync.push_pending_missions("test_org").await;
         assert!(res.is_ok());
 
-        let error_msg = repo.errors.lock().unwrap().get("local_1").cloned().unwrap_or_default();
+        let error_msg = repo
+            .errors
+            .lock()
+            .unwrap()
+            .get("local_1")
+            .cloned()
+            .unwrap_or_default();
         assert_eq!(error_msg, "HTTP 500");
     }
 
@@ -363,7 +486,11 @@ mod tests {
             id: "local_1".to_string(),
             organization_id: "test_org".to_string(),
             status: "PENDING".to_string(),
-            payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
+            payload: crate::services::sync::local_repository::MissionPayload {
+                role: "SYSTEM".to_string(),
+                task: "test".to_string(),
+                context: None,
+            },
             created_at: chrono::Utc::now(),
             synced_to_cloud: false,
             cloud_mission_id: None,
@@ -374,15 +501,26 @@ mod tests {
         let mock_client = MockSyncHttpClient::new();
         mock_client.add_post_response(
             "http://cloud_api/api/v1/missions/escalate",
-            Err("Connection refused".to_string())
+            Err("Connection refused".to_string()),
         );
 
-        let sync = CloudSynchronizerImpl::with_client(repo.clone(), "http://cloud_api".to_string(), None, Box::new(mock_client));
+        let sync = CloudSynchronizerImpl::with_client(
+            repo.clone(),
+            "http://cloud_api".to_string(),
+            None,
+            Box::new(mock_client),
+        );
 
         let res = sync.push_pending_missions("test_org").await;
         assert!(res.is_ok());
 
-        let error_msg = repo.errors.lock().unwrap().get("local_1").cloned().unwrap_or_default();
+        let error_msg = repo
+            .errors
+            .lock()
+            .unwrap()
+            .get("local_1")
+            .cloned()
+            .unwrap_or_default();
         assert_eq!(error_msg, "Connection refused");
     }
 
@@ -393,7 +531,11 @@ mod tests {
             id: "local_1".to_string(),
             organization_id: "test_org".to_string(),
             status: "PENDING".to_string(),
-            payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
+            payload: crate::services::sync::local_repository::MissionPayload {
+                role: "SYSTEM".to_string(),
+                task: "test".to_string(),
+                context: None,
+            },
             created_at: chrono::Utc::now(),
             synced_to_cloud: true,
             cloud_mission_id: Some("cloud_1".to_string()),
@@ -404,10 +546,15 @@ mod tests {
         let mock_client = MockSyncHttpClient::new();
         mock_client.add_get_response(
             "http://cloud_api/api/v1/missions/cloud_1/status",
-            Ok((200, serde_json::json!({"status": "COMPLETED"})))
+            Ok((200, serde_json::json!({"status": "COMPLETED"}))),
         );
 
-        let sync = CloudSynchronizerImpl::with_client(repo.clone(), "http://cloud_api".to_string(), None, Box::new(mock_client));
+        let sync = CloudSynchronizerImpl::with_client(
+            repo.clone(),
+            "http://cloud_api".to_string(),
+            None,
+            Box::new(mock_client),
+        );
 
         let res = sync.pull_mission_updates("test_org").await;
         assert!(res.is_ok());

@@ -2200,7 +2200,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button onclick="nextStep(100)">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
                     </div>
@@ -2268,10 +2268,197 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        let currentStep = 1;
+
+                        function getOnboardingState() {
+                            const state = { step: currentStep };
+                            document.querySelectorAll('#setup-screen input').forEach(input => {
+                                if (input.type === 'checkbox' || input.type === 'radio') {
+                                    state[input.placeholder || input.name || input.id || input.nextSibling?.textContent?.trim() || Math.random()] = input.checked;
+                                } else {
+                                    state[input.placeholder || input.name || input.id] = input.value;
+                                }
+                            });
+                            // also capture buttons acting as state (like business type)
+                            return state;
+                        }
+
+                        function setOnboardingState(state) {
+                            if (!state) return;
+                            if (state.step) {
+                                currentStep = state.step;
+                                showSetupStep(currentStep);
+                            }
+                            document.querySelectorAll('#setup-screen input').forEach(input => {
+                                const key = input.placeholder || input.name || input.id || input.nextSibling?.textContent?.trim();
+                                if (state[key] !== undefined) {
+                                    if (input.type === 'checkbox' || input.type === 'radio') {
+                                        input.checked = state[key];
+                                    } else {
+                                        input.value = state[key];
+                                    }
+                                }
+                            });
+                        }
+
+                        async function saveState() {
+                            const state = getOnboardingState();
+                            try {
+                                await fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(state)
+                                });
+                            } catch(e) {
+                                console.warn('Failed to save state', e);
+                            }
+                        }
+
+                        async function loadState() {
+                            try {
+                                const res = await fetch('/api/onboarding/state');
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.state && data.state !== "{}") {
+                                         let parsed = typeof data.state === 'string' ? JSON.parse(data.state) : data.state;
+                                         setOnboardingState(parsed);
+                                    }
+                                }
+                            } catch(e) {
+                                console.warn('Failed to load state', e);
+                            }
+                        }
+
+                        function showSetupStep(step) {
+                            document.querySelectorAll('[id^="step-"]').forEach(s => s.style.display = 'none');
+                            const target = document.getElementById(typeof step === 'number' ? 'step-' + step : 'step-' + step);
+                            if (target) {
+                                target.style.display = 'block';
+                            }
+                        }
+
+                        function nextStep(step) {
+                            currentStep = step;
+                            if (step === 100) {
+                                // Launch!
+                                showSetupStep(100);
+                                launchBusiness();
+                            } else {
+                                showSetupStep(step);
+                                saveState();
+                            }
+                        }
+
+                        function generateAI() {
+                             showSetupStep('generating');
+                             setTimeout(() => {
+                                 showSetupStep('launch-ai');
+                             }, 1000);
+                        }
+
+                        async function launchBusiness() {
+                             const state = getOnboardingState();
+                             const payload = {
+                                 business_type: state['What kind of business are you building?'] || 'Online Store',
+                                 company_name: state['What is your business called?'] || 'My Business',
+                                 company_description: '',
+                                 selling_categories: [],
+                                 payment_pref: 'online',
+                                 admin_email: state['you@email.com'] || 'admin@example.com',
+                                 admin_name: state['e.g. Maya Smith'] || '',
+                                 admin_password: state['Password'] || 'password123',
+                                 website_template: 'Modern',
+                                 first_product_name: state['What is the name of this product?'] || '',
+                                 first_product_price: state['0.00'] || '',
+                                 domain_choice: 'subdomain',
+                                 price_type: 'fixed'
+                             };
+
+                             try {
+                                 await fetch('/api/onboarding/start', {
+                                     method: 'POST',
+                                     headers: { 'Content-Type': 'application/json' },
+                                     body: JSON.stringify(payload)
+                                 });
+                             } catch(e) {
+                                 console.warn('Failed to start onboarding', e);
+                             }
+
+                             // Create confetti effect
+                             const colors = ['#0055ff', '#4ecca3', '#ff0055', '#ffd700'];
+                             for(let i=0; i<100; i++) {
+                                 const confetti = document.createElement('div');
+                                 confetti.style.position = 'fixed';
+                                 confetti.style.width = '10px';
+                                 confetti.style.height = '10px';
+                                 confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                                 confetti.style.left = Math.random() * 100 + 'vw';
+                                 confetti.style.top = '-10px';
+                                 confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                                 confetti.style.zIndex = '9999';
+                                 confetti.style.animation = `fall ${Math.random() * 3 + 2}s linear forwards`;
+                                 document.body.appendChild(confetti);
+                                 setTimeout(() => confetti.remove(), 5000);
+                             }
+
+                             // Add styles for confetti
+                             if (!document.getElementById('confetti-style')) {
+                                 const style = document.createElement('style');
+                                 style.id = 'confetti-style';
+                                 style.innerHTML = `@keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }`;
+                                 document.head.appendChild(style);
+                             }
+
+                             // Attempt to auto-copy domain link
+                             try {
+                                 await navigator.clipboard.writeText('https://test-company.ohc.app');
+                             } catch(e) {}
+                        }
+
+                        async function handleSignup(btn) {
+                            btn.textContent = 'Creating...';
+
+                            // Get auth details
+                            const emailInput = document.querySelector('#signup-screen input[type="email"]');
+                            const pwdInput = document.querySelector('#signup-screen input[type="password"]');
+
+                            // Just save them directly to inputs in wizard or local state for now
+                            // The actual business creation happens in launchBusiness()
+
+                            // Automatically transition to setup wizard
+                            btn.textContent = 'Sign Up';
+                            showScreen('setup-screen');
+                        }
+
+                        async function handleLogin(btn) {
+                            showScreen('dashboard-screen');
+                        }
+
+                        // Initialize user locale currency
+                        function setupCurrency() {
+                            try {
+                                const formatter = new Intl.NumberFormat(navigator.language || 'en-US', {
+                                    style: 'currency',
+                                    currency: 'USD' // Fallback
+                                });
+                                // Extract currency symbol for hint
+                                const parts = formatter.formatToParts(0);
+                                const symbol = parts.find(p => p.type === 'currency')?.value || '$';
+
+                                const priceInput = document.querySelector('input[placeholder="0.00"]');
+                                if (priceInput) {
+                                     // Just a mock of setting the currency symbol in the UI
+                                     priceInput.placeholder = `${symbol} 0.00`;
+                                }
+                            } catch(e) {}
+                        }
+
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+                            setupCurrency();
+                            loadState();
                         };
                     </script>
                 </body>

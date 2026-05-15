@@ -1,5 +1,5 @@
-use serde_json::json;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+use serde_json::json;
 
 #[derive(Clone)]
 pub struct OnboardingAgent {
@@ -12,16 +12,68 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub }
     }
 
-    pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+    pub async fn save_onboarding_state(
+        &self,
+        org_id: &str,
+        user_id: &str,
+        step: i32,
+        state_json: &str,
+    ) -> Result<(), String> {
+        let state_val: serde_json::Value =
+            serde_json::from_str(state_json).unwrap_or(serde_json::json!({}));
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4, $5) \
+             ON CONFLICT (organization_id) DO UPDATE \
+             SET current_step = EXCLUDED.current_step, state_json = EXCLUDED.state_json, updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(org_id)
+        .bind(org_id)
+        .bind(user_id)
+        .bind(step)
+        .bind(state_val)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn get_onboarding_state(&self, org_id: &str) -> Result<String, String> {
+        use sqlx::Row;
+        let row = sqlx::query(
+            "SELECT state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1",
+        )
+        .bind(org_id)
+        .fetch_optional(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if let Some(r) = row {
+            let state_json: serde_json::Value = r
+                .try_get("state_json")
+                .unwrap_or_else(|_| serde_json::json!({}));
+            Ok(state_json.to_string())
+        } else {
+            Ok("{}".to_string())
+        }
+    }
+
+    pub async fn start_onboarding(
+        &self,
+        req: StartOnboardingRequest,
+    ) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
 
-
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();
-        let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
+        let username = if req.admin_name.is_empty() {
+            email.clone()
+        } else {
+            req.admin_name.clone()
+        };
         let password = req.admin_password.clone();
 
         let req_first_product_name = req.first_product_name.clone();
@@ -34,9 +86,19 @@ impl OnboardingAgent {
         let agent_clone_product = self.clone();
         let product_future = tokio::task::spawn(async move {
             if !req_first_product_name.is_empty() {
-                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
+                agent_clone_product
+                    .create_product(
+                        &org_id_clone1,
+                        &req_first_product_name,
+                        &req_first_product_price,
+                        &req_price_type,
+                        &business_type_clone,
+                    )
+                    .await
             } else {
-                agent_clone_product.generate_initial_products(&org_id_clone1, &business_type_clone).await
+                agent_clone_product
+                    .generate_initial_products(&org_id_clone1, &business_type_clone)
+                    .await
             }
         });
 
@@ -74,14 +136,22 @@ impl OnboardingAgent {
         let hash_future = tokio::task::spawn(async move {
             if !password.is_empty() {
                 tokio::task::spawn_blocking(move || {
-                    bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST }).map_err(|e| format!("Failed to hash password: {}", e))
-                }).await.map_err(|e| e.to_string())?
+                    bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST })
+                        .map_err(|e| format!("Failed to hash password: {}", e))
+                })
+                .await
+                .map_err(|e| e.to_string())?
             } else {
                 Ok("".to_string())
             }
         });
 
-        let (product_res_res, seed_res_res, _events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+        let (product_res_res, seed_res_res, _events_res_res, hash_res_res) = tokio::join!(
+            product_future,
+            seed_future,
+            publish_events_future,
+            hash_future
+        );
 
         let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
         let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
@@ -117,17 +187,28 @@ impl OnboardingAgent {
 
         // Extract feature flags logic
         let mut flags = serde_json::Map::new();
-        if business_type == "Service Business" || business_type == "Service" || req.selling_categories.contains(&"services".to_string()) {
+        if business_type == "Service Business"
+            || business_type == "Service"
+            || req.selling_categories.contains(&"services".to_string())
+        {
             flags.insert("enable_booking".to_string(), serde_json::json!(true));
         }
-        if business_type == "Restaurant / Food" || business_type == "Food Cart" || req.selling_categories.contains(&"food".to_string()) {
+        if business_type == "Restaurant / Food"
+            || business_type == "Food Cart"
+            || req.selling_categories.contains(&"food".to_string())
+        {
             flags.insert("enable_menu".to_string(), serde_json::json!(true));
             flags.insert("enable_pre_order".to_string(), serde_json::json!(true));
         }
-        if req.selling_categories.contains(&"physical".to_string()) || req.selling_categories.contains(&"digital".to_string()) {
+        if req.selling_categories.contains(&"physical".to_string())
+            || req.selling_categories.contains(&"digital".to_string())
+        {
             flags.insert("enable_ecommerce".to_string(), serde_json::json!(true));
         }
-        if req.selling_categories.contains(&"subscriptions".to_string()) {
+        if req
+            .selling_categories
+            .contains(&"subscriptions".to_string())
+        {
             flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
         }
 
@@ -147,12 +228,22 @@ impl OnboardingAgent {
 
         Ok(StartOnboardingResponse {
             success: true,
-            message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
+            message: format!(
+                "Successfully onboarded {} as a {}!",
+                company_name, business_type
+            ),
             organization_id: org_id,
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str) -> Result<(), String> {
+    async fn create_product(
+        &self,
+        org_id: &str,
+        name: &str,
+        price_str: &str,
+        price_type: &str,
+        business_type: &str,
+    ) -> Result<(), String> {
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
@@ -186,28 +277,47 @@ impl OnboardingAgent {
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
-        let _ = self.hub.publish_teammate_event("products_inbox".to_string(), event);
+        let _ = self
+            .hub
+            .publish_teammate_event("products_inbox".to_string(), event);
 
         Ok(())
     }
 
-    async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
+    async fn generate_initial_products(
+        &self,
+        org_id: &str,
+        business_type: &str,
+    ) -> Result<(), String> {
         let products = match business_type {
             "Online Store" => vec![
-                ("Standard Product", "A great product for your store", 1999, "physical"),
+                (
+                    "Standard Product",
+                    "A great product for your store",
+                    1999,
+                    "physical",
+                ),
                 ("Premium Product", "A premium offering", 4999, "physical"),
             ],
             "Service Business" => vec![
-                ("Consultation", "1-hour professional consultation", 10000, "booking"),
+                (
+                    "Consultation",
+                    "1-hour professional consultation",
+                    10000,
+                    "booking",
+                ),
                 ("Service Call", "On-site service visit", 7500, "booking"),
             ],
             "Restaurant / Food" => vec![
                 ("House Special", "Our most popular dish", 1599, "physical"),
                 ("Drink of the Day", "Refreshing beverage", 450, "physical"),
             ],
-            _ => vec![
-                ("Default Item", "Welcome to your new business", 1000, "physical"),
-            ],
+            _ => vec![(
+                "Default Item",
+                "Welcome to your new business",
+                1000,
+                "physical",
+            )],
         };
 
         let mut futures = vec![];
@@ -252,7 +362,9 @@ impl OnboardingAgent {
         }
 
         for f in futures {
-            f.await.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?;
+            f.await
+                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
         }
 
         Ok(())
@@ -291,9 +403,9 @@ impl OnboardingAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use crate::db::DB;
     use ::server_ohc::orchestration::StartOnboardingRequest;
+    use std::sync::Arc;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("DATABASE_URL").ok()?;
@@ -342,24 +454,35 @@ mod tests {
 
         let org_id = resp.organization_id;
         use sqlx::Row;
-        let agents = sqlx::query("SELECT id, name, role FROM agents WHERE organization_id = $1 AND is_default = TRUE")
-            .bind(&org_id)
-            .fetch_all(&agent.db.pool)
-            .await
-            .unwrap();
+        let agents = sqlx::query(
+            "SELECT id, name, role FROM agents WHERE organization_id = $1 AND is_default = TRUE",
+        )
+        .bind(&org_id)
+        .fetch_all(&agent.db.pool)
+        .await
+        .unwrap();
 
         assert_eq!(agents.len(), 7);
 
-        let expected_roles = vec!["The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", "The Advisor"];
+        let expected_roles = vec![
+            "The Manager",
+            "The Promoter",
+            "The Salesperson",
+            "The Ambassador",
+            "The Accountant",
+            "The Protector",
+            "The Advisor",
+        ];
         for role in expected_roles {
             assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
         }
 
-        let users = sqlx::query("SELECT username, email, roles FROM users WHERE organization_id = $1")
-            .bind(&org_id)
-            .fetch_all(&agent.db.pool)
-            .await
-            .unwrap();
+        let users =
+            sqlx::query("SELECT username, email, roles FROM users WHERE organization_id = $1")
+                .bind(&org_id)
+                .fetch_all(&agent.db.pool)
+                .await
+                .unwrap();
 
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].get::<String, _>("email"), "admin@test.com");
@@ -398,20 +521,30 @@ mod tests {
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
-        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
-            .bind(&org_id_service)
-            .fetch_one(&db.pool)
-            .await
-            .unwrap();
+        let row_service =
+            sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+                .bind(&org_id_service)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
 
-        let state_json_service: serde_json::Value = row_service.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
-        assert_eq!(state_json_service.get("enable_booking").and_then(|v| v.as_bool()), Some(true));
+        let state_json_service: serde_json::Value = row_service
+            .try_get("state_json")
+            .unwrap_or_else(|_| serde_json::json!({}));
+        assert_eq!(
+            state_json_service
+                .get("enable_booking")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
 
-        let agents_service = sqlx::query("SELECT role FROM agents WHERE organization_id = $1 AND role = 'The Salesperson'")
-            .bind(&org_id_service)
-            .fetch_all(&agent.db.pool)
-            .await
-            .unwrap();
+        let agents_service = sqlx::query(
+            "SELECT role FROM agents WHERE organization_id = $1 AND role = 'The Salesperson'",
+        )
+        .bind(&org_id_service)
+        .fetch_all(&agent.db.pool)
+        .await
+        .unwrap();
         assert_eq!(agents_service.len(), 1);
 
         // Test Food Cart
@@ -434,13 +567,19 @@ mod tests {
         let res_food = agent.start_onboarding(req_food).await.unwrap();
         let org_id_food = res_food.organization_id;
 
-        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
-            .bind(&org_id_food)
-            .fetch_one(&db.pool)
-            .await
-            .unwrap();
+        let row_food =
+            sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+                .bind(&org_id_food)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
 
-        let state_json_food: serde_json::Value = row_food.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
-        assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
+        let state_json_food: serde_json::Value = row_food
+            .try_get("state_json")
+            .unwrap_or_else(|_| serde_json::json!({}));
+        assert_eq!(
+            state_json_food.get("enable_menu").and_then(|v| v.as_bool()),
+            Some(true)
+        );
     }
 }

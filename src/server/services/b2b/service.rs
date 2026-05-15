@@ -1,8 +1,8 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::b2b_service_server::B2bService;
-use std::sync::RwLock;
+use ::server_ohc::orchestration::*;
 use chrono::Utc;
+use std::sync::RwLock;
+use tonic::{Request, Response, Status};
 
 pub struct MyB2BService {
     approvals: RwLock<Vec<ApprovalRequest>>,
@@ -40,7 +40,7 @@ impl B2bService for MyB2BService {
         if req.agent_id.is_empty() || req.action.is_empty() {
             return Err(Status::invalid_argument("agentId and action are required"));
         }
-        
+
         let now = Utc::now();
         let risk_level = if req.risk_level.is_empty() {
             if req.estimated_cost_usd > 500.0 {
@@ -66,10 +66,10 @@ impl B2bService for MyB2BService {
             decided_at_unix: 0,
             decided_by: String::new(),
         };
-        
+
         let mut approvals = self.approvals.write().unwrap();
         approvals.push(approval.clone());
-        
+
         Ok(Response::new(approval))
     }
 
@@ -79,19 +79,25 @@ impl B2bService for MyB2BService {
     ) -> Result<Response<ApprovalsResponse>, Status> {
         let req = request.into_inner();
         if req.approval_id.is_empty() || req.decision.is_empty() {
-            return Err(Status::invalid_argument("approvalId and decision are required"));
+            return Err(Status::invalid_argument(
+                "approvalId and decision are required",
+            ));
         }
-        
+
         let new_status = match req.decision.as_str() {
             "approve" => "APPROVED",
             "reject" => "REJECTED",
-            _ => return Err(Status::invalid_argument("decision must be 'approve' or 'reject'")),
+            _ => {
+                return Err(Status::invalid_argument(
+                    "decision must be 'approve' or 'reject'",
+                ))
+            }
         };
 
         let now = Utc::now();
         let mut approvals = self.approvals.write().unwrap();
         let mut found = false;
-        
+
         for a in approvals.iter_mut() {
             if a.id == req.approval_id {
                 a.status = new_status.to_string();
@@ -101,11 +107,11 @@ impl B2bService for MyB2BService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("approval not found"));
         }
-        
+
         Ok(Response::new(ApprovalsResponse {
             approvals: approvals.clone(),
         }))
@@ -127,9 +133,11 @@ impl B2bService for MyB2BService {
     ) -> Result<Response<HandoffPackage>, Status> {
         let req = request.into_inner();
         if req.from_agent_id.is_empty() || req.intent.is_empty() {
-            return Err(Status::invalid_argument("fromAgentId and intent are required"));
+            return Err(Status::invalid_argument(
+                "fromAgentId and intent are required",
+            ));
         }
-        
+
         let now = Utc::now();
         let handoff = HandoffPackage {
             id: format!("handoff-{}", now.timestamp()),
@@ -142,10 +150,10 @@ impl B2bService for MyB2BService {
             status: "pending".to_string(),
             created_at_unix: now.timestamp(),
         };
-        
+
         let mut handoffs = self.handoffs.write().unwrap();
         handoffs.push(handoff.clone());
-        
+
         Ok(Response::new(handoff))
     }
 
@@ -155,17 +163,21 @@ impl B2bService for MyB2BService {
     ) -> Result<Response<HandoffsResponse>, Status> {
         let req = request.into_inner();
         if req.handoff_id.is_empty() || req.status.is_empty() {
-            return Err(Status::invalid_argument("handoffId and status are required"));
+            return Err(Status::invalid_argument(
+                "handoffId and status are required",
+            ));
         }
-        
+
         if req.status != "acknowledged" && req.status != "resolved" {
-            return Err(Status::invalid_argument("status must be 'acknowledged' or 'resolved'"));
+            return Err(Status::invalid_argument(
+                "status must be 'acknowledged' or 'resolved'",
+            ));
         }
 
         let mut handoffs = self.handoffs.write().unwrap();
         let mut found = false;
         let mut already_resolved = false;
-        
+
         for h in handoffs.iter_mut() {
             if h.id == req.handoff_id {
                 found = true;
@@ -177,15 +189,17 @@ impl B2bService for MyB2BService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("handoff not found"));
         }
-        
+
         if already_resolved {
-            return Err(Status::failed_precondition("State Changed: This handoff has already been acknowledged or resolved."));
+            return Err(Status::failed_precondition(
+                "State Changed: This handoff has already been acknowledged or resolved.",
+            ));
         }
-        
+
         Ok(Response::new(HandoffsResponse {
             handoffs: handoffs.clone(),
         }))
@@ -203,41 +217,47 @@ impl B2bService for MyB2BService {
 
     async fn b2b_handshake(
         &self,
-                request: Request<B2bHandshakeRequest>,
+        request: Request<B2bHandshakeRequest>,
     ) -> Result<Response<TrustAgreement>, Status> {
         let req = request.into_inner();
         if req.partner_org.is_empty() || req.partner_jwks.is_empty() {
-            return Err(Status::invalid_argument("partnerOrg and partnerJwksUrl are required"));
+            return Err(Status::invalid_argument(
+                "partnerOrg and partnerJwksUrl are required",
+            ));
         }
-        
+
         let agreement = TrustAgreement {
-            id: format!("ta-{}-{}", req.partner_org.replace(".", "-"), Utc::now().timestamp()),
+            id: format!(
+                "ta-{}-{}",
+                req.partner_org.replace(".", "-"),
+                Utc::now().timestamp()
+            ),
             partner_org: req.partner_org,
             partner_jwks: req.partner_jwks,
             allowed_roles: req.allowed_roles,
             status: "ACTIVE".to_string(),
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut agreements = self.trust_agreements.write().unwrap();
         agreements.push(agreement.clone());
-        
+
         Ok(Response::new(agreement))
     }
 
     async fn b2b_revoke(
         &self,
-                request: Request<B2bRevokeRequest>,
+        request: Request<B2bRevokeRequest>,
     ) -> Result<Response<TrustAgreement>, Status> {
         let req = request.into_inner();
         if req.agreement_id.is_empty() {
             return Err(Status::invalid_argument("agreementId is required"));
         }
-        
+
         let mut agreements = self.trust_agreements.write().unwrap();
         let mut found = false;
         let mut updated = None;
-        
+
         for ag in agreements.iter_mut() {
             if ag.id == req.agreement_id {
                 ag.status = "REVOKED".to_string();
@@ -246,11 +266,11 @@ impl B2bService for MyB2BService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("agreement not found"));
         }
-        
+
         Ok(Response::new(updated.unwrap()))
     }
 }

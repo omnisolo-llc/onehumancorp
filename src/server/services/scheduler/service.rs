@@ -1,10 +1,10 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::scheduler_service_server::SchedulerService;
-use std::sync::Arc;
 use crate::hub::Hub;
-use crate::scheduler::{Task, Schedule, ScheduleType, TaskStatus};
-use chrono::{Utc, TimeZone};
+use crate::scheduler::{Schedule, ScheduleType, Task, TaskStatus};
+use ::server_ohc::orchestration::scheduler_service_server::SchedulerService;
+use ::server_ohc::orchestration::*;
+use chrono::{TimeZone, Utc};
+use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
 pub struct MySchedulerService {
     hub: Arc<Hub>,
@@ -22,10 +22,14 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<ScheduledTasksResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
 
         let tasks = self.hub.scheduler().list_for_org(&org_id);
         let proto_tasks = tasks.into_iter().map(|t| convert_to_proto(t)).collect();
@@ -36,14 +40,20 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<CreateScheduledTaskRequest>,
     ) -> Result<Response<ProtoTask>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
 
         let req = request.into_inner();
-        let schedule = req.schedule.ok_or_else(|| Status::invalid_argument("schedule is required"))?;
-        
+        let schedule = req
+            .schedule
+            .ok_or_else(|| Status::invalid_argument("schedule is required"))?;
+
         let task = Task {
             id: format!("task-{}", Utc::now().timestamp()),
             organization_id: org_id,
@@ -57,7 +67,9 @@ impl SchedulerService for MySchedulerService {
             payload: serde_json::from_str(&req.payload).unwrap_or_default(),
         };
 
-        self.hub.scheduler().create(task.clone())
+        self.hub
+            .scheduler()
+            .create(task.clone())
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(convert_to_proto(task)))
@@ -67,15 +79,21 @@ impl SchedulerService for MySchedulerService {
         &self,
         request: Request<CancelScheduledTaskRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
 
         let req = request.into_inner();
-        self.hub.scheduler().cancel(&org_id, &req.id)
+        self.hub
+            .scheduler()
+            .cancel(&org_id, &req.id)
             .map_err(|e| Status::not_found(e))?;
-            
+
         Ok(Response::new(EmptyResponse {}))
     }
 }
@@ -107,11 +125,23 @@ fn convert_from_proto_schedule(s: ProtoSchedule) -> Schedule {
         "Cron" => ScheduleType::Cron,
         _ => ScheduleType::Once,
     };
-    
+
     Schedule {
         r#type,
-        at: if s.at_unix > 0 { Some(Utc.timestamp_opt(s.at_unix, 0).unwrap()) } else { None },
-        interval_s: if s.interval_s > 0 { Some(s.interval_s) } else { None },
-        expression: if !s.expression.is_empty() { Some(s.expression) } else { None },
+        at: if s.at_unix > 0 {
+            Some(Utc.timestamp_opt(s.at_unix, 0).unwrap())
+        } else {
+            None
+        },
+        interval_s: if s.interval_s > 0 {
+            Some(s.interval_s)
+        } else {
+            None
+        },
+        expression: if !s.expression.is_empty() {
+            Some(s.expression)
+        } else {
+            None
+        },
     }
 }
