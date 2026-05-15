@@ -48,6 +48,24 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 content_markdown: "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.".to_string(),
             },
             HelpArticle {
+                id: "api-docs-1".to_string(),
+                topic: "API Documentation".to_string(),
+                title: "Developer API Reference".to_string(),
+                content_markdown: "For advanced users, you can connect your custom app directly to OneHumanCorp using our REST API. You can list products, handle checkout, and authenticate using your API key. Learn more at the API screen.".to_string(),
+            },
+            HelpArticle {
+                id: "video-tutorial-1".to_string(),
+                topic: "Video Tutorials".to_string(),
+                title: "How to add your first product".to_string(),
+                content_markdown: "Watch this quick 60-second video to learn how to add your products online with ease. Find this and more in the Video Tutorials section.".to_string(),
+            },
+            HelpArticle {
+                id: "changelog-1".to_string(),
+                topic: "Release Notes".to_string(),
+                title: "What's New".to_string(),
+                content_markdown: "We constantly update OneHumanCorp to make running your business easier. Check the 'What's New' section for updates like the new AI Marketing Agent and Better Mobile Checkout.".to_string(),
+            },
+            HelpArticle {
                 id: "account-billing-1".to_string(),
                 topic: "Account & Billing".to_string(),
                 title: "Understanding your invoice".to_string(),
@@ -74,6 +92,16 @@ fn get_tooltips() -> &'static Vec<Tooltip> {
                 element_id: "btn-new-product".to_string(),
                 title: "Add Product".to_string(),
                 plain_language_description: "Click here to add something new to sell. You can add a photo and a price.".to_string(),
+            },
+            Tooltip {
+                element_id: "nav-help".to_string(),
+                title: "Help Center".to_string(),
+                plain_language_description: "Find answers, watch tutorials, and get help.".to_string(),
+            },
+            Tooltip {
+                element_id: "btn-chat-help".to_string(),
+                title: "Ask AI Help Agent".to_string(),
+                plain_language_description: "Have a question? Our AI Help Agent can assist you 24/7.".to_string(),
             },
             Tooltip {
                 element_id: "setting-multitenant".to_string(),
