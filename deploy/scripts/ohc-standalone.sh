@@ -22,6 +22,8 @@ export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=1
 export MALLOC_ARENA_MAX=1
 export RAYON_NUM_THREADS=2
+export RUST_MIN_STACK=2097152
+export GOMAXPROCS=1
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
@@ -41,29 +43,29 @@ chmod 700 "${OHC_RUNTIME_DIR}" "${OHC_MEMORY_DIR}" "${OHC_STATUS_DIR}" "${OHC_ME
 find "${OHC_RUNTIME_DIR}" -type f -exec chmod 600 {} \+
 find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
 
-if [ -z "$OHC_LOCAL_DB_KEY" ]; then
+if [ -z "$OHC_SQLITE_KEY" ]; then
   KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
     (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
   fi
-  export OHC_LOCAL_DB_KEY="$(cat "$KEY_FILE")"
+  export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
 fi
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
 # Build optimized binaries instead of running through Bazelisk repeatedly
 echo -e "${DIM}  Compiling optimized binaries...${RESET}"
-npx @bazel/bazelisk build -c opt //src/server:server //src/app:app > /dev/null 2>&1
+npx @bazel/bazelisk build -c opt //src/server:server //src/ui/tauri:app > /dev/null 2>&1
 echo -e "  ${GREEN}✓ Binaries compiled${RESET}"
 
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
 (while true; do
-  find "${OHC_MEMORY_DIR}" -type f -mmin +60 -delete > /dev/null 2>&1
+  find "${OHC_MEMORY_DIR}" -type f -mmin +60 -exec rm -rf {} + > /dev/null 2>&1
   # Resource Cleanup: Also clean unbounded tmp, cache, and download directories
-  find "${OHC_RUNTIME_DIR}/tmp/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "${OHC_RUNTIME_DIR}/.cache/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
-  find "${OHC_RUNTIME_DIR}/downloads/" -type f -mmin +60 -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/tmp/" -type f -mmin +60 -exec rm -rf {} + > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/.cache/" -type f -mmin +60 -exec rm -rf {} + > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/downloads/" -type f -mmin +60 -exec rm -rf {} + > /dev/null 2>&1 || true
   sleep 3600
 done) &
 PRUNE_PID=$!
@@ -79,7 +81,7 @@ until curl -s http://localhost:8080/health > /dev/null 2>&1; do
   sleep 1
 done
 
-./bazel-bin/src/app/app > /dev/null 2>&1 &
+./bazel-bin/src/ui/tauri/app > /dev/null 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 
@@ -104,9 +106,9 @@ function cleanup {
   # Resource Cleanup: Clean additional temporary artifact directories
   echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
   rm -rf "${OHC_STATUS_DIR}"/* 2>/dev/null || true
-  find "${OHC_RUNTIME_DIR}/tmp/" -type f -delete > /dev/null 2>&1 || true
-  find "${OHC_RUNTIME_DIR}/.cache/" -type f -delete > /dev/null 2>&1 || true
-  find "${OHC_RUNTIME_DIR}/downloads/" -type f -delete > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/tmp/" -type f -exec rm -rf {} + > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/.cache/" -type f -exec rm -rf {} + > /dev/null 2>&1 || true
+  find "${OHC_RUNTIME_DIR}/downloads/" -type f -exec rm -rf {} + > /dev/null 2>&1 || true
 
   docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
   docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
