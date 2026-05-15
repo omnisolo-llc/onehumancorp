@@ -19,12 +19,12 @@ func TestPostgresRLSIntegration(t *testing.T) {
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		if os.Getenv("CI") == "" { t.Skipf("Integration test failed to connect (skipping outside CI): %v", err) } else { t.Fatalf("Integration test failed to connect: %v", err) }
+		t.Fatalf("Integration test failed to connect: %v", err)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		if os.Getenv("CI") == "" { t.Skipf("Integration test failed to ping (skipping outside CI): %v", err) } else { t.Fatalf("Integration test failed to ping: %v", err) }
+		t.Fatalf("Integration test failed to ping: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
