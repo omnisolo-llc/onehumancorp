@@ -72,6 +72,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_time_travel_rewind: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    /// Architectural Decision 5: Permission Architecture (Permissive vs Restrictive)
+    pub enable_permissive_architecture: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -121,6 +123,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
+            enable_permissive_architecture: false,
         }
     }
 }
@@ -2263,6 +2266,12 @@ impl Agent {
 
     // Anthropic Mechanic: 3-Stage Tool Gating
     fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
+        // Architectural Decision 5: Permission Architecture
+        // Permissive (auto-approve) vs Restrictive (require approval).
+        if cfg.enable_permissive_architecture {
+            return Ok(());
+        }
+
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
             return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
@@ -5266,3 +5275,73 @@ mod stream_tests {
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
+
+#[cfg(test)]
+mod permission_architecture_tests {
+    use super::*;
+    use crate::types::{ToolCall, ToolError};
+
+    #[test]
+    fn test_permission_architecture_matrix() {
+        let bools = [true, false];
+        let mut count = 0;
+
+        for &permissive in &bools {
+            for &trusted in &bools {
+                for &read_only in &bools {
+                    for &allowed in &bools {
+                        for &high_risk in &bools {
+                            for &approved in &bools {
+                                count += 1;
+
+                                let mut cfg = AgentRunConfig::default();
+                                cfg.enable_permissive_architecture = permissive;
+                                cfg.project_trusted = trusted;
+
+                                let tool_name = "test_tool".to_string();
+
+                                if allowed {
+                                    cfg.allowed_tools = Some(vec![tool_name.clone()]);
+                                } else {
+                                    cfg.allowed_tools = Some(vec!["other_tool".to_string()]);
+                                }
+
+                                if high_risk {
+                                    cfg.high_risk_tools = vec![tool_name.clone()];
+                                }
+
+                                if approved {
+                                    cfg.approved_tool_calls = vec!["tc_id_123".to_string()];
+                                }
+
+                                let dummy_tc = ToolCall {
+                                    id: "tc_id_123".to_string(),
+                                    name: tool_name.clone(),
+                                    arguments: serde_json::json!({}),
+                                };
+
+                                let res = Agent::check_tool_gating(&dummy_tc, read_only, &cfg);
+
+                                if permissive {
+                                    assert!(res.is_ok(), "Permissive mode should bypass all checks.");
+                                } else {
+                                    if !trusted && !read_only {
+                                        assert!(matches!(res, Err(ToolError::Fatal(ref msg)) if msg.contains("Project not trusted")), "Should fail trust check");
+                                    } else if !allowed {
+                                        assert!(matches!(res, Err(ToolError::Fatal(ref msg)) if msg.contains("not in the allowed list")), "Should fail allowed check");
+                                    } else if high_risk && !approved {
+                                        assert!(matches!(res, Err(ToolError::UserFixable(ref msg)) if msg.contains("explicit user confirmation")), "Should fail high risk check");
+                                    } else {
+                                        assert!(res.is_ok(), "Should pass all checks");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assert_eq!(count, 64);
+    }
+}

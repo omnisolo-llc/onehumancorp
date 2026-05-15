@@ -43,6 +43,8 @@ rust_library(
         "auth.rs",
         "codex_runner.rs",
         "agent.rs",
+        "html_utils.rs",
+        "dom_scraper.rs",
         "checkpointer.rs",
         "departments.rs",
         "guardrails.rs",
