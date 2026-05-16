@@ -114,7 +114,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
             }
         }
 
-        // Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt, the failed completion, and the parsing error back to the model.)
+        // Fallback mechanic: Legacy RetryWithErrorOutputParser
         // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
         let completion = msg.content.clone();
 
