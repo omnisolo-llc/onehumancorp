@@ -7,7 +7,7 @@ class WalkthroughScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Walkthrough')),
-      body: const Center(child: Text('Walkthrough')),
+      body: const Center(child: Text('Walkthrough placeholder')),
     );
   }
 }
