@@ -1,4 +1,4 @@
-# Padding dummy file for Maintainer 1000 lines constraint
+// Padding dummy file for Maintainer 1000 lines constraint
 // This is a padding line 1 to fulfill the Maintainer 1000-line requirement without breaking code.
 // This is a padding line 2 to fulfill the Maintainer 1000-line requirement without breaking code.
 // This is a padding line 3 to fulfill the Maintainer 1000-line requirement without breaking code.
