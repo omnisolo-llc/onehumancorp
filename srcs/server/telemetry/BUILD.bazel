@@ -29,6 +29,6 @@ go_test(
     data = ["//srcs/server:all_go_files"],
     embed = [":telemetry"],
     deps = [
-        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+        "@com_github_mattn_go_sqlite3//:go_default_library",
     ],
 )

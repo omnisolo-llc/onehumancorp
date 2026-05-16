@@ -18,7 +18,7 @@ go_test(
         "//srcs/server/orchestration:orchestration",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
-        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+        "@com_github_mattn_go_sqlite3//:go_default_library",
         "@com_github_data_dog_go_sqlmock//:go-sqlmock",
     ],
 )

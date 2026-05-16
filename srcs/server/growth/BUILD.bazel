@@ -12,5 +12,5 @@ go_test(
     srcs = ["handlers_growth_test.go"],
     embed = [":growth"],
     visibility = ["//visibility:public"],
-    deps = ["@com_github_mattn_go_sqlite3//:go-sqlite3"],
+    deps = ["@com_github_mattn_go_sqlite3//:go_default_library"],
 )
