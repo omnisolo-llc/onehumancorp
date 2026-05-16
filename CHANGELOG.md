@@ -5,6 +5,15 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhance `agent_missions` backlog queue logic with robust handlers for pruning stale missions.
+- Integrate local-to-cloud mission sync health probe to ensure hybrid environment stability.
+
+### Privacy/Offline Improvements
+- Finalize Hybrid MCP RAG Daemon sync functionality for local offline-first capabilities.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
