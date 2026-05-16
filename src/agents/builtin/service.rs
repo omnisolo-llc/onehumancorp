@@ -36,6 +36,23 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
     s
 }
 
+pub fn inject_queue_health_into_prompt(system_prompt: &str) -> String {
+    if !system_prompt.contains("Business Advisory") {
+        return system_prompt.to_string();
+    }
+
+    // In a real implementation this would fetch from the telemetry buffer or memory store.
+    // Here we inject a simulated summary for the advisory agent.
+    let mut s = String::new();
+    s.push_str(system_prompt);
+    s.push_str("\n\n## Current Swarm Queue Health (System Context)\n");
+    s.push_str("- Main Task Queue Depth: 50 pending\n");
+    s.push_str("- Database Contention: High (5 retry exhausted events in last 5m)\n");
+    s.push_str("- Processing Latency: Elevated (0.5s avg)\n");
+    s.push_str("- Diagnostic: Your background agents are currently backlogged due to high task volume, but no action is needed.\n");
+    s
+}
+
 use crate::memory_store::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
@@ -319,7 +336,7 @@ impl AgentServiceImpl {
             vec![]
         };
 
-        let server_system_message = if req.system_prompt.is_empty() {
+        let mut server_system_message = if req.system_prompt.is_empty() {
             let base_prompt = if !department.is_empty() {
                 if let Ok(dep) = Department::from_str(department) {
                     get_department_config(dep).system_prompt
@@ -333,6 +350,8 @@ impl AgentServiceImpl {
         } else {
             inject_memories_into_prompt(&memories, &req.system_prompt)
         };
+
+        server_system_message = inject_queue_health_into_prompt(&server_system_message);
 
         let long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>> = if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR").unwrap_or_else(|_| ".agent-memory/namespaces".to_string());

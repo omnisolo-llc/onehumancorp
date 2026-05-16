@@ -36,8 +36,6 @@ pub use ::server_config as config;
 pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub mod builder;
-pub mod tools;
-pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
@@ -1042,7 +1040,7 @@ impl HubService for MyHubService {
             id: msg_id,
             from_agent: req.from_agent_id,
             to_agent: sub_agent_id,
-             r#type: "TaskDelegation".to_string(),
+            r#type: "TaskDelegation".to_string(),
             content: format!("Execute Task: {}\nContext: {}\nK8sPod: {}", req.instruction, req.parent_thread_id, pod_id),
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
@@ -1562,7 +1560,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             id: format!("{}-{}", task.id, Utc::now().timestamp()),
                             from_agent: "system-scheduler".to_string(),
                             to_agent: task.agent_id.clone(),
-                             r#type: "task".to_string(),
+                            r#type: "task".to_string(),
                             content: format!("Scheduled Task triggered: {}.", task.name),
                             occurred_at_unix: Utc::now().timestamp(),
                             meeting_id: String::new(),
@@ -1611,112 +1609,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
-                        :root {
-                            --primary: #0055ff;
-                            --primary-hover: #0044cc;
-                            --bg: #f4f7fa;
-                            --card-bg: #ffffff;
-                            --text: #1a1a1b;
-                            --text-secondary: #646d7b;
-                            --border: #e1e4e8;
-                            --sidebar-bg: #ffffff;
-                        }
-                        body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
-                            background: var(--bg); 
-                            color: var(--text); 
-                            margin: 0; 
-                            line-height: 1.5;
-                        }
-                        .glass { 
-                            background: var(--card-bg); 
-                            border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                        }
-                        nav { 
-                            padding: 0 40px; 
-                            display: flex; 
-                            gap: 30px; 
-                            border-bottom: 1px solid var(--border); 
-                            background: var(--sidebar-bg); 
-                            position: sticky; 
-                            top: 0; 
-                            z-index: 100; 
-                            height: 60px;
-                            align-items: center;
-                        }
-                        nav a { 
-                            color: var(--text-secondary); 
-                            text-decoration: none; 
-                            font-weight: 500; 
-                            cursor: pointer; 
-                            font-size: 14px;
-                            transition: color 0.2s;
-                        }
-                        nav a:hover {
-                            color: var(--primary);
-                        }
+                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.8); position: sticky; top: 0; z-index: 100; }
+                        nav a { color: #4ecca3; text-decoration: none; font-weight: 600; cursor: pointer; }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
-                        .card { 
-                            background: var(--card-bg); 
-                            padding: 24px; 
-                            border-radius: 8px; 
-                            margin-bottom: 24px; 
-                            border: 1px solid var(--border);
-                        }
-                        h1, h2, h3 { color: var(--text); margin-top: 0; }
-                        input { 
-                            width: 100%; 
-                            padding: 10px 14px; 
-                            margin-bottom: 16px; 
-                            background: #ffffff; 
-                            border: 1px solid var(--border); 
-                            border-radius: 6px; 
-                            color: var(--text); 
-                            box-sizing: border-box; 
-                            font-size: 14px;
-                            transition: border-color 0.2s;
-                        }
-                        input:focus {
-                            outline: none;
-                            border-color: var(--primary);
-                        }
-                        button { 
-                            padding: 10px 20px; 
-                            background: var(--primary); 
-                            border: none; 
-                            border-radius: 6px; 
-                            color: white; 
-                            font-weight: 600; 
-                            cursor: pointer; 
-                            margin-right: 8px; 
-                            margin-bottom: 8px; 
-                            font-size: 14px;
-                            transition: background 0.2s;
-                        }
-                        button:hover {
-                            background: var(--primary-hover);
-                        }
-                        button.secondary { 
-                            background: transparent; 
-                            border: 1px solid var(--border); 
-                            color: var(--text-secondary); 
-                        }
-                        button.secondary:hover {
-                            background: #f8f9fa;
-                            border-color: var(--text-secondary);
-                        }
-                        .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
-                        
-                        /* Login screen specific */
-                        #login-screen {
-                            max-width: 400px;
-                            margin-top: 100px;
-                        }
-                        #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
-                        #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+                        .screen { display: none; padding: 40px; max-width: 800px; margin: 40px auto; }
+                        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+                        h1, h2 { color: #4ecca3; }
+                        input { width: 100%; padding: 12px; margin-bottom: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; box-sizing: border-box; }
+                        button { padding: 12px 24px; background: #4ecca3; border: none; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+                        button.secondary { background: transparent; border: 1px solid #4ecca3; color: #4ecca3; }
+                        .error { color: #ff6b6b; margin-bottom: 15px; display: none; }
                     </style>
                 </head>
                 <body>
@@ -1753,7 +1657,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Start Setup</button>
+                            <button onclick="showScreen('setup-screen')">Update Setup</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
@@ -1776,7 +1680,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Video Tutorials</button>
+                                <button onclick="alert('Tutorial started')">Watch Tutorials</button>
                                 <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
                             </div>
                         </div>
@@ -2208,13 +2112,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
-                        <h2>One Human Corp</h2>
+                        <h1>One Human Corp</h1>
                         <p>Sign in to manage your business</p>
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
+                        <button onclick="handleLogin(this)">Fix App Issues</button>
+                        <button onclick="handleLogin(this)">Sign In</button>
                         <button onclick="handleLogin(this)">Login</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
+                        <button class="secondary">Use Google or Apple</button>
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
 
@@ -2273,6 +2180,84 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
+
+                        function simulateOrder() {
+                            const feed = document.getElementById('agent-activity-feed');
+                            feed.innerHTML = '<p>Operations processed OrderReceived</p>';
+                            setTimeout(() => {
+                                feed.innerHTML += '<p>Customer Success drafted confirmation</p>';
+                            }, 500);
+                        }
+
+                        function handleLogin(btn) {
+                            const email = document.querySelector('#login-screen input[type="email"]').value;
+                            btn.innerText = 'Signing in...';
+                            if (!email) {
+                                setTimeout(() => {
+                                    document.getElementById('login-error').style.display = 'block';
+                                    btn.innerText = 'Sign In';
+                                }, 500);
+                            } else {
+                                localStorage.setItem('isLoggedIn', 'true');
+                                setTimeout(() => showScreen('dashboard-screen'), 500);
+                            }
+                        }
+
+                        function handleSignup(btn) {
+                            btn.innerText = 'Creating account...';
+                            setTimeout(() => showScreen('setup-screen'), 500);
+                        }
+
+                        function nextStep(step) {
+                            document.getElementById('setup-screen').querySelectorAll('div[id^="step-"]').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+                        function generateAI() {
+                            nextStep('generating');
+                            setTimeout(() => nextStep('launch-ai'), 1000);
+                        }
+
+                        function toggleMenu() {
+                            const menu = document.getElementById('extra-menu');
+                            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                        }
+
+                        // Attach event listener for the grandma hint
+                        document.addEventListener('click', (e) => {
+                            if (e.target.innerText === '?') {
+                                const hint = document.getElementById('quick-actions-hint');
+                                if (hint) hint.style.display = 'block';
+                            }
+                        });
+
+                        window.onload = function() {
+                            const path = window.location.pathname;
+                            const urlParams = new URLSearchParams(window.location.search);
+
+                            const isAuthPath = Object.values(pathMap).includes(path);
+
+                            if (localStorage.getItem('isLoggedIn') === 'true' || urlParams.has('login') || isAuthPath) {
+                                for (const [id, p] of Object.entries(pathMap)) {
+                                    if (p === path) {
+                                        showScreen(id);
+                                        return;
+                                    }
+                                }
+                                showScreen('dashboard-screen');
+                            } else {
+                                if (urlParams.has('signup') || path === '/signup') {
+                                    showScreen('signup-screen');
+                                } else if (path === '/pricing') {
+                                    showScreen('pricing-screen');
+                                } else if (path === '/my-plan' || path === '/billing') {
+                                    showScreen('my-plan-screen');
+                                } else {
+                                    showScreen('login-screen');
+                                }
+                            }
+                        };
                     </script>
                 </body>
             </html>
@@ -2280,3 +2265,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     };
     axum::response::Html(content)
 }
+
+pub mod tools;
+pub mod workers;
+// Validation dummy comment

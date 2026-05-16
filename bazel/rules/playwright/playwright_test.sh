@@ -50,7 +50,7 @@ if [[ ! -d "$workspace_root/node_modules" ]]; then
     workspace_root="$(pwd)"
 fi
 
-# Resolve spec file to absolute path while still in original directory.
+# Resolve spec file to absolute path while still in original directory
 ABS_SPEC_FILE=""
 if [[ -n "$spec_file" ]]; then
     ABS_SPEC_FILE="$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")"
@@ -97,31 +97,10 @@ for candidate in "src/server/server" "../_main/src/server/server"; do
   fi
 done
 
+cd "$workspace_root"
+
 export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
 mkdir -p "$HOME"
-
-# Run Playwright from a writable project-shaped directory. Some specs and
-# reporters write relative paths such as test-results/ and playwright-report/.
-# Writing those into Bazel runfiles leaves behind sandbox-owned directories that
-# can break later runfiles tree creation.
-WORK_DIR="${TEST_TMPDIR:-/tmp}/playwright-workspace"
-rm -rf "$WORK_DIR"
-mkdir -p "$WORK_DIR/src/server"
-ln -s "$workspace_root/package.json" "$WORK_DIR/package.json"
-ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
-ln -s "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
-ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
-ln -s "$workspace_root/src/e2e" "$WORK_DIR/src/e2e"
-ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
-
-if [[ -n "$ABS_SPEC_FILE" ]]; then
-  spec_base="$(basename "$ABS_SPEC_FILE")"
-  if [[ -f "$WORK_DIR/src/e2e/$spec_base" ]]; then
-    ABS_SPEC_FILE="$WORK_DIR/src/e2e/$spec_base"
-  fi
-fi
-
-cd "$WORK_DIR"
 
 # Unique container names for parallel isolation
 RAND_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 6)
@@ -209,8 +188,6 @@ export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 # Bazel provides TEST_UNDECLARED_OUTPUTS_DIR for capturing artifacts
 PLAYWRIGHT_OUTPUT_DIR="${TEST_UNDECLARED_OUTPUTS_DIR:-$TEST_TMPDIR/playwright-results}"
 mkdir -p "$PLAYWRIGHT_OUTPUT_DIR"
-export PLAYWRIGHT_HTML_REPORT="${TEST_UNDECLARED_OUTPUTS_DIR:-$TEST_TMPDIR}/playwright-report"
-mkdir -p "$PLAYWRIGHT_HTML_REPORT"
 
 # Use npx to run playwright - it will find the local installation via package.json
 if [[ -n "$ABS_SPEC_FILE" ]]; then

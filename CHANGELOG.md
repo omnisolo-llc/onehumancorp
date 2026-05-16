@@ -8,7 +8,6 @@
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
-- ✍️ Scribe: Implemented the In-App Help Center & Contextual Tooltip API, enabling non-technical users to access step-by-step guides, onboarding walkthroughs, and plain-language assistance directly within the app.
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
 ### Privacy/Offline Improvements

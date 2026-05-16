@@ -108,6 +108,14 @@ impl TaskQueue for SQLiteTaskQueue {
                 .map_err(|e| e.to_string())?;
 
             tx.commit().await.map_err(|e| e.to_string())?;
+
+            // Log queue depth decrement
+            let depth_res: Option<i64> = sqlx::query_scalar("SELECT COUNT(*) FROM sub_agent_jobs WHERE status = 'QUEUED'")
+                .fetch_optional(&*self.pool)
+                .await
+                .unwrap_or(Some(0));
+            let _ = ::server_telemetry::record_swarm_queue_depth(&self.pool, "main", depth_res.unwrap_or(0) as i32).await;
+
             return Ok(Some(job));
         }
 
@@ -116,11 +124,23 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
+        let job_opt: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar("SELECT created_at FROM sub_agent_jobs WHERE id = ?")
+            .bind(job_id)
+            .fetch_optional(&*self.pool)
+            .await
+            .unwrap_or(None);
+
         sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
             .bind(job_id)
             .execute(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        if let Some(created_at) = job_opt {
+            let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
+            let _ = ::server_telemetry::record_swarm_job_processing_latency(&self.pool, latency).await;
+        }
+
         Ok(())
     }
 

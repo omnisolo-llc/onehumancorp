@@ -1,13 +1,9 @@
 # Bazel configuration for MCP Any
 
-# Keep this checkout's output base away from stale root-owned runfiles that can
-# be left behind by Docker-backed Playwright tests in Bazel's default cache.
-startup --output_user_root=~/.cache/bazel/bazel-output-ohc
-
-# ── Default: local builds/tests ───────────────────────────────────────────────
-# BuildBuddy configs are available explicitly with --config=buildbuddy-official
-# or --config=buildbuddy. Keep the default path local so `bazel test //...`
-# does not depend on external cache/BES availability.
+# ── Default: use BuildBuddy official for all builds and tests ─────────────────
+# Provides remote cache, remote execution, and build event streaming.
+build --config=buildbuddy-official
+test --config=buildbuddy-official
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -19,7 +15,7 @@ build --remote_download_toplevel
 build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
-build --spawn_strategy=sandboxed,local
+build --spawn_strategy=remote,sandboxed,local
 build --sandbox_add_mount_pair=/var/run/docker.sock
 build --incompatible_strict_action_env
 build --announce_rc
@@ -38,10 +34,6 @@ build --rewind_lost_inputs
 # Show test output only on failure
 test --test_output=errors
 test --build_tests_only
-# Keep the default wildcard suite hermetic and host-local. Docker-backed E2E
-# targets remain runnable explicitly by target when their app contracts are being
-# validated.
-test --test_tag_filters=-e2e,-requires-docker
 test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
