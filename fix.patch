@@ -1,0 +1,8 @@
+--- src/server/harness/executor.rs
++++ src/server/harness/executor.rs
+@@ -40,5 +40,5 @@
+         assert!(result.is_ok());
+         let msg = result.unwrap();
+-        assert!(msg.contains("Executing: bash -c \"set -e; echo 'hello'\""));
++        assert!(msg.contains("Executing: bash -c \"set -e; umask 077; echo 'hello'\""));
+     }
