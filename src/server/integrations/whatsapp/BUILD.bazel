@@ -1,0 +1,5 @@
+filegroup(
+    name = "srcs",
+    srcs = ["client.rs", "mod.rs"],
+    visibility = ["//src/server/integrations:__pkg__"],
+)
