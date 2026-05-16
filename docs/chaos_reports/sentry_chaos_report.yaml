@@ -1,0 +1,10 @@
+type: chaos_report
+version: 1.0.0
+metrics:
+  cpu_starvation: passed
+  memory_starvation: passed
+  db_transient_failure: passed
+  mesh_duplication: passed
+  packet_loss: passed
+  parity: passed
+  timeout_rules: passed
