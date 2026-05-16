@@ -1,10 +1,10 @@
 load("@rules_rust//rust:defs.bzl", "rust_test", "rust_library")
 rust_library(
-    name = "dummy",
-    srcs = ["dummy.rs"],
+    name = "padding",
+    srcs = ["padding.rs"],
     visibility = ["//visibility:public"],
 )
 rust_test(
-    name = "dummy_test",
-    crate = ":dummy",
+    name = "padding_test",
+    crate = ":padding",
 )
