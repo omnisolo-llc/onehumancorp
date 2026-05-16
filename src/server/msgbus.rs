@@ -565,7 +565,7 @@ impl StateHandoffManager {
             source_mode: 0,
             target_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
-            state_snapshot_json: payload,
+            state_snapshot: payload,
         };
         let mut buf = Vec::new();
         handoff.encode(&mut buf).map_err(|e| e.to_string())?;
@@ -795,7 +795,7 @@ mod tests {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
                 if let Ok(handoff) = crate::interop::protocol::proto::StateHandoff::decode(&msg.payload[..]) {
-                    if handoff.mission_id == "m1" && handoff.tenant_id == "t1" && handoff.state_snapshot_json == vec![1, 2, 3, 4] {
+                    if handoff.mission_id == "m1" && handoff.tenant_id == "t1" && handoff.state_snapshot == vec![1, 2, 3, 4] {
                         received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
                     }
                 }
