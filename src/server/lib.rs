@@ -1471,6 +1471,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+        .nest("/api/help", api::help::router())
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -2257,7 +2258,80 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <canvas id="confetti-canvas"></canvas>
                     </div>
 
-<!-- Login Screen -->
+
+                    <!-- Help Center Screen -->
+                    <div id="help-center-screen" class="screen">
+                        <h1>Help Center</h1>
+                        <p>Welcome! How can we help you today?</p>
+                        <input type="text" placeholder="Search for help..." id="help-search" onkeyup="filterHelp()">
+
+                        <h2>Getting Started Videos</h2>
+                        <div id="help-videos" class="video-grid">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <h2 style="margin-top: 40px;">Articles by Topic</h2>
+                        <div id="help-articles" class="article-grid">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <div style="margin-top: 40px;">
+                            <button onclick="showScreen('changelog-screen')" class="secondary">View Release Notes (What's New)</button>
+                            <button onclick="showScreen('api-docs-screen')" class="secondary">Advanced: API Documentation</button>
+                        </div>
+                    </div>
+
+                    <!-- API Docs Screen -->
+                    <div id="api-docs-screen" class="screen glass">
+                        <h1>API Documentation</h1>
+                        <p>For advanced users and developers connecting custom software.</p>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid var(--border); font-family: monospace;">
+                            <h3>GET /api/v1/products</h3>
+                            <p>Returns a list of all products in your catalog.</p>
+                            <h3>POST /api/v1/orders</h3>
+                            <p>Creates a new order.</p>
+                        </div>
+                        <br>
+                        <button onclick="showScreen('help-center-screen')">&larr; Back to Help Center</button>
+                    </div>
+
+                    <!-- Changelog Screen -->
+                    <div id="changelog-screen" class="screen">
+                        <h1>What's New</h1>
+                        <p>Recent updates to OneHumanCorp.</p>
+                        <div id="changelog-entries" class="card glass">
+                            <!-- Populated by JS -->
+                        </div>
+                        <button onclick="showScreen('help-center-screen')">&larr; Back to Help Center</button>
+                    </div>
+
+                    <!-- Floating Chat & Help Buttons -->
+                    <button id="floating-help-btn" onclick="showScreen('help-center-screen')" class="primary">?</button>
+                    <button id="floating-chat-btn" onclick="toggleChatWindow()" class="primary">💬</button>
+
+                    <!-- Chat Window -->
+                    <div id="floating-help-chat-window" class="card glass">
+                        <h3 style="margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border);">Ask Help Agent</h3>
+                        <div id="floating-chat-messages">
+                            <div class="chat-message agent">Hi! I'm your Help Agent. Ask me anything about using OHC.</div>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <input type="text" id="floating-chat-input" placeholder="Type a question..." style="margin: 0;" onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                            <button onclick="sendChatMessage()" style="margin: 0;">Send</button>
+                        </div>
+                    </div>
+
+                    <!-- Walkthrough Overlay & Bubble -->
+                    <div id="walkthrough-overlay"></div>
+                    <div id="walkthrough-bubble">
+                        <p id="walkthrough-text"></p>
+                        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                            <button class="secondary" onclick="closeWalkthrough()" style="padding: 4px 8px; font-size: 12px;">Close</button>
+                            <button onclick="nextWalkthroughStep()" style="padding: 4px 8px; font-size: 12px;">Next</button>
+                        </div>
+                    </div>
+
+                    <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
                         <h2>One Human Corp</h2>
@@ -2552,7 +2626,205 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+
+                        // Walkthrough Logic
+                        let walkthroughRegistry = {};
+                        let currentTourId = null;
+                        let currentTourStep = 0;
+
+                        async function initWalkthroughs() {
+                            try {
+                                const res = await fetch('/api/help/walkthroughs');
+                                walkthroughRegistry = await res.json();
+                            } catch (e) { console.error('Failed to init walkthroughs', e); }
+                        }
+
+                        window.startTour = function(id) {
+                            if (!walkthroughRegistry[id] || walkthroughRegistry[id].length === 0) return;
+                            currentTourId = id;
+                            currentTourStep = 0;
+                            document.getElementById('walkthrough-overlay').style.display = 'block';
+                            renderTourStep();
+                        }
+
+                        function renderTourStep() {
+                            const steps = walkthroughRegistry[currentTourId];
+                            if (currentTourStep >= steps.length) {
+                                closeWalkthrough();
+                                return;
+                            }
+
+                            const step = steps[currentTourStep];
+                            const el = document.querySelector(step.selector);
+                            const bubble = document.getElementById('walkthrough-bubble');
+
+                            if (el) {
+                                const rect = el.getBoundingClientRect();
+                                bubble.style.display = 'block';
+                                bubble.style.top = (rect.bottom + 10) + 'px';
+                                bubble.style.left = rect.left + 'px';
+                                document.getElementById('walkthrough-text').textContent = step.text;
+
+                                // Ensure elements are above overlay temporarily
+                                el.style.position = 'relative';
+                                el.style.zIndex = '9999';
+                                el.dataset.origZ = el.style.zIndex;
+                            } else {
+                                // Fallback center
+                                bubble.style.display = 'block';
+                                bubble.style.top = '50%';
+                                bubble.style.left = '50%';
+                                bubble.style.transform = 'translate(-50%, -50%)';
+                                document.getElementById('walkthrough-text').textContent = step.text;
+                            }
+                        }
+
+                        window.nextWalkthroughStep = function() {
+                            const steps = walkthroughRegistry[currentTourId];
+                            const step = steps[currentTourStep];
+                            const el = document.querySelector(step.selector);
+                            if (el) {
+                                el.style.zIndex = el.dataset.origZ || '';
+                            }
+
+                            currentTourStep++;
+                            renderTourStep();
+                        }
+
+                        window.closeWalkthrough = function() {
+                            document.getElementById('walkthrough-overlay').style.display = 'none';
+                            const bubble = document.getElementById('walkthrough-bubble');
+                            bubble.style.display = 'none';
+                            bubble.style.transform = 'none';
+
+                            if (currentTourId) {
+                                const steps = walkthroughRegistry[currentTourId];
+                                if (steps[currentTourStep]) {
+                                    const el = document.querySelector(steps[currentTourStep].selector);
+                                    if (el) el.style.zIndex = el.dataset.origZ || '';
+                                }
+                            }
+                            currentTourId = null;
+                        }
+
+                        // Tooltip Logic
+                        let activeTooltip = null;
+                        async function initTooltips() {
+                            try {
+                                const res = await fetch('/api/help/tooltips');
+                                const registry = await res.json();
+
+                                Object.entries(registry).forEach(([selector, text]) => {
+                                    const elements = document.querySelectorAll(selector);
+                                    elements.forEach(el => {
+                                        el.addEventListener('mouseenter', (e) => {
+                                            if (activeTooltip) activeTooltip.remove();
+                                            activeTooltip = document.createElement('div');
+                                            activeTooltip.className = 'tooltip glass';
+                                            activeTooltip.textContent = text;
+                                            document.body.appendChild(activeTooltip);
+
+                                            const rect = el.getBoundingClientRect();
+                                            activeTooltip.style.top = (rect.top - activeTooltip.offsetHeight - 8) + 'px';
+                                            activeTooltip.style.left = (rect.left + (rect.width/2) - (activeTooltip.offsetWidth/2)) + 'px';
+                                        });
+                                        el.addEventListener('mouseleave', () => {
+                                            if (activeTooltip) {
+                                                activeTooltip.remove();
+                                                activeTooltip = null;
+                                            }
+                                        });
+                                    });
+                                });
+                            } catch (e) { console.error('Failed to init tooltips', e); }
+                        }
+
+                        // Chat Logic
+                        function toggleChatWindow() {
+                            const w = document.getElementById('floating-help-chat-window');
+                            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+                        }
+
+                        async function sendChatMessage() {
+                            const input = document.getElementById('floating-chat-input');
+                            const val = input.value.trim();
+                            if (!val) return;
+
+                            const messages = document.getElementById('floating-chat-messages');
+                            messages.innerHTML += `<div class='chat-message user'>${val}</div>`;
+                            input.value = '';
+                            messages.scrollTop = messages.scrollHeight;
+
+                            try {
+                                const res = await fetch('/api/help/chat', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ message: val })
+                                });
+                                const data = await res.json();
+                                setTimeout(() => {
+                                    let extra = data.article_link ? '<br><a href="javascript:void(0)" onclick="showScreen(' + String.fromCharCode(39) + 'help-center-screen' + String.fromCharCode(39) + ')" style="color:var(--primary);">Read the full article &rarr;</a>' : '';
+                                    messages.innerHTML += `<div class='chat-message agent'>${data.reply}${extra}</div>`;
+                                    messages.scrollTop = messages.scrollHeight;
+                                }, 500);
+                            } catch (e) {}
+                        }
+
+                        // Help Data Fetching Logic
+                        async function fetchHelpData() {
+                            try {
+                                const [articlesRes, videosRes, changelogRes] = await Promise.all([
+                                    fetch('/api/help/articles'),
+                                    fetch('/api/help/videos'),
+                                    fetch('/api/help/changelog')
+                                ]);
+
+                                const articles = await articlesRes.json();
+                                const videos = await videosRes.json();
+                                const changelog = await changelogRes.json();
+
+                                const articlesContainer = document.getElementById('help-articles');
+                                if (articlesContainer) {
+                                    articlesContainer.innerHTML = articles.map(a => `
+                                        <div class='card glass'>
+                                            <h3>${a.title}</h3>
+                                            <p style="font-size: 14px; color: var(--text-secondary);">${a.summary}</p>
+                                            <button class='secondary' onclick='alert("${a.content.replace(/"/g, "\\\"")}")'>Read Article &rarr;</button>
+                                        </div>
+                                    `).join('');
+                                }
+
+                                const videosContainer = document.getElementById('help-videos');
+                                if (videosContainer) {
+                                    videosContainer.innerHTML = videos.map(v => `
+                                        <div class='video-card glass' onclick='alert("Playing video: ${v.title}")'>
+                                            <img src="${v.thumbnail}" alt="${v.title}">
+                                            <h4 style="margin: 8px 0 0 0; font-size: 14px;">${v.title}</h4>
+                                            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-secondary);">Watch tutorial (1m 30s)</p>
+                                        </div>
+                                    `).join('');
+                                }
+
+                                const changelogContainer = document.getElementById('changelog-entries');
+                                if (changelogContainer) {
+                                    changelogContainer.innerHTML = changelog.map(c => `
+                                        <div class='changelog-entry'>
+                                            <span style="background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${c.version}</span>
+                                            <span style="color: var(--text-secondary); font-size: 12px; margin-left: 8px;">${c.date}</span>
+                                            <h3 style="margin: 8px 0;">${c.title}</h3>
+                                            <p style="margin: 0;">${c.description}</p>
+                                        </div>
+                                    `).join('');
+                                }
+                            } catch (e) {
+                                console.error('Failed to load help data', e);
+                            }
+                        }
+
                         window.onload = () => {
+                            fetchHelpData();
+                            initWalkthroughs();
+                            initTooltips();
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
