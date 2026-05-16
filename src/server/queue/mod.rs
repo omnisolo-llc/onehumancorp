@@ -1,5 +1,4 @@
 pub(crate) use super::*;
-#![allow(dead_code)]
 
 
 use async_trait::async_trait;

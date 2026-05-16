@@ -11,7 +11,6 @@ use super::*;
             });
         });
     }
-}
 
 #[cfg(test)]
 mod autodream_db_tests {
@@ -296,3 +295,4 @@ mod e2e_tenant_isolation_tests {
         // Discarding `DISCARD ALL` safely scopes context explicitly for each execution.
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
     }
+}
