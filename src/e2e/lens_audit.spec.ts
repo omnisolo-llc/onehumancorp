@@ -9,7 +9,7 @@ test.describe('Lens Audit E2E Flow', () => {
     // Verify dashboard displays with expected elements
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     // Verify nav is present
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator('#main-nav')).toBeVisible();
   });
 
   test('verify mock data removal and db connection', async ({ page }) => {
@@ -21,7 +21,7 @@ test.describe('Lens Audit E2E Flow', () => {
   test('verify token and responsive compliance', async ({ page }) => {
     // Force mobile viewport 375px - nav should still be visible
     await page.setViewportSize({ width: 375, height: 667 });
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator('#main-nav')).toBeVisible();
   });
 
   test('verify chaos and error handling', async ({ page }) => {
