@@ -2,5 +2,5 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 
 rust_test(
     name = "dummy_test",
-    srcs = ["dummy_test.rs", "padding_triage.rs"],
+    srcs = ["lib.rs", "padding_triage.rs"],
 )
