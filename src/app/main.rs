@@ -6502,3 +6502,70 @@ mod additional_smart_blocks_tests {
         assert_eq!(ui.get_product_name(), "Int Product");
     }
 }
+
+#[cfg(test)]
+mod e2e_checklist_tests {
+    use super::*;
+    use std::rc::Rc;
+    use std::cell::RefCell;
+
+    #[test]
+    fn test_e2e_welcome_checklist_display() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(10);
+        assert_eq!(ui.get_step(), 10);
+    }
+
+    #[test]
+    fn test_e2e_welcome_checklist_launch_integration() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(9);
+        ui.set_launch_success(true);
+        ui.set_step(100);
+        assert_eq!(ui.get_step(), 100);
+    }
+
+    #[test]
+    fn test_e2e_welcome_checklist_from_step_10() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(10);
+        let dashboard_called = Rc::new(RefCell::new(false));
+        let dashboard_called_clone = dashboard_called.clone();
+        ui.on_show_welcome_checklist(move || {
+            *dashboard_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_show_welcome_checklist();
+        assert!(*dashboard_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_welcome_checklist_from_step_100() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(100);
+        let dashboard_called = Rc::new(RefCell::new(false));
+        let dashboard_called_clone = dashboard_called.clone();
+        ui.on_show_welcome_checklist(move || {
+            *dashboard_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_show_welcome_checklist();
+        assert!(*dashboard_called.borrow());
+    }
+
+    #[test]
+    fn test_e2e_welcome_checklist_add_products_routing() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+        ui.set_step(10);
+        let add_products_called = Rc::new(RefCell::new(false));
+        let add_products_called_clone = add_products_called.clone();
+        ui.on_go_to_add_products(move || {
+            *add_products_called_clone.borrow_mut() = true;
+        });
+        ui.invoke_go_to_add_products();
+        assert!(*add_products_called.borrow());
+    }
+}
