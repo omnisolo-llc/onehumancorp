@@ -3,7 +3,7 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 
 #[derive(Clone)]
 pub struct OnboardingAgent {
-    db: std::sync::Arc<crate::db::DB>,
+    pub db: std::sync::Arc<crate::db::DB>,
     hub: std::sync::Arc<crate::hub::Hub>,
 }
 

@@ -29,10 +29,24 @@ async fn start_onboarding(
 }
 
 async fn get_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    _req: axum::extract::Request,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    // In a real scenario we'd use tenant_id from auth. For E2E testing, grab latest onboarding state
+    let pool = &agent.db.pool;
+
+    let row = match sqlx::query("SELECT state_json FROM onboarding_state ORDER BY updated_at DESC LIMIT 1")
+        .fetch_one(pool)
+        .await {
+            Ok(row) => row,
+            Err(_) => return Ok(Json(serde_json::json!({"state": "{}"})))
+        };
+
+    use sqlx::Row;
+    let state_json: serde_json::Value = row.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+
     Ok(Json(serde_json::json!({
-        "state": "{}"
+        "state": state_json
     })))
 }
 

@@ -1740,10 +1740,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
+
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
+                        <div id="next-best-action-card" class="card glass" style="background: rgba(0, 85, 255, 0.05); border: 1px solid var(--primary);">
+                            <h2 style="color: var(--primary); margin-bottom: 8px;">Next Best Action</h2>
+                            <p id="nba-text" style="font-size: 16px; margin-bottom: 16px;">Loading your next step...</p>
+                            <button id="nba-btn" class="primary" style="font-size: 16px; padding: 12px 24px;">...</button>
+                        </div>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
@@ -1904,15 +1911,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
+                    <p>Built with OHC — Start your free business →</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
@@ -2116,124 +2115,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
-                        </div>
-                        <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
-                        </div>
-                        <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
-                        </div>
-                        <div id="step-6" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
-                        </div>
-                        <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                        </div>
 
-                        <div id="checklist-screen" class="screen">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                    <!-- Setup Wizard -->
+                    <div id="setup-screen" class="screen glass" style="max-width: 400px; padding: 20px;">
+                        <div id="chat-container" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; height: 300px; overflow-y: auto; padding-right: 10px;">
+                            <div class="chat-bubble bot" style="background: var(--bg); padding: 12px 16px; border-radius: 12px 12px 12px 0; align-self: flex-start; max-width: 85%;">
+                                Hi there! I'm The Advisor. Let's get your business online. What kind of business are you starting?
+                            </div>
                         </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        <div id="chat-input-area" style="display: flex; gap: 10px;">
+                            <input type="text" id="chat-input" placeholder="e.g. I sell custom cakes" style="flex: 1; margin: 0; border-radius: 20px; padding: 12px 20px;" onkeypress="if(event.key === 'Enter') sendChatMessage()" />
+                            <button onclick="sendChatMessage()" style="margin: 0; border-radius: 20px;">Send</button>
                         </div>
                     </div>
-
 
                     <!-- Storefront Builder Screen -->
                     <div id="storefront-builder-screen" class="screen glass" style="display: none;">
@@ -2297,6 +2191,77 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+
+                        // Chat Logic
+                        let chatStep = 0;
+                        let chatState = {
+                            business_type: "",
+                            company_name: ""
+                        };
+
+                        function addChatBubble(text, sender) {
+                            const container = document.getElementById('chat-container');
+                            const bubble = document.createElement('div');
+                            bubble.className = `chat-bubble ${sender}`;
+                            bubble.style.cssText = sender === 'user'
+                                ? 'background: var(--primary); color: white; padding: 12px 16px; border-radius: 12px 12px 0 12px; align-self: flex-end; max-width: 85%;'
+                                : 'background: var(--bg); padding: 12px 16px; border-radius: 12px 12px 12px 0; align-self: flex-start; max-width: 85%;';
+                            bubble.textContent = text;
+                            container.appendChild(bubble);
+                            container.scrollTop = container.scrollHeight;
+                        }
+
+                        async function sendChatMessage() {
+                            const input = document.getElementById('chat-input');
+                            const text = input.value.trim();
+                            if (!text) return;
+
+                            addChatBubble(text, 'user');
+                            input.value = '';
+                            input.disabled = true;
+
+                            setTimeout(async () => {
+                                if (chatStep === 0) {
+                                    chatState.business_type = text;
+                                    addChatBubble("Awesome! And what is the name of your business?", 'bot');
+                                    chatStep++;
+                                    input.disabled = false;
+                                    input.placeholder = "e.g. Maya's Bakes";
+                                    input.focus();
+                                } else if (chatStep === 1) {
+                                    chatState.company_name = text;
+                                    addChatBubble("Perfect. I'm setting everything up for you now...", 'bot');
+
+                                    try {
+                                        await fetch('/api/onboarding/start', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                business_type: chatState.business_type,
+                                                company_name: chatState.company_name,
+                                                company_description: "",
+                                                selling_categories: [],
+                                                payment_pref: "online",
+                                                admin_email: "test@example.com",
+                                                admin_name: "Test User",
+                                                admin_password: "password123",
+                                                website_template: "Modern",
+                                                first_product_name: "Default",
+                                                first_product_price: "0",
+                                                domain_choice: "free",
+                                                price_type: "fixed"
+                                            })
+                                        });
+                                    } catch(e) { console.error(e); }
+
+                                    setTimeout(() => {
+                                        showScreen('dashboard-screen');
+                                        refreshDashboard();
+                                    }, 1500);
+                                }
+                            }, 500);
+                        }
 
                         // Storefront Builder State & Logic
                         let storefrontDraftState = [
@@ -2544,6 +2509,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             }
                         }
+
+
+                        async function refreshDashboard() {
+                            try {
+                                const res = await fetch('/api/onboarding/state');
+                                const data = await res.json();
+                                const state = typeof data.state === 'string' ? JSON.parse(data.state || "{}") : (data.state || {});
+
+                                const nbaText = document.getElementById('nba-text');
+                                const nbaBtn = document.getElementById('nba-btn');
+
+                                if (state.enable_booking) {
+                                    nbaText.textContent = "Connect your calendar to start accepting bookings.";
+                                    nbaBtn.textContent = "Connect Calendar";
+                                    nbaBtn.onclick = () => showScreen('api-screen');
+                                } else if (state.enable_menu) {
+                                    nbaText.textContent = "Add items to your digital menu.";
+                                    nbaBtn.textContent = "Add Menu Item";
+                                    nbaBtn.onclick = () => console.log('action_add_product');
+                                } else {
+                                    nbaText.textContent = "Add your first product to start selling.";
+                                    nbaBtn.textContent = "+ Add Photo";
+                                    nbaBtn.onclick = () => console.log('action_add_product');
+                                }
+                            } catch(e) {
+                                console.error('Failed to fetch state', e);
+                                document.getElementById('nba-text').textContent = "Add your first product to start selling.";
+                                document.getElementById('nba-btn').textContent = "+ Add Photo";
+                            }
+                        }
+
+                        window.addEventListener('load', () => {
+                            if (window.location.pathname === '/' || window.location.pathname === '/dashboard') {
+                                refreshDashboard();
+                            }
+                        });
 
                         async function generateAI() {
                             nextStep('generating');
