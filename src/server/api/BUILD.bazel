@@ -8,6 +8,7 @@ filegroup(
         "health.rs",
         "mesh_handler.rs",
         "mod.rs",
+        "simulate.rs",
         "telemetry.rs",
         "//src/server/api/agents:srcs",
         "//src/server/api/onboarding:srcs",

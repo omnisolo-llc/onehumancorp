@@ -1442,6 +1442,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
 
+    let memory_bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
+    let department_service = crate::services::agent::department::service::DepartmentService::new(memory_bus.clone());
+    tokio::spawn(async move {
+        if let Err(e) = department_service.start().await {
+            tracing::error!("DepartmentService failed: {}", e);
+        }
+    });
+
     let webhook_state = crate::api::billing_webhook::WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
@@ -1455,6 +1463,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .nest("/api/v1/simulate", api::simulate::router(hub.clone()))
         .with_state(hub.clone());
 
     let app = axum::Router::new()
@@ -1767,7 +1776,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div class="card glass">
                             <h3>Agent Activity</h3>
-                            <div id="agent-activity-feed">
+                            <div id="agent-activity-feed" style="max-height: 200px; overflow-y: auto;">
                                 <p>No recent activity.</p>
                             </div>
                             <button onclick="simulateOrder()">Simulate Order</button>
