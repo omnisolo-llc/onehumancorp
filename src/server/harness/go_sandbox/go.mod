@@ -1,4 +1,4 @@
-module harness
+module src/server/harness/go_sandbox
 
 go 1.25.0
 

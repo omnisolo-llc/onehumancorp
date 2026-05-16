@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+
+go_library(
+    name = "harness_lib",
+    srcs = ["sandbox_manager.go"],
+    importpath = "src/server/harness/go_sandbox",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "ohc-harness-cli",
+    embed = [":harness_lib"],
+
+    visibility = ["//visibility:public"],
+)
