@@ -2190,7 +2190,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
+                            <input type="text" id="ai-business-description" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
@@ -2200,9 +2200,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                            <div id="ai-store-preview" style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; max-width: 375px; margin-left: auto; margin-right: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                                <!-- Blocks injected here -->
+                            </div>
+                            <button onclick="publishDraft()">🚀 1-Tap Launch My Business</button>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">Continue to Dashboard</button>
                         </div>
                     </div>
 
@@ -2297,8 +2299,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        let globalSiteDraft = null;
+
                         async function generateAI() {
+                            const desc = document.getElementById('ai-business-description').value;
+                            if (!desc) {
+                                alert("Please describe your business.");
+                                return;
+                            }
                             nextStep('generating');
+
+                            try {
+                                const res = await fetch('/api/v1/builder/generate', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ description: desc })
+                                });
+                                if (!res.ok) throw new Error("Failed to generate storefront");
+                                const data = await res.json();
+                                globalSiteDraft = data;
+
+                                // Render blocks to preview
+                                const previewContainer = document.getElementById('ai-store-preview');
+                                previewContainer.innerHTML = '';
+
+                                if (data.pages && data.pages.length > 0) {
+                                    const page = data.pages[0];
+                                    page.blocks.forEach(block => {
+                                        const div = document.createElement('div');
+                                        div.style.marginBottom = '16px';
+                                        div.style.padding = '12px';
+                                        div.style.background = 'var(--bg)';
+                                        div.style.borderRadius = '8px';
+
+                                        if (block.block_type === 'HeroBlock') {
+                                            div.innerHTML = `<h2 style="margin:0; font-size: 20px;">${block.content.headline || 'Hero'}</h2><p style="margin:4px 0 0; color: var(--text-secondary); font-size: 14px;">${block.content.subtitle || ''}</p>`;
+                                        } else if (block.block_type === 'ProductGridBlock') {
+                                            div.innerHTML = `<h3 style="margin:0; font-size: 16px;">Products</h3><ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px;">${(block.content.items || []).map(i => `<li>${i}</li>`).join('')}</ul>`;
+                                        } else if (block.block_type === 'ServiceBookingBlock' || block.block_type === 'BookingCalendarBlock') {
+                                            div.innerHTML = `<h3 style="margin:0; font-size: 16px;">Book a Service</h3><p style="margin: 4px 0 0; font-size: 14px;">📅 Calendar Widget Placeholder</p>`;
+                                        } else if (block.block_type === 'TestimonialBlock') {
+                                            div.innerHTML = `<h3 style="margin:0; font-size: 16px;">Reviews</h3><p style="margin: 4px 0 0; font-style: italic; font-size: 14px;">"${(block.content.testimonials || [])[0] || 'Amazing!'}"</p>`;
+                                        } else {
+                                            div.innerHTML = `<div>${block.block_type}</div>`;
+                                        }
+                                        previewContainer.appendChild(div);
+                                    });
+                                }
+
+                                nextStep('launch-ai');
+                            } catch (e) {
+                                console.error(e);
+                                alert("Error generating storefront. Please try again.");
+                                nextStep(1);
+                            }
+                        }
+
+                        async function publishDraft() {
+                            if (!globalSiteDraft) return;
+                            try {
+                                const domain = document.getElementById('ai-business-description').value.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + ".ohc.app";
+                                const res = await fetch('/api/v1/builder/publish_draft', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        domain: domain,
+                                        draft: globalSiteDraft
+                                    })
+                                });
+                                if (!res.ok) throw new Error("Failed to publish");
+                                alert("Success! Your business is now live at " + domain);
+                                showScreen('dashboard-screen');
+                            } catch (e) {
+                                console.error(e);
+                                alert("Failed to publish storefront.");
+                            }
                         }
 
                         function showScreen(id) {
