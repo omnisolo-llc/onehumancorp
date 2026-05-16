@@ -2170,14 +2170,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
+
+
                         <div id="checklist-screen" class="screen">
+                            <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
+                            <div id="progress-text" style="color: #4ade80; display: none;">Progress: <span id="progress-val">25%</span></div>
+                            <div id="congrats-text" style="color: #4ade80; font-size: 1.125rem; font-weight: bold; display: none;">Congratulations! You've completed the setup.</div>
+                            <p><input type="checkbox" class="checklist-cb" checked disabled> Business live</p>
+                            <p><input type="checkbox" class="checklist-cb" onchange="updateChecklistProgress()"> Add 3 more products</p>
+                            <p><input type="checkbox" class="checklist-cb" onchange="updateChecklistProgress()"> Connect Instagram</p>
+                            <p><input type="checkbox" class="checklist-cb" onchange="updateChecklistProgress()"> Share your link with a friend</p>
+
+                            <p><button style="background:none; border:none; color:inherit; text-decoration:underline; cursor:pointer;" onclick="showScreen('services-screen')">Connect Instagram</button></p>
+                            <p><button style="background:none; border:none; color:inherit; text-decoration:underline; cursor:pointer;" onclick="showScreen('referral-dashboard-screen')">Share your link</button></p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
+
+                        <div id="services-screen" class="screen" style="display: none;">
+                            <h1>Integrations</h1>
+                            <button onclick="showScreen('checklist-screen')">Back to Checklist</button>
+                        </div>
+                        <div id="referral-dashboard-screen" class="screen" style="display: none;">
+                            <h1>Referrals</h1>
+                            <button onclick="showScreen('checklist-screen')">Back to Checklist</button>
+                        </div>
+
                         <div id="step-101" style="display: none;">
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
@@ -2219,6 +2237,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        function updateChecklistProgress() {
+                            const cbs = document.querySelectorAll('.checklist-cb');
+                            const checkedCbs = document.querySelectorAll('.checklist-cb:checked');
+                            const pct = Math.round((checkedCbs.length / cbs.length) * 100);
+
+                            const pt = document.getElementById('progress-text');
+                            const pv = document.getElementById('progress-val');
+                            const ct = document.getElementById('congrats-text');
+
+                            if (pct > 0) {
+                                pt.style.display = 'block';
+                                pv.textContent = pct + '%';
+                            } else {
+                                pt.style.display = 'none';
+                            }
+
+                            if (pct === 100) {
+                                ct.style.display = 'block';
+                            } else {
+                                ct.style.display = 'none';
+                            }
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
