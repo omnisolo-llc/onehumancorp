@@ -99,3 +99,4 @@ alias(
 load("@gazelle//:def.bzl", "gazelle")
 # gazelle:prefix onehumancorp
 gazelle(name = "gazelle")
+trigger
