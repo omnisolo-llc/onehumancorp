@@ -30,9 +30,8 @@ mod tests {
         assert_eq!(sanitized_props.get("geolocation").unwrap(), "[REDACTED]");
     }
 
-
+    use ::server_telemetry::{buffer_metric, redact_interface_pii};
     use serde_json::{json, Value};
-    use ::server_telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
     fn test_redact_pii_password() {
@@ -81,10 +80,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_buffer_metric_persistence() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        if std::env::var("DATABASE_URL").is_err() {
+            return; // Skip if database is not available
+        }
+        let db = match crate::db::DB::new().await {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+        let pool = match db.store {
+            crate::db::DbStore::Postgres => db.pool,
+            crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
         };
 
         let labels = json!({"user_id": "123", "secret": "shh"});
@@ -106,10 +111,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_metrics() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        if std::env::var("DATABASE_URL").is_err() {
+            return; // Skip if database is not available
+        }
+        let db = match crate::db::DB::new().await {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+        let pool = match db.store {
+            crate::db::DbStore::Postgres => db.pool,
+            crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
         };
 
         let res = ::server_telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
@@ -121,10 +132,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_token_usage_forecast() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        if std::env::var("DATABASE_URL").is_err() {
+            return; // Skip if database is not available
+        }
+        let db = match crate::db::DB::new().await {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+        let pool = match db.store {
+            crate::db::DbStore::Postgres => db.pool,
+            crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
         };
 
         let res = ::server_telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
@@ -146,13 +163,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_agent_cost() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        if std::env::var("DATABASE_URL").is_err() {
+            return; // Skip if database is not available
+        }
+        let db = match crate::db::DB::new().await {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+        let pool = match db.store {
+            crate::db::DbStore::Postgres => db.pool,
+            crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
         };
 
-        let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
+        let res = ::server_telemetry::record_agent_cost(
+            &pool,
+            "agent-123",
+            "org-1",
+            "test-role",
+            "test-model",
+            "test-entity",
+            1.5,
+        )
+        .await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
@@ -173,13 +205,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_api_call_cost() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        if std::env::var("DATABASE_URL").is_err() {
+            return; // Skip if database is not available
+        }
+        let db = match crate::db::DB::new().await {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+        let pool = match db.store {
+            crate::db::DbStore::Postgres => db.pool,
+            crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
         };
 
-        let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
+        let res =
+            ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
@@ -199,13 +238,25 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_swarm_job_latency_by_entity() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        if std::env::var("DATABASE_URL").is_err() {
+            return; // Skip if database is not available
+        }
+        let db = match crate::db::DB::new().await {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+        let pool = match db.store {
+            crate::db::DbStore::Postgres => db.pool,
+            crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
         };
 
-        let res = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
+        let res = ::server_telemetry::record_swarm_job_latency_by_entity(
+            &pool,
+            "cloud",
+            "test-entity-3",
+            125.0,
+        )
+        .await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
@@ -227,11 +278,17 @@ mod tests {
     fn test_buffer_metric_respects_standalone() {
         temp_env::with_vars(vec![("STANDALONE_MODE", Some("true"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+            if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip if database is not available
+    }
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let pool = match db.store {
+        crate::db::DbStore::Postgres => db.pool,
+        crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
+    };
 
         // Ensure STANDALONE_MODE is true. Telemetry should be ignored
 
@@ -253,19 +310,16 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        use walkdir::WalkDir;
-        use std::fs;
         use std::env;
+        use std::fs;
         use std::path::PathBuf;
+        use walkdir::WalkDir;
 
         let mut violations = Vec::new();
 
         let mut search_dirs = vec![PathBuf::from(".")];
         // Try multiple possible source locations
-        let possible_src_roots = vec![
-            PathBuf::from("src"),
-            PathBuf::from("src/server"),
-        ];
+        let possible_src_roots = vec![PathBuf::from("src"), PathBuf::from("src/server")];
         if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
             let runfiles = PathBuf::from(&runfiles_dir);
             // In bazel runfiles, the manifest is at RUNFILES_DIR/MANIFEST.txt
@@ -295,14 +349,15 @@ mod tests {
 
         for dir in &search_dirs {
             if dir.exists() {
-                let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
-                    e.path().components().all(|c| c.as_os_str() != "external")
-                });
+                let walker = WalkDir::new(&dir)
+                    .into_iter()
+                    .filter_entry(|e| e.path().components().all(|c| c.as_os_str() != "external"));
 
-                for entry in walker
-                    .filter_map(Result::ok)
-                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
-                {
+                for entry in walker.filter_map(Result::ok).filter(|e| {
+                    e.path()
+                        .extension()
+                        .map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts")
+                }) {
                     let path_str = entry.path().to_string_lossy();
                     if path_str.contains("telemetry_test.rs") {
                         continue;
@@ -318,18 +373,25 @@ mod tests {
                         let lower_line = line.to_lowercase();
 
                         if !in_log_block {
-                            if lower_line.contains("tracing::info!") ||
-                               lower_line.contains("etracing::info!") ||
-                               lower_line.contains("info!") ||
-                               lower_line.contains("error!") ||
-                               lower_line.contains("warn!") ||
-                               lower_line.contains("debug!") ||
-                               lower_line.contains("tracing::") ||
-                               lower_line.contains("println!") ||
-                               lower_line.contains("log.print") ||
-                               lower_line.contains("fmt.errorf") || lower_line.contains("fmt.error") || lower_line.contains("log.printf") || lower_line.contains("fmt.print") ||
-                               lower_line.contains("console.log") || lower_line.contains("console.error") || lower_line.contains("console.warn") || lower_line.contains("console.info") || lower_line.contains("console.debug") ||
-                               lower_line.contains("eprintln!")
+                            if lower_line.contains("tracing::info!")
+                                || lower_line.contains("etracing::info!")
+                                || lower_line.contains("info!")
+                                || lower_line.contains("error!")
+                                || lower_line.contains("warn!")
+                                || lower_line.contains("debug!")
+                                || lower_line.contains("tracing::")
+                                || lower_line.contains("println!")
+                                || lower_line.contains("log.print")
+                                || lower_line.contains("fmt.errorf")
+                                || lower_line.contains("fmt.error")
+                                || lower_line.contains("log.printf")
+                                || lower_line.contains("fmt.print")
+                                || lower_line.contains("console.log")
+                                || lower_line.contains("console.error")
+                                || lower_line.contains("console.warn")
+                                || lower_line.contains("console.info")
+                                || lower_line.contains("console.debug")
+                                || lower_line.contains("eprintln!")
                             {
                                 in_log_block = true;
                                 block_start_line = i + 1;
@@ -337,11 +399,21 @@ mod tests {
                                 current_log_block.push_str(&lower_line);
                                 paren_count = 0;
 
-                                paren_count += lower_line.chars().filter(|c| *c == '(' || *c == '{').count() as i32;
-                                paren_count -= lower_line.chars().filter(|c| *c == ')' || *c == '}').count() as i32;
+                                paren_count += lower_line
+                                    .chars()
+                                    .filter(|c| *c == '(' || *c == '{')
+                                    .count() as i32;
+                                paren_count -= lower_line
+                                    .chars()
+                                    .filter(|c| *c == ')' || *c == '}')
+                                    .count() as i32;
 
                                 // In case the statement is entirely on one line with no parens or perfectly balanced
-                                if paren_count <= 0 && (lower_line.contains(")") || lower_line.contains("}") || lower_line.ends_with(";")) {
+                                if paren_count <= 0
+                                    && (lower_line.contains(")")
+                                        || lower_line.contains("}")
+                                        || lower_line.ends_with(";"))
+                                {
                                     in_log_block = false;
                                 }
                             }
@@ -349,41 +421,56 @@ mod tests {
                             current_log_block.push_str(" ");
                             current_log_block.push_str(&lower_line);
 
-                            paren_count += lower_line.chars().filter(|c| *c == '(' || *c == '{').count() as i32;
-                            paren_count -= lower_line.chars().filter(|c| *c == ')' || *c == '}').count() as i32;
+                            paren_count += lower_line
+                                .chars()
+                                .filter(|c| *c == '(' || *c == '{')
+                                .count() as i32;
+                            paren_count -= lower_line
+                                .chars()
+                                .filter(|c| *c == ')' || *c == '}')
+                                .count() as i32;
 
-                            if paren_count <= 0 || lower_line.ends_with(");") || lower_line.ends_with("};") {
+                            if paren_count <= 0
+                                || lower_line.ends_with(");")
+                                || lower_line.ends_with("};")
+                            {
                                 in_log_block = false;
                             }
                         }
 
                         // Process the complete block once it's closed, OR if it was a single line
                         if !in_log_block && !current_log_block.is_empty() {
-                            if current_log_block.contains("tenant_id") ||
-                               current_log_block.contains("organization_id") ||
-                               current_log_block.contains("org_id") ||
-                               current_log_block.contains("session_data") ||
-                               current_log_block.contains("session_id") ||
-                               current_log_block.contains("payload") ||
-                               current_log_block.contains("email") ||
-                               current_log_block.contains("password") ||
-                               current_log_block.contains("pii") ||
-                               current_log_block.contains("api_key") ||
-                               current_log_block.contains("secret_key") ||
-                               current_log_block.contains("credit") ||
-                               current_log_block.contains("card") ||
-                               current_log_block.contains("cvv") ||
-                               current_log_block.contains("dob") ||
-                               current_log_block.contains("birth") ||
-                               current_log_block.contains("passport") ||
-                               current_log_block.contains("bank") ||
-                               current_log_block.contains("account") ||
-                               current_log_block.contains("stripe") ||
-                               current_log_block.contains("billing") ||
-                               current_log_block.contains("ip_address") ||
-                               current_log_block.contains("mac_address") ||
-                               current_log_block.contains("geolocation") {
-                                violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
+                            if current_log_block.contains("tenant_id")
+                                || current_log_block.contains("organization_id")
+                                || current_log_block.contains("org_id")
+                                || current_log_block.contains("session_data")
+                                || current_log_block.contains("session_id")
+                                || current_log_block.contains("payload")
+                                || current_log_block.contains("email")
+                                || current_log_block.contains("password")
+                                || current_log_block.contains("pii")
+                                || current_log_block.contains("api_key")
+                                || current_log_block.contains("secret_key")
+                                || current_log_block.contains("credit")
+                                || current_log_block.contains("card")
+                                || current_log_block.contains("cvv")
+                                || current_log_block.contains("dob")
+                                || current_log_block.contains("birth")
+                                || current_log_block.contains("passport")
+                                || current_log_block.contains("bank")
+                                || current_log_block.contains("account")
+                                || current_log_block.contains("stripe")
+                                || current_log_block.contains("billing")
+                                || current_log_block.contains("ip_address")
+                                || current_log_block.contains("mac_address")
+                                || current_log_block.contains("geolocation")
+                            {
+                                violations.push(format!(
+                                    "{}:{} (block starting here): {}",
+                                    entry.path().display(),
+                                    block_start_line,
+                                    current_log_block.trim()
+                                ));
                             }
                             current_log_block.clear();
                         }
@@ -396,7 +483,10 @@ mod tests {
         if checked_files == 0 {
             // No files found to check - likely running in an environment where source files
             // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
-            println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
+            println!(
+                "PII test skipped: Could not find any .rs files. Search dirs: {:?}",
+                search_dirs_for_error
+            );
             return;
         }
         assert!(
@@ -456,10 +546,16 @@ async fn test_queue_length_gauge_initialization() {
 
 #[tokio::test]
 async fn test_record_queue_length_with_deployment_mode() {
-    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-        Ok(Ok(p)) => p,
-        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    if std::env::var("DATABASE_URL").is_err() {
+        return; // Skip if database is not available
+    }
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let pool = match db.store {
+        crate::db::DbStore::Postgres => db.pool,
+        crate::db::DbStore::Sqlite(_) => return, // telemetry metrics require postgres pool for now
     };
 
     let res = ::server_telemetry::record_queue_length(&pool, 5).await;
@@ -479,14 +575,17 @@ async fn test_record_queue_length_with_deployment_mode() {
 fn test_standalone_wrapper_audit() {
     let mut script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
     if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
-        script_path = std::path::PathBuf::from(workspace_dir).join("deploy/scripts/ohc-standalone.sh");
+        script_path =
+            std::path::PathBuf::from(workspace_dir).join("deploy/scripts/ohc-standalone.sh");
     } else if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
-        script_path = std::path::PathBuf::from(runfiles_dir).join("ohc/deploy/scripts/ohc-standalone.sh");
+        script_path =
+            std::path::PathBuf::from(runfiles_dir).join("ohc/deploy/scripts/ohc-standalone.sh");
     }
     if !script_path.exists() {
         script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
     }
-    let content = std::fs::read_to_string(script_path).expect("Failed to read ohc-standalone.sh script");
+    let content =
+        std::fs::read_to_string(script_path).expect("Failed to read ohc-standalone.sh script");
 
     let expected_telemetry_check = r#"if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
