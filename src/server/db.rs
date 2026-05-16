@@ -172,7 +172,7 @@ impl DB {
                         if attempt >= max_attempts {
                             return Err(e.into());
                         }
-                        tracing::warn!("Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...", attempt, max_attempts, e);
+                        tracing::debug!("Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...", attempt, max_attempts, e);
                         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     }
                 }
@@ -857,7 +857,7 @@ pub async fn insert_autodream_memory(
             }
         };
         if affected > 0 {
-            tracing::info!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
+            tracing::debug!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
         }
         Ok(affected)
     }

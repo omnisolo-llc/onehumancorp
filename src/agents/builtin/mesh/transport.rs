@@ -898,16 +898,16 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
                         Ok(t) => {
                             let t_clone = t.clone();
                             tokio::spawn(async move { t_clone.start_worker().await; });
-                            tracing::info!("Initialized SqliteTransport (Standalone)");
+                            tracing::debug!("Initialized SqliteTransport (Standalone)");
                             return Ok(Arc::new(t));
                         },
                         Err(e) => {
-                            tracing::warn!("Failed to initialize SqliteTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                            tracing::debug!("Failed to initialize SqliteTransport (Standalone): {}. Falling back to MemoryTransport.", e);
                         }
                     }
                 },
                 Err(e) => {
-                    tracing::warn!("Failed to connect to SQLite DB for transport: {}", e);
+                    tracing::debug!("Failed to connect to SQLite DB for transport: {}", e);
                 }
             }
         }

@@ -11,16 +11,16 @@ backend:
   autoscaling:
     enabled: true
     minReplicas: 3
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    maxReplicas: 200
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
     limits:
-      cpu: "1000m"
-      memory: "2Gi"
+      cpu: "2000m"
+      memory: "4Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -32,14 +32,14 @@ backend:
 resourceQuota:
   enabled: true
   requests:
-    cpu: "20"
-    memory: "20Gi"
-    ephemeralStorage: "50Gi"
+    cpu: "50"
+    memory: "100Gi"
+    ephemeralStorage: "100Gi"
   limits:
-    cpu: "60"
-    memory: "120Gi"
-    ephemeralStorage: "150Gi"
-    pods: "200"
+    cpu: "150"
+    memory: "300Gi"
+    ephemeralStorage: "500Gi"
+    pods: "500"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
@@ -55,17 +55,17 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 3
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    minReplicas: 2
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
+      cpu: "100m"
+      memory: "128Mi"
     limits:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "1000m"
+      memory: "1Gi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -105,8 +105,8 @@ chatwoot:
     targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "250m"
+      memory: "256Mi"
     limits:
       cpu: "1000m"
       memory: "1Gi"
@@ -148,11 +148,11 @@ powersync:
     targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "50m"
-      memory: "512Mi"
+      cpu: "100m"
+      memory: "256Mi"
     limits:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "1000m"
+      memory: "1Gi"
 
 # Kube-Prometheus-Stack for Cloud Observability
 kube-prometheus-stack:
@@ -161,9 +161,34 @@ kube-prometheus-stack:
     enabled: true
     env:
       GF_LOG_CONSOLE_FORMAT: "json"
+    extraConfigmapMounts:
+      - name: grafana-custom-css
+        configMap: grafana-custom-css
+        mountPath: /usr/share/grafana/public/css/custom.css
+        subPath: custom.css
+        readOnly: true
     sidecar:
       dashboards:
         enabled: true
         label: grafana_dashboard
         labelValue: "1"
+    extraConfigmapMounts:
+      - name: grafana-custom-css
+        configMap: "ohc-grafana-custom-css"
+        mountPath: /usr/share/grafana/public/css/custom.css
+        subPath: custom.css
+        readOnly: true
 
+
+# Fluent Bit logging
+fluentBit:
+  enabled: true
+  image: fluent/fluent-bit:latest
+  logLevel: info
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"

@@ -371,6 +371,68 @@ impl InteropProtocol {
         self.bus.subscribe(format!("system:job_status:{}", job_id), bus_handler).await
     }
 
+    /// Synchronizes a QueueJob across modes idempotently
+    pub async fn sync_queue_job(&self, job: proto::QueueJob) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+
+        // Idempotency check: ensure we don't duplicate syncing the EXACT same state transition
+        // by including updated_at_ms in the lock resource.
+        let idempotency_lock_resource = format!("queue_job:processed:{}_{}", job.id, job.updated_at_ms);
+        let attempt_owner = format!("{}_{}", self.node_id, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+
+        if !self.lock.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.unwrap_or(false) {
+            return Ok(());
+        }
+
+        let mut buf = Vec::new();
+        if let Err(e) = job.encode(&mut buf) {
+            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
+            return Err(e.to_string());
+        }
+
+        let msg = Message {
+            topic: format!("system:queue_job_sync:{}", job.tenant_id),
+            payload: buf,
+        };
+
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        let result = loop {
+            match self.bus.publish(msg.clone()).await {
+                Ok(_) => break Ok(()),
+                Err(e) => {
+                    if retries >= 5 {
+                        break Err(format!("Failed to publish queue job sync after retries: {}", e));
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        };
+
+        if result.is_err() {
+            // Failed to publish, release idempotency lock so it can be retried
+            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
+        }
+
+        result
+    }
+
+    /// Listens for queue job synchronizations
+    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(proto::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let bus_handler = Box::new(move |msg: Message| {
+            if msg.topic.starts_with("system:queue_job_sync:") {
+                use prost::Message as ProstMessage;
+                if let Ok(decoded) = proto::QueueJob::decode(&msg.payload[..]) {
+                    handler(decoded);
+                }
+            }
+        });
+
+        self.bus.subscribe(format!("system:queue_job_sync:{}", tenant_id), bus_handler).await
+    }
+
 }
 
 #[cfg(test)]
@@ -1091,4 +1153,71 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_sync_queue_job() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |job: proto::QueueJob| {
+            if job.id == "job1" && job.tenant_id == "t1" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        let job = proto::QueueJob {
+            id: "job1".to_string(),
+            tenant_id: "t1".to_string(),
+            parent_task_id: "".to_string(),
+            agent_role: "agent".to_string(),
+            payload: "{}".to_string(),
+            status: "pending".to_string(),
+            attempts: 0,
+            max_attempts: 3,
+            run_after_ms: 0,
+            locked_until_ms: 0,
+            created_at_ms: 0,
+            updated_at_ms: 0,
+        };
+
+        let result = protocol.sync_queue_job(job.clone()).await;
+        assert!(result.is_ok());
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+
+        received.store(false, Ordering::SeqCst);
+        let result2 = protocol.sync_queue_job(job).await;
+        assert!(result2.is_ok());
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(!received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_queue_jobs_malformed() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+
+        let protocol = InteropProtocol::new(bus.clone(), lock.clone(), "listener".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |_job: proto::QueueJob| {
+            rx.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        let msg = Message {
+            topic: "system:queue_job_sync:t1".to_string(),
+            payload: vec![255, 255, 255],
+        };
+        bus.publish(msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(!received.load(Ordering::SeqCst));
     }

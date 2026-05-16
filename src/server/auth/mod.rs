@@ -142,12 +142,12 @@ impl Store {
                 }
 
                 let new_secret = if let Ok(sqlite_key) = std::env::var("OHC_SQLITE_KEY") {
-                    tracing::warn!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
+                    tracing::debug!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
                     let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::warn!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
+                    tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
                     panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
                 };
 
@@ -413,7 +413,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
 
@@ -601,7 +601,24 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn logout(&self, _request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+    async fn logout(&self, request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+        if let Some(auth_info) = request.extensions().get::<AuthInfo>() {
+            if let Some(auth_header) = request.metadata().get("authorization") {
+                if let Ok(auth_str) = auth_header.to_str() {
+                    let token = if auth_str.to_lowercase().starts_with("bearer ") {
+                        &auth_str[7..]
+                    } else {
+                        auth_str
+                    };
+
+                    if let Ok(claims) = self.store.validate_token(token).await {
+                        // Securely revoke the session
+                        let exp = chrono::DateTime::from_timestamp(claims.exp, 0).unwrap_or_else(chrono::Utc::now);
+                        self.store.revoke_token(claims.jti, exp, &auth_info.org_id).await;
+                    }
+                }
+            }
+        }
         Ok(Response::new(EmptyResponse {}))
     }
 

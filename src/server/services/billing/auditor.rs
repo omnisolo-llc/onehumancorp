@@ -8,6 +8,7 @@ use opentelemetry::KeyValue;
 #[derive(Clone)]
 pub struct AuditEvent {
     pub agent_id: String,
+    pub tenant_id: String,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cached_input_tokens: i64,
@@ -23,6 +24,7 @@ pub struct ComputeEvent {
 pub struct CostAuditor {
     config: CostConfig,
     agent_costs: Mutex<HashMap<String, f64>>,
+    tenant_costs: Mutex<HashMap<String, f64>>,
     agent_budgets: Mutex<HashMap<String, f64>>,
     total_cost: Mutex<f64>,
     caching_savings: Mutex<f64>,
@@ -48,6 +50,7 @@ impl CostAuditor {
         CostAuditor {
             config,
             agent_costs: Mutex::new(HashMap::new()),
+            tenant_costs: Mutex::new(HashMap::new()),
             agent_budgets: Mutex::new(HashMap::new()),
             total_cost: Mutex::new(0.0),
             caching_savings: Mutex::new(0.0),
@@ -82,6 +85,15 @@ impl CostAuditor {
 
         let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0.0);
         *current_cost += cost;
+
+        let mut tenant_costs = self.tenant_costs.lock().unwrap();
+        let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0.0);
+        *current_tenant_cost += cost;
+
+        // Detect anomalies (simple threshold check)
+        if cost > 10.0 {
+            tracing::warn!("Anomaly detected: High token usage cost ({})", cost);
+        }
         *total_cost += cost;
 
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
@@ -236,9 +248,11 @@ impl CostAuditor {
         report += &format!("Total Savings via Storage Compression: ${:.4}\n", *storage_savings);
         report += &format!("Total Compute Cost: ${:.4}\n", *total_compute_cost);
         report += &format!("Total Network Cost: ${:.4}\n", *total_network_cost);
-        report += "Agent Costs:\n";
+        report += "Agent Costs:
+";
 
         for (agent_id, cost) in agent_costs.iter() {
+
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
 
@@ -257,6 +271,14 @@ impl CostAuditor {
             } else {
                 report += &format!("- {}: ${:.4}{}\n", agent_id, cost, metrics_str);
             }
+        }
+
+        let tenant_costs = self.tenant_costs.lock().unwrap();
+        report += "Tenant Costs:
+";
+        for (tenant_id, cost) in tenant_costs.iter() {
+            report += &format!("- {}: ${:.4}
+", tenant_id, cost);
         }
 
         report
@@ -298,6 +320,7 @@ mod tests {
         
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
+            tenant_id: "tenant1".to_string(),
             input_tokens: 1000,
             output_tokens: 500,
             cached_input_tokens: 0,
@@ -331,6 +354,7 @@ mod tests {
 
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
+            tenant_id: "tenant1".to_string(),
             input_tokens: 100,
             output_tokens: 50,
             cached_input_tokens: 100,
