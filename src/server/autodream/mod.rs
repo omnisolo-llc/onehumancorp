@@ -37,8 +37,8 @@ impl AutoDreamWorker {
                 }
 
                 let repository = match &db.store {
-                    crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository::new(db.pool.clone()),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository::new_sqlite(sqlite_pool.clone()),
+                    crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
                 };
 
                 let stale_threshold = chrono::Utc::now() - chrono::Duration::days(180);
@@ -148,8 +148,8 @@ impl AutoDreamWorker {
 
     async fn resolve_conflicts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let repository = match &db.store {
-            crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository::new(db.pool.clone()),
-            crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository::new_sqlite(sqlite_pool.clone()),
+            crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+            crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
         };
 
         let resolved_count = repository.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;

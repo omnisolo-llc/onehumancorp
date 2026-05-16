@@ -1246,8 +1246,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
-        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository::new(db.pool.clone()),
-        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository::new_sqlite(sqlite_pool.clone()),
+        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
     let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();

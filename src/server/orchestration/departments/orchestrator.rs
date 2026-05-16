@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
 use crate::db::DbStore;
-use ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository;
+use ohc_builtin_agent::memory_store::VectorRepository;
 use opentelemetry::global;
 use opentelemetry::KeyValue;
 use crate::orchestration::mesh::TeammateMesh;
@@ -119,7 +119,7 @@ pub struct DepartmentOrchestrator {
     departments: RwLock<HashMap<DepartmentType, Arc<tokio::sync::RwLock<dyn Department>>>>,
     agents: RwLock<HashMap<String, Arc<tokio::sync::RwLock<dyn BaseAgent>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
-    memory_repo: Arc<ConsolidatedMemoryRepository>,
+    memory_repo: Arc<VectorRepository>,
     mesh: Arc<dyn TeammateMesh>,
     action_counter: Counter<u64>,
 }
@@ -127,8 +127,8 @@ pub struct DepartmentOrchestrator {
 impl DepartmentOrchestrator {
     pub fn new(db: Arc<crate::db::DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let memory_repo = match &db.store {
-            DbStore::Postgres => Arc::new(ConsolidatedMemoryRepository::new(db.pool.clone())),
-            DbStore::Sqlite(pool) => Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool.clone())),
+            DbStore::Postgres => Arc::new(VectorRepository::new(db.pool.clone())),
+            DbStore::Sqlite(pool) => Arc::new(VectorRepository::new_sqlite(pool.clone())),
         };
         let meter = global::meter("ohc.orchestrator");
         let action_counter = meter.u64_counter("agent.actions.total").build();
@@ -387,7 +387,7 @@ impl DepartmentOrchestrator {
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
-    pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::ConsolidatedMemoryRecord) -> Result<(), String> {
+    pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
 }

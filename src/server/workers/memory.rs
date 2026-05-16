@@ -1,17 +1,17 @@
 use std::sync::Arc;
-use ohc_builtin_agent::memory_store::ConsolidatedMemoryRepository;
+use ohc_builtin_agent::memory_store::VectorRepository;
 use chrono::Utc;
 
 /// MemoryConsolidationWorker is responsible for periodically pruning stale context
 /// and automatically resolving memory conflicts within the vector repository.
 pub struct MemoryConsolidationWorker {
-    pub repository: Arc<ConsolidatedMemoryRepository>,
+    pub repository: Arc<VectorRepository>,
     pub poll_interval: std::time::Duration,
     pub prune_threshold_days: i64,
 }
 
 impl MemoryConsolidationWorker {
-    pub fn new(repository: Arc<ConsolidatedMemoryRepository>) -> Self {
+    pub fn new(repository: Arc<VectorRepository>) -> Self {
         Self {
             repository,
             poll_interval: std::time::Duration::from_secs(3600), // 1 hour
@@ -51,7 +51,7 @@ mod tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
-        let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool));
+        let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
 
         worker.start();
@@ -69,7 +69,7 @@ mod tests {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
-        let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool));
+        let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
         assert_eq!(worker.poll_interval.as_secs(), 3600);
 }
@@ -106,10 +106,10 @@ mod tests {
         .await
         .expect("Failed to create consolidated_memory table");
 
-        let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool.clone()));
+        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
         // Insert a stale record that should be pruned
-        let stale_record = ohc_builtin_agent::memory_store::ConsolidatedMemoryRecord {
+        let stale_record = ohc_builtin_agent::memory_store::EmbeddingRecord {
             id: "stale_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -173,10 +173,10 @@ mod tests {
         .await
         .unwrap();
 
-        let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool.clone()));
+        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
         // Insert a stale record
-        let stale_record = ohc_builtin_agent::memory_store::ConsolidatedMemoryRecord {
+        let stale_record = ohc_builtin_agent::memory_store::EmbeddingRecord {
             id: "stale_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -192,7 +192,7 @@ mod tests {
         };
 
         // Insert two conflicting records
-        let conflict_loser = ohc_builtin_agent::memory_store::ConsolidatedMemoryRecord {
+        let conflict_loser = ohc_builtin_agent::memory_store::EmbeddingRecord {
             id: "conflict_loser".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -207,7 +207,7 @@ mod tests {
             metadata: None,
         };
 
-        let conflict_winner = ohc_builtin_agent::memory_store::ConsolidatedMemoryRecord {
+        let conflict_winner = ohc_builtin_agent::memory_store::EmbeddingRecord {
             id: "conflict_winner".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),

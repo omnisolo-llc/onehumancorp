@@ -1,17 +1,17 @@
-use crate::memory_store::ConsolidatedMemoryRepository;
+use crate::memory_store::VectorRepository;
 use std::sync::Arc;
 use tokio::time::sleep;
 use std::time::Duration;
 use chrono::Utc;
 
 pub struct ConsolidationWorker {
-    pub repository: Arc<ConsolidatedMemoryRepository>,
+    pub repository: Arc<VectorRepository>,
     pub poll_interval: Duration,
     pub pruning_threshold_days: i64,
 }
 
 impl ConsolidationWorker {
-    pub fn new(repository: Arc<ConsolidatedMemoryRepository>, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
+    pub fn new(repository: Arc<VectorRepository>, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
         Self {
             repository,
             poll_interval,
@@ -45,10 +45,10 @@ impl ConsolidationWorker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory_store::ConsolidatedMemoryRecord;
+    use crate::memory_store::EmbeddingRecord;
     use std::str::FromStr;
 
-    async fn setup_sqlite_repo() -> Arc<ConsolidatedMemoryRepository> {
+    async fn setup_sqlite_repo() -> Arc<VectorRepository> {
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
@@ -69,7 +69,7 @@ mod tests {
             );"
         ).execute(&pool).await.unwrap();
 
-        Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool))
+        Arc::new(VectorRepository::new_sqlite(pool))
     }
 
     #[tokio::test]
@@ -83,7 +83,7 @@ mod tests {
 
         let old_time = Utc::now() - chrono::Duration::days(181);
 
-        let prune_me = ConsolidatedMemoryRecord {
+        let prune_me = EmbeddingRecord {
             id: "prune_1".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "test".to_string(),

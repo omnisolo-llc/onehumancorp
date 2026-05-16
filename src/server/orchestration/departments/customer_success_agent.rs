@@ -27,7 +27,7 @@ impl Department for CustomerSuccessAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.message.received" {
-            let record = ohc_builtin_agent::memory_store::ConsolidatedMemoryRecord {
+            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
                 agent_id: self.agent_id(),
