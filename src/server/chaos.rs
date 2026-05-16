@@ -430,7 +430,7 @@ mod tests {
 
         // Cloud Mode Simulation (100 simultaneous business owners)
         let mut cloud_handles = vec![];
-        for i in 0..100 {
+        for _i in 0..100 {
             let s = sip_db.clone();
             cloud_handles.push(tokio::spawn(async move {
                 let start = Instant::now();
