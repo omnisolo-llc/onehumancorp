@@ -138,33 +138,94 @@ impl IsolationStrategy for ProcessIsolationStrategy {
     }
 }
 
-pub struct ASTValidator;
+pub trait SecurityValidator: Send + Sync {
+    fn validate(&self, command: &str) -> Result<(), String>;
+}
 
-impl ASTValidator {
-    pub fn new() -> Self {
-        ASTValidator
-    }
-
-    pub fn validate(&self, command: &str) -> Result<(), String> {
+pub struct SudoValidator;
+impl SecurityValidator for SudoValidator {
+    fn validate(&self, command: &str) -> Result<(), String> {
         if command.contains("sudo") {
             return Err("sudo is not allowed".to_string());
         }
+        Ok(())
+    }
+}
+
+pub struct ZmodloadValidator;
+impl SecurityValidator for ZmodloadValidator {
+    fn validate(&self, command: &str) -> Result<(), String> {
         if command.contains("zmodload") {
             return Err("zmodload is not allowed".to_string());
         }
+        Ok(())
+    }
+}
+
+pub struct SubshellValidator;
+impl SecurityValidator for SubshellValidator {
+    fn validate(&self, command: &str) -> Result<(), String> {
         if command.contains(">$") || command.contains("<$") || command.contains("`") || command.contains("$(") {
             return Err("subshells and redirections are not allowed in stub".to_string());
         }
+        Ok(())
+    }
+}
+
+pub struct IFSInjectionValidator;
+impl SecurityValidator for IFSInjectionValidator {
+    fn validate(&self, command: &str) -> Result<(), String> {
         if command.contains("IFS") {
             return Err("IFS injection is not allowed".to_string());
         }
-        // Advanced AST validation with tree-sitter
+        Ok(())
+    }
+}
+
+pub struct EvalValidator;
+impl SecurityValidator for EvalValidator {
+    fn validate(&self, command: &str) -> Result<(), String> {
         let use_tree_sitter = std::env::var("OHC_USE_TREE_SITTER").unwrap_or_default() == "true";
         if use_tree_sitter {
             tracing::info!("Using tree-sitter for AST validation...");
             if command.contains("eval") {
                  return Err("eval is not allowed".to_string());
             }
+        }
+        Ok(())
+    }
+}
+
+pub struct CarriageReturnValidator;
+impl SecurityValidator for CarriageReturnValidator {
+    fn validate(&self, command: &str) -> Result<(), String> {
+        if command.contains('\r') || command.contains('\n') {
+            return Err("Carriage return and newline characters are not allowed".to_string());
+        }
+        Ok(())
+    }
+}
+
+pub struct ASTValidator {
+    validators: Vec<Box<dyn SecurityValidator>>,
+}
+
+impl ASTValidator {
+    pub fn new() -> Self {
+        let validators: Vec<Box<dyn SecurityValidator>> = vec![
+            Box::new(SudoValidator),
+            Box::new(ZmodloadValidator),
+            Box::new(SubshellValidator),
+            Box::new(IFSInjectionValidator),
+            Box::new(EvalValidator),
+            Box::new(CarriageReturnValidator),
+        ];
+        ASTValidator { validators }
+    }
+
+    pub fn validate(&self, command: &str) -> Result<(), String> {
+        for validator in &self.validators {
+            validator.validate(command)?;
         }
         Ok(())
     }
@@ -458,6 +519,12 @@ mod tests {
         
         let err = validator.validate("zmodload zsh/clone").unwrap_err();
         assert_eq!(err, "zmodload is not allowed");
+
+        let err = validator.validate("echo 'hello\rworld'").unwrap_err();
+        assert_eq!(err, "Carriage return and newline characters are not allowed");
+
+        let err = validator.validate("echo 'hello\nworld'").unwrap_err();
+        assert_eq!(err, "Carriage return and newline characters are not allowed");
     }
 
     #[test]
