@@ -1,235 +1,80 @@
-# Scout: Tool Integration Research Q4
+# Tool Integration Research Report Q2
 
 ## Overview
-This report details the evaluation of 7 external tools across various categories to determine their viability for native integration into the OneHumanCorp (OHC) platform. The primary goal is to empower non-technical small business owners by abstracting away the complexity of third-party platforms while bringing their functionality natively into the OHC ecosystem.
+This report evaluates seven essential tools aimed at solving real-world problems for small business owners in the realms of scheduling, messaging, shipping, social media, email marketing, payment processing, and video conferencing. The focus is strictly on the non-technical user experience, ensuring that features pass the "Grandmother Test." All tools were evaluated for compatibility with OHC's Hybrid architecture (Cloud and Standalone).
 
 ---
 
-## 1. Social Media: TikTok Unified Inbox
-### Title
-Native TikTok Inbox Integration
-
-### Problem Statement
-Small business owners struggle to keep up with customer messages and comments across multiple platforms, specifically losing track of engagement on TikTok. They need a single place to view and reply to all messages without constantly switching apps.
-
-### Research Report
-*   **Strategy**: Build a native integration with the TikTok API to pull comments and direct messages into the unified OHC inbox.
-*   **Target Persona**: E-commerce merchants, content creators.
-*   **Advantages**: TikTok is a massive source of discovery. Managing engagement natively in OHC saves time and prevents lost leads.
-*   **Risks**: TikTok API access can be strict, and managing high volumes of comments requires robust backend processing.
-*   **Pricing**: API access is generally free for authorized apps, but requires maintaining compliance with TikTok's developer terms.
-*   **Compatibility**: Cloud (OAuth). Standalone (OAuth).
-
-### Design Doc
-*   Users connect their TikTok account via a "Connect TikTok" button in OHC Settings.
-*   Webhooks receive incoming comments and direct messages and route them to a unified "Inbox" view in the OHC app alongside Instagram and WhatsApp.
-*   Replies typed in OHC are pushed back to TikTok natively.
-*   The AI agent can help categorize or suggest replies for common questions.
-
-### Implementation Prompt
-Implement a unified inbox integration with TikTok. Allow users to connect their TikTok accounts. Incoming comments and DMs must appear in the OHC chronological feed. Users must be able to send replies from within OHC.
-- **Acceptance Criteria**: Connect TikTok account. Receive a test comment/DM in the OHC inbox. Send a reply from OHC that appears on TikTok.
-
-### Priority
-P2
-
-### Estimated Scope
-Medium
+## 1. Calendar & Scheduling: Cal.com
+**Problem Solved:** Eliminates back-and-forth scheduling emails, preventing missed meetings and lost revenue for service-based businesses.
+*   **Ease of Use:** Exceptional. Non-technical users simply share a generated booking link. The UI is modern and straightforward.
+*   **Pricing:** Free for individual use. $12/month per user for teams.
+*   **Environment:** As an open-source platform, it natively supports both Cloud and Standalone environments. Docker self-hosting makes it a perfect fit for OHC Standalone.
+*   **AI Integration:** Features "Cal.ai," an AI scheduling assistant, aligning perfectly with OHC's agentic vision.
+*   **Integration Approach:** OHC will connect via OAuth and listen to webhooks to sync events into the unified inbox.
 
 ---
 
-## 2. Calendar & Scheduling: Microsoft Outlook
-### Title
-Native Integration with Outlook Calendar for Scheduling
-
-### Problem Statement
-While some small business owners use Google Calendar, a significant portion rely on Microsoft Outlook. They need appointments booked through OHC to automatically block out time on their Outlook calendar to prevent double-booking. They do not want to use complex third-party tools like Calendly.
-
-### Research Report
-*   **Strategy**: Direct integration with the Microsoft Graph API to sync Outlook Calendars.
-*   **Target Persona**: Professional services (consultants, tutors, accountants).
-*   **Advantages**: Provides parity with Google Calendar integration, catering to businesses ingrained in the Microsoft ecosystem.
-*   **Risks**: Microsoft Graph API OAuth flow can be complex. Maintaining real-time bidirectional sync requires robust polling or webhook infrastructure.
-*   **Pricing**: Free API access via Microsoft Graph.
-*   **Compatibility**: Cloud (OAuth). Standalone (OAuth).
-
-### Design Doc
-*   In the "Calendar & Scheduling" settings, users can click "Connect Outlook".
-*   Once connected, the OHC booking widget checks the user's Outlook calendar for free/busy slots.
-*   When a customer books a service, an event is created directly on the user's Outlook Calendar.
-*   If the user deletes or modifies the event in Outlook, webhooks sync the changes back to OHC.
-
-### Implementation Prompt
-Integrate Outlook Calendar via the Microsoft Graph API. Allow users to authenticate their Microsoft accounts. Fetch free/busy data to determine booking availability natively within OHC. Push new bookings to the Outlook calendar and listen for updates/cancellations.
-- **Acceptance Criteria**: Connect Outlook account. Free/busy times reflect on the booking widget. Booked appointments appear in Outlook.
-
-### Priority
-P1
-
-### Estimated Scope
-Medium
+## 2. SMS & Notifications: Twilio
+**Problem Solved:** Ensures customers receive critical updates (like order confirmations) reliably, especially targeting demographics with low email open rates or limited English proficiency.
+*   **Ease of Use:** The underlying API is highly technical, but the business owner's experience via OHC will be seamless. They will simply purchase a number within OHC and toggle notification rules.
+*   **Pricing:** Pay-as-you-go. Extremely cost-effective (fractions of a cent per SMS in the US) plus small monthly fees for leased numbers.
+*   **Environment:** Cloud-first via REST APIs. Works in Standalone mode as long as the local instance has outbound internet access and can process webhooks/polling for replies.
+*   **AI Integration:** Offers Conversation Intelligence and seamless hooks for our AI agents to auto-respond to incoming text messages.
+*   **Integration Approach:** OHC will use the Programmable Messaging API for dispatch and handle webhooks to route customer replies into the unified inbox.
 
 ---
 
-## 3. Email Marketing: MailerLite
-### Title
-Native Email Campaigns via MailerLite Integration
-
-### Problem Statement
-Small business owners want to send newsletters and promotional emails to their customer base. While SendGrid/SES are great for transactional emails, building a full drag-and-drop template editor internally is too complex. MailerLite provides a user-friendly API for managing campaigns without forcing the user to leave OHC.
-
-### Research Report
-*   **Strategy**: API integration with MailerLite for subscriber management and campaign sending.
-*   **Target Persona**: Retail, boutique owners, service providers.
-*   **Advantages**: Offloads the complexity of email rendering and template design while keeping the trigger points natively in OHC.
-*   **Risks**: MailerLite API rate limits; synchronizing customer lists requires background jobs.
-*   **Pricing**: Free tier up to 1,000 subscribers, affordable thereafter.
-*   **Compatibility**: Cloud (OAuth or API Key). Standalone (API Key).
-
-### Design Doc
-*   In OHC Settings, users input their MailerLite API key (or OAuth in Cloud mode).
-*   Customer emails collected during checkout/booking in OHC are automatically synced to a specific MailerLite group.
-*   Users can trigger pre-built campaigns natively from OHC (e.g., "Send 'New Collection' email"), which makes API calls to MailerLite to dispatch the campaign.
-*   Basic analytics (open rate, click rate) are fetched via API and displayed on the OHC Marketing dashboard.
-
-### Implementation Prompt
-Integrate MailerLite to handle email marketing campaigns. Automatically sync OHC customer records to MailerLite subscriber groups. Provide a native UI to trigger specific email campaigns and view basic delivery analytics without needing to log into MailerLite directly.
-- **Acceptance Criteria**: Sync a customer email to MailerLite. Trigger an email campaign from OHC. View campaign open/click rates in OHC.
-
-### Priority
-P2
-
-### Estimated Scope
-Medium
+## 3. Shipping & Logistics: Shippo
+**Problem Solved:** Simplifies the complex, manual process of calculating shipping rates and printing labels, saving physical goods sellers hours of administrative work.
+*   **Ease of Use:** Very high. Business owners just input box dimensions/weight and click "Print Label" to get deeply discounted carrier rates.
+*   **Pricing:** API Starter plan has no monthly fees. First 30 labels are free, then 7¢ per label. Address validation is highly affordable (2¢ domestic, 8¢ international).
+*   **Environment:** API-first. Works perfectly in Cloud. Functions in Standalone mode provided there is an internet connection to reach Shippo's rating and transaction endpoints.
+*   **AI Integration:** Uses AI for generating "Estimated Delivery Dates," directly improving the customer experience.
+*   **Integration Approach:** OHC will integrate the Rating API for checkout/fulfillment screens and the Transaction API to generate printable PDF labels directly in the owner's dashboard.
 
 ---
 
-## 4. Payment Processing: Alipay
-### Title
-Expand Payments with Alipay Integration
-
-### Problem Statement
-Small business owners targeting the Chinese market or catering to Chinese tourists locally need to accept Alipay. Western payment methods like Stripe often do not adequately support direct local currency transactions for these users, leading to lost sales and poor conversion rates.
-
-### Research Report
-*   **Strategy**: Direct API integration with Alipay Global to facilitate cross-border and local transactions.
-*   **Target Persona**: Retail businesses in tourist hubs, e-commerce stores shipping internationally.
-*   **Advantages**: Unlocks a massive demographic that relies almost exclusively on Alipay or WeChat Pay. Native integration prevents the user from navigating clunky third-party gateways.
-*   **Risks**: Alipay's integration documentation can be fragmented; requires specific business entity verification for cross-border payments.
-*   **Pricing**: Standard transaction fees apply.
-*   **Compatibility**: Cloud (Centralized routing). Standalone (User supplies API keys).
-
-### Design Doc
-*   In the "Finance & Payments" settings, users can enable Alipay.
-*   The setup process requires providing merchant details for Alipay verification.
-*   During checkout, if the user selects Alipay, a QR code is generated (for desktop/in-person) or a deep link opens the Alipay app (on mobile).
-*   Webhooks notify OHC when the payment is completed to automatically update the order status.
-
-### Implementation Prompt
-Add Alipay as an alternative payment provider. Implement the QR code generation and mobile app deep-linking flow for checkout. Ensure that payment success webhooks accurately map to standard OHC order fulfillment events.
-- **Acceptance Criteria**: Merchant can configure Alipay. Customers can select Alipay at checkout and complete a transaction via QR code or app redirect. Webhooks successfully mark the order as paid.
-
-### Priority
-P2
-
-### Estimated Scope
-Large
+## 4. Social Media Integration: Ayrshare
+**Problem Solved:** Enables business owners to schedule posts and manage their presence across multiple social networks without logging into separate apps.
+*   **Ease of Use:** Simplifies the OAuth nightmare. Owners connect their accounts once in OHC and schedule content easily.
+*   **Pricing:** Designed for platforms. $599/month for the first 30 user profiles, dropping significantly at higher volumes.
+*   **Environment:** Cloud API. Works natively in OHC Cloud. Standalone instances require outbound internet for API calls.
+*   **AI Integration:** Offers a "Max Pack" with AI tools for content generation and analysis.
+*   **Integration Approach:** Implement the Social Media Messaging API for publishing and configure webhooks to receive comments into the unified inbox.
 
 ---
 
-## 5. Shipping & Logistics: ShipStation
-### Title
-Automated Label Generation via ShipStation Integration
-
-### Problem Statement
-Small business owners selling physical goods spend too much time copying customer addresses into different carrier websites to find the best rate and print labels. They need a single button natively within OHC to calculate rates, buy postage, and print labels.
-
-### Research Report
-*   **Strategy**: API integration with ShipStation to aggregate carriers and print labels.
-*   **Target Persona**: E-commerce stores, crafters, boutique owners.
-*   **Advantages**: Provides access to discounted rates across multiple carriers (USPS, UPS, FedEx) through a single API. High reliability.
-*   **Risks**: ShipStation has its own monthly subscription cost, which adds to the merchant's overhead. Complex API for international shipments.
-*   **Pricing**: Monthly subscription fee plus postage costs.
-*   **Compatibility**: Cloud (OAuth or API Key). Standalone (API Key).
-
-### Design Doc
-*   Merchant connects their ShipStation account in the OHC "Fulfillment" settings.
-*   During checkout, OHC queries the ShipStation API with package dimensions to display live shipping rates to the customer.
-*   In the OHC Merchant Dashboard, the Operations Agent highlights unfulfilled orders.
-*   Merchant clicks a native "Buy Label" button. OHC calls ShipStation to purchase the label and saves the PDF.
-*   The tracking number is automatically retrieved and emailed to the customer.
-
-### Implementation Prompt
-Integrate ShipStation to automate shipping label generation. The checkout flow must query live rates. The merchant order management view must allow purchasing and printing of shipping labels natively. Tracking numbers must be automatically saved and sent to the customer.
-- **Acceptance Criteria**: Live shipping rates shown at checkout. Merchant can purchase and print a shipping label from the OHC dashboard. Tracking number is emailed to the customer.
-
-### Priority
-P1
-
-### Estimated Scope
-Large
+## 5. Email Marketing: Resend
+**Problem Solved:** Allows business owners to send reliable newsletters, promotions, and transactional receipts without wrestling with complex legacy marketing tools or deliverability issues.
+*   **Ease of Use:** Built for developers, but enables OHC to provide a dead-simple UI (like a WYSIWYG editor) while handling the complex email delivery backend silently.
+*   **Pricing:** Very generous free tier (3,000 emails/mo). Pro tier is $20/mo for 50,000 emails.
+*   **Environment:** Cloud API. Seamless in OHC Cloud. Functions in Standalone via outbound REST calls.
+*   **AI Integration:** Provides AI Assistant capabilities, synergizing well with OHC agents generating email copy.
+*   **Integration Approach:** Integrate the Email API for dispatching and webhooks for tracking open/click rates.
 
 ---
 
-## 6. SMS & Notifications: MessageBird
-### Title
-Global SMS Notifications via MessageBird Integration
-
-### Problem Statement
-Small business owners, especially those running food trucks or physical services, often miss push notifications or emails. They and their customers need reliable, instant SMS alerts for order updates, appointment reminders, and promotions, regardless of their global location.
-
-### Research Report
-*   **Strategy**: Direct API integration with MessageBird for global outbound SMS delivery.
-*   **Target Persona**: Food service operators, local service providers, international merchants.
-*   **Advantages**: Excellent global coverage and competitive pricing outside the US compared to Twilio. Simple API.
-*   **Risks**: US A2P 10DLC compliance is still a hurdle for merchants sending to US numbers.
-*   **Pricing**: Pay-per-message. OHC will need a credit system or bill the merchant directly.
-*   **Compatibility**: Cloud (Centralized OHC MessageBird account). Standalone (User provides API key).
-
-### Design Doc
-*   In OHC Settings, merchants can toggle SMS notifications on/off for specific events (e.g., "Order Ready", "Appointment Reminder").
-*   When a qualifying event occurs, the OHC backend dispatches an async job to the MessageBird API.
-*   The system formats phone numbers globally (E.164) before sending.
-*   The AI Operations Agent can intelligently delay non-urgent SMS messages to avoid waking customers at night.
-
-### Implementation Prompt
-Integrate MessageBird for global SMS notifications. Allow merchants to configure which events trigger an SMS to the customer or themselves. Ensure strict E.164 phone number formatting and handle delivery failure webhooks.
-- **Acceptance Criteria**: Merchant can enable SMS for "Order Ready". Customer receives an SMS when the order status changes. Phone numbers are validated and formatted correctly.
-
-### Priority
-P2
-
-### Estimated Scope
-Medium
+## 6. Payment Processing: Stripe
+**Problem Solved:** Provides a fast, secure, and globally recognized way for businesses to accept online payments (credit cards, digital wallets) without the hassle of traditional merchant accounts.
+*   **Ease of Use:** Frictionless checkout for end-customers. Simple onboarding for the business owner via Stripe Connect.
+*   **Pricing:** Pay-as-you-go processing fees (e.g., 2.9% + 30¢). No monthly or setup fees.
+*   **Environment:** Cloud API. Works in OHC Cloud and Standalone (requires outbound access to Stripe APIs).
+*   **AI Integration:** Utilizes AI (Stripe Radar) to detect and block fraudulent transactions.
+*   **Integration Approach:** Use Stripe Connect for merchant onboarding and Stripe Checkout/Elements for the payment flow.
 
 ---
 
-## 7. Video Conferencing: Microsoft Teams
-### Title
-Auto-Generate Microsoft Teams Meeting Links for Appointments
+## 7. Video Conferencing: Whereby
+**Problem Solved:** Facilitates virtual consultations and tutoring without requiring clients to download software or navigate complex calendar links.
+*   **Ease of Use:** The "Embedded" product allows 1-click video calls directly inside the browser, offering the lowest possible friction for both owner and client.
+*   **Pricing:** Embedded "Build" plan is $9.99/mo (includes 2,000 participant minutes), plus $0.004 per additional minute.
+*   **Environment:** Cloud API. Works perfectly in OHC Cloud and Standalone (requires outbound access to generate URLs).
+*   **AI Integration:** Offers session transcriptions and live captions which can be fed into OHC agents.
+*   **Integration Approach:** Use the Embedded API to generate ephemeral room URLs and display them in an iframe within the OHC dashboard.
 
-### Problem Statement
-Small business owners offering virtual consultations or tutoring spend unnecessary time manually creating Microsoft Teams meeting links and emailing them to clients. This workflow is error-prone and unprofessional. They need links generated automatically upon booking within OHC.
+---
 
-### Research Report
-*   **Strategy**: Native OAuth integration with the Microsoft Graph API to create Teams meetings.
-*   **Target Persona**: Professional services, tutors, B2B consultants using the Microsoft ecosystem.
-*   **Advantages**: Highly professional. Parity with Zoom/Google Meet integrations. Keeps the user flow entirely automated.
-*   **Risks**: Microsoft Graph API OAuth permissions can be granular and confusing to configure for the initial developer setup.
-*   **Pricing**: Free for users with a Microsoft 365 account that includes Teams.
-*   **Compatibility**: Cloud (OAuth). Standalone (Server-to-Server OAuth or User OAuth).
-
-### Design Doc
-*   During service creation, the user sets the location type to "Online Meeting" and selects "Microsoft Teams" (after connecting their Microsoft account).
-*   When a customer books this service, OHC makes a call to the Graph API to schedule an online meeting.
-*   The generated Teams join URL is embedded directly into the OHC confirmation email, the calendar invite, and the customer portal.
-
-### Implementation Prompt
-Build a Microsoft Teams integration that dynamically creates meeting links for online service bookings. Users must be able to authenticate their Microsoft account. Upon booking, OHC must generate a unique Teams link and attach it to the appointment record and outgoing notifications.
-- **Acceptance Criteria**: Merchant connects Microsoft account. Customer books an online service. Unique Teams link is generated and sent to both parties in the confirmation email.
-
-### Priority
-P2
-
-### Estimated Scope
-Medium
+## Next Steps
+- Implementers should refer to the issue briefs in `docs/research/` to begin API integration design.
+- Prioritize Twilio (P0) and Stripe (P0) due to their critical necessity for customer communication and revenue generation, respectively.
