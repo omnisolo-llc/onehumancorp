@@ -1,3 +1,5 @@
+mod padding_triage;
+
 #[cfg(test)]
 mod tests {
     #[test]

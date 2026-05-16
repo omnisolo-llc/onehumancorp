@@ -1,13 +1,3 @@
-# OHC Hybrid OS - Release Notes (v0.4.43)
-
-## Cloud Updates
-- Multi-tenant K8s deployment optimized.
-- Scalability fixes for Postgres connection pool.
-
-## Standalone Updates
-- Desktop wrapper binary version bumped.
-- Privacy and offline sync fixes for SQLite.
-
 ## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
 
 ### Cloud Scaling Improvements
