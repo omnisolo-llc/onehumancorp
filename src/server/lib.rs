@@ -1677,15 +1677,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <title>OneHuman Dashboard</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: white; margin: 0; }
+                        body {
+font-family: 'Inter', sans-serif;
+background: #0f172a;
+color: white;
+margin: 0;
+-webkit-font-smoothing: antialiased;
+backdrop-filter: blur(20px) saturate(200%);
+-webkit-backdrop-filter: blur(20px) saturate(200%);
+}
                         nav { padding: 20px; display: flex; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-                        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; }
+                        .glass, .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); }
                         main { padding: 40px; }
                         .card { padding: 24px; margin-bottom: 20px; }
                         h1 { font-weight: 600; color: #4ecca3; }
                     </style>
                 </head>
-                <body>
+                <body class="glass-panel">
                     <nav class="glass">
                         <a href="/" style="color: #4ecca3; text-decoration: none;">Dashboard</a>
                         <a href="/agents" style="color: white; text-decoration: none;">Agents</a>
