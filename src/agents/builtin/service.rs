@@ -36,7 +36,7 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
     s
 }
 
-use crate::memory_store::{VectorRepository, EmbeddingRecord};
+use crate::memory_store::{ConsolidatedMemoryRepository, ConsolidatedMemoryRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -72,7 +72,7 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
-    memory: Option<Arc<VectorRepository>>,
+    memory: Option<Arc<ConsolidatedMemoryRepository>>,
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
@@ -178,7 +178,7 @@ impl AgentServiceImpl {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+                        let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool));
                         self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
                         self.memory = Some(repo);
                     }
@@ -189,7 +189,7 @@ impl AgentServiceImpl {
             } else {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
-                        let repo = Arc::new(VectorRepository::new(pool));
+                        let repo = Arc::new(ConsolidatedMemoryRepository::new(pool));
                         self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
                         self.memory = Some(repo);
                     }
@@ -654,7 +654,7 @@ impl AgentService for AgentServiceImpl {
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
                 let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-                let record = EmbeddingRecord {
+                let record = ConsolidatedMemoryRecord {
                     id: uuid::Uuid::new_v4().to_string(),
                     tenant_id: org_id,
                     agent_id: "agent".to_string(),

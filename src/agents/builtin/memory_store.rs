@@ -3,7 +3,7 @@ use sqlx::Row;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct EmbeddingRecord {
+pub struct ConsolidatedMemoryRecord {
     pub id: String,
     pub tenant_id: String,
     pub agent_id: String,
@@ -18,34 +18,34 @@ pub struct EmbeddingRecord {
     pub metadata: Option<String>,
 }
 
-pub enum VectorMemoryStore {
+pub enum ConsolidatedMemoryStore {
     Postgres(sqlx::PgPool),
     Sqlite(sqlx::SqlitePool),
 }
 
-pub struct VectorRepository {
-    store: VectorMemoryStore,
+pub struct ConsolidatedMemoryRepository {
+    store: ConsolidatedMemoryStore,
 }
 
-impl VectorRepository {
+impl ConsolidatedMemoryRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Postgres(pool) }
+        ConsolidatedMemoryRepository { store: ConsolidatedMemoryStore::Postgres(pool) }
     }
 
     pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
+        ConsolidatedMemoryRepository { store: ConsolidatedMemoryStore::Sqlite(pool) }
     }
 
 
-    pub fn get_store(&self) -> &VectorMemoryStore {
+    pub fn get_store(&self) -> &ConsolidatedMemoryStore {
         &self.store
     }
 
-    pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
+    pub async fn upsert(&self, record: &ConsolidatedMemoryRecord) -> Result<(), String> {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
 
         match &self.store {
-            VectorMemoryStore::Postgres(pool) => {
+            ConsolidatedMemoryStore::Postgres(pool) => {
                 sqlx::query(
                     "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
@@ -75,7 +75,7 @@ impl VectorRepository {
                 .await
                 .map_err(|e| e.to_string())?;
             }
-            VectorMemoryStore::Sqlite(pool) => {
+            ConsolidatedMemoryStore::Sqlite(pool) => {
                 sqlx::query(
                     "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
@@ -110,17 +110,17 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+    pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<ConsolidatedMemoryRecord>, String> {
         self.semantic_search(tenant_id, query_embedding, limit).await
     }
 
-    pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+    pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<ConsolidatedMemoryRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
 
         match &self.store {
-            VectorMemoryStore::Postgres(pool) => {
+            ConsolidatedMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query(
                     "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
                      FROM consolidated_memory \
@@ -154,7 +154,7 @@ impl VectorRepository {
 
                     let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
-                    results.push(EmbeddingRecord {
+                    results.push(ConsolidatedMemoryRecord {
                         id,
                         tenant_id,
                         agent_id,
@@ -179,7 +179,7 @@ impl VectorRepository {
                     .await;
                 }
             }
-            VectorMemoryStore::Sqlite(pool) => {
+            ConsolidatedMemoryStore::Sqlite(pool) => {
                 let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
                     .execute(pool)
                     .await
@@ -219,7 +219,7 @@ impl VectorRepository {
 
                         let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
-                        results.push(EmbeddingRecord {
+                        results.push(ConsolidatedMemoryRecord {
                             id,
                             tenant_id,
                             agent_id,
@@ -261,7 +261,7 @@ impl VectorRepository {
                         let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
                         let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
 
-                        let record = EmbeddingRecord {
+                        let record = ConsolidatedMemoryRecord {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             agent_id: row.get("agent_id"),
@@ -328,14 +328,14 @@ impl VectorRepository {
     /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
-            VectorMemoryStore::Postgres(pool) => {
+            ConsolidatedMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
-            VectorMemoryStore::Sqlite(pool) => {
+            ConsolidatedMemoryStore::Sqlite(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
@@ -348,14 +348,14 @@ impl VectorRepository {
 
     #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
-            VectorMemoryStore::Postgres(pool) => {
+            ConsolidatedMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
                     .bind(id)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
-            VectorMemoryStore::Sqlite(pool) => {
+            ConsolidatedMemoryStore::Sqlite(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = ?")
                     .bind(id)
                     .execute(pool)
@@ -366,7 +366,7 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn resolve_conflict(&self, winner: &EmbeddingRecord, loser: &EmbeddingRecord) -> Result<(), String> {
+    pub async fn resolve_conflict(&self, winner: &ConsolidatedMemoryRecord, loser: &ConsolidatedMemoryRecord) -> Result<(), String> {
         self.delete(&loser.id).await?;
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count + 1;
@@ -394,7 +394,7 @@ impl VectorRepository {
     }
 
     /// Determines the winner of a memory conflict between two embedding records.
-    pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
+    pub fn determine_conflict_winner<'a>(a: &'a ConsolidatedMemoryRecord, b: &'a ConsolidatedMemoryRecord) -> (&'a ConsolidatedMemoryRecord, &'a ConsolidatedMemoryRecord) {
         if a.owner_override != b.owner_override {
             if a.owner_override {
                 (a, b)
@@ -419,11 +419,11 @@ impl VectorRepository {
     }
 
 
-    pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
+    pub async fn get_conflicting_pairs(&self) -> Result<Vec<(ConsolidatedMemoryRecord, ConsolidatedMemoryRecord)>, String> {
         let mut conflicts = Vec::new();
 
         match &self.store {
-            VectorMemoryStore::Postgres(pool) => {
+            ConsolidatedMemoryStore::Postgres(pool) => {
                 let query = "
                     SELECT
                         a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
@@ -445,7 +445,7 @@ impl VectorRepository {
                     let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
                     let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
 
-                    let a = EmbeddingRecord {
+                    let a = ConsolidatedMemoryRecord {
                         id: row.get("a_id"),
                         tenant_id: row.get("a_tenant_id"),
                         agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
@@ -460,7 +460,7 @@ impl VectorRepository {
                         metadata: row.get("a_metadata"),
                     };
 
-                    let b = EmbeddingRecord {
+                    let b = ConsolidatedMemoryRecord {
                         id: row.get("b_id"),
                         tenant_id: row.get("b_tenant_id"),
                         agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
@@ -478,7 +478,7 @@ impl VectorRepository {
                     conflicts.push((a, b));
                 }
             }
-            VectorMemoryStore::Sqlite(pool) => {
+            ConsolidatedMemoryStore::Sqlite(pool) => {
                 // Determine if we have the vector extension loaded (e.g. by checking if vec_distance_cosine exists)
                 let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
                     .execute(pool)
@@ -507,7 +507,7 @@ impl VectorRepository {
                         let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
                         let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
 
-                        let a = EmbeddingRecord {
+                        let a = ConsolidatedMemoryRecord {
                             id: row.get("a_id"),
                             tenant_id: row.get("a_tenant_id"),
                             agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
@@ -522,7 +522,7 @@ impl VectorRepository {
                             metadata: row.get("a_metadata"),
                         };
 
-                        let b = EmbeddingRecord {
+                        let b = ConsolidatedMemoryRecord {
                             id: row.get("b_id"),
                             tenant_id: row.get("b_tenant_id"),
                             agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
@@ -556,7 +556,7 @@ impl VectorRepository {
                         let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
                         let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
 
-                        let record = EmbeddingRecord {
+                        let record = ConsolidatedMemoryRecord {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             agent_id: row.get::<Option<String>, _>("agent_id").unwrap_or_default(),
@@ -681,7 +681,7 @@ mod tests {
     #[test]
     fn test_embedding_record_serialization() {
         let now = Utc.with_ymd_and_hms(2026, 4, 26, 0, 0, 0).unwrap();
-        let record = EmbeddingRecord {
+        let record = ConsolidatedMemoryRecord {
             id: "rec1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -697,7 +697,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&record).unwrap();
-        let deserialized: EmbeddingRecord = serde_json::from_str(&json).unwrap();
+        let deserialized: ConsolidatedMemoryRecord = serde_json::from_str(&json).unwrap();
 
         assert_eq!(record.id, deserialized.id);
         assert_eq!(record.embedding, deserialized.embedding);
@@ -778,7 +778,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
 }
 
 pub struct PersistentMemoryStore {
-    pub repo: std::sync::Arc<VectorRepository>,
+    pub repo: std::sync::Arc<ConsolidatedMemoryRepository>,
     pub tenant_id: String,
     pub agent_id: String,
     pub llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
@@ -812,7 +812,7 @@ impl LongTermMemory for PersistentMemoryStore {
             "MANUAL"
         };
 
-        let record = EmbeddingRecord {
+        let record = ConsolidatedMemoryRecord {
             id,
             tenant_id: self.tenant_id.clone(),
             agent_id: self.agent_id.clone(),
@@ -1096,9 +1096,9 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
-        let r1 = EmbeddingRecord {
+        let r1 = ConsolidatedMemoryRecord {
             id: "rec1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1112,7 +1112,7 @@ mod get_conflicts_tests {
             owner_override: true,
             metadata: None,
         };
-        let r2 = EmbeddingRecord {
+        let r2 = ConsolidatedMemoryRecord {
             id: "rec2".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1170,10 +1170,10 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
-        let winner = EmbeddingRecord {
+        let winner = ConsolidatedMemoryRecord {
             id: "winner".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1188,7 +1188,7 @@ mod get_conflicts_tests {
             metadata: None,
         };
 
-        let loser = EmbeddingRecord {
+        let loser = ConsolidatedMemoryRecord {
             id: "loser".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent2".to_string(),
@@ -1247,11 +1247,11 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
         // 1. Conflict resolved by owner_override
-        let r1 = EmbeddingRecord {
+        let r1 = ConsolidatedMemoryRecord {
             id: "rec1_a".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1265,7 +1265,7 @@ mod get_conflicts_tests {
             owner_override: false,
             metadata: None,
         };
-        let r2 = EmbeddingRecord {
+        let r2 = ConsolidatedMemoryRecord {
             id: "rec1_b".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1281,7 +1281,7 @@ mod get_conflicts_tests {
         };
 
         // 2. Conflict resolved by reliability_score
-        let r3 = EmbeddingRecord {
+        let r3 = ConsolidatedMemoryRecord {
             id: "rec2_a".to_string(),
             tenant_id: "org2".to_string(),
             agent_id: "agent1".to_string(),
@@ -1295,7 +1295,7 @@ mod get_conflicts_tests {
             owner_override: false,
             metadata: None,
         };
-        let r4 = EmbeddingRecord {
+        let r4 = ConsolidatedMemoryRecord {
             id: "rec2_b".to_string(),
             tenant_id: "org2".to_string(),
             agent_id: "agent1".to_string(),
@@ -1312,7 +1312,7 @@ mod get_conflicts_tests {
 
         // 3. Conflict resolved by recency
         let older = now - chrono::Duration::hours(1);
-        let r5 = EmbeddingRecord {
+        let r5 = ConsolidatedMemoryRecord {
             id: "rec3_a".to_string(),
             tenant_id: "org3".to_string(),
             agent_id: "agent1".to_string(),
@@ -1326,7 +1326,7 @@ mod get_conflicts_tests {
             owner_override: false,
             metadata: None,
         };
-        let r6 = EmbeddingRecord {
+        let r6 = ConsolidatedMemoryRecord {
             id: "rec3_b".to_string(),
             tenant_id: "org3".to_string(),
             agent_id: "agent1".to_string(),
@@ -1397,12 +1397,12 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
         let very_old_time = now - chrono::Duration::days(200);
 
         // Record 1: Old enough, source_type is TASK_SUMMARY, reference_count < 5 -> Should be pruned
-        let record1 = EmbeddingRecord {
+        let record1 = ConsolidatedMemoryRecord {
             id: "rec1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1418,7 +1418,7 @@ mod get_conflicts_tests {
         };
 
         // Record 2: Old enough, source_type is TASK_SUMMARY, but owner_override = TRUE -> Should be kept
-        let record2 = EmbeddingRecord {
+        let record2 = ConsolidatedMemoryRecord {
             id: "rec2".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1434,7 +1434,7 @@ mod get_conflicts_tests {
         };
 
         // Record 3: Old enough, source_type is TASK_SUMMARY, but reference_count >= 5 -> Should be kept
-        let record3 = EmbeddingRecord {
+        let record3 = ConsolidatedMemoryRecord {
             id: "rec3".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1450,7 +1450,7 @@ mod get_conflicts_tests {
         };
 
         // Record 4: Old enough, but source_type is NOT TASK_SUMMARY -> Should be kept
-        let record4 = EmbeddingRecord {
+        let record4 = ConsolidatedMemoryRecord {
             id: "rec4".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1511,11 +1511,11 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
         // Conflict resolved by fallback (same override, reliability, timestamp)
-        let r1 = EmbeddingRecord {
+        let r1 = ConsolidatedMemoryRecord {
             id: "rec4_a".to_string(),
             tenant_id: "org4".to_string(),
             agent_id: "agent1".to_string(),
@@ -1529,7 +1529,7 @@ mod get_conflicts_tests {
             owner_override: false,
             metadata: None,
         };
-        let r2 = EmbeddingRecord {
+        let r2 = ConsolidatedMemoryRecord {
             id: "rec4_b".to_string(),
             tenant_id: "org4".to_string(),
             agent_id: "agent1".to_string(),
@@ -1588,12 +1588,12 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
         let old_time = now - chrono::Duration::days(181);
 
-        let record1 = EmbeddingRecord {
+        let record1 = ConsolidatedMemoryRecord {
             id: "rec1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1608,7 +1608,7 @@ mod get_conflicts_tests {
             metadata: None,
         };
 
-        let record2 = EmbeddingRecord {
+        let record2 = ConsolidatedMemoryRecord {
             id: "rec2".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1668,10 +1668,10 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
-        let record1 = EmbeddingRecord {
+        let record1 = ConsolidatedMemoryRecord {
             id: "rec1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1724,10 +1724,10 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
-        let record1 = EmbeddingRecord {
+        let record1 = ConsolidatedMemoryRecord {
             id: "rec1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1742,7 +1742,7 @@ mod get_conflicts_tests {
             metadata: None,
         };
 
-        let record2 = EmbeddingRecord {
+        let record2 = ConsolidatedMemoryRecord {
             id: "rec2".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -1795,10 +1795,10 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
-        let record_dept_a = EmbeddingRecord {
+        let record_dept_a = ConsolidatedMemoryRecord {
             id: "dept_a_rec".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent_a".to_string(),
@@ -1813,7 +1813,7 @@ mod get_conflicts_tests {
             metadata: None,
         };
 
-        let record_dept_b = EmbeddingRecord {
+        let record_dept_b = ConsolidatedMemoryRecord {
             id: "dept_b_rec".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent_b".to_string(),
@@ -1828,7 +1828,7 @@ mod get_conflicts_tests {
             metadata: None,
         };
 
-        let record_other_tenant = EmbeddingRecord {
+        let record_other_tenant = ConsolidatedMemoryRecord {
             id: "other_tenant_rec".to_string(),
             tenant_id: "org2".to_string(),
             agent_id: "agent_a".to_string(),
@@ -1888,10 +1888,10 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = VectorRepository::new_sqlite(pool.clone());
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
 
-        let record1 = EmbeddingRecord {
+        let record1 = ConsolidatedMemoryRecord {
             id: "dept_a_rec".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "sales_agent".to_string(),
@@ -1959,7 +1959,7 @@ mod get_conflicts_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool));
         let llm = Arc::new(MockLlm);
         let store = PersistentMemoryStore {
             repo: repo.clone(),
@@ -2041,9 +2041,9 @@ mod anthropic_memory_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = super::VectorRepository::new_sqlite(pool.clone());
+        let repo = super::ConsolidatedMemoryRepository::new_sqlite(pool.clone());
 
-        let cs_record = EmbeddingRecord {
+        let cs_record = ConsolidatedMemoryRecord {
             id: "cs_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "customer_success".to_string(),
@@ -2058,7 +2058,7 @@ mod anthropic_memory_tests {
             metadata: None,
         };
 
-        let advisory_record = EmbeddingRecord {
+        let advisory_record = ConsolidatedMemoryRecord {
             id: "advisory_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "business_advisory".to_string(),
@@ -2111,13 +2111,13 @@ mod anthropic_memory_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = super::VectorRepository::new_sqlite(pool.clone());
+        let repo = super::ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
         let threshold = now - chrono::Duration::days(180);
         let older_time = threshold - chrono::Duration::days(10);
         let newer_time = threshold + chrono::Duration::days(10);
 
-        let old_record = super::EmbeddingRecord {
+        let old_record = super::ConsolidatedMemoryRecord {
             id: "old_rec".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -2132,7 +2132,7 @@ mod anthropic_memory_tests {
             metadata: None,
         };
 
-        let new_record = super::EmbeddingRecord {
+        let new_record = super::ConsolidatedMemoryRecord {
             id: "new_rec".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -2188,11 +2188,11 @@ mod anthropic_memory_tests {
             );"
         ).execute(&pool).await;
 
-        let repo = super::VectorRepository::new_sqlite(pool.clone());
+        let repo = super::ConsolidatedMemoryRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
         let old_time = now - chrono::Duration::days(181);
 
-        let record1 = super::EmbeddingRecord {
+        let record1 = super::ConsolidatedMemoryRecord {
             id: "rec_override".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -2232,8 +2232,8 @@ mod determine_conflict_winner_tests {
         owner_override: bool,
         reliability_score: i32,
         created_at_days_ago: i64,
-    ) -> EmbeddingRecord {
-        EmbeddingRecord {
+    ) -> ConsolidatedMemoryRecord {
+        ConsolidatedMemoryRecord {
             id: id.to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
@@ -2254,11 +2254,11 @@ mod determine_conflict_winner_tests {
         // Migrated winner logic test from conflict.rs {
         let a = create_test_record("a", true, 50, 10);
         let b = create_test_record("b", false, 90, 5); // b has better score and is newer, but a has override
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        let (winner, loser) = ConsolidatedMemoryRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a");
         assert_eq!(loser.id, "b");
 
-        let (winner2, loser2) = VectorRepository::determine_conflict_winner(&b, &a);
+        let (winner2, loser2) = ConsolidatedMemoryRepository::determine_conflict_winner(&b, &a);
         assert_eq!(winner2.id, "a");
         assert_eq!(loser2.id, "b");
     }
@@ -2268,7 +2268,7 @@ mod determine_conflict_winner_tests {
         // Migrated score logic test from conflict.rs {
         let a = create_test_record("a", false, 80, 10);
         let b = create_test_record("b", false, 60, 5); // a has better score, b is newer
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        let (winner, loser) = ConsolidatedMemoryRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a");
         assert_eq!(loser.id, "b");
     }
@@ -2277,7 +2277,7 @@ mod determine_conflict_winner_tests {
     fn test_winner_recency() {
         let a = create_test_record("a", false, 50, 2); // a is newer
         let b = create_test_record("b", false, 50, 10);
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        let (winner, loser) = ConsolidatedMemoryRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a");
         assert_eq!(loser.id, "b");
     }
@@ -2287,7 +2287,7 @@ mod determine_conflict_winner_tests {
         let a = create_test_record("a", false, 50, 5);
         let mut b = create_test_record("b", false, 50, 5); // identical stats
         b.created_at = a.created_at; // Ensure created_at is identical
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        let (winner, loser) = ConsolidatedMemoryRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a"); // fallback to a
         assert_eq!(loser.id, "b");
     }
@@ -2299,7 +2299,7 @@ mod e2e_consolidation_tests {
     use super::*;
     use std::str::FromStr;
 
-    async fn setup_sqlite_repo() -> VectorRepository {
+    async fn setup_sqlite_repo() -> ConsolidatedMemoryRepository {
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
@@ -2320,7 +2320,7 @@ mod e2e_consolidation_tests {
             );"
         ).execute(&pool).await.unwrap();
 
-        VectorRepository::new_sqlite(pool)
+        ConsolidatedMemoryRepository::new_sqlite(pool)
     }
 
     #[tokio::test]
@@ -2333,7 +2333,7 @@ mod e2e_consolidation_tests {
         let mut v2 = vec![0.0; 10];
         v2[1] = 1.0; // Distinct vector 2
 
-        let cs_record = EmbeddingRecord {
+        let cs_record = ConsolidatedMemoryRecord {
             id: "cs_e2e_1".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "customer_success".to_string(),
@@ -2348,7 +2348,7 @@ mod e2e_consolidation_tests {
             metadata: None,
         };
 
-        let advisory_record = EmbeddingRecord {
+        let advisory_record = ConsolidatedMemoryRecord {
             id: "adv_e2e_1".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "business_advisory".to_string(),
@@ -2386,7 +2386,7 @@ mod e2e_consolidation_tests {
         let mut v2 = vec![0.0; 10];
         v2[0] = 0.99; // < 0.05 distance to trigger conflict
 
-        let record_a = EmbeddingRecord {
+        let record_a = ConsolidatedMemoryRecord {
             id: "conflict_a".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "sales".to_string(),
@@ -2401,7 +2401,7 @@ mod e2e_consolidation_tests {
             metadata: None,
         };
 
-        let record_b = EmbeddingRecord {
+        let record_b = ConsolidatedMemoryRecord {
             id: "conflict_b".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "sales".to_string(),
@@ -2437,7 +2437,7 @@ mod e2e_consolidation_tests {
         let mut v1 = vec![0.0; 10];
         v1[0] = 1.0;
 
-        let record_maya = EmbeddingRecord {
+        let record_maya = ConsolidatedMemoryRecord {
             id: "maya_1".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "sales".to_string(),
@@ -2452,7 +2452,7 @@ mod e2e_consolidation_tests {
             metadata: None,
         };
 
-        let record_bob = EmbeddingRecord {
+        let record_bob = ConsolidatedMemoryRecord {
             id: "bob_1".to_string(),
             tenant_id: "org_bob".to_string(),
             agent_id: "sales".to_string(),
@@ -2498,7 +2498,7 @@ mod e2e_consolidation_tests {
         v2[1] = 1.0;
 
         // Old, no override, low ref count -> Prune
-        let prune_me = EmbeddingRecord {
+        let prune_me = ConsolidatedMemoryRecord {
             id: "prune_1".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "test".to_string(),
@@ -2514,7 +2514,7 @@ mod e2e_consolidation_tests {
         };
 
         // Old, owner override -> Keep
-        let keep_override = EmbeddingRecord {
+        let keep_override = ConsolidatedMemoryRecord {
             id: "keep_1".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "test".to_string(),
@@ -2530,7 +2530,7 @@ mod e2e_consolidation_tests {
         };
 
         // Newer -> Keep
-        let keep_new = EmbeddingRecord {
+        let keep_new = ConsolidatedMemoryRecord {
             id: "keep_2".to_string(),
             tenant_id: "org_maya".to_string(),
             agent_id: "test".to_string(),
@@ -2573,7 +2573,7 @@ mod e2e_consolidation_tests {
 
         let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
 
-        let record_a = EmbeddingRecord {
+        let record_a = ConsolidatedMemoryRecord {
             id: "edge_a".to_string(),
             tenant_id: "org_edge".to_string(),
             agent_id: "test".to_string(),
@@ -2588,7 +2588,7 @@ mod e2e_consolidation_tests {
             metadata: None,
         };
 
-        let record_b = EmbeddingRecord {
+        let record_b = ConsolidatedMemoryRecord {
             id: "edge_b".to_string(),
             tenant_id: "org_edge".to_string(),
             agent_id: "test".to_string(),
@@ -2643,10 +2643,10 @@ mod additional_tests {
             );"
         ).execute(&pool).await.unwrap();
 
-        let repo = VectorRepository::new_sqlite(pool);
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool);
 
         let v1 = vec![0.5; 1536];
-        let record = EmbeddingRecord {
+        let record = ConsolidatedMemoryRecord {
             id: "rec_cross_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent_sales".to_string(),
@@ -2696,7 +2696,7 @@ mod override_tests_resolve {
             );"
         ).execute(&pool).await.unwrap();
 
-        let repo = VectorRepository::new_sqlite(pool);
+        let repo = ConsolidatedMemoryRepository::new_sqlite(pool);
 
         let mut v1 = vec![0.0; 10];
         v1[0] = 1.0;
@@ -2706,7 +2706,7 @@ mod override_tests_resolve {
         let timestamp = chrono::Utc::now();
 
         // record_a is winner, but has NO owner_override
-        let record_a = EmbeddingRecord {
+        let record_a = ConsolidatedMemoryRecord {
             id: "winner_a".to_string(),
             tenant_id: "org_override".to_string(),
             agent_id: "test".to_string(),
@@ -2722,7 +2722,7 @@ mod override_tests_resolve {
         };
 
         // record_b is loser, but HAS owner_override
-        let record_b = EmbeddingRecord {
+        let record_b = ConsolidatedMemoryRecord {
             id: "loser_b".to_string(),
             tenant_id: "org_override".to_string(),
             agent_id: "test".to_string(),

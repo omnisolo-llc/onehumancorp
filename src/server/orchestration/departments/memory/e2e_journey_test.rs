@@ -1,4 +1,4 @@
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
+use ohc_builtin_agent::memory_store::{ConsolidatedMemoryRepository, ConsolidatedMemoryRecord};
 use std::sync::Arc;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
@@ -33,13 +33,13 @@ async fn test_full_consolidated_memory_e2e_journey() {
     .await
     .expect("Failed to create consolidated_memory table");
 
-    let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+    let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool.clone()));
 
     let now = chrono::Utc::now();
     let old_stale_time = now - chrono::Duration::days(200);
 
     // 1. Marketing adds a stale product note (Day 0)
-    let marketing_stale = EmbeddingRecord {
+    let marketing_stale = ConsolidatedMemoryRecord {
         id: "marketing_stale_1".to_string(),
         tenant_id: "maya_bakery".to_string(),
         agent_id: "marketing_agent".to_string(),
@@ -56,7 +56,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     repo.upsert(&marketing_stale).await.expect("Failed to upsert marketing record");
 
     // 2. Sales adds a pricing note (Day 1)
-    let sales_day1 = EmbeddingRecord {
+    let sales_day1 = ConsolidatedMemoryRecord {
         id: "sales_pricing_1".to_string(),
         tenant_id: "maya_bakery".to_string(),
         agent_id: "sales_agent".to_string(),
@@ -73,7 +73,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     repo.upsert(&sales_day1).await.expect("Failed to upsert sales day 1 record");
 
     // 3. Marketing adds a product context (Day 2)
-    let marketing_day2 = EmbeddingRecord {
+    let marketing_day2 = ConsolidatedMemoryRecord {
         id: "marketing_product_1".to_string(),
         tenant_id: "maya_bakery".to_string(),
         agent_id: "marketing_agent".to_string(),
@@ -90,7 +90,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     repo.upsert(&marketing_day2).await.expect("Failed to upsert marketing day 2 record");
 
     // 4. Sales updates the pricing (Day 3, generating a conflict with Day 1)
-    let sales_day3 = EmbeddingRecord {
+    let sales_day3 = ConsolidatedMemoryRecord {
         id: "sales_pricing_2".to_string(),
         tenant_id: "maya_bakery".to_string(),
         agent_id: "sales_agent".to_string(),
@@ -120,7 +120,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     repo.prune_stale(now - chrono::Duration::days(180)).await.expect("Failed to prune stale context");
 
     // Cross-department retrieval: Operations fetches pricing context natively via vector repository
-    // We explicitly use the application-level method provided by `VectorRepository` to satisfy the code review
+    // We explicitly use the application-level method provided by `ConsolidatedMemoryRepository` to satisfy the code review
     // requirement that we don't bypass application logic with raw SQL queries.
     let results = repo.cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10).await.expect("Operations cross-department search failed");
 
@@ -164,12 +164,12 @@ async fn test_tenant_isolation_e2e_journey() {
     .await
     .expect("Failed to create consolidated_memory table");
 
-    let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+    let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool.clone()));
 
     let now = chrono::Utc::now();
 
     // 1. Tenant A (Maya's Bakery) memory
-    let tenant_a_record = EmbeddingRecord {
+    let tenant_a_record = ConsolidatedMemoryRecord {
         id: "maya_secret_recipe_1".to_string(),
         tenant_id: "maya_bakery".to_string(),
         agent_id: "operations_agent".to_string(),
@@ -186,7 +186,7 @@ async fn test_tenant_isolation_e2e_journey() {
     repo.upsert(&tenant_a_record).await.expect("Failed to upsert Tenant A record");
 
     // 2. Tenant B (Bob's Burgers) memory
-    let tenant_b_record = EmbeddingRecord {
+    let tenant_b_record = ConsolidatedMemoryRecord {
         id: "bob_secret_recipe_1".to_string(),
         tenant_id: "bobs_burgers".to_string(),
         agent_id: "operations_agent".to_string(),

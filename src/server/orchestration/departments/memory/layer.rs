@@ -1,4 +1,4 @@
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
+use ohc_builtin_agent::memory_store::{ConsolidatedMemoryRepository, ConsolidatedMemoryRecord};
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -38,17 +38,17 @@ mod tests {
         .await
         .expect("Failed to create consolidated_memory table");
 
-        // The VectorRepository's `semantic_search` uses vector functions for Postgres.
+        // The ConsolidatedMemoryRepository's `semantic_search` uses vector functions for Postgres.
         // For SQLite, it uses `vec_distance_cosine`, or falls back to returning all matches or none
         // based on extension availability. Let's provide a mock function so `vec_distance_cosine` succeeds
         // inside `semantic_search` if the repository calls it. If `sqlite-vss` is not available,
         // we can still test the cross-department schema integrity and the logic surrounding context sharing
         // by verifying the records can be stored and retrieved successfully.
 
-        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+        let repo = Arc::new(ConsolidatedMemoryRepository::new_sqlite(pool.clone()));
 
         // Dept A: Customer Success notes customer is unhappy
-        let rec1 = EmbeddingRecord {
+        let rec1 = ConsolidatedMemoryRecord {
             id: "cs_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "cs_agent_1".to_string(),
@@ -65,7 +65,7 @@ mod tests {
         repo.upsert(&rec1).await.expect("Failed to upsert Dept A record");
 
         // Dept B: Operations
-        let rec2 = EmbeddingRecord {
+        let rec2 = ConsolidatedMemoryRecord {
             id: "ops_1".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "ops_agent_1".to_string(),
