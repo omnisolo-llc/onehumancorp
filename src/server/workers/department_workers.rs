@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use crate::db::DB;
-use std::time::Duration;
 use chrono::Utc;
-use uuid::Uuid;
-use sqlx::Row;
 use serde_json::json;
+use sqlx::Row;
+use std::sync::Arc;
+use std::time::Duration;
+use uuid::Uuid;
 
 pub struct OperationsWorker {
     pub db: Arc<DB>,
@@ -64,10 +64,16 @@ impl OperationsWorker {
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                let res = row.map(|r| {
+                    (
+                        r.get::<String, _>("id"),
+                        r.get::<String, _>("tenant_id"),
+                        r.get::<serde_json::Value, _>("payload"),
+                    )
+                });
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
-            },
+            }
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
@@ -87,7 +93,8 @@ impl OperationsWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
-                    let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
+                    let payload: serde_json::Value =
+                        serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
                     sqlx::query(
                         "UPDATE department_tasks SET status = 'IN_PROGRESS', locked_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
@@ -112,42 +119,49 @@ impl OperationsWorker {
             if let Some(items) = items {
                 for item in items {
                     if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
-                        let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
-                            crate::db::DbStore::Postgres => {
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND organization_id = $2")
+                        let (inventory_count, product_name, supplier_name, supplier_contact) =
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND organization_id = $2")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(&db.pool)
                                     .await
                                     .unwrap_or(None);
-                                match row {
-                                    Some(r) => (
-                                        r.try_get::<i32, _>("inventory_count").unwrap_or(10),
-                                        r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
-                                        r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
-                                        r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
-                                    ),
-                                    None => (10, product_id.to_string(), None, None)
+                                    match row {
+                                        Some(r) => (
+                                            r.try_get::<i32, _>("inventory_count").unwrap_or(10),
+                                            r.try_get::<String, _>("name")
+                                                .unwrap_or_else(|_| product_id.to_string()),
+                                            r.try_get::<Option<String>, _>("supplier_name")
+                                                .unwrap_or(None),
+                                            r.try_get::<Option<String>, _>("supplier_contact")
+                                                .unwrap_or(None),
+                                        ),
+                                        None => (10, product_id.to_string(), None, None),
+                                    }
                                 }
-                            },
-                            crate::db::DbStore::Sqlite(pool) => {
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND organization_id = ?")
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND organization_id = ?")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(pool)
                                     .await
                                     .unwrap_or(None);
-                                match row {
-                                    Some(r) => (
-                                        r.try_get::<i32, _>("inventory_count").unwrap_or(10),
-                                        r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
-                                        r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
-                                        r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
-                                    ),
-                                    None => (10, product_id.to_string(), None, None)
+                                    match row {
+                                        Some(r) => (
+                                            r.try_get::<i32, _>("inventory_count").unwrap_or(10),
+                                            r.try_get::<String, _>("name")
+                                                .unwrap_or_else(|_| product_id.to_string()),
+                                            r.try_get::<Option<String>, _>("supplier_name")
+                                                .unwrap_or(None),
+                                            r.try_get::<Option<String>, _>("supplier_contact")
+                                                .unwrap_or(None),
+                                        ),
+                                        None => (10, product_id.to_string(), None, None),
+                                    }
                                 }
-                            }
-                        };
+                            };
 
                         let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
 
@@ -207,12 +221,24 @@ impl OperationsWorker {
 
                             if existing_task == 0 {
                                 let task_id = Uuid::new_v4().to_string();
-                            let description = format!("Inventory for {} is low ({} remaining). Average daily sales: {:.1}. Will run out in {:.1} days.", product_name, inventory_count, daily_sales, days_until_empty);
+                                let description = format!(
+                                    "Inventory for {} is low ({} remaining). Average daily sales: {:.1}. Will run out in {:.1} days.",
+                                    product_name, inventory_count, daily_sales, days_until_empty
+                                );
 
-                            let mut drafted_msg = String::new();
-                            if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
-                                let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                let mut drafted_msg = String::new();
+                                if let (Some(s_name), Some(s_contact)) =
+                                    (&supplier_name, &supplier_contact)
+                                {
+                                    let prompt = format!(
+                                        "Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.",
+                                        s_name,
+                                        s_contact,
+                                        product_name,
+                                        inventory_count,
+                                        daily_sales
+                                    );
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                                         prompt,
                                         from_agent_id: "operations".into(),
@@ -221,13 +247,13 @@ impl OperationsWorker {
                                         drafted_msg = res.into_inner().content;
                                     }
                                 }
-                            }
+                                }
 
-                            if drafted_msg.is_empty() {
-                                drafted_msg = format!("Please restock {}.", product_name);
-                            }
+                                if drafted_msg.is_empty() {
+                                    drafted_msg = format!("Please restock {}.", product_name);
+                                }
 
-                            match &db.store {
+                                match &db.store {
                                 crate::db::DbStore::Postgres => {
                                     if let Err(e) = sqlx::query(
                                         r#"
@@ -298,14 +324,20 @@ impl OperationsWorker {
                         .map_err(|e| e.to_string())?;
 
                     // Check for order milestones
-                    let order_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1::uuid")
-                        .bind(&tenant_id)
-                        .fetch_one(&db.pool)
-                        .await
-                        .unwrap_or(0);
+                    let order_count: i64 = sqlx::query_scalar(
+                        "SELECT COUNT(*) FROM orders WHERE tenant_id = $1::uuid",
+                    )
+                    .bind(&tenant_id)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap_or(0);
 
                     if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
+                        let milestone_title = if order_count == 1 {
+                            "🎉 Milestone: First Sale!"
+                        } else {
+                            "🎉 Milestone: 10th Order!"
+                        };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
                         } else {
@@ -325,7 +357,7 @@ impl OperationsWorker {
                         .execute(&db.pool)
                         .await;
                     }
-                },
+                }
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     sqlx::query(
                         r#"
@@ -347,14 +379,19 @@ impl OperationsWorker {
                         .map_err(|e| e.to_string())?;
 
                     // Check for order milestones (Sqlite)
-                    let order_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = ?")
-                        .bind(&tenant_id)
-                        .fetch_one(sqlite_pool)
-                        .await
-                        .unwrap_or(0);
+                    let order_count: i64 =
+                        sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = ?")
+                            .bind(&tenant_id)
+                            .fetch_one(sqlite_pool)
+                            .await
+                            .unwrap_or(0);
 
                     if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
+                        let milestone_title = if order_count == 1 {
+                            "🎉 Milestone: First Sale!"
+                        } else {
+                            "🎉 Milestone: 10th Order!"
+                        };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
                         } else {
@@ -426,11 +463,21 @@ mod tests {
         "#;
         sqlx::query(schema).execute(&sqlite_pool).await.unwrap();
 
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
-        Arc::new(DB { pool: dummy_pg_pool, store: DbStore::Sqlite(sqlite_pool) })
+        Arc::new(DB {
+            pool: dummy_pg_pool,
+            store: DbStore::Sqlite(sqlite_pool),
+        })
     }
 
     #[tokio::test]
@@ -461,8 +508,12 @@ mod tests {
             // Due to timing in parallel tests, wait and retry fetching the task
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
-                .fetch_optional(pool).await.unwrap();
+            let row = sqlx::query(
+                "SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'",
+            )
+            .fetch_optional(pool)
+            .await
+            .unwrap();
 
             // Ignore the test flakiness related to timing if parallel execution skipped the assert
             if let Some(row) = row {
@@ -510,8 +561,12 @@ mod tests {
         if let DbStore::Sqlite(pool) = &db.store {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
-                .fetch_optional(pool).await.unwrap();
+            let row = sqlx::query(
+                "SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'",
+            )
+            .fetch_optional(pool)
+            .await
+            .unwrap();
 
             if let Some(row) = row {
                 let title: String = row.get("title");
@@ -612,10 +667,17 @@ impl CustomerSuccessWorker {
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
+                let res = row.map(|r| {
+                    (
+                        r.get::<String, _>("id"),
+                        r.get::<String, _>("tenant_id"),
+                        r.get::<serde_json::Value, _>("payload"),
+                        r.get::<String, _>("event_type"),
+                    )
+                });
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
-            },
+            }
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
@@ -626,7 +688,7 @@ impl CustomerSuccessWorker {
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                     ORDER BY created_at ASC
                     LIMIT 1
-                    "#
+                    "#,
                 )
                 .fetch_optional(&mut *tx)
                 .await
@@ -637,7 +699,8 @@ impl CustomerSuccessWorker {
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
                     let event_type: String = r.get("event_type");
-                    let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
+                    let payload: serde_json::Value =
+                        serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
                     sqlx::query(
                         "UPDATE department_tasks SET status = 'IN_PROGRESS', locked_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
@@ -659,9 +722,23 @@ impl CustomerSuccessWorker {
         if let Some((id, tenant_id, payload, event_type)) = task {
             // Draft confirmation message
             let (title, drafted_msg) = if event_type == "OrderProcessed" {
-                ("Draft Confirmation".to_string(), format!("Hi! Your order from OHC Store has been processed and is being prepared for shipment. Thank you!"))
+                (
+                    "Draft Confirmation".to_string(),
+                    format!(
+                        "Hi! Your order from OHC Store has been processed and is being prepared for shipment. Thank you!"
+                    ),
+                )
             } else {
-                ("Draft Reply".to_string(), format!("Hi! Thanks for reaching out. We received your message: '{}'. One of our team members will get back to you shortly.", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")))
+                (
+                    "Draft Reply".to_string(),
+                    format!(
+                        "Hi! Thanks for reaching out. We received your message: '{}'. One of our team members will get back to you shortly.",
+                        payload
+                            .get("message")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("")
+                    ),
+                )
             };
 
             let task_id = Uuid::new_v4().to_string();
@@ -687,7 +764,7 @@ impl CustomerSuccessWorker {
                         .execute(&db.pool)
                         .await
                         .map_err(|e| e.to_string())?;
-                },
+                }
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     let _ = sqlx::query(
                         r#"
@@ -742,13 +819,27 @@ impl PromoterWorker {
             while let Ok(event) = product_rx.recv().await {
                 if event.action == "ProductCreated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
-                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                            let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
-                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
+                        if let Ok(payload_json) =
+                            serde_json::from_str::<serde_json::Value>(&payload_str)
+                        {
+                            let product_name = payload_json
+                                .get("name")
+                                .and_then(|n| n.as_str())
+                                .unwrap_or("a new product");
+                            let org_id = payload_json
+                                .get("organization_id")
+                                .and_then(|o| o.as_str())
+                                .unwrap_or("system");
 
-                            let prompt = format!("Generate a catchy and engaging social media post (Instagram/X) for our new product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.", product_name);
+                            let prompt = format!(
+                                "Generate a catchy and engaging social media post (Instagram/X) for our new product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.",
+                                product_name
+                            );
 
-                            let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+                            let mut drafted_post = format!(
+                                "Check out our new product: {}! 🚀 #newarrival #ohc",
+                                product_name
+                            );
 
                             if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                 let reason_req = ::server_ohc::orchestration::ReasonRequest {
@@ -777,7 +868,7 @@ impl PromoterWorker {
                                     .bind(&drafted_post)
                                     .execute(&db_social.pool)
                                     .await;
-                                },
+                                }
                                 crate::db::DbStore::Sqlite(pool) => {
                                     let _ = sqlx::query(
                                         r#"
@@ -803,12 +894,25 @@ impl PromoterWorker {
             while let Ok(event) = promoter_rx.recv().await {
                 if event.action == "OnboardingStarted" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
-                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                            let session_id = payload_json.get("session_id").and_then(|s| s.as_str()).unwrap_or("").to_string();
-                            let bio = payload_json.get("bio").and_then(|b| b.as_str()).unwrap_or("").to_string();
+                        if let Ok(payload_json) =
+                            serde_json::from_str::<serde_json::Value>(&payload_str)
+                        {
+                            let session_id = payload_json
+                                .get("session_id")
+                                .and_then(|s| s.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            let bio = payload_json
+                                .get("bio")
+                                .and_then(|b| b.as_str())
+                                .unwrap_or("")
+                                .to_string();
 
                             if !session_id.is_empty() {
-                                let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
+                                let prompt = format!(
+                                    "Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.",
+                                    bio
+                                );
 
                                 let mut resolved_payload = serde_json::json!({});
 
@@ -826,7 +930,8 @@ impl PromoterWorker {
                                     }
                                 }
 
-                                let out_payload = serde_json::to_vec(&resolved_payload).unwrap_or_default();
+                                let out_payload =
+                                    serde_json::to_vec(&resolved_payload).unwrap_or_default();
 
                                 let out_event = ::server_ohc::orchestration::TeammateMeshEvent {
                                     agent_id: "promoter".to_string(),
@@ -835,7 +940,10 @@ impl PromoterWorker {
                                     payload: out_payload,
                                     msg_id: uuid::Uuid::new_v4().to_string(),
                                 };
-                                let _ = hub.publish_teammate_event(format!("onboarding_{}", session_id), out_event);
+                                let _ = hub.publish_teammate_event(
+                                    format!("onboarding_{}", session_id),
+                                    out_event,
+                                );
                             }
                         }
                     }

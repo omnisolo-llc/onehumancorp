@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use crate::db::DB;
-use tokio::time::{interval, Duration};
+use std::sync::Arc;
+use tokio::time::{Duration, interval};
 
 pub struct MaintenanceWorker {
     db: DB,
@@ -16,8 +16,12 @@ impl MaintenanceWorker {
             let mut interval = interval(Duration::from_secs(300)); // Every 5 minutes
             loop {
                 interval.tick().await;
-                if let Err(e) = self.db.cleanup_stagnant_missions(3600).await { // 1 hour timeout
-                    tracing::error!("MaintenanceWorker: Failed to cleanup stagnant missions: {}", e);
+                if let Err(e) = self.db.cleanup_stagnant_missions(3600).await {
+                    // 1 hour timeout
+                    tracing::error!(
+                        "MaintenanceWorker: Failed to cleanup stagnant missions: {}",
+                        e
+                    );
                 }
             }
         });

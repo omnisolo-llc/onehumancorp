@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DynamicToolSchema {
@@ -23,7 +23,11 @@ impl McpGateway {
         }
     }
 
-    pub async fn register_tool(&self, spiffe_id: &str, schema: DynamicToolSchema) -> Result<(), String> {
+    pub async fn register_tool(
+        &self,
+        spiffe_id: &str,
+        schema: DynamicToolSchema,
+    ) -> Result<(), String> {
         // Authenticate/Authorize via SPIFFE
         if !spiffe_id.starts_with("spiffe://") {
             return Err("Invalid SPIFFE ID".to_string());
@@ -42,7 +46,12 @@ impl McpGateway {
             .collect()
     }
 
-    pub async fn invoke_tool(&self, spiffe_id: &str, tool_name: &str, args: Value) -> Result<String, String> {
+    pub async fn invoke_tool(
+        &self,
+        spiffe_id: &str,
+        tool_name: &str,
+        args: Value,
+    ) -> Result<String, String> {
         // Find the tool
         let reg = self.registry.read().await;
         let tool = match reg.get(tool_name) {
@@ -59,7 +68,10 @@ impl McpGateway {
 
         // Simulate invoking the tool via HTTP/RPC
         // In a real implementation, this would make an actual network call to tool.endpoint_url
-        Ok(format!("Successfully invoked dynamic tool {} with args: {}", tool_name, args))
+        Ok(format!(
+            "Successfully invoked dynamic tool {} with args: {}",
+            tool_name, args
+        ))
     }
 }
 
@@ -79,7 +91,9 @@ mod tests {
             required_spiffe_id: Some("*".to_string()),
         };
 
-        let result = gateway.register_tool("spiffe://example.org/agent-1", schema).await;
+        let result = gateway
+            .register_tool("spiffe://example.org/agent-1", schema)
+            .await;
         assert!(result.is_ok());
 
         let discovered = gateway.discover_tools("weather").await;
@@ -99,14 +113,29 @@ mod tests {
             required_spiffe_id: Some("spiffe://example.org/finance-agent".to_string()),
         };
 
-        gateway.register_tool("spiffe://example.org/admin", schema).await.unwrap();
+        gateway
+            .register_tool("spiffe://example.org/admin", schema)
+            .await
+            .unwrap();
 
         // Should fail due to wrong SPIFFE ID
-        let res_fail = gateway.invoke_tool("spiffe://example.org/random-agent", "secure_finance", serde_json::json!({})).await;
+        let res_fail = gateway
+            .invoke_tool(
+                "spiffe://example.org/random-agent",
+                "secure_finance",
+                serde_json::json!({}),
+            )
+            .await;
         assert!(res_fail.is_err());
 
         // Should succeed with correct SPIFFE ID
-        let res_ok = gateway.invoke_tool("spiffe://example.org/finance-agent", "secure_finance", serde_json::json!({})).await;
+        let res_ok = gateway
+            .invoke_tool(
+                "spiffe://example.org/finance-agent",
+                "secure_finance",
+                serde_json::json!({}),
+            )
+            .await;
         assert!(res_ok.is_ok());
     }
 }

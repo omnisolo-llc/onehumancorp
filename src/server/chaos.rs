@@ -8,16 +8,29 @@ impl ChaosEngine {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-    use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
+    use sqlx::postgres::PgPoolOptions;
+    use std::time::Duration;
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(Duration::from_millis(50))
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
@@ -28,29 +41,40 @@ mod tests {
         let result = sip_db.prune_stale_missions(threshold).await;
         assert!(result.is_err());
 
-        let upsert_res = sip_db.upsert_mission("test_mission", "PENDING", "data", true).await;
-        assert!(upsert_res.is_err(), "upsert_mission should fail gracefully without panic");
+        let upsert_res = sip_db
+            .upsert_mission("test_mission", "PENDING", "data", true)
+            .await;
+        assert!(
+            upsert_res.is_err(),
+            "upsert_mission should fail gracefully without panic"
+        );
 
         let delegate_res = async {
             let mut tx = pool.begin().await?;
-            sip_db.delegate_mission_with_tx(&mut tx, "test_mission", "PENDING", "data", true, &None).await
-        }.await;
-        assert!(delegate_res.is_err(), "delegate_mission_with_tx should fail gracefully without panic");
+            sip_db
+                .delegate_mission_with_tx(&mut tx, "test_mission", "PENDING", "data", true, &None)
+                .await
+        }
+        .await;
+        assert!(
+            delegate_res.is_err(),
+            "delegate_mission_with_tx should fail gracefully without panic"
+        );
     }
-
 
     // Testing graceful degradation during network latency
     #[tokio::test]
     async fn test_chaos_network_spike_degradation() {
-        let result = tokio::time::timeout(
-            Duration::from_millis(50),
-            async {
-                tokio::time::sleep(Duration::from_millis(500)).await;
-                Ok::<(), String>(())
-            }
-        ).await;
+        let result = tokio::time::timeout(Duration::from_millis(50), async {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            Ok::<(), String>(())
+        })
+        .await;
 
-        assert!(result.is_err(), "Network spike should trigger circuit breaker / timeout");
+        assert!(
+            result.is_err(),
+            "Network spike should trigger circuit breaker / timeout"
+        );
     }
 
     #[tokio::test]
@@ -79,8 +103,11 @@ mod tests {
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1,
                 mission_log TEXT
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let pool_arc = Arc::new(pool);
         let mut tasks = vec![];
@@ -133,9 +160,8 @@ mod tests {
         let max_attempts = 3;
         let mut backoff = Duration::from_millis(10);
 
-        let simulated_acquire = || async {
-            Err::<(), String>("Redis connection dropped or lock held".to_string())
-        };
+        let simulated_acquire =
+            || async { Err::<(), String>("Redis connection dropped or lock held".to_string()) };
 
         loop {
             if simulated_acquire().await.is_ok() {
@@ -170,13 +196,16 @@ mod tests {
         }
 
         let res = async {
-            let mut entries = tokio::fs::read_dir(&temp_dir).await.map_err(|e| e.to_string())?;
+            let mut entries = tokio::fs::read_dir(&temp_dir)
+                .await
+                .map_err(|e| e.to_string())?;
             while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
                 let path = entry.path();
                 let _ = tokio::fs::read_to_string(&path).await;
             }
             Ok::<(), String>(())
-        }.await;
+        }
+        .await;
 
         assert!(res.is_ok(), "Corruption or missing files should not panic");
 
@@ -195,7 +224,11 @@ mod tests {
         use sqlx::sqlite::SqlitePoolOptions;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = SqlitePoolOptions::new().max_connections(1).connect(&uri).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&uri)
+            .await
+            .unwrap();
 
         sqlx::query(
             "CREATE TABLE agent_missions (
@@ -212,29 +245,44 @@ mod tests {
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1,
                 mission_log TEXT
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let mission_id = "test_mission_partition";
-        sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
-            .bind(mission_id)
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')",
+        )
+        .bind(mission_id)
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let thin_client_url = "http://127.0.0.1:1/unreachable";
-        let client = reqwest::Client::builder().timeout(Duration::from_millis(50)).build().unwrap();
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_millis(50))
+            .build()
+            .unwrap();
         let res = client.get(thin_client_url).send().await;
 
-        assert!(res.is_err(), "Network partition should return error without crashing");
+        assert!(
+            res.is_err(),
+            "Network partition should return error without crashing"
+        );
 
-        let mission_status: String = sqlx::query_scalar("SELECT status FROM agent_missions WHERE id = ?")
-            .bind(mission_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let mission_status: String =
+            sqlx::query_scalar("SELECT status FROM agent_missions WHERE id = ?")
+                .bind(mission_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
 
-        assert_eq!(mission_status, "PENDING", "Missions should correctly persist as PENDING");
+        assert_eq!(
+            mission_status, "PENDING",
+            "Missions should correctly persist as PENDING"
+        );
     }
 
     #[tokio::test]
@@ -242,7 +290,10 @@ mod tests {
         // Simulate SQL sync lag by delaying the "synced" status update in a multi-step workflow
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect(&uri).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(&uri)
+            .await
+            .unwrap();
 
         sqlx::query(
             "CREATE TABLE sync_queue (
@@ -250,8 +301,11 @@ mod tests {
                 payload TEXT,
                 synced BOOLEAN DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let item_id = "lag_test_1";
         sqlx::query("INSERT INTO sync_queue (id, payload) VALUES (?, 'data')")
@@ -309,9 +363,13 @@ mod tests {
             // Unreachable
             #[allow(unreachable_code)]
             Ok::<(), String>(())
-        }).await;
+        })
+        .await;
 
-        assert!(result.is_err(), "Service should time out under heavy CPU/Memory load simulation to prevent cascading failure");
+        assert!(
+            result.is_err(),
+            "Service should time out under heavy CPU/Memory load simulation to prevent cascading failure"
+        );
         assert!(start.elapsed() >= timeout_duration);
     }
     #[tokio::test]
@@ -342,14 +400,20 @@ mod tests {
             }
         }
 
-        assert!(drops > 0, "Packet loss simulation should successfully drop packets");
-        assert!(successes > 0, "Packet loss simulation should allow some packets to pass");
+        assert!(
+            drops > 0,
+            "Packet loss simulation should successfully drop packets"
+        );
+        assert!(
+            successes > 0,
+            "Packet loss simulation should allow some packets to pass"
+        );
     }
 
     #[tokio::test]
     async fn test_mesh_message_duplication_resilience() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
 
         let processed_count = Arc::new(AtomicUsize::new(0));
         let processed_count_clone = processed_count.clone();
@@ -368,7 +432,11 @@ mod tests {
             }
         }
 
-        assert_eq!(processed_count.load(Ordering::SeqCst), 1, "Message should only be processed once despite duplication");
+        assert_eq!(
+            processed_count.load(Ordering::SeqCst),
+            1,
+            "Message should only be processed once despite duplication"
+        );
     }
 
     #[tokio::test]
@@ -403,15 +471,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_load_stress_cloud_standalone() {
-        use std::sync::Arc;
-        use tokio::time::Instant;
         use crate::sip::SipDB;
         use sqlx::sqlite::SqlitePoolOptions;
+        use std::sync::Arc;
+        use tokio::time::Instant;
 
         // Shared SQLite for Standalone Stress
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = SqlitePoolOptions::new().max_connections(5).connect(&uri).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&uri)
+            .await
+            .unwrap();
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS agent_missions (
@@ -422,8 +494,11 @@ mod tests {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 tenant_id TEXT DEFAULT 'system',
                 mission_log TEXT
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let sip_db = Arc::new(SipDB::new(pg_pool, "system".to_string()));
@@ -445,10 +520,27 @@ mod tests {
             cloud_latencies.push(h.await.unwrap());
         }
         cloud_latencies.sort();
-        let cp50 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[cloud_latencies.len() / 2] };
-        let cp95 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.95) as usize] };
-        let cp99 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.99) as usize] };
-        tracing::info!("Cloud Stress Results: p50={}us, p95={}us, p99={}us", cp50, cp95, cp99);
+        let cp50 = if cloud_latencies.is_empty() {
+            0
+        } else {
+            cloud_latencies[cloud_latencies.len() / 2]
+        };
+        let cp95 = if cloud_latencies.is_empty() {
+            0
+        } else {
+            cloud_latencies[(cloud_latencies.len() as f64 * 0.95) as usize]
+        };
+        let cp99 = if cloud_latencies.is_empty() {
+            0
+        } else {
+            cloud_latencies[(cloud_latencies.len() as f64 * 0.99) as usize]
+        };
+        tracing::info!(
+            "Cloud Stress Results: p50={}us, p95={}us, p99={}us",
+            cp50,
+            cp95,
+            cp99
+        );
 
         // Standalone Mode Simulation (10 simultaneous business owners)
         let mut standalone_handles = vec![];
@@ -470,10 +562,27 @@ mod tests {
             standalone_latencies.push(h.await.unwrap());
         }
         standalone_latencies.sort();
-        let sp50 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[standalone_latencies.len() / 2] };
-        let sp95 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.95) as usize] };
-        let sp99 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.99) as usize] };
-        tracing::info!("Standalone Stress Results: p50={}us, p95={}us, p99={}us", sp50, sp95, sp99);
+        let sp50 = if standalone_latencies.is_empty() {
+            0
+        } else {
+            standalone_latencies[standalone_latencies.len() / 2]
+        };
+        let sp95 = if standalone_latencies.is_empty() {
+            0
+        } else {
+            standalone_latencies[(standalone_latencies.len() as f64 * 0.95) as usize]
+        };
+        let sp99 = if standalone_latencies.is_empty() {
+            0
+        } else {
+            standalone_latencies[(standalone_latencies.len() as f64 * 0.99) as usize]
+        };
+        tracing::info!(
+            "Standalone Stress Results: p50={}us, p95={}us, p99={}us",
+            sp50,
+            sp95,
+            sp99
+        );
 
         assert!(cp50 >= 0);
         assert!(sp50 >= 0);
@@ -489,9 +598,16 @@ mod tests {
             // Simulate a stalled chaos operation (e.g., dropped packets on agent connection)
             tokio::time::sleep(Duration::from_millis(150)).await;
             Ok::<(), String>(())
-        }).await;
+        })
+        .await;
 
-        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
-        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
+        assert!(
+            result.is_err(),
+            "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure"
+        );
+        assert!(
+            start.elapsed() >= timeout_duration,
+            "Timeout enforcement should take at least the configured duration"
+        );
     }
 }

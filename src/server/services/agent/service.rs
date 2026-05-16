@@ -1,9 +1,9 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-use std::sync::{Arc, RwLock};
-use chrono::Utc;
 use crate::hub::Hub;
+use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+use ::server_ohc::orchestration::*;
+use chrono::Utc;
+use std::sync::{Arc, RwLock};
+use tonic::{Request, Response, Status};
 
 pub struct MyAgentManagerService {
     hub: Arc<Hub>,
@@ -36,15 +36,25 @@ impl MyAgentManagerService {
             async {
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
-                    (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-                }).await.unwrap_or((0.0, 0, vec![]))
+                    (
+                        cost_auditor.get_total_cost(),
+                        cost_auditor.get_total_tokens(),
+                        cost_auditor.get_agent_costs_snapshot(),
+                    )
+                })
+                .await
+                .unwrap_or((0.0, 0, vec![]))
             }
         );
         let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
         let mut agent_costs = Vec::new();
         for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
-            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+            let pct = if total_cost > 0.0 {
+                (cost / total_cost) as f32
+            } else {
+                0.0
+            };
             agent_costs.push(AgentCostSummary {
                 name,
                 cost_usd: cost,
@@ -64,7 +74,10 @@ impl MyAgentManagerService {
         for a in agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
-        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
+        let statuses = status_map
+            .into_iter()
+            .map(|(status, count)| StatusCount { status, count })
+            .collect();
 
         let snapshot = DashboardSnapshot {
             meetings: meetings.to_vec(),
@@ -75,7 +88,13 @@ impl MyAgentManagerService {
             queue_length: 0,
             updated_at_unix: Utc::now().timestamp(),
         };
-        self.snapshot_cache.set(&cache_key, snapshot.clone(), std::time::Duration::from_secs(5)).await;
+        self.snapshot_cache
+            .set(
+                &cache_key,
+                snapshot.clone(),
+                std::time::Duration::from_secs(5),
+            )
+            .await;
         Ok(snapshot)
     }
 }
@@ -86,9 +105,14 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<HireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
         let req = request.into_inner();
         if req.name.is_empty() || req.role.is_empty() {
             return Err(Status::invalid_argument("name and role are required"));
@@ -101,11 +125,17 @@ impl AgentManagerService for MyAgentManagerService {
             role: req.role,
             organization_id: org_id.clone(),
             status: "IDLE".to_string(),
-            provider_type: if req.provider_type.is_empty() { "builtin".to_string() } else { req.provider_type },
+            provider_type: if req.provider_type.is_empty() {
+                "builtin".to_string()
+            } else {
+                req.provider_type
+            },
         };
 
         self.hub.register_agent(agent);
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
+        self.snapshot_cache
+            .invalidate(&format!("agent_dashboard_snapshot_{}", org_id))
+            .await;
         Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
@@ -113,16 +143,23 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<FireAgentRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
         let req = request.into_inner();
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agentId is required"));
         }
 
         self.hub.fire_agent(&req.agent_id);
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
+        self.snapshot_cache
+            .invalidate(&format!("agent_dashboard_snapshot_{}", org_id))
+            .await;
         Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
@@ -130,19 +167,32 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<DelegateTaskRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
         let req = request.into_inner();
-        let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
-        
+        let task = req
+            .task
+            .ok_or_else(|| Status::invalid_argument("task is required"))?;
+
         if req.from_agent_id.is_empty() || req.to_agent_id.is_empty() {
-            return Err(Status::invalid_argument("from_agent_id and to_agent_id are required"));
+            return Err(Status::invalid_argument(
+                "from_agent_id and to_agent_id are required",
+            ));
         }
 
-        self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
+        self.hub
+            .clone()
+            .delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
+        self.snapshot_cache
+            .invalidate(&format!("agent_dashboard_snapshot_{}", org_id))
+            .await;
         Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
@@ -151,8 +201,16 @@ impl AgentManagerService for MyAgentManagerService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AgentProvidersResponse>, Status> {
         let providers = vec![
-            AgentProviderInfo { r#type: "builtin".to_string(), name: "Builtin".to_string(), authenticated: true },
-            AgentProviderInfo { r#type: "claude".to_string(), name: "Claude".to_string(), authenticated: false },
+            AgentProviderInfo {
+                r#type: "builtin".to_string(),
+                name: "Builtin".to_string(),
+                authenticated: true,
+            },
+            AgentProviderInfo {
+                r#type: "claude".to_string(),
+                name: "Claude".to_string(),
+                authenticated: false,
+            },
         ];
         Ok(Response::new(AgentProvidersResponse { providers }))
     }
@@ -175,13 +233,17 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<IdentitiesResponse>, Status> {
         let agents = self.hub.get_agents();
         let now = Utc::now();
-        let identities = agents.iter().map(|a| a.clone()).map(|a| AgentIdentity {
-            agent_id: a.id.clone(),
-            svid: format!("spiffe://onehumancorp.io/system/{}", a.id),
-            trust_domain: "onehumancorp.io".to_string(),
-            issued_at_unix: now.timestamp(),
-            expires_at_unix: (now + chrono::Duration::hours(24)).timestamp(),
-        }).collect();
+        let identities = agents
+            .iter()
+            .map(|a| a.clone())
+            .map(|a| AgentIdentity {
+                agent_id: a.id.clone(),
+                svid: format!("spiffe://onehumancorp.io/system/{}", a.id),
+                trust_domain: "onehumancorp.io".to_string(),
+                issued_at_unix: now.timestamp(),
+                expires_at_unix: (now + chrono::Duration::hours(24)).timestamp(),
+            })
+            .collect();
 
         Ok(Response::new(IdentitiesResponse { identities }))
     }
@@ -191,7 +253,9 @@ impl AgentManagerService for MyAgentManagerService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<SkillsResponse>, Status> {
         let skills = self.skills.read().unwrap();
-        Ok(Response::new(SkillsResponse { skills: skills.clone() }))
+        Ok(Response::new(SkillsResponse {
+            skills: skills.clone(),
+        }))
     }
 
     async fn import_skill(
@@ -209,7 +273,11 @@ impl AgentManagerService for MyAgentManagerService {
             name: req.name,
             domain: req.domain,
             description: req.description,
-            source: if req.source.is_empty() { "custom".to_string() } else { req.source },
+            source: if req.source.is_empty() {
+                "custom".to_string()
+            } else {
+                req.source
+            },
             author: req.author,
             roles: req.roles,
             imported_at_unix: now.timestamp(),
@@ -226,16 +294,23 @@ impl AgentManagerService for MyAgentManagerService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<SnapshotsResponse>, Status> {
         let snapshots = self.snapshots.read().unwrap();
-        Ok(Response::new(SnapshotsResponse { snapshots: snapshots.clone() }))
+        Ok(Response::new(SnapshotsResponse {
+            snapshots: snapshots.clone(),
+        }))
     }
 
     async fn create_snapshot(
         &self,
         request: Request<CreateSnapshotRequest>,
     ) -> Result<Response<OrgSnapshot>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
         let req = request.into_inner();
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
@@ -280,9 +355,14 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id_req = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        let org_id_req = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
         Ok(Response::new(self.get_snapshot(&org_id_req).await?))
     }
 
@@ -290,9 +370,14 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         request: Request<RestoreSnapshotRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
         let req = request.into_inner();
         if req.snapshot_id.is_empty() {
             return Err(Status::invalid_argument("snapshotId is required"));

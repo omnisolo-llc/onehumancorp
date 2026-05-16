@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use crate::db::{DB, DbStore};
 use super::models::Task;
+use crate::db::{DB, DbStore};
 use chrono::Utc;
+use std::sync::Arc;
 
 pub struct TaskRepository {
     db: Arc<DB>,
@@ -21,7 +21,7 @@ impl TaskRepository {
                         id, organization_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                    "#
+                    "#,
                 )
                 .bind(&task.id)
                 .bind(&task.organization_id)
@@ -43,7 +43,7 @@ impl TaskRepository {
                         id, organization_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    "#
+                    "#,
                 )
                 .bind(&task.id)
                 .bind(&task.organization_id)
@@ -64,39 +64,40 @@ impl TaskRepository {
 
     pub async fn get_tasks_by_org(&self, organization_id: &str) -> Result<Vec<Task>, String> {
         let tasks = match &self.db.store {
-            DbStore::Postgres => {
-                sqlx::query_as::<_, Task>(
-                    r#"
+            DbStore::Postgres => sqlx::query_as::<_, Task>(
+                r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
                     WHERE organization_id = $1
-                    "#
-                )
-                .bind(organization_id)
-                .fetch_all(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?
-            }
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query_as::<_, Task>(
-                    r#"
+                    "#,
+            )
+            .bind(organization_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?,
+            DbStore::Sqlite(sqlite_pool) => sqlx::query_as::<_, Task>(
+                r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
                     WHERE organization_id = ?
-                    "#
-                )
-                .bind(organization_id)
-                .fetch_all(sqlite_pool)
-                .await
-                .map_err(|e| e.to_string())?
-            }
+                    "#,
+            )
+            .bind(organization_id)
+            .fetch_all(sqlite_pool)
+            .await
+            .map_err(|e| e.to_string())?,
         };
         Ok(tasks)
     }
 
-    pub async fn update_task_status(&self, organization_id: &str, task_id: &str, new_status: &str) -> Result<(), String> {
+    pub async fn update_task_status(
+        &self,
+        organization_id: &str,
+        task_id: &str,
+        new_status: &str,
+    ) -> Result<(), String> {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -105,7 +106,7 @@ impl TaskRepository {
                     UPDATE tasks
                     SET status = $1, updated_at = $2
                     WHERE id = $3 AND organization_id = $4
-                    "#
+                    "#,
                 )
                 .bind(new_status)
                 .bind(now)
@@ -125,7 +126,7 @@ impl TaskRepository {
                     UPDATE tasks
                     SET status = ?, updated_at = ?
                     WHERE id = ? AND organization_id = ?
-                    "#
+                    "#,
                 )
                 .bind(new_status)
                 .bind(now)
@@ -169,13 +170,27 @@ mod tests {
                 updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
             );
-            "#
+            "#,
         )
         .execute(&pool)
         .await
         .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
@@ -236,12 +251,16 @@ mod tests {
 
         repo.create_task(task).await.unwrap();
 
-        repo.update_task_status(&org_id, "task_1", "IN_PROGRESS").await.unwrap();
+        repo.update_task_status(&org_id, "task_1", "IN_PROGRESS")
+            .await
+            .unwrap();
 
         let tasks = repo.get_tasks_by_org(&org_id).await.unwrap();
         assert_eq!(tasks[0].status, "IN_PROGRESS");
 
-        let result = repo.update_task_status("wrong_org", "task_1", "COMPLETED").await;
+        let result = repo
+            .update_task_status("wrong_org", "task_1", "COMPLETED")
+            .await;
         assert!(result.is_err());
 
         let tasks_after = repo.get_tasks_by_org(&org_id).await.unwrap();

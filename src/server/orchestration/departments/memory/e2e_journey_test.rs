@@ -1,12 +1,13 @@
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
-use std::sync::Arc;
+use ohc_builtin_agent::memory_store::{EmbeddingRecord, VectorRepository};
+use sqlx::Row;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
-use sqlx::Row;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_full_consolidated_memory_e2e_journey() {
-    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
+    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
+        .expect("Failed to parse connection string");
     let pool = SqlitePoolOptions::new()
         .connect_with(conn_opts)
         .await
@@ -27,7 +28,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
             reliability_score INTEGER DEFAULT 50,
             owner_override BOOLEAN DEFAULT FALSE,
             metadata TEXT
-        );"
+        );",
     )
     .execute(&pool)
     .await
@@ -53,7 +54,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
         owner_override: false,
         metadata: None,
     };
-    repo.upsert(&marketing_stale).await.expect("Failed to upsert marketing record");
+    repo.upsert(&marketing_stale)
+        .await
+        .expect("Failed to upsert marketing record");
 
     // 2. Sales adds a pricing note (Day 1)
     let sales_day1 = EmbeddingRecord {
@@ -70,7 +73,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
         owner_override: false,
         metadata: None,
     };
-    repo.upsert(&sales_day1).await.expect("Failed to upsert sales day 1 record");
+    repo.upsert(&sales_day1)
+        .await
+        .expect("Failed to upsert sales day 1 record");
 
     // 3. Marketing adds a product context (Day 2)
     let marketing_day2 = EmbeddingRecord {
@@ -87,7 +92,9 @@ async fn test_full_consolidated_memory_e2e_journey() {
         owner_override: false,
         metadata: None,
     };
-    repo.upsert(&marketing_day2).await.expect("Failed to upsert marketing day 2 record");
+    repo.upsert(&marketing_day2)
+        .await
+        .expect("Failed to upsert marketing day 2 record");
 
     // 4. Sales updates the pricing (Day 3, generating a conflict with Day 1)
     let sales_day3 = EmbeddingRecord {
@@ -105,40 +112,71 @@ async fn test_full_consolidated_memory_e2e_journey() {
         owner_override: false,
         metadata: None,
     };
-    repo.upsert(&sales_day3).await.expect("Failed to upsert sales day 3 record");
+    repo.upsert(&sales_day3)
+        .await
+        .expect("Failed to upsert sales day 3 record");
 
     // Verify initial count (should be 4)
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM consolidated_memory")
-        .fetch_one(&pool).await.expect("Failed to query count");
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to query count");
     assert_eq!(count, 4, "Initial state should have 4 records");
 
     // Run Auto-resolution (resolves the conflict between sales_day1 and sales_day3)
-    let resolved = repo.auto_resolve_conflicts().await.expect("Failed to auto-resolve conflicts");
+    let resolved = repo
+        .auto_resolve_conflicts()
+        .await
+        .expect("Failed to auto-resolve conflicts");
     assert_eq!(resolved, 1, "Exactly 1 conflict should be resolved");
 
     // Run Pruning process (removes stale note older than 180 days)
-    repo.prune_stale(now - chrono::Duration::days(180)).await.expect("Failed to prune stale context");
+    repo.prune_stale(now - chrono::Duration::days(180))
+        .await
+        .expect("Failed to prune stale context");
 
     // Cross-department retrieval: Operations fetches pricing context natively via vector repository
     // We explicitly use the application-level method provided by `VectorRepository` to satisfy the code review
     // requirement that we don't bypass application logic with raw SQL queries.
-    let results = repo.cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10).await.expect("Operations cross-department search failed");
+    let results = repo
+        .cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10)
+        .await
+        .expect("Operations cross-department search failed");
 
-    assert!(!results.is_empty(), "Cross-department search should successfully return results");
+    assert!(
+        !results.is_empty(),
+        "Cross-department search should successfully return results"
+    );
 
     let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
-    assert!(ids.contains(&"marketing_product_1".to_string()), "Marketing product should be retrieved");
-    assert!(ids.contains(&"sales_pricing_2".to_string()), "Winner pricing should be retrieved");
+    assert!(
+        ids.contains(&"marketing_product_1".to_string()),
+        "Marketing product should be retrieved"
+    );
+    assert!(
+        ids.contains(&"sales_pricing_2".to_string()),
+        "Winner pricing should be retrieved"
+    );
 
     // Specific validation for the pricing conflict winner
-    let winner = results.iter().find(|r| r.id == "sales_pricing_2").expect("Winner record not found in search results");
-    assert_eq!(winner.content, "Maya's cake price is $55", "Operations should correctly see the latest $55 price");
-    assert_eq!(winner.agent_id, "sales_agent", "Operations queried a record successfully created by Sales");
+    let winner = results
+        .iter()
+        .find(|r| r.id == "sales_pricing_2")
+        .expect("Winner record not found in search results");
+    assert_eq!(
+        winner.content, "Maya's cake price is $55",
+        "Operations should correctly see the latest $55 price"
+    );
+    assert_eq!(
+        winner.agent_id, "sales_agent",
+        "Operations queried a record successfully created by Sales"
+    );
 }
 
 #[tokio::test]
 async fn test_tenant_isolation_e2e_journey() {
-    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
+    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
+        .expect("Failed to parse connection string");
     let pool = SqlitePoolOptions::new()
         .connect_with(conn_opts)
         .await
@@ -158,7 +196,7 @@ async fn test_tenant_isolation_e2e_journey() {
             reliability_score INTEGER DEFAULT 50,
             owner_override BOOLEAN DEFAULT FALSE,
             metadata TEXT
-        );"
+        );",
     )
     .execute(&pool)
     .await
@@ -183,7 +221,9 @@ async fn test_tenant_isolation_e2e_journey() {
         owner_override: true,
         metadata: None,
     };
-    repo.upsert(&tenant_a_record).await.expect("Failed to upsert Tenant A record");
+    repo.upsert(&tenant_a_record)
+        .await
+        .expect("Failed to upsert Tenant A record");
 
     // 2. Tenant B (Bob's Burgers) memory
     let tenant_b_record = EmbeddingRecord {
@@ -200,15 +240,29 @@ async fn test_tenant_isolation_e2e_journey() {
         owner_override: true,
         metadata: None,
     };
-    repo.upsert(&tenant_b_record).await.expect("Failed to upsert Tenant B record");
+    repo.upsert(&tenant_b_record)
+        .await
+        .expect("Failed to upsert Tenant B record");
 
     // Verify Tenant A search only gets Tenant A records
-    let results_a = repo.cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10).await.expect("Tenant A search failed");
+    let results_a = repo
+        .cross_department_search("maya_bakery", &[0.5, 0.5, 0.5], 10)
+        .await
+        .expect("Tenant A search failed");
     assert_eq!(results_a.len(), 1, "Tenant A should only see 1 record");
-    assert_eq!(results_a[0].id, "maya_secret_recipe_1", "Tenant A should see their own record");
+    assert_eq!(
+        results_a[0].id, "maya_secret_recipe_1",
+        "Tenant A should see their own record"
+    );
 
     // Verify Tenant B search only gets Tenant B records
-    let results_b = repo.cross_department_search("bobs_burgers", &[0.5, 0.5, 0.5], 10).await.expect("Tenant B search failed");
+    let results_b = repo
+        .cross_department_search("bobs_burgers", &[0.5, 0.5, 0.5], 10)
+        .await
+        .expect("Tenant B search failed");
     assert_eq!(results_b.len(), 1, "Tenant B should only see 1 record");
-    assert_eq!(results_b[0].id, "bob_secret_recipe_1", "Tenant B should see their own record");
+    assert_eq!(
+        results_b[0].id, "bob_secret_recipe_1",
+        "Tenant B should see their own record"
+    );
 }

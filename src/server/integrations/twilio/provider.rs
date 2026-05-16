@@ -1,8 +1,6 @@
-use super::client::{TwilioClientWrapper, RealTwilioClient};
+use super::client::{RealTwilioClient, TwilioClientWrapper};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
-
-
 
 pub struct TwilioProvider {
     client: Arc<dyn TwilioClientWrapper>,
@@ -51,8 +49,8 @@ impl TwilioProvider {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     struct MockTwilioClient {
         sent_messages: Arc<AtomicUsize>,
@@ -69,10 +67,15 @@ mod tests {
     #[tokio::test]
     async fn test_twilio_provider_integration() {
         let sent = Arc::new(AtomicUsize::new(0));
-        let mock = Arc::new(MockTwilioClient { sent_messages: sent.clone() });
+        let mock = Arc::new(MockTwilioClient {
+            sent_messages: sent.clone(),
+        });
         let provider = TwilioProvider::with_client(mock);
 
-        provider.send_sms("+1234567890", "+0987654321", "Test message").await.unwrap();
+        provider
+            .send_sms("+1234567890", "+0987654321", "Test message")
+            .await
+            .unwrap();
         assert_eq!(sent.load(Ordering::SeqCst), 1);
     }
 

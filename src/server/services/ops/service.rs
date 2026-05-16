@@ -1,12 +1,12 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::ops_service_server::OpsService;
-use std::sync::{Arc, RwLock};
-use chrono::Utc;
 use crate::hub::Hub;
-use tokio_stream::Stream;
+use ::server_ohc::orchestration::ops_service_server::OpsService;
+use ::server_ohc::orchestration::*;
+use chrono::Utc;
 use std::pin::Pin;
+use std::sync::{Arc, RwLock};
+use tokio_stream::Stream;
 use tokio_stream::StreamExt;
+use tonic::{Request, Response, Status};
 
 pub struct MyOpsService {
     hub: Arc<Hub>,
@@ -46,9 +46,11 @@ impl OpsService for MyOpsService {
     ) -> Result<Response<Incident>, Status> {
         let req = request.into_inner();
         if req.severity.is_empty() || req.summary.is_empty() {
-            return Err(Status::invalid_argument("severity and summary are required"));
+            return Err(Status::invalid_argument(
+                "severity and summary are required",
+            ));
         }
-        
+
         let now = Utc::now();
         let incident = Incident {
             id: format!("inc-{}", now.timestamp()),
@@ -60,10 +62,10 @@ impl OpsService for MyOpsService {
             updated_at_unix: now.timestamp(),
             resolution_plan_id: String::new(),
         };
-        
+
         let mut incidents = self.incidents.write().unwrap();
         incidents.push(incident.clone());
-        
+
         Ok(Response::new(incident))
     }
 
@@ -73,13 +75,15 @@ impl OpsService for MyOpsService {
     ) -> Result<Response<Incident>, Status> {
         let req = request.into_inner();
         if req.incident_id.is_empty() || req.status.is_empty() {
-            return Err(Status::invalid_argument("incidentId and status are required"));
+            return Err(Status::invalid_argument(
+                "incidentId and status are required",
+            ));
         }
-        
+
         let mut incidents = self.incidents.write().unwrap();
         let mut found = false;
         let mut updated = None;
-        
+
         for inc in incidents.iter_mut() {
             if inc.id == req.incident_id {
                 inc.status = req.status.clone();
@@ -95,11 +99,11 @@ impl OpsService for MyOpsService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("incident not found"));
         }
-        
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -121,7 +125,7 @@ impl OpsService for MyOpsService {
         if req.role_id.is_empty() {
             return Err(Status::invalid_argument("roleId is required"));
         }
-        
+
         let profile = ComputeProfile {
             role_id: req.role_id,
             min_vram_gb: req.min_vram_gb,
@@ -129,10 +133,10 @@ impl OpsService for MyOpsService {
             scheduling_priority: req.scheduling_priority,
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut profiles = self.compute_profiles.write().unwrap();
         profiles.push(profile.clone());
-        
+
         Ok(Response::new(profile))
     }
 
@@ -144,7 +148,7 @@ impl OpsService for MyOpsService {
         if req.region.is_empty() {
             return Err(Status::invalid_argument("region is required"));
         }
-        
+
         Ok(Response::new(ClusterStatus {
             region: req.region,
             status: "healthy".to_string(),
@@ -170,9 +174,11 @@ impl OpsService for MyOpsService {
     ) -> Result<Response<BudgetAlert>, Status> {
         let req = request.into_inner();
         if req.threshold_usd <= 0.0 {
-            return Err(Status::invalid_argument("thresholdUsd must be greater than zero"));
+            return Err(Status::invalid_argument(
+                "thresholdUsd must be greater than zero",
+            ));
         }
-        
+
         let alert = BudgetAlert {
             id: format!("alert-{}", Utc::now().timestamp()),
             organization_id: req.organization_id,
@@ -183,10 +189,10 @@ impl OpsService for MyOpsService {
             triggered: false,
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut alerts = self.budget_alerts.write().unwrap();
         alerts.push(alert.clone());
-        
+
         Ok(Response::new(alert))
     }
 
@@ -208,7 +214,7 @@ impl OpsService for MyOpsService {
         if req.name.is_empty() {
             return Err(Status::invalid_argument("name is required"));
         }
-        
+
         let now = Utc::now();
         let pipeline = Pipeline {
             id: format!("pipeline-{}", now.timestamp()),
@@ -220,10 +226,10 @@ impl OpsService for MyOpsService {
             created_at_unix: now.timestamp(),
             updated_at_unix: now.timestamp(),
         };
-        
+
         let mut pipelines = self.pipelines.write().unwrap();
         pipelines.push(pipeline.clone());
-        
+
         Ok(Response::new(pipeline))
     }
 
@@ -235,11 +241,13 @@ impl OpsService for MyOpsService {
         let mut pipelines = self.pipelines.write().unwrap();
         let mut found = false;
         let mut updated = None;
-        
+
         for p in pipelines.iter_mut() {
             if p.id == req.pipeline_id {
                 if p.status != "STAGING" {
-                    return Err(Status::failed_precondition("pipeline must be in STAGING status to promote"));
+                    return Err(Status::failed_precondition(
+                        "pipeline must be in STAGING status to promote",
+                    ));
                 }
                 p.status = "PROMOTED".to_string();
                 p.updated_at_unix = Utc::now().timestamp();
@@ -248,11 +256,11 @@ impl OpsService for MyOpsService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("pipeline not found"));
         }
-        
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -264,7 +272,7 @@ impl OpsService for MyOpsService {
         let mut pipelines = self.pipelines.write().unwrap();
         let mut found = false;
         let mut updated = None;
-        
+
         for p in pipelines.iter_mut() {
             if p.id == req.pipeline_id {
                 p.status = req.status.clone();
@@ -277,11 +285,11 @@ impl OpsService for MyOpsService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("pipeline not found"));
         }
-        
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -289,10 +297,14 @@ impl OpsService for MyOpsService {
         &self,
         request: Request<ScaleRequest>,
     ) -> Result<Response<ScaleResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
 
         let req = request.into_inner();
         if req.role.is_empty() {
@@ -336,7 +348,8 @@ impl OpsService for MyOpsService {
                 if i < idle_agent_ids.len() as i32 {
                     self.hub.fire_agent(&idle_agent_ids[i as usize]);
                 } else if (i as usize - idle_agent_ids.len()) < active_agent_ids.len() {
-                    self.hub.fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()]);
+                    self.hub
+                        .fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()]);
                 }
             }
         }
@@ -348,32 +361,54 @@ impl OpsService for MyOpsService {
         }))
     }
 
-    type StreamScaleEventsStream = Pin<Box<dyn Stream<Item = Result<ScaleEvent, Status>> + Send + 'static>>;
+    type StreamScaleEventsStream =
+        Pin<Box<dyn Stream<Item = Result<ScaleEvent, Status>> + Send + 'static>>;
 
     async fn stream_scale_events(
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<Self::StreamScaleEventsStream>, Status> {
         let events = vec![
-            ScaleEvent { event: "AI Workforce Manager: Reconciling Team Member resource.".to_string(), status: "INFO".to_string() },
-            ScaleEvent { event: "AI Workforce Manager: Allocating compute profiles...".to_string(), status: "INFO".to_string() },
-            ScaleEvent { event: "AI Workforce Manager: Provisioning SPIFFE identities...".to_string(), status: "INFO".to_string() },
-            ScaleEvent { event: "AI Workforce Manager: Integrating with orchestration Hub...".to_string(), status: "INFO".to_string() },
-            ScaleEvent { event: "AgentHired".to_string(), status: "Ready".to_string() },
+            ScaleEvent {
+                event: "AI Workforce Manager: Reconciling Team Member resource.".to_string(),
+                status: "INFO".to_string(),
+            },
+            ScaleEvent {
+                event: "AI Workforce Manager: Allocating compute profiles...".to_string(),
+                status: "INFO".to_string(),
+            },
+            ScaleEvent {
+                event: "AI Workforce Manager: Provisioning SPIFFE identities...".to_string(),
+                status: "INFO".to_string(),
+            },
+            ScaleEvent {
+                event: "AI Workforce Manager: Integrating with orchestration Hub...".to_string(),
+                status: "INFO".to_string(),
+            },
+            ScaleEvent {
+                event: "AgentHired".to_string(),
+                status: "Ready".to_string(),
+            },
         ];
 
         let stream = tokio_stream::iter(events).map(|e| Ok(e));
-        Ok(Response::new(Box::pin(stream) as Self::StreamScaleEventsStream))
+        Ok(Response::new(
+            Box::pin(stream) as Self::StreamScaleEventsStream
+        ))
     }
 
     async fn prune_missions(
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<PruneMissionsResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-
+        let org_id = if tenant_id.is_empty() {
+            "system".to_string()
+        } else {
+            tenant_id
+        };
 
         let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), org_id);
 

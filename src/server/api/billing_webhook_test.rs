@@ -1,12 +1,9 @@
-use axum::{
-    routing::post,
-    Router,
-};
+use axum::{Router, routing::post};
 use serde_json::json;
 
-use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
-use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
+use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
 use crate::db::DB;
+use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 
 #[tokio::test]
 async fn test_stripe_webhook_handler_completed() {
@@ -64,7 +61,12 @@ async fn test_stripe_webhook_handler_completed() {
     });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -135,7 +137,12 @@ async fn test_stripe_webhook_handler_deleted() {
     });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -151,14 +158,14 @@ async fn test_stripe_webhook_handler_deleted() {
     assert_eq!(row.0, "Free");
 }
 
-
-
 #[tokio::test]
 async fn test_mercadopago_webhook_handler_payment_created() {
+    use crate::api::billing_webhook::{
+        MercadoPagoEvent, MercadoPagoEventData, WebhookState, mercadopago_webhook_handler,
+    };
+    use axum::extract::{Json, State};
     use axum::http::StatusCode;
-    use axum::extract::{State, Json};
     use axum::response::IntoResponse;
-    use crate::api::billing_webhook::{mercadopago_webhook_handler, WebhookState, MercadoPagoEvent, MercadoPagoEventData};
     use std::sync::Arc;
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
@@ -197,6 +204,8 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         },
     };
 
-    let response = mercadopago_webhook_handler(State(state), Json(event)).await.into_response();
+    let response = mercadopago_webhook_handler(State(state), Json(event))
+        .await
+        .into_response();
     assert_eq!(response.status(), StatusCode::OK);
 }
