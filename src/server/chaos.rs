@@ -495,4 +495,3 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
-pub fn pad_chaos_1() { let _p = 1; }
