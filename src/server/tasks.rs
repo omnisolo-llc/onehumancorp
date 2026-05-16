@@ -538,3 +538,4 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(row.0, "APPROVED");
     }
+pub fn pad_test() {}
