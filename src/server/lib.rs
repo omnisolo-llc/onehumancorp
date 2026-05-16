@@ -1609,6 +1609,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <!DOCTYPE html>
             <html>
                 <head>
+                    <meta charset="UTF-8">
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
@@ -1719,9 +1720,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+                        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
                     </style>
                 </head>
                 <body>
+                    <!-- Global Milestones Toast Notifications -->
+                    <div id="milestone-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
                         <a onclick="showScreen('agents-screen')">Agents</a>
@@ -1761,8 +1766,51 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <button onclick="document.getElementById('share-business-modal').style.display='block'">Share my business</button>
+                            <button onclick="showScreen('social-agent-screen')">Social Agent</button>
+                            <button onclick="showScreen('email-marketing-screen')">Email Marketing</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
+                        </div>
+
+                        <!-- Upgrade Prompt Modal (Soft Paywall) -->
+                        <div id="upgrade-prompt-modal" class="screen glass" style="display: none; position: fixed; top: 20%; left: 10%; width: 80%; z-index: 1001; height: auto; padding: 20px;">
+                            <div style="text-align: center;">
+                                <h2 style="margin-top: 0;">Limit Reached</h2>
+                                <p>You've reached the 10 product limit on the Free tier. Great job growing your business!</p>
+                                <p>Upgrade to the Starter tier for unlimited products and a custom domain.</p>
+                                <button style="width: 100%; margin-top: 15px;" onclick="document.getElementById('upgrade-prompt-modal').style.display='none'; showScreen('pricing-screen')">View Upgrade Options</button>
+                                <button class="secondary" style="width: 100%; margin-top: 10px;" onclick="document.getElementById('upgrade-prompt-modal').style.display='none'">Maybe Later</button>
+                            </div>
+                        </div>
+
+                        <!-- Business Share & Embed Modal -->
+                        <div id="share-business-modal" class="screen glass" style="display: none; position: fixed; top: 10%; left: 10%; width: 80%; z-index: 1000; height: auto; max-height: 80vh; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h2>Share Your Store</h2>
+                                <button class="secondary" style="margin: 0; padding: 5px 10px;" onclick="document.getElementById('share-business-modal').style.display='none'">✕</button>
+                            </div>
+
+                            <div class="card glass" style="margin-top: 15px;">
+                                <h3>Preview</h3>
+                                <div style="border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; overflow: hidden; margin-top: 10px;">
+                                    <div style="height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                                        <h1 style="color: white; margin: 0; font-size: 24px;">My Awesome Store</h1>
+                                    </div>
+                                    <div style="padding: 15px; background: rgba(0,0,0,0.5);">
+                                        <h4 style="margin: 0 0 5px 0;">Welcome to our premium storefront</h4>
+                                        <p style="margin: 0; font-size: 0.9em; color: #ccc;">ohc.business/my-awesome-store</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card glass" style="margin-top: 15px;">
+                                <h3>Share via</h3>
+                                <button style="width: 100%; margin-bottom: 10px;" onclick="alert('Link copied to clipboard!')">🔗 Copy Link</button>
+                                <button style="width: 100%; margin-bottom: 10px; background: #E1306C;" onclick="alert('Opening Instagram...')">📷 Post to Instagram</button>
+                                <button style="width: 100%; margin-bottom: 10px; background: #25D366;" onclick="alert('Opening WhatsApp...')">💬 Send WhatsApp</button>
+                                <button style="width: 100%; background: #000000; border: 1px solid #333;" onclick="alert('Opening X (Twitter)...')">🐦 Post to X</button>
+                            </div>
                         </div>
                         <div id="facebook-integration" class="card glass">
                             <h3>📘 Facebook</h3>
@@ -1784,12 +1832,83 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
+                        <!-- Social Agent Auto-Posting Screen -->
+                        <div id="social-agent-screen" class="screen glass">
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                            <h1>AI Social Manager</h1>
+                            <p>Your AI agent automatically drafts and schedules posts for new products, sales, or milestones.</p>
+
+                            <div class="card glass">
+                                <h3>Connect Accounts</h3>
+                                <button style="background: #E1306C; margin-bottom: 5px;">📷 Connect Instagram</button>
+                                <button style="background: #1877F2; margin-bottom: 5px;">📘 Connect Facebook</button>
+                                <button style="background: #000000; border: 1px solid #333; margin-bottom: 5px;">🐦 Connect X</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Pending Approvals (1)</h3>
+                                <div style="border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px; margin-top: 10px;">
+                                    <p style="margin: 0 0 10px 0; color: #aaa; font-size: 0.9em;">Drafted 5 mins ago based on "New Product Added"</p>
+                                    <p>"We just launched our new custom cakes! 🎂 Perfectly baked and designed to your liking. Order yours today! #CustomCakes #Bakery #NewArrival"</p>
+                                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                        <button style="flex: 1;" onclick="alert('Post Approved and Scheduled!'); this.parentElement.parentElement.style.display='none'">👍 Approve (1-Tap)</button>
+                                        <button class="secondary" style="flex: 1;" onclick="alert('Edit modal opened')">Edit</button>
+                                        <button class="secondary" style="flex: 1;" onclick="this.parentElement.parentElement.style.display='none'">Reject</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Scheduled Posts</h3>
+                                <p style="color: #ccc;">No posts scheduled currently.</p>
+                            </div>
+                        </div>
+
+                        <!-- Email Marketing Screen -->
+                        <div id="email-marketing-screen" class="screen glass">
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                            <h1>Email Campaigns</h1>
+                            <p>Engage your audience with AI-generated email campaigns.</p>
+
+                            <div class="card glass">
+                                <h3>Create New Campaign</h3>
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px;">AI Template</label>
+                                    <select style="width: 100%; padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                                        <option>New Arrivals 🛍️</option>
+                                        <option>Flash Sale ⚡</option>
+                                        <option>Thank You! 🙏</option>
+                                    </select>
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px;">Target Audience</label>
+                                    <select style="width: 100%; padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.5); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                                        <option>All Customers (150)</option>
+                                        <option>Recent Buyers (30)</option>
+                                        <option>Inactive (45)</option>
+                                    </select>
+                                </div>
+                                <button style="width: 100%;" onclick="alert('Drafting campaign via AI...'); setTimeout(() => alert('Campaign Sent Successfully!'), 1500)">Preview & Send</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Recent Campaigns</h3>
+                                <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 10px;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <strong>Spring Sale Kickoff</strong>
+                                        <span style="color: #b0ffb0;">Sent</span>
+                                    </div>
+                                    <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ccc;">Open Rate: 42% | Clicks: 15</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" onclick="console.log('action_add_product'); document.getElementById('upgrade-prompt-modal').style.display='block'">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
@@ -1799,22 +1918,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
                         <h1>Referral Dashboard</h1>
+                        <p style="font-size: 1.1em; color: #b0ffb0;">Share OHC with a friend, both get 1 month free Pro.</p>
                         <div class="card glass">
                             <h3>Your Referral Link</h3>
                             <p id="referral-link">ohc://join?ref=DEFAULT</p>
-                            <button onclick="alert('Copied!')">Copy</button>
+                            <button onclick="alert('Copied!')">Copy Link</button>
                             <button onclick="location.reload()">Refresh</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Stats</h3>
+                            <p>Invites sent: <strong>5</strong></p>
+                            <p>Invites accepted: <strong>2</strong></p>
                         </div>
                         <div class="card glass">
                             <h3>Share</h3>
                             <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
-                            <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
-                            <p id="invite-copied" style="display: none;">Invite message copied!</p>
-                        </div>
-                        <div class="card glass">
-                            <h3>Actions</h3>
-                            <button onclick="alert('History shown')">📜 View Referral Logs</button>
-                            <button onclick="alert('Data exported')">📤 Export Data</button>
+                            <button onclick="document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
+                            <p id="invite-copied" style="display: none; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 4px;">
+                                "Hey! I'm running my business on OHC. It's incredibly easy. Use my link to get 1 month free Pro: ohc://join?ref=DEFAULT"
+                            </p>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
@@ -1971,10 +2093,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Choose the best plan for your business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
                         <div class="card glass">
-                            <h3>Free Starter</h3>
+                            <h3>Free</h3>
                             <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
+                            <ul><li>1 AI Agent</li><li>10 Products Limit</li><li>OHC Subdomain</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Start Free</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Starter</h3>
+                            <p>$9 / 30-days</p>
+                            <ul><li>3 AI Agents</li><li>Unlimited Products</li><li>Custom Domain</li></ul>
+                            <button onclick="showScreen('dashboard-screen')">Choose Starter</button>
                         </div>
                         <div class="card glass">
                             <h3>Pro Professional</h3>
@@ -2277,7 +2405,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
                             { id: 'b2', type: 'Product Grid', content: { title: 'Featured Products', count: 4 } },
                             { id: 'b3', type: 'Service List', content: { title: 'Our Services' } },
-                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } }
+                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } },
+                            { id: 'b5', type: 'Footer', content: { text: 'Built with OHC — Start your free business →' } }
                         ];
                         let rearrangeMode = false;
                         let activeBlockId = null;
@@ -2304,6 +2433,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         innerHtml += `<p><strong>${block.content.title}</strong></p><p>${block.content.subtitle}</p><button class="secondary">${block.content.cta}</button>`;
                                     } else if (block.type === 'Product Grid') {
                                         innerHtml += `<p>${block.content.title} (${block.content.count} items)</p>`;
+                                    } else if (block.type === 'Footer') {
+                                        innerHtml += `<p style="font-size: 0.8em; color: #aaa; text-align: center; text-decoration: underline; cursor: pointer;">${block.content.text}</p>`;
                                     } else {
                                         innerHtml += `<p>${block.content.title || block.content.text}</p>`;
                                     }
@@ -2545,22 +2676,58 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'social-agent-screen' || id === 'email-marketing-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
 
+                        function showMilestoneToast(message, icon) {
+                            const container = document.getElementById('milestone-toast-container');
+                            const toast = document.createElement('div');
+                            toast.className = 'card glass';
+                            toast.style.margin = '0';
+                            toast.style.padding = '15px';
+                            toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+                            toast.style.animation = 'slideIn 0.5s ease-out';
+                            toast.innerHTML = `<h3 style="margin: 0; font-size: 16px;">${icon} ${message}</h3>`;
+                            container.appendChild(toast);
+
+                            setTimeout(() => {
+                                toast.style.opacity = '0';
+                                toast.style.transition = 'opacity 0.5s';
+                                setTimeout(() => toast.remove(), 500);
+                            }, 5000);
+                        }
+
+                        let milestoneTimer1, milestoneTimer2;
+
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+
+                            // Simulate real-time milestone notifications
+                            milestoneTimer1 = setTimeout(() => {
+                                showMilestoneToast("You just got your 10th order!", "🎉");
+                            }, 8000);
+
+                            milestoneTimer2 = setTimeout(() => {
+                                showMilestoneToast("Your store has 100 visitors today!", "🚀");
+                            }, 15000);
                         };
                     </script>
                 </body>
             </html>
         "#,
     };
-    axum::response::Html(content)
+
+    // Explicitly set UTF-8 content type to ensure emojis render correctly in all browsers
+    let mut response = axum::response::Html(content).into_response();
+    response.headers_mut().insert(
+        axum::http::header::CONTENT_TYPE,
+        axum::http::HeaderValue::from_static("text/html; charset=utf-8"),
+    );
+    response
 }
