@@ -619,6 +619,39 @@ impl VectorRepository {
         }
         Ok(conflicts)
     }
+    /// Retrieves consolidation metrics for a specific tenant.
+    /// Includes total memory count, active conflicts, and high-reliability context count.
+    pub async fn get_memory_metrics(&self, tenant_id: &str) -> Result<serde_json::Value, String> {
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM consolidated_memory WHERE tenant_id = $1")
+                    .bind(tenant_id)
+                    .fetch_one(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                let high_rel_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM consolidated_memory WHERE tenant_id = $1 AND reliability_score >= 80")
+                    .bind(tenant_id)
+                    .fetch_one(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(serde_json::json!({ "total_memories": count_row.0, "high_reliability_memories": high_rel_row.0 }))
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM consolidated_memory WHERE tenant_id = ?")
+                    .bind(tenant_id)
+                    .fetch_one(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                let high_rel_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM consolidated_memory WHERE tenant_id = ? AND reliability_score >= 80")
+                    .bind(tenant_id)
+                    .fetch_one(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(serde_json::json!({ "total_memories": count_row.0, "high_reliability_memories": high_rel_row.0 }))
+            }
+        }
+    }
+
 
 }
 

@@ -1,3 +1,4 @@
+// Architecture: Persistent Memory Layer
 use std::sync::Arc;
 use ohc_builtin_agent::memory_store::VectorRepository;
 use chrono::Utc;
