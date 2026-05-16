@@ -324,13 +324,6 @@ impl DashboardService for MyDashboardService {
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
-        let stop_words: std::collections::HashSet<&str> = [
-            "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to",
-            "for", "with", "by", "about", "as", "of",
-        ]
-        .iter()
-        .cloned()
-        .collect();
 
         let org_agents: Vec<_> = agents
             .iter()
@@ -346,14 +339,7 @@ impl DashboardService for MyDashboardService {
             if orig_len > 0 {
                 original_prompts_len += orig_len;
 
-                let compressed = prompt
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+                let compressed = ::server_pricing::compression::reduce_tokens(prompt);
 
                 compressed_prompts_len += compressed.len();
             }
@@ -364,14 +350,7 @@ impl DashboardService for MyDashboardService {
             let orig_len = prompt.len();
             if orig_len > 0 {
                 original_prompts_len += orig_len;
-                let compressed = prompt
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+                let compressed = ::server_pricing::compression::reduce_tokens(prompt);
                 compressed_prompts_len += compressed.len();
             }
         }
@@ -406,14 +385,7 @@ impl DashboardService for MyDashboardService {
         let mut final_agents = _filtered_agents
             .into_iter()
             .map(|a| {
-                let compressed_name = a.name
-                    .split_whitespace()
-                    .filter(|word| {
-                        let clean_word = word.to_lowercase();
-                        !stop_words.contains(clean_word.as_str())
-                    })
-                    .collect::<Vec<&str>>()
-                    .join(" ");
+                let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
 
                 ::server_ohc::agent::Agent {
                     id: a.id,
