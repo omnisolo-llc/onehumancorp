@@ -101,7 +101,6 @@ Chart.lock
 
 # Golang is not allowed in this project
 *.go
-!src/server/harness/*.go
 
 
 # Rust build artifacts

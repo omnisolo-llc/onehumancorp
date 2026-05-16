@@ -1,4 +1,5 @@
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 rust_library(
     name = "server_harness",
@@ -32,4 +33,17 @@ rust_library(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+)
+
+go_library(
+    name = "harness_go",
+    srcs = ["sandbox_manager.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/harness",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "harness_go_test",
+    srcs = ["sandbox_manager_test.go"],
+    embed = [":harness_go"],
 )
