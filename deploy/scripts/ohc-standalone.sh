@@ -111,9 +111,6 @@ function cleanup {
   find "${OHC_RUNTIME_DIR}/.cache/" -type f -delete > /dev/null 2>&1 || true
   find "${OHC_RUNTIME_DIR}/downloads/" -type f -delete > /dev/null 2>&1 || true
 
-  docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
-  docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
-
   # Wait for processes to exit
   wait $APP_PID 2>/dev/null || true
   wait $SERVER_PID 2>/dev/null || true
