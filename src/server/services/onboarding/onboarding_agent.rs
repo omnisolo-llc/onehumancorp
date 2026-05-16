@@ -12,6 +12,42 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub }
     }
 
+    pub async fn get_onboarding_state(&self, tenant_id: &str, org_id: &str) -> Result<String, String> {
+        let query = "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2";
+        use sqlx::Row;
+        let row = sqlx::query(query)
+            .bind(tenant_id)
+            .bind(org_id)
+            .fetch_optional(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(r) = row {
+            let state: serde_json::Value = r.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            Ok(state.to_string())
+        } else {
+            Ok("{}".to_string())
+        }
+    }
+
+    pub async fn save_onboarding_state(&self, tenant_id: &str, org_id: &str, user_id: &str, current_step: i32, state_string: &str) -> Result<(), String> {
+        let state_json: serde_json::Value = serde_json::from_str(state_string).unwrap_or_else(|_| serde_json::json!({}));
+
+        let query = r#"INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, organization_id) DO UPDATE SET current_step = EXCLUDED.current_step, state_json = EXCLUDED.state_json"#;
+
+        sqlx::query(query)
+            .bind(tenant_id)
+            .bind(org_id)
+            .bind(user_id)
+            .bind(current_step)
+            .bind(&state_json)
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
