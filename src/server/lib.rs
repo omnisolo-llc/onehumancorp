@@ -1783,15 +1783,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Distribute</button>
-                        </nav>
+                        <nav class="glass" style="display: flex; flex-direction: row; justify-content: space-between; padding: 10px 5px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box; gap: 4px;">
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; font-size: 11px; padding: 0; margin: 0; border-radius: 8px; flex: 1; display: flex; align-items: center; justify-content: center; letter-spacing: -0.5px;" onclick="console.log('action_add_product')">Add</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; font-size: 11px; padding: 0; margin: 0; border-radius: 8px; flex: 1; display: flex; align-items: center; justify-content: center; letter-spacing: -0.5px;" onclick="showScreen('orders-screen')">Orders</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; font-size: 11px; padding: 0; margin: 0; border-radius: 8px; flex: 1; display: flex; align-items: center; justify-content: center; letter-spacing: -0.5px;" onclick="showScreen('inbox-screen')">Inbox</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; font-size: 11px; padding: 0; margin: 0; border-radius: 8px; flex: 1; display: flex; align-items: center; justify-content: center; letter-spacing: -0.5px;" onclick="showScreen('analytics-screen')">Stats</button>
+                            <button class="nav-item" style="min-width: 44px; min-height: 44px; font-size: 11px; padding: 0; margin: 0; border-radius: 8px; flex: 1; display: flex; align-items: center; justify-content: center; letter-spacing: -0.5px;" onclick="showScreen('share-screen')">Share</button></nav>
                     </div>
 
                     <!-- Referral Dashboard -->
@@ -2214,7 +2211,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Login</button>
+                        <button onclick="handleLogin(this)">Sign In</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>

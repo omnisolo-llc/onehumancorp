@@ -22,10 +22,10 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     const viewOrdersBtn = page.locator('text="Orders"').last();
     await expect(viewOrdersBtn).toBeVisible();
 
-    const checkMessagesBtn = page.locator('text="Messages"');
+    const checkMessagesBtn = page.locator('text="Inbox"');
     await expect(checkMessagesBtn.filter({ visible: true }).first()).toBeVisible();
 
-    const seeAnalyticsBtn = page.locator('text="Analytics"');
+    const seeAnalyticsBtn = page.locator('text="Stats"');
     await expect(seeAnalyticsBtn.filter({ visible: true }).first()).toBeVisible();
 
     const shareStoreBtn = page.locator('text="Share"').last();
@@ -70,7 +70,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
-    const checkMessagesBtn = page.locator('text="Messages"').filter({ visible: true }).first();
+    const checkMessagesBtn = page.locator('text="Inbox"').filter({ visible: true }).first();
     await expect(checkMessagesBtn).toBeVisible();
     await checkMessagesBtn.click();
 
@@ -84,7 +84,7 @@ test.describe('Dashboard Navigation UX Simplification', () => {
     await page.click('button:has-text("Sign In")');
     await page.waitForURL('**/*');
 
-    const seeAnalyticsBtn = page.locator('text="Analytics"').filter({ visible: true }).first();
+    const seeAnalyticsBtn = page.locator('text="Stats"').filter({ visible: true }).first();
     await expect(seeAnalyticsBtn).toBeVisible();
     await seeAnalyticsBtn.click();
 
