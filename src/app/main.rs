@@ -1944,7 +1944,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     app::HelpArticle { category: "My Store".into(), title: "How to add products".into(), description: "Learn how to list new items, add photos, and set prices.".into() },
                     app::HelpArticle { category: "Payments & Billing".into(), title: "How to accept Apple Pay".into(), description: "Enable Apple Pay with one click in your payment settings.".into() },
                     app::HelpArticle { category: "AI Helpers".into(), title: "What can the Customer Success Helper do?".into(), description: "Your helper can reply to customer emails and Instagram DMs automatically.".into() },
-                    app::HelpArticle { category: "SocialMediaManager".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
+                    app::HelpArticle { category: "Marketing".into(), title: "How to run a promotion".into(), description: "Learn how to create discount codes and share them on social media.".into() },
                     app::HelpArticle { category: "Account & Billing".into(), title: "How to change your subscription".into(), description: "Find out how to upgrade or downgrade your plan and view past invoices.".into() },
                 ];
                 let all_articles_rc = std::rc::Rc::new(all_articles.clone());
@@ -4472,7 +4472,7 @@ mod docs_tests {
         let publish_success_clone = publish_success.clone();
 
         ui.on_activate_agent(move |agent, can_reply, can_social, can_write_descriptions, can_send_updates, frequency| {
-            assert_eq!(agent, "CustomerSupport");
+            assert_eq!(agent, "CustomerSuccess");
             assert_eq!(can_reply, true);
             assert_eq!(can_social, false);
             assert_eq!(can_write_descriptions, true);
@@ -4488,7 +4488,7 @@ mod docs_tests {
         ui.invoke_save_state();
         assert_eq!(ui.get_is_advanced(), true);
 
-        ui.set_selected_agent("CustomerSupport".into());
+        ui.set_selected_agent("CustomerSuccess".into());
         ui.invoke_next_step();
 
         // Step 1: Capabilities -> Step 2
@@ -4511,7 +4511,7 @@ mod docs_tests {
         );
 
         assert_eq!(ui.get_step(), 3);
-        assert_eq!(ui.get_selected_agent(), "CustomerSupport");
+        assert_eq!(ui.get_selected_agent(), "CustomerSuccess");
         assert_eq!(ui.get_can_reply(), true);
         assert_eq!(ui.get_can_write_descriptions(), true);
         assert_eq!(ui.get_can_send_updates(), false);

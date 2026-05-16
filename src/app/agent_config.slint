@@ -70,73 +70,73 @@ export component AgentConfig inherits Window {
                     spacing: 12px;
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "CustomerSupport" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_agent == "CustomerSuccess" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "🎧"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "Customer Support"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "The Ambassador"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Customer Success — keeps customers happy"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "CustomerSupport"; selected_agent_display = "Customer Support"; } }
+                        TouchArea { clicked => { selected_agent = "CustomerSuccess"; selected_agent_display = "The Ambassador"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "SocialMediaManager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_agent == "Marketing" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "📱"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "Social Media Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "The Promoter"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Marketing & Advertising — gets the word out"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "SocialMediaManager"; selected_agent_display = "Social Media Manager"; } }
+                        TouchArea { clicked => { selected_agent = "Marketing"; selected_agent_display = "The Promoter"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "SEOBooster" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_agent == "Sales" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "🤝"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "SEO Booster"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "The Salesperson"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Sales & Acquisition — finds and wins customers"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "SEOBooster"; selected_agent_display = "SEO Booster"; } }
+                        TouchArea { clicked => { selected_agent = "Sales"; selected_agent_display = "The Salesperson"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "OrderManager" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_agent == "Operations" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "📦"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "Order Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "The Manager"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Operations — handles daily operations"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "OrderManager"; selected_agent_display = "Order Manager"; } }
+                        TouchArea { clicked => { selected_agent = "Operations"; selected_agent_display = "The Manager"; } }
                     }
                     GlassCard {
                         height: 90px;
-                        background: selected_agent == "EmailMarketer" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                        background: selected_agent == "Finance" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
                         HorizontalBox {
                             padding: 16px; spacing: 16px; alignment: center;
                             Text { text: "💰"; font-size: 32px; }
                             VerticalBox {
                                 alignment: center;
-                                Text { text: "Email Marketer"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                                Text { text: "The Accountant"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                                 Text { text: "Finance & Payments — makes sure money flows"; font-family: "Inter"; font-size: 12px; color: #94a3b8; }
                             }
                         }
-                        TouchArea { clicked => { selected_agent = "EmailMarketer"; selected_agent_display = "Email Marketer"; } }
+                        TouchArea { clicked => { selected_agent = "Finance"; selected_agent_display = "The Accountant"; } }
                     }
                 }
             }

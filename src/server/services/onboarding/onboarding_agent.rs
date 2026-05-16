@@ -42,12 +42,12 @@ impl OnboardingAgent {
         let publish_events_future = async move {
             // Subscribe default AI Agents to specific tenant events dynamically
             let event_topics = vec![
-                ("Order Manager", "tenant.booking.created"),
-                ("Order Manager", "tenant.order.placed"),
-                ("Social Media Manager", "tenant.product.created"),
-                ("The SEO Booster", "tenant.lead.created"),
-                ("Customer Support", "tenant.message.received"),
-                ("Email Marketer", "tenant.payment.success"),
+                ("The Manager", "tenant.booking.created"),
+                ("The Manager", "tenant.order.placed"),
+                ("The Promoter", "tenant.product.created"),
+                ("The Salesperson", "tenant.lead.created"),
+                ("The Ambassador", "tenant.message.received"),
+                ("The Accountant", "tenant.payment.success"),
                 ("The Protector", "tenant.contract.signed"),
                 ("The Advisor", "tenant.report.generated"),
             ];
@@ -214,11 +214,11 @@ impl OnboardingAgent {
 
     async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
         let default_agents = vec![
-            ("OrderManager", "Order Manager", "OrderManager"),
-            ("SocialMediaManager & Advertising", "Social Media Manager", "SocialMediaManager"),
-            ("SEOBooster & Acquisition", "The SEO Booster", "SEOBooster"),
-            ("Customer Success", "Customer Support", "CustomerSupport"),
-            ("EmailMarketer & Payments", "Email Marketer", "EmailMarketer"),
+            ("Operations", "The Manager", "Operations"),
+            ("Marketing & Advertising", "The Promoter", "Marketing"),
+            ("Sales & Acquisition", "The Salesperson", "Sales"),
+            ("Customer Success", "The Ambassador", "CustomerSuccess"),
+            ("Finance & Payments", "The Accountant", "Finance"),
             ("Legal & Compliance", "The Protector", "Legal"),
             ("Business Advisory", "The Advisor", "Advisory"),
         ];
@@ -301,7 +301,7 @@ mod tests {
 
         assert_eq!(agents.len(), 7);
 
-        let expected_roles = vec!["Order Manager", "Social Media Manager", "The SEO Booster", "Customer Support", "Email Marketer", "The Protector", "The Advisor"];
+        let expected_roles = vec!["The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", "The Advisor"];
         for role in expected_roles {
             assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
         }
@@ -355,7 +355,7 @@ mod tests {
         let state_json_service: serde_json::Value = row_service.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
         assert_eq!(state_json_service.get("enable_booking").and_then(|v| v.as_bool()), Some(true));
 
-        let agents_service = sqlx::query("SELECT role FROM agents WHERE organization_id = $1 AND role = 'The SEO Booster'")
+        let agents_service = sqlx::query("SELECT role FROM agents WHERE organization_id = $1 AND role = 'The Salesperson'")
             .bind(&org_id_service)
             .fetch_all(&agent.db.pool)
             .await
