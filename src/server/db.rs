@@ -117,7 +117,7 @@ impl DB {
 
             let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
                 .create_if_missing(true)
-                .extension("sqlite_vec");
+                ;
 
             // Enforce SQLCipher for Standalone mode unconditionally
             let key = if let Some(k) = database_url.split("key=").nth(1) {

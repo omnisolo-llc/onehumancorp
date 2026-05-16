@@ -1770,10 +1770,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="agent-activity-feed">
                                 <p>No recent activity.</p>
                             </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button onclick="showScreen('api-screen')">Connect Apps</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
                                 <button onclick="alert('Tutorial started')">Video Tutorials</button>
@@ -1901,7 +1900,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
+                    <div id="setup-screen-old" class="screen">
                         <h1>Business Setup</h1>
                         <div class="card glass">
                             <h3>Step 1: Details</h3>
@@ -1916,7 +1915,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
+                        <h1>Connect Apps</h1>
                         <h1>Custom Integration</h1>
                         <h1>Custom Software</h1>
                         <h2>Product Data Access</h2>
@@ -2219,6 +2218,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+                        function nextStep(step) {
+                            document.querySelectorAll('[id^="step-"]').forEach(el => el.style.display = 'none');
+                            const target = document.getElementById('step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+                        function generateAI() {
+                            nextStep('generating');
+                            setTimeout(() => {
+                                nextStep('launch-ai');
+                            }, 2000);
+                        }
+
+                        function toggleMenu() {
+                            const menu = document.getElementById('extra-menu');
+                            if (menu) {
+                                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                            }
+                        }
+
+                        function handleLogin(btn) {
+                            showScreen('dashboard-screen');
+                        }
+
+                        function handleSignup(btn) {
+                            showScreen('dashboard-screen');
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
