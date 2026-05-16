@@ -8,6 +8,7 @@ filegroup(
         "hub.rs",
         "mesh.rs",
         "mod.rs",
+        "journey_feature.rs",
         "orchestration_test.rs",
         "shared_tasks.rs",
         "shared_tasks_test.rs",
