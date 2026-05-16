@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
-#[allow(dead_code)]
+
 struct CircuitBreaker {
     failures: Mutex<usize>,
     last_failure: Mutex<Option<Instant>>,
@@ -18,7 +18,7 @@ struct CircuitBreaker {
     reset_timeout: Duration,
 }
 
-#[allow(dead_code)]
+
 impl CircuitBreaker {
     fn new(max_failures: usize, reset_timeout: Duration) -> Self {
         CircuitBreaker {
@@ -56,10 +56,10 @@ impl CircuitBreaker {
     }
 }
 
-#[allow(dead_code)]
+
 static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 
-#[allow(dead_code)]
+
 fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
@@ -99,7 +99,7 @@ impl OpenAIClient {
 
 #[derive(Serialize)]
 struct OpenAIMessage {
-    role: String,
+    _role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -159,8 +159,8 @@ struct OpenAIChoice {
 
 #[derive(Deserialize, Debug)]
 struct OpenAIResponseMessage {
-    #[allow(dead_code)]
-    role: String,
+
+    _role: String,
     content: Option<String>,
     tool_calls: Option<Vec<OpenAIResponseToolCall>>,
 }
@@ -207,7 +207,7 @@ impl LlmClient for OpenAIClient {
 
         if !req.system.is_empty() {
             messages.push(OpenAIMessage {
-                role: "system".to_string(),
+                _role: "system".to_string(),
                 content: Some(req.system.clone()),
                 tool_calls: None,
                 tool_call_id: None,
@@ -227,7 +227,7 @@ impl LlmClient for OpenAIClient {
                     tr.content.clone()
                 };
                 messages.push(OpenAIMessage {
-                    role: "tool".to_string(),
+                    _role: "tool".to_string(),
                     content: Some(content),
                     tool_calls: None,
                     tool_call_id: Some(tr.tool_call_id.clone()),
@@ -249,14 +249,14 @@ impl LlmClient for OpenAIClient {
                     })
                     .collect();
                 messages.push(OpenAIMessage {
-                    role: "assistant".to_string(),
+                    _role: "assistant".to_string(),
                     content: if m.content.is_empty() { None } else { Some(m.content.clone()) },
                     tool_calls: Some(calls),
                     tool_call_id: None,
                 });
             } else {
                 messages.push(OpenAIMessage {
-                    role: m.role.to_string(),
+                    _role: m.role.to_string(),
                     content: Some(m.content.clone()),
                     tool_calls: None,
                     tool_call_id: None,

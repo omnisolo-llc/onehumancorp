@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+
 
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
@@ -176,12 +176,12 @@ pub trait HarnessBackend: Send + Sync {
 }
 
 pub struct LocalBackend {
-    validator: Arc<ASTValidator>,
+    _validator: Arc<ASTValidator>,
 }
 
 impl LocalBackend {
     pub fn new(validator: Arc<ASTValidator>) -> Self {
-        LocalBackend { validator }
+        LocalBackend { _validator: validator }
     }
 
     pub fn is_bwrap_available(&self) -> bool {
@@ -281,7 +281,7 @@ impl LocalBackend {
 #[async_trait]
 impl HarnessBackend for LocalBackend {
     async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
-        self.validator.validate(command)?;
+        self._validator.validate(command)?;
 
         if self.is_bwrap_available() {
             let args = self.get_bwrap_args(command, policy);
@@ -343,7 +343,7 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    validator: Arc<ASTValidator>,
+    _validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
 }
@@ -355,7 +355,7 @@ impl Manager {
         let docker_backend = Arc::new(DockerBackend::new());
         Manager {
             config,
-            validator,
+            _validator: validator,
             local_backend,
             docker_backend,
         }

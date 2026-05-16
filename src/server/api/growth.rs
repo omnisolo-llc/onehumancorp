@@ -61,7 +61,7 @@ pub struct MilestonesResponse {
     pub milestones: Vec<Milestone>,
 }
 
-pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
+pub fn router<S>(_pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -70,13 +70,13 @@ where
         .route("/campaign/send", post(handle_send_campaign))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
-        .layer(Extension(GrowthState { pool, hub }))
+        .layer(Extension(GrowthState { _pool: _pool, _hub: hub }))
 }
 
 #[derive(Clone)]
 struct GrowthState {
-    pool: PgPool,
-    hub: Arc<Hub>,
+    _pool: PgPool,
+    _hub: Arc<Hub>,
 }
 
 async fn handle_social_post(
