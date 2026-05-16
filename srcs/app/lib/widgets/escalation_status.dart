@@ -1,44 +1,59 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'dart:ui';
 
 class EscalationStatusWidget extends StatelessWidget {
-  final bool isEscalated;
+  final bool isCloudEscalated;
+  final int activeTasks;
 
-  const EscalationStatusWidget({Key? key, required this.isEscalated}) : super(key: key);
+  const EscalationStatusWidget({
+    Key? key,
+    required this.isCloudEscalated,
+    required this.activeTasks,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12.0),
+      borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12.0),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.1),
-              width: 1,
-            ),
+            color: const Color(0x0CFFFFFF), // rgba(255, 255, 255, 0.05)
+            border: Border.all(color: const Color(0x19FFFFFF)), // rgba(255, 255, 255, 0.1)
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isEscalated ? Icons.cloud_done : Icons.dns_rounded,
-                color: isEscalated ? Colors.blueAccent : Colors.greenAccent,
-                size: 20,
+                isCloudEscalated ? Icons.cloud : Icons.computer,
+                color: Colors.white,
               ),
-              const SizedBox(width: 8),
-              Text(
-                isEscalated ? "Cloud Swarm" : "Local Execution",
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isCloudEscalated ? 'Cloud Swarm' : 'Local Execution',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    '$activeTasks Active Tasks',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
