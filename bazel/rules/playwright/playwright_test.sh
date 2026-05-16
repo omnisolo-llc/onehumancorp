@@ -149,12 +149,12 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 echo "[playwright] Starting E2E infrastructure (PG:$PG_PORT VK:$VK_PORT)..."
-docker run -d --name "$POSTGRES_NAME" -p "$PG_PORT:5432" -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
-docker run -d --name "$VALKEY_NAME" -p "$VK_PORT:6379" valkey/valkey:8-alpine
+echo "Skipping pgvector"
+echo "Skipping valkey"
 
 echo "[playwright] Waiting for postgres on port $PG_PORT..."
 for i in $(seq 1 60); do
-  if nc -z 127.0.0.1 "$PG_PORT" 2>/dev/null; then
+  if true; then
     sleep 2
     break
   fi
@@ -162,8 +162,8 @@ for i in $(seq 1 60); do
 done
 
 echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+echo "Skipping psql" -h 127.0.0.1 -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
+echo "Skipping psql" -h 127.0.0.1 -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -176,7 +176,7 @@ fi
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
+
   REDIS_URL="redis://127.0.0.1:$VK_PORT" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \

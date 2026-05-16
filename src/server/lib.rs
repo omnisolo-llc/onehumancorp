@@ -2239,6 +2239,48 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meeting-room-screen': '/meetings/room/1'
                         };
 
+
+                        window.state = { activity: [] };
+                        function simulateOrder() {
+                            let newState = JSON.parse(JSON.stringify(window.state));
+                            let messages = [
+                                "✅ Your Support Agent replied to 3 customers",
+                                "📦 Order Manager updated stock for 12 items",
+                                "🚀 Marketing Pro launched a new campaign",
+                                "💬 Sales Bot answered 5 inquiries"
+                            ];
+                            let randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                            newState.activity.unshift(randomMessage);
+                            window.state = newState; // Optimistic update
+
+                            const feed = document.getElementById('agent-activity-feed');
+                            const newMessage = document.createElement('p');
+                            newMessage.textContent = randomMessage;
+
+                            // OHC Premium Design Standards: Glassmorphism and animations
+                            newMessage.style.opacity = '0';
+                            newMessage.style.transform = 'translateY(-10px)';
+                            newMessage.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
+                            newMessage.style.backdropFilter = 'blur(20px) saturate(200%)';
+                            newMessage.style.padding = '8px';
+                            newMessage.style.borderRadius = '4px';
+                            newMessage.style.background = 'rgba(255,255,255,0.1)';
+                            newMessage.style.border = '1px solid var(--border)';
+                            newMessage.style.marginBottom = '8px';
+
+                            feed.prepend(newMessage);
+
+                            // Remove empty placeholder if exists
+                            if (feed.children.length > 1 && feed.lastElementChild.textContent === 'No recent activity.') {
+                                feed.removeChild(feed.lastElementChild);
+                            }
+
+                            requestAnimationFrame(() => {
+                                newMessage.style.opacity = '1';
+                                newMessage.style.transform = 'translateY(0)';
+                            });
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);

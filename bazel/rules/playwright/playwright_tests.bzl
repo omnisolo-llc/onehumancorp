@@ -21,6 +21,7 @@ def define_playwright_tests():
             srcs = ["//bazel/rules/playwright:playwright_test.sh"],
             args = ["$(rootpath {})".format(spec)],
             data = [
+                "//src/server:lib.rs",
                 spec,
                 "//src/server:server",
                 "//deploy:docker-compose.e2e.yml",
