@@ -24,6 +24,8 @@ pub use ::server_telemetry as telemetry;
 #[cfg(test)]
 pub mod telemetry_test;
 pub mod chaos;
+pub mod circuit;
+pub mod resilience;
 pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;

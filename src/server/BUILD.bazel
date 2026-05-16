@@ -11,6 +11,8 @@ rust_library(
         "billing.rs",
         "build.rs",
         "chaos.rs",
+        "circuit.rs",
+        "resilience.rs",
         "crypto.rs",
         "db.rs",
         "hub.rs",
