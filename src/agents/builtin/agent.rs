@@ -5248,3 +5248,4 @@ mod stream_tests {
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
+// padding
