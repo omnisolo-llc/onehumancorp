@@ -612,47 +612,42 @@ impl DB {
         Ok(())
     }
 
-    pub async fn delete_stale_sessions(&self, threshold: DateTime<Utc>) -> Result<Vec<(String, String, String)>, Box<dyn std::error::Error>> {
+    pub async fn delete_stale_sessions(&self, threshold: DateTime<Utc>) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
         let mut result = Vec::new();
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let rows = sqlx::query("SELECT s.session_id, a.tenant_id, s.context_data FROM agent_session_data s JOIN agents a ON s.agent_id = a.id WHERE s.last_accessed < ?").bind(threshold).fetch_all(sqlite_pool).await?;
+                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?").bind(threshold).fetch_all(sqlite_pool).await?;
                 for row in rows {
                     let id: String = row.get("session_id");
-                    let tenant_id: String = row.get("tenant_id");
                     let data: String = row.get("context_data");
-                    result.push((id, tenant_id, data));
+                    result.push((id, data));
                 }
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-                let rows = sqlx::query("SELECT s.session_id, a.tenant_id::text, s.context_data FROM agent_session_data s JOIN agents a ON s.agent_id = a.id WHERE s.last_accessed < $1").bind(threshold).fetch_all(&mut *tx).await?;
-                tx.commit().await?;
+                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1").bind(threshold).fetch_all(&self.pool).await?;
                 for row in rows {
                     let id: String = row.get("session_id");
-                    let tenant_id: String = row.get("tenant_id");
                     let data: String = row.get("context_data");
-                    result.push((id, tenant_id, data));
+                    result.push((id, data));
                 }
             }
         };
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?").bind(threshold).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { let mut tx = self.pool.begin().await?; sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?; sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&mut *tx).await?; tx.commit().await?; }
+            DbStore::Postgres => { let mut tx = self.pool.begin().await?; set_org_context(&mut *tx, "system").await?; sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&mut *tx).await?; tx.commit().await?; }
         };
 
         Ok(result)
     }
 
-    pub async fn inject_truth(&self, memory_id: &str, org_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?; },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                set_org_context(&mut *tx, org_id).await?;
+                set_org_context(&mut *tx, "system").await?;
                 sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
                 .bind(context)
@@ -678,17 +673,17 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT t.id, m.tenant_id, t.payload FROM swarm_tasks t JOIN agent_missions m ON t.mission_id = m.id WHERE t.status = 'COMPLETED' AND t.auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                let swarm_rows = sqlx::query("SELECT id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
+                    let org_id: String = "system".to_string(); // Fallback tenant_id
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+                set_org_context(&mut *tx, "system").await?;
                 let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
@@ -697,11 +692,11 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT t.id::text, m.tenant_id::text, t.payload::text FROM swarm_tasks t JOIN agent_missions m ON t.mission_id = m.id WHERE t.status = 'COMPLETED' AND t.auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 tx.commit().await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
+                    let org_id: String = "system".to_string(); // Fallback tenant_id
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
@@ -823,7 +818,7 @@ pub async fn insert_autodream_memory(
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+                set_org_context(&mut *tx, "system").await?;
                 sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
@@ -852,7 +847,7 @@ pub async fn insert_autodream_memory(
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+                set_org_context(&mut *tx, "system").await?;
                 let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'STUCK') AND updated_at < $1")
                     .bind(threshold)
                     .execute(&mut *tx)
@@ -885,7 +880,7 @@ pub async fn insert_autodream_memory(
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
                 };
                 let mut tx = self.pool.begin().await?;
-                sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+                set_org_context(&mut *tx, "system").await?;
                 sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
                 tx.commit().await?;
             }
