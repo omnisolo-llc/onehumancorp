@@ -11,6 +11,7 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
+    sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
     messages: RwLock<std::collections::HashMap<String, Vec<ChatMessage>>>,
     instances: RwLock<std::collections::HashMap<String, IntegrationInstance>>,
     pull_requests: RwLock<std::collections::HashMap<String, Vec<PullRequest>>>,
@@ -41,6 +42,7 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
@@ -141,6 +143,10 @@ impl IntegrationsRegistry {
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
         });
+        if integration_id == "sendgrid" {
+            let mut clients = self.sendgrid_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
+        }
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
@@ -295,6 +301,21 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
 mod tests {
     use super::*;
     #[tokio::test]
+    async fn test_sendgrid_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "sendgrid".to_string(),
+            base_url: "https://api.sendgrid.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("sendgrid", "https://api.sendgrid.com", creds).unwrap();
+        let res = registry.send_email("sendgrid", "to@test.com", "from@test.com", "Subject", "Body");
+        assert!(res.is_ok());
+    }
     async fn test_twilio_integration() {
         let registry = IntegrationsRegistry::new();
         let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
@@ -311,5 +332,24 @@ mod tests {
         let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
 
+    }
+}
+
+impl IntegrationsRegistry {
+    pub fn send_email(&self, integration_id: &str, to: &str, from: &str, subject: &str, html_body: &str) -> Result<(), String> {
+        let clients = self.sendgrid_clients.read().unwrap();
+        if let Some(client) = clients.get(integration_id) {
+            let client = std::sync::Arc::clone(client);
+            let to = to.to_string();
+            let from = from.to_string();
+            let subject = subject.to_string();
+            let html_body = html_body.to_string();
+            tokio::spawn(async move {
+                let _ = client.send_email(&to, &from, &subject, &html_body).await;
+            });
+            Ok(())
+        } else {
+            Err(format!("SendGrid integration {} not found or connected", integration_id))
+        }
     }
 }

@@ -39,8 +39,20 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
         }
     };
     catalog.push(twilio_provider);
+    catalog.push(init_sendgrid());
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
     catalog
+}
+
+pub fn init_sendgrid() -> IntegrationProvider {
+    crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "sendgrid".to_string(),
+            name: "SendGrid Email".to_string(),
+            category: "email_marketing".to_string(),
+            base_url: "https://api.sendgrid.com".to_string(),
+        }
+    }
 }
