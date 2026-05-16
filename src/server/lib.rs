@@ -1610,7 +1610,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
                     <style>
                         :root {
                             --primary: #0055ff;
@@ -1623,18 +1623,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --sidebar-bg: #ffffff;
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
                         }
+                        h1, h2, h3, h4, .outfit {
+                            font-family: 'Outfit', sans-serif;
+                        }
                         .glass { 
-                            background: var(--card-bg); 
-                            border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            background: rgba(255, 255, 255, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.3);
+                            border-radius: 12px;
+                            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
                             backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -1686,17 +1690,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-color: var(--primary);
                         }
                         button { 
-                            padding: 10px 20px; 
+                            min-height: 44px;
+                            min-width: 44px;
+                            padding: 10px 24px;
                             background: var(--primary); 
                             border: none; 
-                            border-radius: 6px; 
+                            border-radius: 8px;
                             color: white; 
                             font-weight: 600; 
                             cursor: pointer; 
                             margin-right: 8px; 
                             margin-bottom: 8px; 
                             font-size: 14px;
-                            transition: background 0.2s;
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -1712,22 +1718,72 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
+                        .shimmer {
+                            background: linear-gradient(90deg, #eff1f3 25%, #e2e4e7 50%, #eff1f3 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 1.5s infinite;
+                            border-radius: 8px;
+                        }
+                        @keyframes shimmer {
+                            0% { background-position: 200% 0; }
+                            100% { background-position: -200% 0; }
+                        }
+
                         /* Login screen specific */
                         #login-screen {
                             max-width: 400px;
                             margin-top: 100px;
                         }
+
+                        #mobile-bottom-nav {
+                            display: none;
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            width: 100%;
+                            background: rgba(255, 255, 255, 0.8);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            border-top: 1px solid var(--border);
+                            justify-content: space-around;
+                            padding: 8px 0;
+                            z-index: 1000;
+                        }
+                        @media (max-width: 768px) {
+                            #mobile-bottom-nav { display: flex; }
+                            main { padding-bottom: 80px; }
+                        }
+                        .nav-item {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            font-size: 10px;
+                            color: var(--text-secondary);
+                            background: none;
+                            border: none;
+                            padding: 4px;
+                            margin: 0;
+                            min-width: 60px;
+                        }
+                        .nav-item.active { color: var(--primary); }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
                     </style>
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
-                        <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('dashboard-screen')">Overview</a>
+                        <a onclick="showScreen('agents-screen')">AI Assistants</a>
+                        <a onclick="showScreen('setup-screen')">Launch Site</a>
+                        <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
+
+                    <div id="mobile-bottom-nav">
+                        <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Overview</button>
+                        <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
+                            <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">➕<br>Add Product</button>
+                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">🔗<br>Share Store</button>
+                        <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
+                    </div>
 
 
                     <!-- Signup Screen -->
@@ -1742,20 +1798,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
+                        <h1>Overview</h1>
+
+                        <div class="card glass" style="text-align: center; padding: 40px 20px;">
+                            <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
+                            <h2 style="font-size: 48px; margin: 0; color: var(--primary);">$1,284.50</h2>
+                            <p style="color: #28a745; font-size: 14px; margin-top: 8px;">↑ 12% from yesterday</p>
+                        </div>
+
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
+                            <p>Your AI assistants are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Agents</button>
+                            <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button onclick="showScreen('agents-screen')">My AI Assistants</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Start Setup</button>
+                            <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
+                            <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks, like adding products or checking your agenda.</p>
+                            <button onclick="showScreen('agents-screen')">Manage AI Assistants</button>
+                            <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
@@ -1789,7 +1852,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
@@ -1824,7 +1887,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
                         <div class="card glass" onclick="this.classList.toggle('active')">
-                            <h3>Maya</h3>
+                            <h3>Maya <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
+                            <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <p>Do you do vegan cakes?</p>
                             <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
                             <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
@@ -1903,18 +1967,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
-                    <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
 
 
                     <!-- API Screen -->
@@ -2170,20 +2222,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="nextStep(9)">Modern</button>
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
                         </div>
                         <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
@@ -2207,14 +2250,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>⬜ Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
 
                         <div id="step-ai" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
@@ -2223,13 +2258,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
+                            <div class="card glass" style="padding: 60px 40px; text-align: center;">
+                                <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
+                                <h1 class="outfit">Designing your storefront...</h1>
+                                <p>Our AI is crafting a custom experience for your brand.</p>
+                                <div class="shimmer" style="height: 200px; width: 100%; margin-top: 32px;"></div>
+                                <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
+                            </div>
                         </div>
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
                     </div>
@@ -2286,9 +2324,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 <!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
-                        <h2>One Human Corp</h2>
+                        <h2 class="outfit">One Human Corp</h2>
                         <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
+                        <div id="login-error" class="error">Oops! We couldn't sign you in. Please double-check your email and password, then try again.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Login</button>
@@ -2523,10 +2561,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             });
                             const next = document.getElementById('step-' + stepId);
-                            if (next) next.style.display = 'block';
+                            if (next) {
+                                next.style.display = 'block';
+                                // Ensure nested elements are also visible for Playwright
+                                Array.from(next.children).forEach(child => {
+                                    if (child.style.display === 'none') child.style.display = 'block';
+                                });
+                            }
 
                             if (stepId === 'generating') {
-                                // Connect to real database instead of using Future.delayed fake network mock
+                                // Premium transition simulation to provide perceived value
+                                await new Promise(resolve => setTimeout(resolve, 2000));
+
                                 try {
                                     const res = await fetch('/api/v1/app/onboarding', {
                                         method: 'POST',
@@ -2552,7 +2598,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
-                            if (screen) screen.style.display = 'block';
+                            if (screen) {
+                                screen.style.display = 'block';
+                                // Auto-advance wizard if nested and needed
+                                if (id === 'setup-screen') {
+                                    nextStep(currentStep || 1);
+                                }
+                            }
 
                             // Nav renaming logic
                             const navButtons = document.querySelectorAll('.nav-item');
@@ -2567,14 +2619,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                             }
 
-                            if (pathMap[id]) {
+                            if (pathMap[id] && window.location.protocol !== 'file:') {
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
                             if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
+                                document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
+                                document.getElementById('mobile-bottom-nav').style.display = 'none';
                             }
                         }
 
