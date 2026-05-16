@@ -57,7 +57,7 @@ impl ToolExecutor for GlobExecutor {
 pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Glob".to_string(),
-        description: "Find files matching a glob pattern. Returns newline-separated paths.".to_string(),
+        description: "Find files matching a glob pattern. Returns newline-separated paths. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
