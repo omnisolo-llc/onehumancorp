@@ -15,7 +15,7 @@ go_test(
     srcs = ["task_repo_test.go"],
     embed = [":repository"],
     deps = [
-        "@com_github_mattn_go_sqlite3//:go_default_library",
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],

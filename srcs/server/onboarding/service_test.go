@@ -20,7 +20,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	_, err = db.Exec(`
 		CREATE TABLE tenants (
 			id TEXT PRIMARY KEY,
-			owner_email TEXT, state TEXT,
+			owner_email TEXT,
 			tier TEXT,
 			name TEXT,
 			category TEXT,
