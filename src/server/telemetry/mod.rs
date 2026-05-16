@@ -47,14 +47,6 @@ pub async fn record_autodream_consolidation(pool: &PgPool, count: f32) -> Result
     buffer_metric(pool, "ohc_autodream_consolidation_total", "counter", count, serde_json::json!({})).await
 }
 
-pub async fn record_autodream_records_synced_total(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "ohc_autodream_records_synced_total", "counter", count, serde_json::json!({})).await
-}
-
-pub async fn record_autodream_sync_errors_total(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "ohc_autodream_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
-}
-
 pub async fn record_sync_escalation(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "sync_escalation_total", "counter", count, serde_json::json!({ "mode": mode })).await
 }

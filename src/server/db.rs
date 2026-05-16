@@ -501,9 +501,7 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
-                        topic TEXT DEFAULT '',
-                        sync_status VARCHAR(50) DEFAULT 'pending',
-                        last_sync_at TIMESTAMP NULL
+                        topic TEXT DEFAULT ''
                     );
                     CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,

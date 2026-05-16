@@ -1,9 +1,5 @@
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
-use reqwest::Client;
-use tokio_util::sync::CancellationToken;
-use tokio::time::{sleep, Duration};
-
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
@@ -145,64 +141,10 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
     }
 }
 
-
-
-#[async_trait]
-pub trait AutoDreamSyncServiceExt: Send + Sync {
-    async fn start_sync_daemon(&self, cloud_api_url: String, cancel_token: CancellationToken, mtls_client: Client) -> Result<(), Box<dyn std::error::Error>>;
-}
-
-#[async_trait]
-impl AutoDreamSyncServiceExt for AutoDreamSyncServiceImpl {
-    async fn start_sync_daemon(&self, cloud_api_url: String, cancel_token: CancellationToken, mtls_client: Client) -> Result<(), Box<dyn std::error::Error>> {
-        loop {
-            tokio::select! {
-                _ = cancel_token.cancelled() => {
-                    return Ok(());
-                }
-                _ = async {
-                    match self.fetch_pending_syncs(100).await {
-                        Ok(records) => {
-                            if records.is_empty() {
-                                sleep(Duration::from_secs(60)).await;
-                                return;
-                            }
-
-                            let ids: Vec<String> = records.iter().map(|r| r.id.clone()).collect();
-                            match mtls_client.post(&cloud_api_url).json(&records).send().await {
-                                Ok(res) if res.status().is_success() => {
-                                    if let Err(e) = self.mark_records_synced(ids).await {
-                                        eprintln!("Failed to mark records as synced: {}", e);
-                                    }
-                                    let _ = crate::telemetry::record_autodream_records_synced_total(&self.pool, records.len() as f32).await;
-                                }
-                                Ok(res) => {
-                                    eprintln!("Cloud API returned status: {}", res.status());
-                                    let _ = crate::telemetry::record_autodream_sync_errors_total(&self.pool, records.len() as f32, &res.status().to_string()).await;
-                                }
-                                Err(e) => {
-                                    eprintln!("Failed to push to Cloud API: {}", e);
-                                    let _ = crate::telemetry::record_autodream_sync_errors_total(&self.pool, records.len() as f32, "api_error").await;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to fetch pending syncs: {}", e);
-                        }
-                    }
-                    sleep(Duration::from_secs(30)).await;
-                } => {}
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use sqlx::postgres::PgPoolOptions;
-    use reqwest::{Client, Certificate, Identity};
-    use tokio_util::sync::CancellationToken;
 
     #[tokio::test]
     async fn test_autodream_sync_service() {
@@ -212,6 +154,7 @@ mod tests {
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)
             .unwrap();
@@ -219,6 +162,7 @@ mod tests {
         let service = AutoDreamSyncServiceImpl::new(pool.clone());
 
         let pending = service.fetch_pending_syncs(10).await;
+        // Depending on DB state, this may fail or return Ok
         assert!(pending.is_ok() || pending.is_err());
 
         let record = AutoDreamSyncRecord {
@@ -231,7 +175,7 @@ mod tests {
             source_type: Some("test_source".to_string()),
             topic: Some("test_topic".to_string()),
             sync_status: Some("pending".to_string()),
-            last_sync_at: Some(chrono::Utc::now()),
+            last_sync_at: Some(Utc::now()),
         };
 
         let process_res = service.process_incoming_syncs(vec![record.clone()]).await;
@@ -239,32 +183,5 @@ mod tests {
 
         let mark_res = service.mark_records_synced(vec![record.id.clone()]).await;
         assert!(mark_res.is_ok() || mark_res.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_daemon_cancellation() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
-        }
-
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(database_url)
-            .unwrap();
-
-        let service = AutoDreamSyncServiceImpl::new(pool.clone());
-        let cancel_token = CancellationToken::new();
-        let token_clone = cancel_token.clone();
-
-        let client = Client::builder().build().unwrap();
-
-        let handle = tokio::spawn(async move {
-            let _ = service.start_sync_daemon("http://localhost:8080".to_string(), token_clone, client).await;
-        });
-
-        cancel_token.cancel();
-        let _ = handle.await;
-        assert!(true);
     }
 }
