@@ -107,7 +107,7 @@ impl Hub {
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: {
-                let mut t = Tracker::new();
+                let mut t = if let Ok(url) = std::env::var("REDIS_URL") { Tracker::new_with_redis(&url) } else { Tracker::new() };
                 t.set_auditor(cost_auditor.clone());
                 t
             },
