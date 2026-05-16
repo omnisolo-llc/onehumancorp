@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
-  // dummy validation comment
-  test('should traverse the complete business setup wizard successfully', async ({ page }) => {
+    test('should traverse the complete business setup wizard successfully', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('founder@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');

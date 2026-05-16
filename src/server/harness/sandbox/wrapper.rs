@@ -20,7 +20,7 @@ impl BashWrapper {
 
     pub fn wrap(&self, cmd: &str) -> String {
         // Enforce state management / I/O instrumenting based on config
-        let mut preamble = String::from("set -e; umask 077; umask 077; ");
+        let mut preamble = String::from("set -e; umask 077; ");
         // simple representation of instrumentation
         if !self.read_only_paths.is_empty() {
             // For assistant-class isolation, we simulate read-only enforcement
@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn test_wrapper_default() {
         let wrapper = BashWrapper::new();
-        assert_eq!(wrapper.wrap("echo hello"), "bash -c \"set -e; umask 077; umask 077; echo hello\"");
+        assert_eq!(wrapper.wrap("echo hello"), "bash -c \"set -e; umask 077; echo hello\"");
     }
 
     #[test]

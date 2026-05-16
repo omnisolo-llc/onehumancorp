@@ -1903,7 +1903,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
-                    <!-- Setup Page -->
+
+
+
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
                         <h1>Connect Custom Software</h1>
@@ -2077,59 +2079,58 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
+
+
+
+                    <!-- Setup Wizard Full Flow -->
+                    <div id="setup-screen" class="screen glass" style="display: none;">
                         <div id="step-0">
                             <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(1)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(1)">Start My Business</button>
                         </div>
                         <div id="step-1" style="display: none;">
                             <h1>What kind of business are you building?</h1>
                             <button class="secondary" onclick="nextStep(2)">🛒 Online Store</button>
                             <button class="secondary" onclick="nextStep(2)">🛠️ Service Business</button>
                             <button class="secondary" onclick="nextStep(2)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(2)">🎨 Creative</button>
+                            <button class="secondary" onclick="nextStep(2)">🎨 Creative / Portfolio</button>
                             <button class="secondary" onclick="nextStep(2)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(0)">Back</button>
+                            <button class="secondary" onclick="nextStep(2)">🏢 Other</button>
+                            <br/><button onclick="nextStep(2)">Next</button>
                         </div>
                         <div id="step-2" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <p>What is your business called?</p>
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <input type="text" placeholder="Description" />
+                            <h1>What is your business called?</h1>
+                            <input type="text" id="wizard-business-name" placeholder="e.g. Maya's Cakes" />
+                            <br/>
+                            <p>Business Description</p>
+                            <textarea id="wizard-business-desc" placeholder="A short description of your business..."></textarea>
                             <button onclick="nextStep('generating')">Auto-suggest Description</button>
-                            <button onclick="nextStep(3)">Next</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <br/><button onclick="nextStep(3)">Next</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical products</label><br/>
-                            <label><input type="checkbox"> Digital downloads</label><br/>
-                            <label><input type="checkbox"> Services / appointments</label><br/>
-                            <label><input type="checkbox"> Food & beverages</label><br/>
-                            <label><input type="checkbox"> Subscriptions</label><br/>
+                            <div class="multi-select">
+                                <label><input type="checkbox" value="physical"> Physical products</label>
+                                <label><input type="checkbox" value="digital"> Digital downloads</label>
+                                <label><input type="checkbox" value="services"> Services / appointments</label>
+                                <label><input type="checkbox" value="food"> Food & beverages</label>
+                                <label><input type="checkbox" value="subscriptions"> Subscriptions</label>
+                            </div>
                             <br/><button onclick="nextStep(4)">Next</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>Add your first product</h1>
                             <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="0.00" />
-                            <input type="text" placeholder="Birthday Cake" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(5)">Next</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <br/><button onclick="nextStep(5)">Next</button>
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(6)">Online only</button>
-                            <button class="secondary" onclick="nextStep(6)">In-person (POS)</button>
-                            <button class="secondary" onclick="nextStep(6)">Both</button>
-                            <button class="secondary" onclick="nextStep(6)">Skip for now</button>
+                            <button class="secondary" onclick="nextStep(6)">💳 Online only (2 mins)</button>
+                            <button class="secondary" onclick="nextStep(6)">🏪 In-person (POS) (3 mins)</button>
+                            <button class="secondary" onclick="nextStep(6)">🔄 Both (5 mins)</button>
+                            <button class="secondary" onclick="nextStep(6)">⏩ Skip for now</button>
                             <br/><button onclick="nextStep(6)">Next</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>Choose a Template</h1>
@@ -2139,7 +2140,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Choose a Domain</h1>
-                            <button class="secondary" onclick="nextStep(8)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(8)">🌐 Free OHC Domain (mybusiness.ohc.app)</button>
                             <button class="secondary" onclick="nextStep(8)">🔗 Connect Custom Domain</button>
                             <br/><button onclick="nextStep(8)">Next</button>
                         </div>
@@ -2156,12 +2157,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-9" style="display: none;">
                             <div class="card glass">
-                                <h1>Ready to launch!</h1>
+                                <h1>Almost there</h1>
                                 <p id="review-business-name">Business: <span id='review-business-name-span'></span></p>
-                                <p style="display:none;">Business: E2E Bakery</p>
-                                <p>Almost there</p>
-                                <button onclick="nextStep(100)">Launch My Business →</button>
-                                <button style="display:none;" onclick="nextStep(100)">Launch!</button>
+                                <button onclick="nextStep(100)">Launch!</button>
                             </div>
                         </div>
                         <div id="step-100" style="display: none;">
@@ -2181,12 +2179,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>⬜ Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
+                        <div id="step-101" style="display: none;">
+                            <h1>You're set up! Here's what to do next:</h1>
+                            <p>✅ Business live</p>
+                            <p>Add 3 more products</p>
+                            <p>Connect Instagram</p>
+                            <p>Share your link with a friend</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                        </div>
 
                         <div id="step-ai" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(0)">Back</button>
+                            <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <h1>Designing your storefront...</h1>
@@ -2201,7 +2207,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
 
-<!-- Storefront Builder Screen -->
+                    <!-- Storefront Builder Screen -->
                     <div id="storefront-builder-screen" class="screen glass" style="display: none;">
                         <div class="builder-container">
                             <div class="builder-header">
@@ -2255,7 +2261,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>One Human Corp</h2>
                         <p>Sign in to manage your business</p>
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="text" placeholder="Email or Username" />
+                        <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Login</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
@@ -2476,6 +2482,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+
+
+
                         let currentStep = 0;
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
@@ -2502,7 +2511,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             });
                             if (stepId === 9) {
-                                document.getElementById('review-business-name-span').innerText = document.querySelector('#step-2 input').value;
+                                document.getElementById('review-business-name-span').innerText = document.getElementById('wizard-business-name').value;
                             }
                             const next = document.getElementById('step-' + stepId);
                             if (next) next.style.display = 'block';
@@ -2512,7 +2521,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     await fetch('/api/onboarding/start', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ business_name: document.querySelector('#step-2 input').value })
+                                        body: JSON.stringify({ business_name: document.getElementById('wizard-business-name').value })
                                     });
                                 } catch (e) {
                                     console.error('Failed to start onboarding', e);
@@ -2522,22 +2531,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (stepId === 'generating') {
                                 // Connect to real database instead of using Future.delayed fake network mock
                                 try {
-                                    const res = await fetch('/api/v1/app/onboarding', {
+                                    await fetch('/api/onboarding/start', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({})
                                     });
-                                    if (prevStep === 2) nextStep(3);
+                                    if (prevStep === 2) {
+                                        document.getElementById('wizard-business-desc').value = "A customized business description generated by AI.";
+                                        nextStep(2);
+                                    }
                                     else if (prevStep === 4) nextStep(5);
                                     else nextStep('launch-ai');
                                 } catch (e) {
                                     console.error(e);
-                                    if (prevStep === 2) nextStep(3);
+                                    if (prevStep === 2) {
+                                        document.getElementById('wizard-business-desc').value = "A customized business description generated by AI.";
+                                        nextStep(2);
+                                    }
                                     else if (prevStep === 4) nextStep(5);
                                     else nextStep('launch-ai');
                                 }
                             }
                         }
+
 
                         async function generateAI() {
                             nextStep('generating');
