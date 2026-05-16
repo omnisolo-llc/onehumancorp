@@ -253,6 +253,62 @@ pub struct Agent {
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
 }
 
+#[derive(Clone)]
+pub struct LangGraphAgentState {
+    pub messages: Vec<Message>,
+    pub has_tool_calls: bool,
+    pub tool_calls_to_execute: Vec<crate::types::ToolCall>,
+    pub error: Option<String>,
+    pub total_tokens: i32,
+    pub error_counts: std::collections::HashMap<String, usize>,
+}
+
+#[derive(Clone, Debug)]
+pub enum LangGraphStateUpdate {
+    AddMessage(Message),
+    SetToolCalls(Vec<crate::types::ToolCall>),
+    ClearToolCalls,
+    SetError(String),
+    Batch(Vec<LangGraphStateUpdate>),
+    AddTokens(i32),
+    SetErrorCounts(std::collections::HashMap<String, usize>),
+}
+
+pub struct LangGraphAgentReducer;
+
+impl crate::langgraph::Reducer<LangGraphAgentState, LangGraphStateUpdate> for LangGraphAgentReducer {
+    fn reduce(&self, state: &mut LangGraphAgentState, update: LangGraphStateUpdate) {
+        let mut updates = vec![update];
+        while let Some(u) = updates.pop() {
+            match u {
+                LangGraphStateUpdate::AddMessage(msg) => {
+                    state.messages.push(msg);
+                }
+                LangGraphStateUpdate::SetToolCalls(calls) => {
+                    state.tool_calls_to_execute = calls.clone();
+                    state.has_tool_calls = !calls.is_empty();
+                }
+                LangGraphStateUpdate::ClearToolCalls => {
+                    state.tool_calls_to_execute.clear();
+                    state.has_tool_calls = false;
+                }
+                LangGraphStateUpdate::SetError(err) => {
+                    state.error = Some(err);
+                }
+                LangGraphStateUpdate::Batch(batch) => {
+                    updates.extend(batch.into_iter().rev());
+                }
+                LangGraphStateUpdate::AddTokens(tokens) => {
+                    state.total_tokens += tokens;
+                }
+                LangGraphStateUpdate::SetErrorCounts(counts) => {
+                    state.error_counts = counts;
+                }
+            }
+        }
+    }
+}
+
 impl Agent {
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
@@ -442,18 +498,14 @@ impl Agent {
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
             let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-
-            // Workaround to call the generic closure since on_event is a generic F.
-            // Wait, we can just return the error directly.
             return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
         }
 
-        // Add initial message if needed
         if !initial_message.is_empty() {
             initial_messages.push(Message::user(initial_message));
         }
 
-        let mut graph = crate::langgraph::StateGraph::new(std::sync::Arc::new(crate::langgraph::DefaultReducer));
+        let mut graph = crate::langgraph::StateGraph::new(std::sync::Arc::new(LangGraphAgentReducer));
 
         let llm = self.llm.clone();
         let tools_def: Vec<_> = session_tools.iter().map(|t| crate::types::ToolDefinition {
@@ -463,7 +515,6 @@ impl Agent {
         }).collect();
 
         let mut cfg_clone = cfg.clone();
-        // Force settings
         cfg_clone.enable_langgraph_mechanic = true;
         let cfg_arc = std::sync::Arc::new(cfg_clone);
 
@@ -472,406 +523,320 @@ impl Agent {
 
         let system_prompt = build_hierarchical_system_prompt(&cfg_arc, &session_tools_arc);
 
-        // --- NODE 1: LLM Call ---
         let llm_cfg = cfg_arc.clone();
         let llm_tools = tools_def_arc.clone();
         let llm_client = llm.clone();
         let llm_sys = system_prompt.clone();
-        graph.add_node("llm_call", move |state| {
+
+        graph.add_node("llm_call", move |state: LangGraphAgentState| {
             let llm_client_c = llm_client.clone();
             let llm_sys_c = llm_sys.clone();
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
-                let msgs_val = state.get("messages").unwrap().as_array().unwrap();
-                let mut msgs = vec![];
-                for m in msgs_val {
-                    let role_str = m["role"].as_str().unwrap();
-                    let content = m["content"].as_str().unwrap().to_string();
-                    let role = match role_str {
-                        "user" => crate::types::Role::User,
-                        "assistant" => crate::types::Role::Assistant,
-                        "system" => crate::types::Role::System,
-                        "tool" => crate::types::Role::Tool,
-                        _ => crate::types::Role::User,
-                    };
-                    let mut tool_calls = vec![];
-                    if let Some(tcs) = m.get("tool_calls").and_then(|v| v.as_array()) {
-                        for tc in tcs {
-                            tool_calls.push(crate::types::ToolCall {
-                                id: tc["id"].as_str().unwrap().to_string(),
-                                name: tc["name"].as_str().unwrap().to_string(),
-                                arguments: tc["arguments"].clone(),
-                            });
-                        }
-                    }
-                    let mut tool_results = vec![];
-                    if let Some(trs) = m.get("tool_results").and_then(|v| v.as_array()) {
-                        for tr in trs {
-                            tool_results.push(crate::types::ToolResult {
-                                tool_call_id: tr["tool_call_id"].as_str().unwrap().to_string(),
-                                content: tr["content"].as_str().unwrap_or("").to_string(),
-                                error: tr["error"].as_str().unwrap_or("").to_string(),
-                            });
-                        }
-                    }
-                    msgs.push(crate::types::Message {
-                        role,
-                        content,
-                        tool_calls,
-                        tool_results,
-                        response_id: None,
-                previous_response_id: None,
-                    });
-                }
+                let msgs = state.messages.clone();
 
                 let req = crate::types::ChatRequest {
                     model: llm_cfg_c.model.clone(),
-                    system: llm_sys_c.clone(),
+                    system: llm_sys_c,
                     messages: msgs,
-                    tools: llm_tools_c.to_vec(),
+                    tools: (*llm_tools_c).clone(),
                     max_tokens: llm_cfg_c.max_tokens,
                     temperature: llm_cfg_c.temperature,
                 };
 
-                match llm_client_c.chat(req).await {
-                    Ok(resp) => {
-                        let total_tokens_this_turn = resp.usage.input_tokens + resp.usage.output_tokens;
-                        let mut current_total = state.get("total_tokens").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                        current_total += total_tokens_this_turn;
+                let resp = match llm_client_c.chat(req).await {
+                    Ok(r) => r,
+                    Err(e) => return Ok(LangGraphStateUpdate::SetError(format!("LLM error: {}", e))),
+                };
 
-                        let mut final_content = resp.message.content.clone();
-                        let mut has_tool_calls = !resp.message.tool_calls.is_empty();
+                // Track total tokens (budget check)
+                let current_total = state.total_tokens + resp.usage.input_tokens + resp.usage.output_tokens;
+                let mut updates = vec![
+                    LangGraphStateUpdate::AddTokens(resp.usage.input_tokens + resp.usage.output_tokens)
+                ];
 
-                        if llm_cfg_c.max_task_tokens > 0 && current_total > llm_cfg_c.max_task_tokens {
-                            final_content = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
-                            has_tool_calls = false; // Prevent further tool calls
-                        }
-
-                        let final_tool_calls = if has_tool_calls {
-                            resp.message.tool_calls.iter().map(|tc| serde_json::json!({
-                                "id": tc.id,
-                                "name": tc.name,
-                                "arguments": tc.arguments,
-                            })).collect::<Vec<_>>()
-                        } else {
-                            vec![]
-                        };
-
-                        let mut update = serde_json::json!({
-                            "has_tool_calls": has_tool_calls,
-                            "total_tokens": current_total,
-                            "last_message": {
-                                "role": "assistant",
-                                "content": final_content,
-                                "tool_calls": final_tool_calls
-                            }
-                        });
-                        // Also append to messages array using the reducer
-                        update.as_object_mut().unwrap().insert("messages".to_string(), serde_json::json!([{
-                                "role": "assistant",
-                                "content": final_content,
-                                "tool_calls": final_tool_calls
-                        }]));
-                        Ok(update)
-                    }
-                    Err(e) => Err(format!("LLM Error: {}", e)),
+                if llm_cfg_c.max_task_tokens > 0 && current_total > llm_cfg_c.max_task_tokens {
+                    updates.push(LangGraphStateUpdate::AddMessage(Message::assistant("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string())));
+                    updates.push(LangGraphStateUpdate::ClearToolCalls);
+                    return Ok(LangGraphStateUpdate::Batch(updates));
                 }
+
+                let tool_calls = resp.message.tool_calls.clone();
+
+                if tool_calls.is_empty() {
+                    updates.push(LangGraphStateUpdate::AddMessage(resp.message));
+                    updates.push(LangGraphStateUpdate::ClearToolCalls);
+                } else {
+                    updates.push(LangGraphStateUpdate::AddMessage(resp.message));
+                    updates.push(LangGraphStateUpdate::SetToolCalls(tool_calls));
+                }
+
+                Ok(LangGraphStateUpdate::Batch(updates))
             })
         });
 
-        // --- NODE 2: Tool Execution ---
-        let tool_tools = session_tools_arc.clone();
-        let cfg_max_retries = cfg.max_retries;
-        graph.add_node("tool_node", move |state| {
-            let tt = tool_tools.clone();
+        graph.add_node("tool_node", move |state: LangGraphAgentState| {
+            let tools_c = session_tools_arc.clone();
+            let llm_cfg_c = cfg_arc.clone();
             Box::pin(async move {
-                let last_msg = state.get("last_message").unwrap();
-                let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
-
-                let mut error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
 
-                for tc_val in tool_calls {
-                    let name = tc_val["name"].as_str().unwrap();
-                    let is_read_only = tt.iter().find(|t| t.name == name).map(|t| t.is_read_only).unwrap_or(false);
+                for tc in &state.tool_calls_to_execute {
+                    let is_read_only = tools_c.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
                     if is_read_only {
-                        read_only_calls.push(tc_val.clone());
+                        read_only_calls.push(tc.clone());
                     } else {
-                        mutating_calls.push(tc_val.clone());
+                        mutating_calls.push(tc.clone());
                     }
                 }
 
-                let mut tool_results_json = vec![serde_json::json!(null); tool_calls.len()];
+                let mut tr_vec = vec![];
+                let mut error_counts = state.error_counts.clone();
 
-                // Execute read-only calls concurrently
+                // Read-only calls concurrent execution
                 let mut read_only_futures = Vec::new();
-                for tc_val in read_only_calls {
-                    let tt_clone = tt.clone();
+                for tc in read_only_calls {
+                    let tools_c_clone = tools_c.clone();
+                    let llm_cfg_clone = llm_cfg_c.clone();
+                    let err_counts_clone = error_counts.clone();
+
                     read_only_futures.push(async move {
-                        let name = tc_val["name"].as_str().unwrap();
-                        let args = tc_val["arguments"].clone();
-                        let id = tc_val["id"].as_str().unwrap().to_string();
+                        let name = tc.name.clone();
+                        let args = tc.arguments.clone();
+                        let id = tc.id.clone();
 
-                        if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
+                        let result_str = if let Some(tool) = tools_c_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
-                            let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
-
+                            let max_retries = llm_cfg_clone.max_retries;
+                            let mut final_res = String::new();
                             loop {
                                 match tool.execute.execute(args.clone()).await {
                                     Ok(res) => {
-                                        final_res = Ok(res);
+                                        final_res = res;
                                         break;
                                     }
                                     Err(crate::types::ToolError::Transient(msg)) => {
                                         if retry_count < max_retries {
                                             retry_count += 1;
-                                            let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                            tokio::time::sleep(backoff).await;
+                                            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                                             continue;
                                         } else {
-                                            final_res = Err(crate::types::ToolError::Transient(msg));
-                                            break;
+                                            return Err(format!("Transient error after retries: {}", msg));
                                         }
                                     }
-                                    Err(e) => {
-                                        final_res = Err(e);
-                                        break;
+                                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                        let c = err_counts_clone.get(&name).cloned().unwrap_or(0);
+                                        if c >= max_retries {
+                                            return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                        } else {
+                                            return Ok((name.clone(), id, msg, true)); // Return just the msg, we'll put it in error field below
+                                        }
                                     }
+                                    Err(crate::types::ToolError::Fatal(msg)) => return Err(msg),
+                                    Err(crate::types::ToolError::Unexpected(msg)) => return Err(msg),
+                                    Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("User intervention required: {}", msg)),
+                                    Err(crate::types::ToolError::HandoffRequested(msg)) => return Err(format!("HandoffRequested: {}", msg)),
                                 }
                             }
-                            (id, final_res)
+                            Ok((name, id, final_res, false))
                         } else {
-                            // Unreachable if tool not found goes to mutating calls
-                            unreachable!()
-                        }
+                            Ok((name.clone(), id, format!("Tool not found: {}", name), true))
+                        };
+                        result_str
                     });
                 }
 
                 let ro_results = futures::future::join_all(read_only_futures).await;
-
-                for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
-                    match final_res {
-                        Ok(res) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            error_counts.insert(tool_name, serde_json::json!(0));
-                            tool_results_json[idx] = serde_json::json!({
-                                "tool_call_id": id,
-                                "content": res,
-                                "error": ""
-                            });
-                        }
-                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
-                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
-                            if count > cfg_max_retries as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
+                for r in ro_results {
+                    match r {
+                        Ok((name, id, res_str, is_error)) => {
+                            if is_error {
+                                *error_counts.entry(name).or_insert(0) += 1;
+                            } else {
+                                error_counts.remove(&name);
                             }
-                            tool_results_json[idx] = serde_json::json!({
-                                "tool_call_id": id,
-                                "content": "",
-                                "error": msg
+                            let (content_str, err_str) = if is_error {
+                                ("".to_string(), res_str)
+                            } else {
+                                (res_str, "".to_string())
+                            };
+                            tr_vec.push(crate::types::ToolResult {
+                                tool_call_id: id,
+                                content: content_str,
+                                error: err_str,
                             });
                         }
-                        Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
-                        }
-                        Err(crate::types::ToolError::UserFixable(msg)) => {
-                            return Err(format!("USER_FIXABLE:{}", msg));
-                        }
-                        Err(crate::types::ToolError::Fatal(msg)) => {
-                            return Err(format!("Fatal tool error: {}", msg));
-                        }
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
-                        Err(crate::types::ToolError::HandoffRequested(target)) => {
-                            return Err(format!("Handoff requested to {}", target));
+                        Err(err_msg) => {
+                            return Ok(LangGraphStateUpdate::SetError(err_msg));
                         }
                     }
                 }
 
-                // Execute mutating calls sequentially
-                for tc_val in mutating_calls {
-                    let name = tc_val["name"].as_str().unwrap();
-                    let args = tc_val["arguments"].clone();
-                    let id = tc_val["id"].as_str().unwrap();
-                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                // Mutating calls sequential execution
+                for tc in mutating_calls {
+                    let name = tc.name.as_str();
+                    let args = tc.arguments.clone();
+                    let id = tc.id.clone();
 
-                    if let Some(tool) = tt.iter().find(|t| t.name == name) {
+                    let mut is_err_recoverable = false;
+                    let result_str = if let Some(tool) = tools_c.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
-                        let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
-
+                        let max_retries = llm_cfg_c.max_retries;
+                        let mut final_res = String::new();
                         loop {
                             match tool.execute.execute(args.clone()).await {
                                 Ok(res) => {
-                                    final_res = Ok(res);
+                                    final_res = res;
                                     break;
                                 }
                                 Err(crate::types::ToolError::Transient(msg)) => {
                                     if retry_count < max_retries {
                                         retry_count += 1;
-                                        let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                        tokio::time::sleep(backoff).await;
+                                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                                         continue;
                                     } else {
-                                        final_res = Err(crate::types::ToolError::Transient(msg));
+                                        return Ok(LangGraphStateUpdate::SetError(format!("Transient error after retries: {}", msg)));
+                                    }
+                                }
+                                Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                    let c = error_counts.get(name).cloned().unwrap_or(0);
+                                    if c >= max_retries {
+                                        return Ok(LangGraphStateUpdate::SetError(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg)));
+                                    } else {
+                                        final_res = format!("Error: {}", msg);
+                                        is_err_recoverable = true;
                                         break;
                                     }
                                 }
-                                Err(e) => {
-                                    final_res = Err(e);
-                                    break;
-                                }
+                                Err(crate::types::ToolError::Fatal(msg)) => return Ok(LangGraphStateUpdate::SetError(msg)),
+                                Err(crate::types::ToolError::Unexpected(msg)) => return Ok(LangGraphStateUpdate::SetError(msg)),
+                                Err(crate::types::ToolError::UserFixable(msg)) => return Ok(LangGraphStateUpdate::SetError(format!("User intervention required: {}", msg))),
+                                Err(crate::types::ToolError::HandoffRequested(msg)) => return Ok(LangGraphStateUpdate::SetError(format!("HandoffRequested: {}", msg))),
                             }
                         }
 
-                        match final_res {
-                            Ok(res) => {
-                                error_counts.insert(name.to_string(), serde_json::json!(0));
-                                tool_results_json[idx] = serde_json::json!({
-                                    "tool_call_id": id,
-                                    "content": res,
-                                    "error": ""
-                                });
-                            }
-                            Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
-                                error_counts.insert(name.to_string(), serde_json::json!(count));
-                                if count > cfg_max_retries as u64 {
-                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
-                                }
-                                tool_results_json[idx] = serde_json::json!({
-                                    "tool_call_id": id,
-                                    "content": "",
-                                    "error": msg
-                                });
-                            }
-                            Err(crate::types::ToolError::Transient(msg)) => {
-                                return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
-                            }
-                            Err(crate::types::ToolError::UserFixable(msg)) => {
-                                return Err(format!("USER_FIXABLE:{}", msg));
-                            }
-                            Err(crate::types::ToolError::Fatal(msg)) => {
-                                return Err(format!("Fatal tool error: {}", msg));
-                            }
-                            Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
-                            }
-                            Err(crate::types::ToolError::HandoffRequested(target)) => {
-                                return Err(format!("Handoff requested to {}", target));
-                            }
+                        if is_err_recoverable {
+                            *error_counts.entry(name.to_string()).or_insert(0) += 1;
+                        } else {
+                            error_counts.remove(name);
                         }
+
+                        final_res
                     } else {
-                        tool_results_json[idx] = serde_json::json!({
-                            "tool_call_id": id,
-                            "content": "",
-                            "error": format!("Tool {} not found", name)
-                        });
-                    }
+                        *error_counts.entry(name.to_string()).or_insert(0) += 1;
+                        is_err_recoverable = true;
+                        format!("Tool not found: {}", name)
+                    };
+
+                    let (content_str, err_str) = if is_err_recoverable {
+                        ("".to_string(), result_str)
+                    } else {
+                        (result_str, "".to_string())
+                    };
+                    tr_vec.push(crate::types::ToolResult {
+                        tool_call_id: id,
+                        content: content_str,
+                        error: err_str,
+                    });
                 }
 
-                Ok(serde_json::json!({
-                    "has_tool_calls": false, // Clear flag
-                    "error_counts": error_counts,
-                    "messages": [{
-                        "role": "tool",
-                        "content": "",
-                        "tool_results": tool_results_json
-                    }]
-                }))
+                Ok(LangGraphStateUpdate::Batch(vec![
+                    LangGraphStateUpdate::AddMessage(Message {
+                        role: crate::types::Role::Tool,
+                        content: "".to_string(),
+                        tool_calls: vec![],
+                        tool_results: tr_vec,
+                        response_id: None,
+                        previous_response_id: None,
+                    }),
+                    LangGraphStateUpdate::SetErrorCounts(error_counts),
+                    LangGraphStateUpdate::ClearToolCalls,
+                ]))
             })
         });
 
-        // --- EDGES ---
-        graph.add_edge("tool_node", "llm_call");
-
-        graph.add_conditional_edges("llm_call", |state| {
-            if state.get("has_tool_calls").and_then(|v| v.as_bool()).unwrap_or(false) {
+        graph.add_conditional_edges("llm_call", |state: &LangGraphAgentState| {
+            if state.error.is_some() {
+                crate::langgraph::END.to_string()
+            } else if state.has_tool_calls {
                 "tool_node".to_string()
             } else {
                 crate::langgraph::END.to_string()
             }
         });
 
+        graph.add_conditional_edges("tool_node", |state: &LangGraphAgentState| {
+            if state.error.is_some() {
+                crate::langgraph::END.to_string()
+            } else {
+                "llm_call".to_string()
+            }
+        });
         graph.set_entry_point("llm_call");
 
-        // Convert initial messages to json state
-        let msgs_json: Vec<_> = initial_messages.iter().map(|m| {
-            serde_json::json!({
-                "role": match m.role {
-                    crate::types::Role::User => "user",
-                    crate::types::Role::Assistant => "assistant",
-                    crate::types::Role::System => "system",
-                    crate::types::Role::Tool => "tool",
-                },
-                "content": m.content,
-                "tool_calls": m.tool_calls.iter().map(|tc| serde_json::json!({
-                    "id": tc.id,
-                    "name": tc.name,
-                    "arguments": tc.arguments,
-                })).collect::<Vec<_>>(),
-                "tool_results": m.tool_results.iter().map(|tr| serde_json::json!({
-                    "tool_call_id": tr.tool_call_id,
-                    "content": tr.content,
-                    "error": tr.error,
-                })).collect::<Vec<_>>(),
-            })
-        }).collect();
-
-        let initial_state = serde_json::json!({
-            "messages": msgs_json,
-            "has_tool_calls": false,
-            "total_tokens": 0,
-            "error_counts": {}
-        });
+        let initial_state = LangGraphAgentState {
+            messages: initial_messages.clone(),
+            has_tool_calls: false,
+            tool_calls_to_execute: vec![],
+            error: None,
+            total_tokens: 0,
+            error_counts: std::collections::HashMap::new(),
+        };
 
         match graph.run(initial_state).await {
             Ok(final_state) => {
-                let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
-                let last_msg = final_msgs.last().unwrap();
-                let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                on_event(AgentEvent::TaskComplete { content: content.clone() });
-
-                // Cross-Department Memory Consolidation for LangGraph
-                if !content.is_empty() {
-                    if let Some(store) = &self.memory_store {
-                        let content_to_store = content.clone();
-                        let store_clone = store.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = store_clone.store(&content_to_store, vec!["AUTO_CONSOLIDATED_LANGGRAPH".to_string()]).await {
-                                tracing::error!("Failed to auto-consolidate LangGraph memory: {}", e);
-                            } else {
-                                tracing::debug!("Successfully auto-consolidated LangGraph memory.");
-                            }
-                        });
+                if let Some(err) = final_state.error {
+                    if err.starts_with("User intervention required:") {
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                    } else if err.starts_with("HandoffRequested:") {
+                        let target = err.replace("HandoffRequested: ", "");
+                        on_event(AgentEvent::Handoff { target_agent: target });
+                        return Ok(err.clone());
+                    } else {
+                        on_event(AgentEvent::TaskError { error: err.clone() });
                     }
-                }
+                    Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err)))
+                } else if let Some(last_msg) = final_state.messages.last() {
+                    let content = if last_msg.content.contains("Token budget exhausted") {
+                        "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string()
+                    } else {
+                        last_msg.content.clone()
+                    };
 
-                Ok(content)
-            }
-            Err(e) => {
-                if let Some(msg) = e.strip_prefix("USER_FIXABLE:") {
-                    let err_msg = format!("User intervention required: {}", msg);
-                    on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
-                    return Err(err_msg.into());
+                    on_event(AgentEvent::TaskComplete {
+                        content: content.clone(),
+                    });
+
+                    if !content.is_empty() {
+                        if let Some(store) = &self.memory_store {
+                            let content_to_store = content.clone();
+                            let thread_id = cfg.thread_id.clone().unwrap_or_else(|| "default".to_string());
+                            let store_clone = store.clone();
+                            tokio::spawn(async move {
+                                let _ = store_clone.store(&thread_id, vec![content_to_store]).await;
+                            });
+                        }
+                    }
+
+                    Ok(content)
+                } else {
+                    Ok("".to_string())
                 }
-                let err_msg = format!("LangGraph Error: {}", e);
-                on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                Err(err_msg.into())
+            },
+            Err(e) => {
+                let err_str = e.to_string();
+                if err_str.starts_with("User intervention required:") {
+                    on_event(AgentEvent::UserInterventionRequired { error: err_str.clone() });
+                } else {
+                    on_event(AgentEvent::TaskError { error: err_str.clone() });
+                }
+                Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, e)))
             }
         }
     }
 
-
-    /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
-    /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
     pub async fn run_plan_and_execute<F>(
         &self,
         cfg: &AgentRunConfig,
