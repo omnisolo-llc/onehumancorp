@@ -4,6 +4,7 @@ filegroup(
         "approvals_test.rs",
         "customer_success_agent.rs",
         "flow_test.rs",
+        "lens_padding.rs",
         "marketing_agent.rs",
         "mod.rs",
         "operations_agent.rs",
