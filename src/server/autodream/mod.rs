@@ -97,7 +97,7 @@ impl AutoDreamWorker {
         
         let client = crate::minimax::LocalLLMClient::new();
 
-        for (id, data) in stale_sessions {
+        for (id, tenant_id, data) in stale_sessions {
              debug!("AutoDream: pruned stale session");
              
              // Mock summarization and injection for now
@@ -114,14 +114,14 @@ impl AutoDreamWorker {
                 }
              };
 
-             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
+             db.inject_truth(&format!("session-summary-{}", id), &tenant_id, &summary, &embedding).await?;
 
-             db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
+             db.insert_autodream_memory(&format!("session-summary-{}", id), &tenant_id, "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
              if db.is_sqlite() {
                  sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                      .bind(&format!("session-summary-{}", id))
-                     .bind("system")
+                     .bind(&tenant_id)
                      .bind("system_agent")
                      .bind(&id)
                      .bind(&summary)
@@ -132,7 +132,7 @@ impl AutoDreamWorker {
              } else {
                  sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                      .bind(&format!("session-summary-{}", id))
-                     .bind("system")
+                     .bind(&tenant_id)
                      .bind("system_agent")
                      .bind(&id)
                      .bind(&summary)
