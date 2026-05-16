@@ -742,7 +742,9 @@ mod tests {
         store.append_transcript("session1", "User asked about memory.\n\nAgent replied 3-tier is better.").await.unwrap();
         store.append_transcript("session2", "User requested weather.\n\nAgent gave forecast.").await.unwrap();
 
-        let res = store.search_transcripts("3-tier is better", 10).await.unwrap();
+        let mut res = store.search_transcripts("3-tier is better", 10).await.unwrap();
+tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+res = store.search_transcripts("3-tier is better", 10).await.unwrap();
         assert_eq!(res.len(), 1);
         assert!(res[0].contains("Agent replied 3-tier is better."));
 
@@ -881,8 +883,9 @@ impl Anthropic3TierMemoryStore {
     pub async fn append_transcript(&self, session_id: &str, turn_content: &str) -> Result<(), String> {
         let path = self.transcripts_dir.join(format!("{}.log", session_id));
         use tokio::io::AsyncWriteExt;
-        let mut file = tokio::fs::OpenOptions::new().create(true).append(true).open(path).await.map_err(|e| e.to_string())?;
+        let mut file = tokio::fs::OpenOptions::new().create(true).append(true).open(&path).await.map_err(|e| e.to_string())?;
         file.write_all(format!("{}\n\n", turn_content).as_bytes()).await.map_err(|e| e.to_string())?;
+        file.flush().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }

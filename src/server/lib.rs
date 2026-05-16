@@ -23,6 +23,8 @@ pub mod analytics;
 pub use ::server_telemetry as telemetry;
 #[cfg(test)]
 pub mod telemetry_test;
+#[cfg(test)]
+pub mod compliance_guardrails_test;
 pub mod chaos;
 pub mod integrations;
 pub use ::server_utils as utils;
@@ -1470,7 +1472,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
-        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+        .nest("/api/v1/growth", api::growth::router())
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
