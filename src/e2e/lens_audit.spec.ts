@@ -35,8 +35,6 @@ test.describe('Lens Audit E2E Flow', () => {
     // 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'My Awesome Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000); // Wait for mock gen
-    await page.click('button:has-text("Next")');
 
     // Verify it navigates and mock data is not present
     const mockElements = page.locator('.mock-data-stub');

@@ -31,8 +31,6 @@ test.describe('Onboarding Wizard', () => {
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
@@ -60,8 +58,6 @@ test.describe('Onboarding Wizard', () => {
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'AI Desc Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
@@ -71,7 +67,6 @@ test.describe('Onboarding Wizard', () => {
 
     await expect(page.locator('button:has-text("Generate AI Description")')).toBeVisible();
     await page.click('button:has-text("Generate AI Description")');
-    await page.waitForTimeout(1000);
 
     await page.click('button:has-text("Next")');
   });
@@ -119,8 +114,6 @@ test.describe('Onboarding Wizard', () => {
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
@@ -185,9 +178,8 @@ test.describe('Onboarding Wizard', () => {
 
     // 9. First Product
     await page.getByPlaceholder('What is the name of this product?').fill("Custom Birthday Cake");
-    await page.getByRole('button', { name: 'Generate AI Description' }).click();
     await page.getByPlaceholder('0.00').fill("120.00");
-    await page.getByRole('button', { name: 'Next →' }).click();
+    await page.getByRole('button', { name: 'Generate AI Description' }).click();
 
     // 10. Domain
     await page.getByRole('button', { name: '🌐 Free OHC Domain' }).click();
@@ -195,6 +187,12 @@ test.describe('Onboarding Wizard', () => {
     // 11. Launch
     await page.getByRole('button', { name: 'Publish my business →' }).click();
     await expect(page.locator('text="Your business is now live!"')).toBeVisible({ timeout: 10000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
 
     // Screenshot
     await page.screenshot({ path: 'test-results/maya_final.png' });

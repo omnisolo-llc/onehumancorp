@@ -1622,12 +1622,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --sidebar-bg: #ffffff;
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
-                        }
+                        } h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
                         .glass { 
                             background: var(--card-bg); 
                             border: 1px solid var(--border); 
@@ -1659,7 +1659,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--primary);
                         }
                         main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
+                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto;  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); }
                         .card { 
                             background: var(--card-bg); 
                             padding: 24px; 
@@ -1668,8 +1668,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border: 1px solid var(--border);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
-                        input { 
-                            width: 100%; 
+                        input { width: 100%;
                             padding: 10px 14px; 
                             margin-bottom: 16px; 
                             background: #ffffff; 
@@ -1678,14 +1677,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text); 
                             box-sizing: border-box; 
                             font-size: 14px;
-                            transition: border-color 0.2s;
-                        }
+                            transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); min-height: 44px; min-width: 44px; padding: 12px 24px; font-size: 16px; box-sizing: border-box; }
                         input:focus {
                             outline: none;
                             border-color: var(--primary);
                         }
-                        button { 
-                            padding: 10px 20px; 
+                        button { padding: 10px 20px;
                             background: var(--primary); 
                             border: none; 
                             border-radius: 6px; 
@@ -1695,8 +1692,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-right: 8px; 
                             margin-bottom: 8px; 
                             font-size: 14px;
-                            transition: background 0.2s;
-                        }
+                            transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); min-height: 44px; min-width: 44px; padding: 12px 24px; font-size: 16px; }
                         button:hover {
                             background: var(--primary-hover);
                         }
@@ -2098,17 +2094,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <button class="secondary" onclick="nextStep(3, 'Online Store')">🛒 Online Store</button>
+                            <button class="secondary" onclick="nextStep(3, 'Service Business')">🛠️ Service Business</button>
+                            <button class="secondary" onclick="nextStep(3, 'Restaurant / Food')">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="nextStep(3, 'Creative')">🎨 Creative</button>
+                            <button class="secondary" onclick="nextStep(3, 'Local Business')">🏠 Local Business</button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
                             <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
+                            <button onclick="nextStep(4)">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
@@ -2124,14 +2120,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Add your first product or service</h1>
                             <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <button onclick="nextStep(6)">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <button class="secondary" onclick="nextStep(7, 'Online')">Online</button>
+                            <button class="secondary" onclick="nextStep(7, 'Both Online & In-person')">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
                         <div id="step-7" style="display: none;">
@@ -2144,21 +2140,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-8" style="display: none;">
                             <h1>Choose a Template</h1>
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <button class="secondary" onclick="nextStep(9, 'Modern')">Modern</button>
+                            <button class="secondary" onclick="nextStep(9, 'Bold')">Bold</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="nextStep(10, 'Free OHC Domain')">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10, 'Connect Custom Domain')">🔗 Connect Custom Domain</button>
                             <br/><button onclick="nextStep(10)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="nextStep(10, 'Free OHC Domain')">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10, 'Connect Custom Domain')">🔗 Connect Custom Domain</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
@@ -2188,22 +2184,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
-                        </div>
-                        <div id="step-generating" style="display: none;">
-                            <h1>Designing your storefront...</h1>
-                            <p>Our AI is crafting a custom experience for your brand.</p>
-                        </div>
-                        <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
-                        </div>
+
+
+
                     </div>
 
                     <!-- Login Screen -->
@@ -2220,7 +2203,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
-                        const pathMap = {
+                                                const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
@@ -2238,6 +2221,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
+                        };
+
+                        let onboardingData = {
+                            business_type: '',
+                            company_name: '',
+                            company_description: '',
+                            selling_categories: [],
+                            payment_pref: '',
+                            admin_email: '',
+                            website_template: '',
+                            first_product_name: '',
+                            first_product_price: '',
+                            domain_choice: ''
                         };
 
                         async function handleLogin(btn) {
@@ -2263,10 +2259,52 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         let currentStep = 1;
-                        async function nextStep(stepId) {
+                        async function nextStep(stepId, value = null) {
                             const prevStep = currentStep;
+
+                            // Capture data based on current step
+                            if (prevStep === 2 && value) {
+                                onboardingData.business_type = value;
+                            } else if (prevStep === 3) {
+                                const val = document.querySelector('#step-3 input').value;
+                                if (val) onboardingData.company_name = val;
+                                // In a real app we might wait for the AI desc here, but mock generation logic was removed
+                            } else if (prevStep === 4) {
+                                const checkboxes = document.querySelectorAll('#step-4 input[type="checkbox"]');
+                                onboardingData.selling_categories = [];
+                                if (checkboxes[0].checked) onboardingData.selling_categories.push('Physical Products');
+                                if (checkboxes[1].checked) onboardingData.selling_categories.push('Services');
+                                if (checkboxes[2].checked) onboardingData.selling_categories.push('Subscriptions');
+                            } else if (prevStep === 5) {
+                                const inputs = document.querySelectorAll('#step-5 input');
+                                if (inputs[0].value) onboardingData.first_product_name = inputs[0].value;
+                                if (inputs[1].value) onboardingData.first_product_price = inputs[1].value;
+                            } else if (prevStep === 6 && value) {
+                                onboardingData.payment_pref = value;
+                            } else if (prevStep === 7) {
+                                const inputs = document.querySelectorAll('#step-7 input');
+                                if (inputs[1].value) onboardingData.admin_email = inputs[1].value;
+                            } else if (prevStep === 8 && value) {
+                                onboardingData.website_template = value;
+                            } else if (prevStep === 9 && value) {
+                                onboardingData.domain_choice = value;
+                            }
+
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
                                 currentStep = parseInt(stepId);
+                            }
+
+                            if (stepId === 100) {
+                                // Final step - send data to backend
+                                try {
+                                    const res = await fetch('/api/onboarding/start', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(onboardingData)
+                                    });
+                                } catch (e) {
+                                    console.error("Failed to save state:", e);
+                                }
                             }
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
@@ -2276,30 +2314,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) next.style.display = 'block';
-
-                            if (stepId === 'generating') {
-                                // Connect to real database instead of using Future.delayed fake network mock
-                                try {
-                                    const res = await fetch('/api/v1/app/onboarding', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({})
-                                    });
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
-                                } catch (e) {
-                                    console.error(e);
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
-                                }
-                            }
                         }
 
-                        async function generateAI() {
-                            nextStep('generating');
-                        }
+
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');

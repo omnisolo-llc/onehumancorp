@@ -47,7 +47,6 @@ test.describe('Social Media Autoposting Flow', () => {
 
     // The modal actually just hides, we don't need to navigate
     // Wait for dashboard view
-    await page.waitForTimeout(1000);
 
     // 5. Check for Drafted Instagram Post in the Agent Activity Feed
     await expect(page.locator('text=Drafted Instagram Post').filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });

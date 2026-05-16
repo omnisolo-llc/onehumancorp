@@ -29,8 +29,6 @@ test('verify wizard UI state propagation to backend', async ({ page }) => {
     // 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'My Awesome Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000); // Wait for mock gen
-    await page.click('button:has-text("Next")');
 
     // 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
@@ -288,8 +286,6 @@ test('verify checklist flow and integration', async ({ page }) => {
     // Step 2: Company Info -> 3
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     // Step 3: Selling Categories -> 4
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
@@ -351,8 +347,6 @@ test('verify checklist connects instagram routing', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
@@ -406,8 +400,6 @@ test('verify checklist share link routing', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
@@ -461,8 +453,6 @@ test('verify checklist fully completed state', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');
@@ -520,8 +510,6 @@ test('verify checklist completion progress', async ({ page }) => {
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is your business called?"]', 'Checklist Store');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForTimeout(1000);
-    await page.click('button:has-text("Next")');
     await page.check('text="Physical Products"');
     await page.click('button:has-text("Next")');
     await page.fill('input[placeholder="What is the name of this product?"]', 'Prod');

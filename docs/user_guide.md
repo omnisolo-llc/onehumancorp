@@ -9,17 +9,17 @@ The app provides a unified, mobile-first onboarding experience for small busines
 
 ## 2. Onboarding Flow
 
-The OHC Slint app features a comprehensive 12-step onboarding wizard:
+The OHC app features a comprehensive 10-step onboarding wizard plus a checklist:
 1.  **Welcome**: Introduction to OneHumanCorp.
 2.  **Business Type**: Selection of business category (Online Store, Service, etc.).
-3.  **Name & Description**: Naming the business and AI-assisted description.
-4.  **Sell Categories**: Multi-select for what the business sells (Physical, Digital, Services, etc.).
-5.  **Payments**: Choice of payment collection (Online, In-person, Both).
-6.  **Admin Account**: Creating the administrator account.
-7.  **Template Selection**: Choosing a website design theme (Modern, Classic, Bold).
-8.  **Product Add**: Adding the first product or service with price and photo.
+3.  **Name & Description**: Naming the business and generating description.
+4.  **Sell Categories**: Multi-select for what the business sells (Physical, Services, Subscriptions).
+5.  **Product Add**: Adding the first product or service with price and photo.
+6.  **Payments**: Choice of payment collection (Online, In-person, Both).
+7.  **Admin Account**: Creating the administrator account.
+8.  **Template Selection**: Choosing a website design theme (Modern, Bold).
 9.  **Domain Choice**: Choosing between a free OHC subdomain or a custom domain.
-10. **Review & Launch**: Summary of setup and triggering the AI deployment.
+10. **Review & Launch**: Summary of setup and triggering the deployment.
 11. **Checklist**: Post-launch checklist for the business owner.
 
 ## 3. Running Tests

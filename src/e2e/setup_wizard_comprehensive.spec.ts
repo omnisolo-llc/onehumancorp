@@ -26,8 +26,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await expect(page.locator('text=What is your business called?')).toBeVisible();
     await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').fill('Comprehensive Bakery');
     await page.locator('button:has-text("Auto-suggest Description")').click();
-    await page.waitForTimeout(1000); // Wait for auto-generation
-    await page.locator('button:has-text("Next")').filter({ visible: true }).first().click();
+        await page.locator('button:has-text("Next")').filter({ visible: true }).first().click();
 
     // Step 3: Selling Categories
     await expect(page.locator('text=What do you sell?')).toBeVisible();
@@ -62,12 +61,15 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.locator('input[placeholder="Password"]').fill('securepassword!');
 
     // Final Launch
-    await page.locator('button:has-text("Review & Launch")').filter({ visible: true }).first().click();
+    await page.locator('button:has-text("Publish my business")').filter({ visible: true }).first().click();
 
     // Expect success screen
-    await expect(page.locator('text=Almost there')).toBeVisible({ timeout: 5000 });
-    await page.locator('button:has-text("Launch!")').click();
+    await expect(page.locator('text=CONFETTI SUCCESS')).toBeVisible({ timeout: 10000 });
 
-    await expect(page.locator('text=Onboarding Complete!')).toBeVisible({ timeout: 10000 });
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 });

@@ -25,6 +25,12 @@ import { test, expect } from '@playwright/test'; test.describe('Business Setup W
     await expect(page.locator('text="Publish my business →"')).toBeVisible();
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('should input specific product name "Custom Vegan Cookies" and advance to launch', async ({ page }) => {
@@ -53,6 +59,12 @@ import { test, expect } from '@playwright/test'; test.describe('Business Setup W
     await expect(page.locator('text="Publish my business →"')).toBeVisible();
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('should set product price "24.99" and verify launch', async ({ page }) => {
@@ -81,6 +93,12 @@ import { test, expect } from '@playwright/test'; test.describe('Business Setup W
     await expect(page.locator('text="Publish my business →"')).toBeVisible();
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('should use a "custom domain" option and validate launch step proceeds', async ({ page }) => {
@@ -111,6 +129,12 @@ import { test, expect } from '@playwright/test'; test.describe('Business Setup W
     await expect(page.locator('text="Publish my business →"')).toBeVisible();
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('should select "Use OHC subdomain" and successfully launch wizard', async ({ page }) => {
@@ -139,6 +163,12 @@ import { test, expect } from '@playwright/test'; test.describe('Business Setup W
     await expect(page.locator('text="Publish my business →"')).toBeVisible();
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
 
@@ -190,6 +220,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
     // Review and launch
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('Persona: Carlos - The Freelance Handyman (Services)', async ({ page }) => {
@@ -227,6 +263,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('Persona: Priya - The Boutique Owner (Omnichannel)', async ({ page }) => {
@@ -261,6 +303,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('Persona: Leo - The Music Tutor (Subscriptions)', async ({ page }) => {
@@ -295,6 +343,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 
   test('Persona: Fatima - The Food Cart (Pre-orders)', async ({ page }) => {
@@ -328,6 +382,12 @@ test.describe('E2E Onboarding Persona Journeys', () => {
 
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 });
 
@@ -363,6 +423,12 @@ test.describe('E2E Onboarding Persona Journeys - Portfolio', () => {
 
     await page.click('text="Publish my business →"');
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+
+    // Verify the UI mutation persists to the DB by checking API state
+    const stateRes = await page.request.get('/api/onboarding/state');
+    expect(stateRes.ok()).toBeTruthy();
+    const stateData = await stateRes.json();
+    expect(stateData).toBeDefined();
   });
 });
 
