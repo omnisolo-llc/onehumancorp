@@ -1209,11 +1209,11 @@ impl Agent {
             return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
         }
 
-        // OpenAI Mechanic: Input Guardrails
+        // OpenAI Mechanic: Input Guardrails (Hook 1/3) linked to Tripwire
         if let Some(guard_cfg) = &final_cfg.guardrails {
             if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
-                on_event(AgentEvent::TaskError { error: e.clone() });
-                return Err(e.into());
+                on_event(AgentEvent::TaskError { error: e.to_string() });
+                return Err(e.to_string().into());
             }
         }
 
@@ -1632,11 +1632,11 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
-                // OpenAI Mechanic: Output Guardrails
+                // OpenAI Mechanic: Output Guardrails (Hook 2/3) linked to Tripwire
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
-                        on_event(AgentEvent::TaskError { error: e.clone() });
-                        return Err(e.into());
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
+                        return Err(e.to_string().into());
                     }
                 }
 
@@ -1685,11 +1685,11 @@ impl Agent {
 
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
-                // OpenAI Mechanic: Tool Guardrails
+                // OpenAI Mechanic: Tool Guardrails (Hook 3/3) linked to Tripwire
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
-                        on_event(AgentEvent::TaskError { error: e.clone() });
-                        return Err(e.into()); // Tripwire: halt the loop immediately
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
+                        return Err(e.to_string().into()); // Tripwire: halt the loop immediately
                     }
                 }
                 let gating_res = Self::check_tool_gating(tc, true, &final_cfg);
@@ -1860,11 +1860,11 @@ impl Agent {
 
             // Execute mutating calls sequentially to prevent race conditions
             for tc in &mutating_calls {
-                // OpenAI Mechanic: Tool Guardrails
+                // OpenAI Mechanic: Tool Guardrails (Hook 3/3) linked to Tripwire
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
-                        on_event(AgentEvent::TaskError { error: e.clone() });
-                        return Err(e.into()); // Tripwire: halt the loop immediately
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
+                        return Err(e.to_string().into()); // Tripwire: halt the loop immediately
                     }
                 }
 
