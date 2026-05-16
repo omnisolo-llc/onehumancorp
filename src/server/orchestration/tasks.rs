@@ -5,7 +5,7 @@ use crate::tasks::SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,

@@ -1,5 +1,6 @@
-use std::sync::atomic::Ordering;
+use prost::Message as ProstMessage;
 use crate::msgbus::MemoryBus;
+use std::sync::atomic::Ordering;
 use crate::msgbus::{Bus, DistributedLock, Message};
 use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
@@ -26,7 +27,6 @@ impl InteropProtocol {
 
     /// Triggers a state handoff when switching modes using protobuf on the wire
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
-        use prost::Message as ProstMessage;
 
         let lock_resource = format!("handoff:{}", mission_id);
 
@@ -113,7 +113,6 @@ impl InteropProtocol {
     pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
@@ -130,7 +129,6 @@ impl InteropProtocol {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
-                use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
                     let ack = proto::HealthAck {
                         source_node_id: node_id.clone(),
@@ -166,7 +164,6 @@ impl InteropProtocol {
 
     /// Health monitor across the swarm using protobuf
     pub async fn check_health(&self, timeout_ms: u64) -> Result<bool, String> {
-        use prost::Message as ProstMessage;
         use std::sync::atomic::{AtomicBool, Ordering};
 
         let received = Arc::new(AtomicBool::new(false));
@@ -212,7 +209,6 @@ impl InteropProtocol {
 
     /// Dispatches a background job and waits for acknowledgment
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
-        use prost::Message as ProstMessage;
         use std::sync::atomic::{AtomicBool, Ordering};
 
         let received = Arc::new(AtomicBool::new(false));
@@ -282,7 +278,6 @@ impl InteropProtocol {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
-                use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
                     // In a real implementation, we would process the job here or send it to a worker pool
                     // Here, we just acknowledge receipt
@@ -321,7 +316,6 @@ impl InteropProtocol {
 
     /// Reports job status back to the main server
     pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
-        use prost::Message as ProstMessage;
 
         let update = proto::JobStatusUpdate {
             job_id: job_id.to_string(),
@@ -361,7 +355,6 @@ impl InteropProtocol {
     pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
-                use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
@@ -376,7 +369,6 @@ impl InteropProtocol {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msgbus::MemoryBus;
     use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]
@@ -390,7 +382,6 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
                 let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
                     rx.store(true, Ordering::SeqCst);
@@ -451,7 +442,6 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
                 let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
                     rx.store(true, Ordering::SeqCst);
@@ -556,7 +546,6 @@ mod tests {
         let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
 
         // Publish a ping
-        use prost::Message as ProstMessage;
         let ping = proto::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -600,7 +589,6 @@ mod tests {
         let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
 
         // Publish a job
-        use prost::Message as ProstMessage;
         let dispatch = proto::JobDispatch {
             job_id: "job_123".to_string(),
             tenant_id: "tenant_x".to_string(),
@@ -920,7 +908,6 @@ mod tests {
             timestamp_ms: 1000,
             state_snapshot: vec![1, 2, 3],
         };
-        use prost::Message as ProstMessage;
         let mut buf = Vec::new();
         handoff.encode(&mut buf).unwrap();
 
@@ -945,7 +932,6 @@ mod tests {
         let rx = received.clone();
 
         let _cancel_ack = bus.subscribe("system:health_ack:sender_node".to_string(), Box::new(move |msg| {
-            use prost::Message as ProstMessage;
             if let Ok(ack) = proto::HealthAck::decode(&msg.payload[..]) {
                 if ack.source_node_id == "node1" && ack.target_node_id == "sender_node" {
                     rx.store(true, Ordering::SeqCst);
@@ -958,7 +944,6 @@ mod tests {
             current_mode: 0,
             timestamp_ms: 1000,
         };
-        use prost::Message as ProstMessage;
         let mut buf = Vec::new();
         ping.encode(&mut buf).unwrap();
 
@@ -983,7 +968,6 @@ mod tests {
         let rx = received.clone();
 
         let _cancel_ack = bus.subscribe("system:job_ack:job1".to_string(), Box::new(move |msg| {
-            use prost::Message as ProstMessage;
             if let Ok(ack) = proto::JobAck::decode(&msg.payload[..]) {
                 if ack.job_id == "job1" && ack.node_id == "node1" {
                     rx.store(true, Ordering::SeqCst);
@@ -998,7 +982,6 @@ mod tests {
             payload: vec![],
             timestamp_ms: 1000,
         };
-        use prost::Message as ProstMessage;
         let mut buf = Vec::new();
         dispatch.encode(&mut buf).unwrap();
 
@@ -1019,7 +1002,6 @@ mod tests {
 
         let bus_clone = bus.clone();
         let _cancel = bus.subscribe("system:health_ping".to_string(), Box::new(move |msg| {
-            use prost::Message as ProstMessage;
             if let Ok(ping) = proto::HealthPing::decode(&msg.payload[..]) {
                 let ack = proto::HealthAck {
                     source_node_id: "responder".to_string(),
@@ -1050,7 +1032,6 @@ mod tests {
 
         let bus_clone = bus.clone();
         let _cancel = bus.subscribe("system:job_dispatch:t1".to_string(), Box::new(move |msg| {
-            use prost::Message as ProstMessage;
             if let Ok(dispatch) = proto::JobDispatch::decode(&msg.payload[..]) {
                 let ack = proto::JobAck {
                     job_id: dispatch.job_id.clone(),

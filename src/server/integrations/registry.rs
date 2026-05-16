@@ -1,4 +1,5 @@
 use std::sync::RwLock;
+use crate::ohc::orchestration::{ChatMessage, IntegrationInstance, PullRequest, Issue, ChatTestRequest, ConnectIntegrationRequest};
 use ::server_ohc::orchestration::*;
 use chrono::Utc;
 

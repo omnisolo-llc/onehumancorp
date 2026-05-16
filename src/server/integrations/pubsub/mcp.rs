@@ -1,3 +1,4 @@
+use prost::Message as ProstMessage;
 use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::MeshTransport;
 use ::server_ohc::orchestration::TeammateMeshEvent;
@@ -31,7 +32,6 @@ impl PubSubManager {
     pub async fn publish(&self, tenant_id: &str, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
-        use prost::Message as ProstMessage;
         let event = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "mcp".to_string(),
             action: "publish".to_string(),
@@ -61,7 +61,6 @@ impl PubSubManager {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
         let wrapped_handler = Box::new(move |msg: TeammateMeshEvent| {
-            use prost::Message as ProstMessage;
             if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
                 let mut new_msg = msg.clone();
                 new_msg.payload = event.payload;

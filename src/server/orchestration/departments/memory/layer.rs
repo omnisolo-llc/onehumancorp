@@ -1,5 +1,5 @@
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 use std::sync::Arc;
+use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 
 #[cfg(test)]
 mod tests {

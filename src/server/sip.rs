@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use sqlx::Row;
+use sqlx::PgPool;
 use chrono::Utc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
