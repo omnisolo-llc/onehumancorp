@@ -17,15 +17,20 @@ impl ArchIngester {
         let embedding_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
         let id = uuid::Uuid::new_v4().to_string();
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, metadata)
-             VALUES ($1, 'default', 'system', $2, $3::vector, 'architecture', '{\"type\": \"consolidation\"}')"
+             VALUES ($1, 'system', 'system', $2, $3::vector, 'architecture', '{\"type\": \"consolidation\"}')"
         )
         .bind(&id)
         .bind(content)
         .bind(&embedding_str)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }

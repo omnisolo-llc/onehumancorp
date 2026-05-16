@@ -453,18 +453,20 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
-        if let Ok(header) = jsonwebtoken::decode_header(_token) {
-            if header.alg == jsonwebtoken::Algorithm::RS256 {
-                let oidc_cfg_internal = self.oidc_cfg.read().unwrap().clone();
-                let oidc_cfg = crate::oidc::OIDCConfig {
-                    issuer_url: oidc_cfg_internal.issuer_url,
-                    client_id: oidc_cfg_internal.client_id,
-                    enabled: oidc_cfg_internal.enabled,
-                };
-                if oidc_cfg.enabled {
-                    return crate::oidc::validate_oidc_token(_token, &oidc_cfg).await;
-                }
+        let header = jsonwebtoken::decode_header(_token).map_err(|e| e.to_string())?;
+
+        if header.alg == jsonwebtoken::Algorithm::RS256 {
+            let oidc_cfg_internal = self.oidc_cfg.read().unwrap().clone();
+            let oidc_cfg = crate::oidc::OIDCConfig {
+                issuer_url: oidc_cfg_internal.issuer_url,
+                client_id: oidc_cfg_internal.client_id,
+                enabled: oidc_cfg_internal.enabled,
+            };
+            if oidc_cfg.enabled {
+                return crate::oidc::validate_oidc_token(_token, &oidc_cfg).await;
             }
+        } else if header.alg != jsonwebtoken::Algorithm::HS256 {
+            return Err("Invalid token algorithm".to_string());
         }
 
         let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
