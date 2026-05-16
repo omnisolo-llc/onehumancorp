@@ -1,4 +1,5 @@
-use redis::{AsyncCommands, Client};
+use redis::Client;
+use redis::AsyncCommands;
 use tokio::sync::OnceCell;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

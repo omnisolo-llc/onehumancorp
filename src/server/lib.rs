@@ -2035,6 +2035,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
+
+                    <!-- Detailed Pricing Breakdown -->
+                    <div id="pricing-details-screen" class="screen">
+                        <h1>Pricing Details</h1>
+                        <table class="data-table">
+                            <tr><th>Feature</th><th>Free</th><th>Starter</th><th>Pro</th></tr>
+                            <tr><td>Agents</td><td>1</td><td>3</td><td>10</td></tr>
+                            <tr><td>Storage</td><td>500MB</td><td>5GB</td><td>50GB</td></tr>
+                            <tr><td>Support</td><td>Email</td><td>Priority</td><td>24/7</td></tr>
+                        </table>
+                        <button onclick="showScreen('my-plan-screen')">Back to Plan</button>
+                    </div>
+
+                    <!-- Usage Analytics -->
+                    <div id="usage-analytics-screen" class="screen">
+                        <h1>Usage Analytics</h1>
+                        <div class="chart-container">
+                            <p>Daily API Calls (Last 7 Days)</p>
+                            <!-- Mock Chart -->
+                            <div style="height: 200px; background: rgba(255,255,255,0.05); display: flex; align-items: flex-end; gap: 10px; padding: 10px;">
+                                <div style="height: 20%; width: 30px; background: var(--primary);"></div>
+                                <div style="height: 50%; width: 30px; background: var(--primary);"></div>
+                                <div style="height: 30%; width: 30px; background: var(--primary);"></div>
+                                <div style="height: 80%; width: 30px; background: var(--primary);"></div>
+                                <div style="height: 60%; width: 30px; background: var(--primary);"></div>
+                                <div style="height: 90%; width: 30px; background: var(--primary);"></div>
+                                <div style="height: 40%; width: 30px; background: var(--primary);"></div>
+                            </div>
+                        </div>
+                        <button onclick="showScreen('my-plan-screen')">Back to Plan</button>
+                    </div>
+
                      <!-- Checkout Page -->
                      <div id="checkout-screen" class="screen">
                          <h1>Checkout</h1>

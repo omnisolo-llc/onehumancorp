@@ -358,3 +358,114 @@ mod tests {
         assert_eq!(auditor.get_total_storage_savings(), 0.1);
     }
 }
+
+
+#[derive(Debug, Clone)]
+pub struct RegionRouting {
+    pub region_id: String,
+    pub base_cost_multiplier: f64,
+    pub latency_ms: u32,
+    pub is_available: bool,
+}
+
+pub struct RoutingOptimizer {
+    regions: HashMap<String, RegionRouting>,
+}
+
+impl RoutingOptimizer {
+    pub fn new() -> Self {
+        let mut regions = HashMap::new();
+        regions.insert("us-east".to_string(), RegionRouting { region_id: "us-east".to_string(), base_cost_multiplier: 1.0, latency_ms: 20, is_available: true });
+        regions.insert("us-west".to_string(), RegionRouting { region_id: "us-west".to_string(), base_cost_multiplier: 1.1, latency_ms: 60, is_available: true });
+        regions.insert("eu-central".to_string(), RegionRouting { region_id: "eu-central".to_string(), base_cost_multiplier: 1.2, latency_ms: 100, is_available: true });
+        regions.insert("ap-south".to_string(), RegionRouting { region_id: "ap-south".to_string(), base_cost_multiplier: 0.9, latency_ms: 150, is_available: true });
+        Self { regions }
+    }
+
+    pub fn get_optimal_region(&self, max_latency: u32, require_availability: bool) -> Option<String> {
+        let mut best_region: Option<String> = None;
+        let mut lowest_cost = f64::MAX;
+
+        for (id, region) in &self.regions {
+            if require_availability && !region.is_available {
+                continue;
+            }
+            if region.latency_ms > max_latency {
+                continue;
+            }
+            if region.base_cost_multiplier < lowest_cost {
+                lowest_cost = region.base_cost_multiplier;
+                best_region = Some(id.clone());
+            }
+        }
+        best_region
+    }
+
+    pub fn update_region_status(&mut self, region_id: &str, is_available: bool, new_latency: u32) {
+        if let Some(region) = self.regions.get_mut(region_id) {
+            region.is_available = is_available;
+            region.latency_ms = new_latency;
+        }
+    }
+}
+
+pub struct DiscountCalculator {
+    pub base_rate: f64,
+    pub volume_tiers: Vec<(u64, f64)>, // (threshold, discount_percentage)
+}
+
+impl DiscountCalculator {
+    pub fn new(base_rate: f64) -> Self {
+        Self {
+            base_rate,
+            volume_tiers: vec![
+                (10_000, 0.05),   // 5% off over 10k units
+                (50_000, 0.10),   // 10% off over 50k units
+                (100_000, 0.20),  // 20% off over 100k units
+                (1_000_000, 0.35),// 35% off over 1M units
+            ],
+        }
+    }
+
+    pub fn calculate_final_price(&self, volume: u64) -> f64 {
+        let mut applicable_discount = 0.0;
+        for (threshold, discount) in &self.volume_tiers {
+            if volume >= *threshold {
+                applicable_discount = *discount;
+            }
+        }
+
+        let subtotal = (volume as f64) * self.base_rate;
+        subtotal * (1.0 - applicable_discount)
+    }
+
+    pub fn calculate_savings(&self, volume: u64) -> f64 {
+        let subtotal = (volume as f64) * self.base_rate;
+        let final_price = self.calculate_final_price(volume);
+        subtotal - final_price
+    }
+}
+
+#[cfg(test)]
+mod tests_additional {
+    use super::*;
+
+    #[test]
+    fn test_routing_optimizer() {
+        let mut optimizer = RoutingOptimizer::new();
+        assert_eq!(optimizer.get_optimal_region(50, true), Some("us-east".to_string()));
+        assert_eq!(optimizer.get_optimal_region(200, true), Some("ap-south".to_string()));
+
+        optimizer.update_region_status("ap-south", false, 150);
+        assert_eq!(optimizer.get_optimal_region(200, true), Some("us-east".to_string()));
+    }
+
+    #[test]
+    fn test_discount_calculator() {
+        let calc = DiscountCalculator::new(1.0);
+        assert_eq!(calc.calculate_final_price(5000), 5000.0);
+        assert_eq!(calc.calculate_final_price(10000), 9500.0); // 5% discount
+        assert_eq!(calc.calculate_final_price(50000), 45000.0); // 10% discount
+        assert_eq!(calc.calculate_savings(100000), 20000.0); // 20% discount savings
+    }
+}

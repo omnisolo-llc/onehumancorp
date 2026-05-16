@@ -209,3 +209,89 @@ impl Default for Tracker {
         Tracker::new()
     }
 }
+
+pub fn process_complex_refund(amount_cents: i64, reason: &str, days_since_purchase: u32) -> Result<i64, String> {
+    if days_since_purchase > 30 {
+        return Err("Refund window expired".to_string());
+    }
+
+    let mut refund_amount = amount_cents;
+
+    // Prorate refund based on days used if it's a subscription
+    if reason == "subscription_cancel" {
+        let daily_rate = amount_cents as f64 / 30.0;
+        let used_amount = (daily_rate * days_since_purchase as f64).round() as i64;
+        refund_amount = amount_cents.saturating_sub(used_amount);
+    }
+
+    // Deduction for processing fees if not a fault of service
+    if reason == "user_error" || reason == "changed_mind" {
+        let fee = (amount_cents as f64 * 0.03) as i64; // 3% fee
+        refund_amount = refund_amount.saturating_sub(fee);
+    }
+
+    Ok(refund_amount)
+}
+
+pub struct InvoiceGenerator {
+    pub company_name: String,
+    pub tax_rate: f64,
+}
+
+impl InvoiceGenerator {
+    pub fn new(company_name: &str, tax_rate: f64) -> Self {
+        Self {
+            company_name: company_name.to_string(),
+            tax_rate,
+        }
+    }
+
+    pub fn generate_html_invoice(&self, items: Vec<(&str, i64)>, customer_name: &str) -> String {
+        let mut html = format!("<html><body><h1>Invoice from {}</h1>", self.company_name);
+        html.push_str(&format!("<h2>Bill To: {}</h2>", customer_name));
+        html.push_str("<table><tr><th>Item</th><th>Amount (cents)</th></tr>");
+
+        let mut subtotal = 0;
+        for (name, amount) in items {
+            html.push_str(&format!("<tr><td>{}</td><td>{}</td></tr>", name, amount));
+            subtotal += amount;
+        }
+
+        let tax = (subtotal as f64 * self.tax_rate).round() as i64;
+        let total = subtotal + tax;
+
+        html.push_str("</table>");
+        html.push_str(&format!("<p>Subtotal: {}</p>", subtotal));
+        html.push_str(&format!("<p>Tax: {}</p>", tax));
+        html.push_str(&format!("<h3>Total: {}</h3>", total));
+        html.push_str("</body></html>");
+
+        html
+    }
+}
+
+#[cfg(test)]
+mod billing_logic_tests {
+    use super::*;
+
+    #[test]
+    fn test_process_complex_refund() {
+        assert_eq!(process_complex_refund(10000, "defective", 10).unwrap(), 10000);
+        assert_eq!(process_complex_refund(10000, "subscription_cancel", 15).unwrap(), 5000);
+        assert_eq!(process_complex_refund(10000, "changed_mind", 5).unwrap(), 9700);
+        assert!(process_complex_refund(10000, "defective", 35).is_err());
+    }
+
+    #[test]
+    fn test_invoice_generator() {
+        let generator = InvoiceGenerator::new("TestCorp", 0.1);
+        let items = vec![("Item A", 5000), ("Item B", 5000)];
+        let html = generator.generate_html_invoice(items, "John Doe");
+
+        assert!(html.contains("Invoice from TestCorp"));
+        assert!(html.contains("John Doe"));
+        assert!(html.contains("Subtotal: 10000"));
+        assert!(html.contains("Tax: 1000"));
+        assert!(html.contains("Total: 11000"));
+    }
+}
