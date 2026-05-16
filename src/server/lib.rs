@@ -2088,102 +2088,178 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Setup Wizard -->
+                    <script>
+                        window.wizardState = {
+                            business_type: "",
+                            company_name: "",
+                            company_description: "Auto generated description",
+                            selling_categories: [],
+                            payment_pref: "online",
+                            website_template: "Modern",
+                            domain_choice: "subdomain",
+                            price_type: "fixed"
+                        };
+
+                        function setWizardState(key, value, nextStepId) {
+                            window.wizardState[key] = value;
+                            fetch('/api/onboarding/state', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(window.wizardState)
+                            }).catch(e => console.error("Could not save state", e));
+                            if (nextStepId) {
+                                nextStep(nextStepId);
+                            }
+                        }
+
+                        function addCategory(value) {
+                            if (!window.wizardState.selling_categories.includes(value)) {
+                                window.wizardState.selling_categories.push(value);
+                            }
+                            fetch('/api/onboarding/state', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(window.wizardState)
+                            }).catch(e => console.error(e));
+                        }
+                    </script>
                     <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
+                        <div id="step-0">
+                            <h1>Setup Wizard</h1>
+                            <button onclick="nextStep(1)">Next</button>
+                        </div>
+                        <div id="step-1" style="display: none;">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)">Start My Business</button>
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="setWizardState('business_type', 'Online Store', 3)">Online Store</button>
+                            <button class="secondary" onclick="setWizardState('business_type', 'Service Business', 3)">Service Business</button>
+                            <button class="secondary" onclick="setWizardState('business_type', 'Restaurant / Food', 3)">Restaurant / Food</button>
+                            <button class="secondary" onclick="setWizardState('business_type', 'Creative / Portfolio', 3)">Creative / Portfolio</button>
+                            <button class="secondary" onclick="setWizardState('business_type', 'Local Business', 3)">Local Business</button>
+                            <button class="secondary" onclick="setWizardState('business_type', 'Other', 3)">Other</button>
+                            <br/><button onclick="nextStep(3)">Next</button>
                         </div>
                         <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                            <h1>What is your business called?</h1>
+                            <input type="text" placeholder="e.g. Maya's Cakes" onchange="window.wizardState.company_name = this.value" id="wiz_company_name" />
+                            <button onclick="nextStep('generating')">Auto-suggest Description</button>
+                            <button onclick="nextStep(4)">Next</button>
+                        </div>
+                        <div id="step-generating" style="display: none;">
+                            <h1>Generating...</h1>
+                            <button onclick="nextStep(4)">Next</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <button class="secondary" onclick="addCategory('physical'); nextStep(5)">Physical products</button>
+                            <button class="secondary" onclick="addCategory('digital'); nextStep(5)">Digital downloads</button>
+                            <button class="secondary" onclick="addCategory('service'); nextStep(5)">Services / appointments</button>
+                            <button class="secondary" onclick="addCategory('food'); nextStep(5)">Food & beverages</button>
+                            <button class="secondary" onclick="addCategory('subscription'); nextStep(5)">Subscriptions</button>
+                            <br/><button onclick="nextStep(5)">Next</button>
                         </div>
                         <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                            <h1>Add your first product</h1>
+                            <input type="text" placeholder="What is the name of this product?" id="wiz_prod_name" />
+                            <input type="text" placeholder="0.00" id="wiz_prod_price" />
+                            <button onclick="nextStep(6)">Next</button>
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                            <button class="secondary" onclick="setWizardState('payment_pref', 'online', 7)">Online only</button>
+                            <button class="secondary" onclick="setWizardState('payment_pref', 'pos', 7)">In-person (POS)</button>
+                            <button class="secondary" onclick="setWizardState('payment_pref', 'both', 7)">Both</button>
+                            <br/><button onclick="nextStep(7)">Next</button>
                         </div>
                         <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
+                            <h1>Choose a Template</h1>
+                            <button class="secondary" onclick="setWizardState('website_template', 'Modern', 8)">Modern</button>
+                            <button class="secondary" onclick="setWizardState('website_template', 'Bold', 8)">Bold</button>
+                            <br/><button onclick="nextStep(8)">Next</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <h1>Choose a Domain</h1>
+                            <button class="secondary" onclick="setWizardState('domain_choice', 'subdomain', 9)">Free OHC Domain</button>
+                            <button class="secondary" onclick="setWizardState('domain_choice', 'custom', 9)">🔗 Connect Custom Domain</button>
+                            <br/><button onclick="nextStep(9)">Next</button>
                         </div>
                         <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <h1>Administrator account</h1>
+                            <input type="text" placeholder="e.g. Maya Smith" id="wiz_admin_name" />
+                            <input type="email" placeholder="you@email.com" id="wiz_admin_email" />
+                            <input type="password" placeholder="Password" id="wiz_admin_password" />
+                            <button onclick="nextStep(10)">Review & Launch</button>
                         </div>
                         <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                            <h1>Review & Launch</h1>
+                            <button onclick="nextStep(100)">Review & Launch</button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <h1>Almost there</h1>
+                            <button onclick="nextStep(101)">Launch!</button>
                         </div>
+                        <div id="step-101" style="display: none;">
+                            <h1>Onboarding Complete!</h1>
+                            <p>Success! Your business is live</p>
+                            <button onclick="alert('Copied')">Copy Store Link</button>
+                            <button onclick="submitOnboarding()">Go to Dashboard →</button>
+                        </div>
+                        <script>
+                            async function submitOnboarding() {
+                                try {
+                                    const adminName = document.querySelector('#wiz_admin_name').value;
+                                    const adminEmail = document.querySelector('#wiz_admin_email').value;
+                                    const adminPass = document.querySelector('#wiz_admin_password').value;
 
+                                    if (!adminPass) {
+                                        alert("Error: Password is required for setup");
+                                        return;
+                                    }
+
+                                    const payload = {
+                                        business_type: window.wizardState.business_type || "Online Store",
+                                        company_name: window.wizardState.company_name || document.querySelector('#wiz_company_name').value || "My Setup Business",
+                                        company_description: window.wizardState.company_description,
+                                        selling_categories: window.wizardState.selling_categories.length > 0 ? window.wizardState.selling_categories : ["physical"],
+                                        payment_pref: window.wizardState.payment_pref,
+                                        admin_name: adminName,
+                                        admin_email: adminEmail,
+                                        admin_password: adminPass,
+                                        website_template: window.wizardState.website_template,
+                                        first_product_name: document.querySelector('#wiz_prod_name').value || "First Product",
+                                        first_product_price: document.querySelector('#wiz_prod_price').value || "25.00",
+                                        domain_choice: window.wizardState.domain_choice,
+                                        price_type: "fixed"
+                                    };
+
+                                    const res = await fetch('/api/onboarding/start', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(payload)
+                                    });
+                                    if (res.ok) {
+                                        console.log("Tenant provisioning completed.");
+                                        showScreen('dashboard-screen');
+                                    } else {
+                                        console.error("Tenant provisioning failed:", res.statusText);
+                                        alert("Provisioning failed. Please try again.");
+                                    }
+                                } catch (e) {
+                                    console.error("Error provisioning tenant:", e);
+                                    alert("Network error.");
+                                }
+                            }
+                        </script>
                         <div id="checklist-screen" class="screen">
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
                             <p>⬜ Add 3 more products</p>
                             <p>⬜ Connect Instagram</p>
                             <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
