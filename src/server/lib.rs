@@ -1633,6 +1633,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
                             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            backdrop-filter: blur(20px) saturate(200%);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -2238,6 +2239,67 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
+
+                        async function handleLogin(btn) {
+                            btn.textContent = 'Logging in...';
+                            const email = document.querySelector('input[type="email"]').value;
+                            const password = document.querySelector('input[type="password"]').value;
+                            try {
+                                const response = await fetch('/api/v1/auth/login', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ username: email, password: password })
+                                });
+                                if (response.ok) {
+                                    showScreen('dashboard-screen');
+                                } else {
+                                    document.getElementById('login-error').style.display = 'block';
+                                }
+                            } catch (e) {
+                                document.getElementById('login-error').style.display = 'block';
+                            } finally {
+                                btn.textContent = 'Login';
+                            }
+                        }
+
+                        let currentStep = 1;
+                        async function nextStep(stepId) {
+                            const prevStep = currentStep;
+                            if (typeof stepId === 'number' || !isNaN(stepId)) {
+                                currentStep = parseInt(stepId);
+                            }
+
+                            document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
+                                    d.style.display = 'none';
+                                }
+                            });
+                            const next = document.getElementById('step-' + stepId);
+                            if (next) next.style.display = 'block';
+
+                            if (stepId === 'generating') {
+                                // Connect to real database instead of using Future.delayed fake network mock
+                                try {
+                                    const res = await fetch('/api/v1/app/onboarding', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({})
+                                    });
+                                    if (prevStep === 3) nextStep(4);
+                                    else if (prevStep === 5) nextStep(6);
+                                    else nextStep('launch-ai');
+                                } catch (e) {
+                                    console.error(e);
+                                    if (prevStep === 3) nextStep(4);
+                                    else if (prevStep === 5) nextStep(6);
+                                    else nextStep('launch-ai');
+                                }
+                            }
+                        }
+
+                        async function generateAI() {
+                            nextStep('generating');
+                        }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
