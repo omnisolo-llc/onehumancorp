@@ -49,6 +49,7 @@ rust_library(
         "harness.rs",
         "langgraph.rs",
         "autogen.rs",
+        "llm_compiler.rs",
         "masking_tests.rs",
         "lib.rs",
         "json_store.rs",
