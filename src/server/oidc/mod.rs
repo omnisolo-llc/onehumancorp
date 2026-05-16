@@ -48,7 +48,13 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
     ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() ||
     match ip {
         std::net::IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_link_local(),
-        std::net::IpAddr::V6(ipv6) => ipv6.is_loopback() || ipv6.is_unspecified(),
+        std::net::IpAddr::V6(ipv6) => {
+            let segs = ipv6.segments();
+            let is_ula = (segs[0] & 0xfe00) == 0xfc00;
+            let is_link_local = (segs[0] & 0xffc0) == 0xfe80;
+            let is_v4_mapped = segs[0] == 0 && segs[1] == 0 && segs[2] == 0 && segs[3] == 0 && segs[4] == 0 && segs[5] == 0xffff;
+            is_ula || is_link_local || is_v4_mapped || ipv6.is_loopback() || ipv6.is_unspecified()
+        }
     }
 }
 
@@ -225,6 +231,13 @@ mod tests {
         
         // Public IP
         assert!(!is_blocked_ip("8.8.8.8".parse().unwrap()));
+
+        // IPv6 Link-local
+        assert!(is_blocked_ip("fe80::1".parse().unwrap()));
+        // IPv6 ULA
+        assert!(is_blocked_ip("fc00::1".parse().unwrap()));
+        // IPv4-mapped IPv6
+        assert!(is_blocked_ip("::ffff:127.0.0.1".parse().unwrap()));
     }
 
     #[tokio::test]
