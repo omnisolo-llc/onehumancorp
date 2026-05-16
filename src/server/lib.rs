@@ -1609,6 +1609,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <!DOCTYPE html>
             <html>
                 <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta property="og:title" content="My Awesome Store" />
+                    <meta property="og:description" content="Welcome to our premium storefront built with OHC." />
+                    <meta property="og:image" content="https://ohc.app/assets/og-image.png" />
+                    <meta property="og:type" content="website" />
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
@@ -1752,6 +1757,51 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
                         <div class="card glass">
+                            <h3>Growth & Community</h3>
+                            <button onclick="showScreen('referral-dashboard-screen')">🎁 Refer a Friend</button>
+                            <button onclick="showShareBusinessModal()">↗️ Share My Business</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Marketing</h3>
+                            <button onclick="showScreen('email-marketing-screen')">📧 Email Campaigns</button>
+                        </div>
+
+                        <!-- Upgrade Prompt Modal -->
+                        <div id="upgrade-prompt-modal" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Upgrade to Pro</h2>
+                                <button class="bottom-sheet-close" onclick="closeUpgradePrompt()">×</button>
+                            </div>
+                            <div style="padding: 15px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                <h3 style="margin-top: 0; color: #4ecca3;">You've reached a limit!</h3>
+                                <p style="font-size: 0.9em; line-height: 1.4;">The Free Starter plan includes 1 AI agent and 10 products. Upgrade to Pro to hire more agents, add unlimited products, and use a custom domain.</p>
+                            </div>
+                            <button style="width: 100%; margin-bottom: 10px; background-color: #4ecca3; color: #1a1a2e; font-weight: bold;" onclick="closeUpgradePrompt(); showScreen('pricing-screen')">View Pro Plans</button>
+                            <button style="width: 100%;" class="secondary" onclick="closeUpgradePrompt()">Maybe Later</button>
+                        </div>
+
+                        <!-- Share Business Modal -->
+                        <div id="share-business-modal" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Share Business</h2>
+                                <button class="bottom-sheet-close" onclick="closeShareBusinessModal()">×</button>
+                            </div>
+                            <div style="padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.2); margin-bottom: 15px;">
+                                <h3 style="margin-top: 0;">My Awesome Store</h3>
+                                <p style="font-size: 0.9em; opacity: 0.8;">Welcome to our premium storefront</p>
+                                <p style="font-size: 0.8em; opacity: 0.5; margin-bottom: 0;">mybusiness.ohc.app</p>
+                            </div>
+                            <button style="width: 100%; margin-bottom: 10px;" onclick="copyBusinessLink()">Copy Link</button>
+                            <p id="business-link-copied" style="display: none; color: #4ecca3; font-size: 0.9em; text-align: center; margin-bottom: 10px;">Copied to clipboard!</p>
+                            <div style="display: flex; gap: 10px;">
+                                <button style="flex: 1;" class="secondary" onclick="alert('Opening Instagram story...')">Instagram</button>
+                                <button style="flex: 1;" class="secondary" onclick="alert('Opening WhatsApp...')">WhatsApp</button>
+                                <button style="flex: 1;" class="secondary" onclick="alert('Opening X...')">X</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
@@ -1774,7 +1824,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p>No recent activity.</p>
                             </div>
                             <button onclick="simulateOrder()">Simulate Order</button>
+                            <button class="secondary" onclick="simulateMilestone()">Simulate Milestone</button>
                         </div>
+
+                        <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;"></div>
+                            <button class="secondary" onclick="simulateMilestone()">Simulate Milestone</button>
+                        </div>
+
+                        <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;"></div>
+
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
@@ -1799,22 +1857,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
                         <h1>Referral Dashboard</h1>
+                        <p style="margin-bottom: 15px;">Share OHC with a friend, both get 1 month free Pro.</p>
+                        <p style="margin-bottom: 15px;">Share OHC with a friend, both get 1 month free Pro.</p>
                         <div class="card glass">
                             <h3>Your Referral Link</h3>
-                            <p id="referral-link">ohc://join?ref=DEFAULT</p>
-                            <button onclick="alert('Copied!')">Copy</button>
-                            <button onclick="location.reload()">Refresh</button>
+                            <p id="referral-link" style="font-family: monospace; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">ohc://join?ref=DYNAMIC_CODE</p>
+                            <button onclick="copyReferralLink()">Copy Link</button>
+                            <p id="referral-link-copied" style="display: none; color: #4ecca3; font-size: 0.9em; margin-top: 8px;">Copied to clipboard!</p>
                         </div>
                         <div class="card glass">
-                            <h3>Share</h3>
+                            <h3>Share & Invite</h3>
+                            <button onclick="inviteToOHC()">📱 Invite via SMS/WhatsApp</button>
                             <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
-                            <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
-                            <p id="invite-copied" style="display: none;">Invite message copied!</p>
                         </div>
                         <div class="card glass">
                             <h3>Actions</h3>
                             <button onclick="alert('History shown')">📜 View Referral Logs</button>
-                            <button onclick="alert('Data exported')">📤 Export Data</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
@@ -1898,9 +1956,72 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <button onclick="showUpgradePrompt()">Hire Agent</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Social Media Manager</h3>
+                            <p>Status: Available</p>
+                            <button onclick="showScreen('social-media-agent-screen')">Hire & Configure</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+                    <!-- Social Media Agent Screen -->
+                    <div id="social-media-agent-screen" class="screen glass">
+                        <h1>Social Media Auto-Poster</h1>
+                        <p>Connect your accounts and let our AI agent automatically generate and schedule posts for your new products, sales, and milestones.</p>
+
+                        <div class="card glass">
+                            <h3>Connect Accounts</h3>
+                            <button style="margin-bottom: 8px; width: 100%;" onclick="alert('Connected to Instagram!'); this.textContent='✓ Instagram Connected'; this.style.backgroundColor='#333';">📷 Connect Instagram</button>
+                            <button style="margin-bottom: 8px; width: 100%;" onclick="alert('Connected to Facebook!'); this.textContent='✓ Facebook Connected'; this.style.backgroundColor='#333';">📘 Connect Facebook</button>
+                            <button style="width: 100%;" onclick="alert('Connected to X!'); this.textContent='✓ X Connected'; this.style.backgroundColor='#333';">🐦 Connect X</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Upcoming Drafts (Generated by AI)</h3>
+                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                                <p style="margin-top: 0; font-size: 0.9em; opacity: 0.7;">Scheduled for: Tomorrow, 10:00 AM</p>
+                                <p><strong>New Arrival!</strong> ✨ We just added something special to our store. Check out our latest collection today. Link in bio! 🛍️ #NewArrival #ShopLocal</p>
+                                <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 5px;" onclick="alert('Post approved for publishing!'); this.textContent='✓ Approved'; this.style.backgroundColor='#333'; this.style.color='#fff';">Approve Post</button>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                                <p style="margin-top: 0; font-size: 0.9em; opacity: 0.7;">Scheduled for: Friday, 3:00 PM</p>
+                                <p><strong>Flash Sale!</strong> ⚡ Get 20% off all items this weekend only. Don't miss out! #Sale #Discount</p>
+                                <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 5px;" onclick="alert('Post approved for publishing!'); this.textContent='✓ Approved'; this.style.backgroundColor='#333'; this.style.color='#fff';">Approve Post</button>
+                            </div>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('agents-screen')">Back to Agents</button>
+                    </div>
+
+                    <!-- Social Media Agent Screen -->
+                    <div id="social-media-agent-screen" class="screen glass">
+                        <h1>Social Media Auto-Poster</h1>
+                        <p>Connect your accounts and let our AI agent automatically generate and schedule posts for your new products, sales, and milestones.</p>
+
+                        <div class="card glass">
+                            <h3>Connect Accounts</h3>
+                            <button style="margin-bottom: 8px; width: 100%;" onclick="alert('Connected to Instagram!'); this.textContent='✓ Instagram Connected'; this.style.backgroundColor='#333';">📷 Connect Instagram</button>
+                            <button style="margin-bottom: 8px; width: 100%;" onclick="alert('Connected to Facebook!'); this.textContent='✓ Facebook Connected'; this.style.backgroundColor='#333';">📘 Connect Facebook</button>
+                            <button style="width: 100%;" onclick="alert('Connected to X!'); this.textContent='✓ X Connected'; this.style.backgroundColor='#333';">🐦 Connect X</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Upcoming Drafts (Generated by AI)</h3>
+                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                                <p style="margin-top: 0; font-size: 0.9em; opacity: 0.7;">Scheduled for: Tomorrow, 10:00 AM</p>
+                                <p><strong>New Arrival!</strong> ✨ We just added something special to our store. Check out our latest collection today. Link in bio! 🛍️ #NewArrival #ShopLocal</p>
+                                <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 5px;" onclick="alert('Post approved for publishing!'); this.textContent='✓ Approved'; this.style.backgroundColor='#333'; this.style.color='#fff';">Approve Post</button>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                                <p style="margin-top: 0; font-size: 0.9em; opacity: 0.7;">Scheduled for: Friday, 3:00 PM</p>
+                                <p><strong>Flash Sale!</strong> ⚡ Get 20% off all items this weekend only. Don't miss out! #Sale #Discount</p>
+                                <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 5px;" onclick="alert('Post approved for publishing!'); this.textContent='✓ Approved'; this.style.backgroundColor='#333'; this.style.color='#fff';">Approve Post</button>
+                            </div>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('agents-screen)">Back to Agents</button>
                     </div>
 
                     <!-- Setup Page -->
@@ -1916,6 +2037,52 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
+
+                    <!-- Email Marketing Screen -->
+                    <div id="email-marketing-screen" class="screen glass">
+                        <h1>Email Campaigns</h1>
+                        <p>Use AI to generate and send targeted emails to your customers.</p>
+
+                        <div class="card glass">
+                            <h3>Create New Campaign</h3>
+                            <p style="margin-bottom: 5px;"><strong>1. Select Contacts</strong></p>
+                            <select style="width: 100%; margin-bottom: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px;">
+                                <option>All Subscribers (1,245)</option>
+                                <option>Recent Buyers (120)</option>
+                                <option>Abandoned Cart (45)</option>
+                            </select>
+
+                            <p style="margin-bottom: 5px;"><strong>2. AI Template</strong></p>
+                            <select style="width: 100%; margin-bottom: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px;">
+                                <option>New Arrivals Announcement</option>
+                                <option>Flash Sale Promotion</option>
+                                <option>Customer Thank You</option>
+                            </select>
+
+                            <button style="width: 100%;" onclick="alert('Generating preview...'); document.getElementById('email-preview').style.display='block';">Generate Preview</button>
+                        </div>
+
+                        <div id="email-preview" class="card glass" style="display: none; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.3);">
+                            <h3 style="margin-top: 0;">Preview</h3>
+                            <p><strong>Subject:</strong> 🌟 Exciting New Arrivals Just for You!</p>
+                            <p style="font-size: 0.9em; opacity: 0.8;">Hi [Name],<br><br>We've just added some amazing new products to our store that we think you'll love. Check them out before they're gone!<br><br>Best,<br>Your Business Name</p>
+                            <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 10px;" onclick="alert('Campaign sent to 1,245 subscribers!'); this.style.display='none';">Send Campaign</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Recent Performance</h3>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px;">
+                                <span>Spring Sale</span>
+                                <span style="color: #4ecca3;">45% Open Rate</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Welcome Series</span>
+                                <span style="color: #4ecca3;">62% Open Rate</span>
+                            </div>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
@@ -2202,7 +2369,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <h2>AI Store</h2>
+                            <div style="border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 20px; margin-bottom: 20px; background: rgba(0,0,0,0.1);">
+                                <h2>AI Store</h2>
+                                <p>Welcome to our new AI-generated store.</p>
+                                <div style="text-align: center; margin-top: 20px; font-size: 0.8em; opacity: 0.7;">
+                                    <a href="/signup" style="color: #4ecca3; text-decoration: none;">Built with OHC — Start your free business →</a>
+                                </div>
+                            </div>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
@@ -2385,6 +2558,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }, 2000);
                         }
 
+                        function copyReferralLink() {
+                            const link = document.getElementById('referral-link').innerText;
+                            navigator.clipboard.writeText(link).then(() => {
+                                document.getElementById('referral-link-copied').style.display = 'block';
+                                setTimeout(() => {
+                                    document.getElementById('referral-link-copied').style.display = 'none';
+                                }, 3000);
+                            }).catch(err => {
+                                alert('Failed to copy: ' + err);
+                            });
+                        }
+
+                        function inviteToOHC() {
+                            const link = document.getElementById('referral-link').innerText;
+                            const message = `Hey! Start your free business on OneHumanCorp and we both get 1 month free Pro. Use my link: ${link}`;
+                            // Simulate opening SMS/WhatsApp
+                            alert('Opening SMS/WhatsApp with message:\n\n' + message);
+                        }
+
+                        function showShareBusinessModal() {
+                            document.getElementById('share-business-modal').classList.add('open');
+                        }
+
+                        function closeShareBusinessModal() {
+                            document.getElementById('share-business-modal').classList.remove('open');
+                        }
+
+                        function showUpgradePrompt() {
+                            document.getElementById('upgrade-prompt-modal').classList.add('open');
+                        }
+
+                        function closeUpgradePrompt() {
+                            document.getElementById('upgrade-prompt-modal').classList.remove('open');
+                        }
+
+                        function simulateOrder() {
+                            const feed = document.getElementById('agent-activity-feed');
+                            if (feed) feed.innerHTML = '<p>Order received! Agent is fulfilling it.</p>' + feed.innerHTML;
+                        }
+
+                        function simulateMilestone() {
+                            const milestones = [
+                                "🎉 You just got your 10th order!",
+                                "🚀 Your store has 100 visitors today!",
+                                "⭐ New 5-star review received!"
+                            ];
+                            const text = milestones[Math.floor(Math.random() * milestones.length)];
+
+                            const container = document.getElementById('toast-container');
+                            if (!container) return;
+
+                            const toast = document.createElement('div');
+                            toast.style.cssText = 'background: rgba(255,255,255,0.1); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 15px 20px; border-radius: 8px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: opacity 0.5s ease-in-out; display: flex; align-items: center; justify-content: space-between; gap: 15px;';
+                            toast.innerHTML = `<span>${text}</span> <button style="padding: 5px 10px; margin: 0; min-width: auto; background: rgba(255,255,255,0.2);" onclick="this.parentElement.remove()">×</button>`;
+
+                            container.appendChild(toast);
+
+                            setTimeout(() => {
+                                toast.style.opacity = '0';
+                                setTimeout(() => toast.remove(), 500);
+                            }, 5000);
+                        }
+
+                        function copyBusinessLink() {
+                            const link = 'https://mybusiness.ohc.app';
+                            navigator.clipboard.writeText(link).then(() => {
+                                document.getElementById('business-link-copied').style.display = 'block';
+                                setTimeout(() => {
+                                    document.getElementById('business-link-copied').style.display = 'none';
+                                }, 3000);
+                            }).catch(err => {
+                                alert('Failed to copy: ' + err);
+                            });
+                        }
+
                         function fireConfetti() {
                             const canvas = document.getElementById('confetti-canvas');
                             if (!canvas) return;
@@ -2457,6 +2705,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
+                            'social-media-agent-screen': '/social-media-agent',
+                            'email-marketing-screen': '/email-marketing',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
