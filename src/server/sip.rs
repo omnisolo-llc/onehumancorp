@@ -53,6 +53,49 @@ impl SipDB {
         self
     }
 
+    pub async fn drain_mission_queue(&self) -> Result<usize, sqlx::Error> {
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let mut backoff = std::time::Duration::from_millis(50);
+
+        loop {
+            let res = async {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+
+                let res = sqlx::query(
+                    "UPDATE agent_missions
+                     SET status = 'COMPLETED',
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE status = 'PENDING' AND tenant_id = $1"
+                )
+                .bind(&self.org_id)
+                .execute(&mut *tx)
+                .await?;
+
+                tx.commit().await?;
+                Ok::<usize, sqlx::Error>(res.rows_affected() as usize)
+            }.await;
+
+            match res {
+                Ok(count) => return Ok(count),
+                Err(err) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else {
+                        return Err(err);
+                    }
+                }
+            }
+        }
+    }
+
     pub async fn prune_stale_missions(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
         let fail_threshold = Utc::now() - age_threshold;
@@ -494,6 +537,53 @@ mod tests {
 
             // Clean up
             sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_id'").execute(&pool).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_drain_mission_queue_success() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("test_drain_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            let count = sip_db.drain_mission_queue().await.unwrap();
+            assert_eq!(count, 1);
+
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'test_drain_id'").execute(&pool).await.unwrap();
         }
     }
 

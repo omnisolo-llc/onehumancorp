@@ -377,6 +377,7 @@ impl OpsService for MyOpsService {
 
         let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), org_id);
 
+        let _ = sip_db.drain_mission_queue().await;
         match sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
             Ok(_) => Ok(Response::new(PruneMissionsResponse {
                 status: "success".to_string(),

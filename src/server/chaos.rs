@@ -25,6 +25,7 @@ mod tests {
         let threshold = chrono::Duration::hours(2);
 
         // When DB is down or connection times out, prune_stale_missions must fail gracefully instead of panic.
+        let _ = sip_db.drain_mission_queue().await;
         let result = sip_db.prune_stale_missions(threshold).await;
         assert!(result.is_err());
 
