@@ -13,6 +13,7 @@ rust_library(
         "chaos.rs",
         "crypto.rs",
         "db.rs",
+        "db/tests.rs",
         "hub.rs",
         "lib.rs",
         "minimax.rs",
