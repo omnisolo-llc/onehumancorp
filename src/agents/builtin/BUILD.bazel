@@ -51,6 +51,7 @@ rust_library(
         "autogen.rs",
         "masking_tests.rs",
         "lib.rs",
+        "feature_catalog.rs",
         "json_store.rs",
         "memory_store.rs",
         "mesh/mod.rs",
