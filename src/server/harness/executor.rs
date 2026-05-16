@@ -40,7 +40,15 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; echo 'hello'\""));
+
+        // Assert we generate the expected wrapped shell command inside the sandbox payload
+        assert!(msg.contains("bash -c \"set -e; echo 'hello'\""));
+
+        #[cfg(target_os = "linux")]
+        assert!(msg.contains("bwrap --ro-bind /bin /bin"));
+
+        #[cfg(target_os = "macos")]
+        assert!(msg.contains("sandbox-exec -p"));
     }
 
     #[tokio::test]

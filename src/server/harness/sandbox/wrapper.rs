@@ -30,7 +30,21 @@ impl BashWrapper {
             preamble.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.blocked_domains.join(",")));
         }
 
-        format!("bash -c \"{}{}\"", preamble, cmd.replace("\"", "\\\""))
+        let inner_cmd = format!("bash -c \"{}{}\"", preamble, cmd.replace("\"", "\\\""));
+
+        #[cfg(target_os = "linux")]
+        {
+            format!("bwrap --ro-bind /bin /bin --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind-try /lib64 /lib64 --ro-bind /etc/alternatives /etc/alternatives --dev /dev --proc /proc --tmpfs /tmp --unshare-pid --unshare-ipc -- {}", inner_cmd)
+        }
+        #[cfg(target_os = "macos")]
+        {
+            let profile = "(version 1)\n(deny default)\n(allow process-exec (regex #\"^/bin/.*\"))\n(allow file-read* (subpath \"/bin\"))\n";
+            format!("sandbox-exec -p '{}' {}", profile, inner_cmd)
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        {
+            inner_cmd
+        }
     }
 }
 
