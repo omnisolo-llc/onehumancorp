@@ -1398,6 +1398,8 @@ service WizardService {
   rpc GetWizardStatus(EmptyRequest) returns (WizardStatusProtoResponse);
   rpc ConfigureWizard(WizardConfigureRequest) returns (WizardStatusProtoResponse);
   rpc VerifyOnboarding(EmptyRequest) returns (OnboardingVerifyResponse);
+  rpc PersistWizardState(WizardStateRequest) returns (EmptyResponse);
+  rpc GetWizardState(WizardStateGetRequest) returns (WizardStateResponse);
 }
 
 message GetMeetingsResponse {
@@ -1670,3 +1672,18 @@ message DownloadInvoiceRequest {
 message DownloadInvoiceResponse {
   string pdf_url = 1;
 }
+
+message WizardStateRequest {
+  string session_id = 1;
+  string state_json = 2;
+}
+
+message WizardStateGetRequest {
+  string session_id = 1;
+}
+
+message WizardStateResponse {
+  string state_json = 1;
+}
+
+message EmptyResponse {}

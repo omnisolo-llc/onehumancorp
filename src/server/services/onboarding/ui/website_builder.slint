@@ -1,0 +1,48 @@
+import { Button, LineEdit, CheckBox, ComboBox, HorizontalBox, VerticalBox, ScrollView, Switch } from "std-widgets.slint";
+export component WebsiteBuilder inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #000;
+
+    in-out property <string> selected_template;
+    in-out property <string> domain_preference;
+    in-out property <bool> is_advanced_mode: false;
+
+    callback select_template(string);
+    callback connect_domain(string);
+    callback toggle_advanced_mode();
+
+    Rectangle {
+        background: #ffffff33;
+        VerticalBox {
+            Text { text: "Choose a Template"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+            Button { text: "Modern"; clicked => { root.select_template("Modern"); } }
+            Button { text: "Classic"; clicked => { root.select_template("Classic"); } }
+            Button { text: "Bold"; clicked => { root.select_template("Bold"); } }
+
+            Text { text: "Brand colors & logo"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+            ComboBox { model: ["Palette 1", "Palette 2", "Palette 3"]; }
+            Button { text: "Generate a logo for me"; }
+
+            Text { text: "Add your first product or service"; font-family: "Outfit"; color: white; }
+            LineEdit { placeholder-text: "Name"; }
+            LineEdit { placeholder-text: "Photo URL"; }
+            LineEdit { placeholder-text: "Price"; }
+            LineEdit { placeholder-text: "Short description"; }
+
+            Text { text: "Choose a Domain"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+            Button { text: "Free OHC Domain"; clicked => { root.connect_domain("Free OHC Domain"); } }
+
+            Text { text: "Go Live"; font-family: "Outfit"; color: white; }
+            Button { text: "Publish"; }
+
+            Button {
+                text: root.is_advanced_mode ? "Disable Advanced Mode" : "Advanced Mode";
+                clicked => { root.toggle_advanced_mode(); }
+            }
+            if (root.is_advanced_mode) {
+                 Text { text: "Raw Config Settings"; font-family: "Inter"; }
+            }
+        }
+    }
+}

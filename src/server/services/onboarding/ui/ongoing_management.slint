@@ -1,0 +1,28 @@
+import { Button, LineEdit, CheckBox, ComboBox, HorizontalBox, VerticalBox, ScrollView, Switch } from "std-widgets.slint";
+export component OngoingManagement inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #000;
+
+    callback help_me_fix_this();
+    callback view_suggested_fix();
+    callback refresh_and_reconnect();
+    in-out property <bool> is_advanced_mode: false;
+    callback toggle_advanced_mode();
+
+    Rectangle {
+        background: #ffffff33;
+        VerticalBox {
+            Text { text: "Help me fix this"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+            Button { text: "View Suggested Fix"; clicked => { root.view_suggested_fix(); } }
+            Button { text: "Refresh & Reconnect"; clicked => { root.refresh_and_reconnect(); } }
+            Button {
+                text: root.is_advanced_mode ? "Disable Advanced Mode" : "Advanced Mode";
+                clicked => { root.toggle_advanced_mode(); }
+            }
+            if (root.is_advanced_mode) {
+                 Text { text: "Raw Config Settings"; font-family: "Inter"; }
+            }
+        }
+    }
+}

@@ -1,0 +1,29 @@
+import { Button, LineEdit, CheckBox, ComboBox, HorizontalBox, VerticalBox, ScrollView, Switch } from "std-widgets.slint";
+export component BillingWizard inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #000;
+
+    callback add_credits();
+    callback upgrade_plan();
+    in-out property <bool> is_advanced_mode: false;
+    callback toggle_advanced_mode();
+
+    Rectangle {
+        background: #ffffff33;
+        VerticalBox {
+            Text { text: "What does this cost?"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+            Text { text: "Current Usage: 450 credits"; font-family: "Inter"; color: white; }
+            Text { text: "Projected Cost: $12.00/mo"; font-family: "Inter"; color: white; }
+            Button { text: "Add credits"; clicked => { root.add_credits(); } }
+            Button { text: "Upgrade plan"; clicked => { root.upgrade_plan(); } }
+            Button {
+                text: root.is_advanced_mode ? "Disable Advanced Mode" : "Advanced Mode";
+                clicked => { root.toggle_advanced_mode(); }
+            }
+            if (root.is_advanced_mode) {
+                 Text { text: "Raw Config Settings"; font-family: "Inter"; }
+            }
+        }
+    }
+}

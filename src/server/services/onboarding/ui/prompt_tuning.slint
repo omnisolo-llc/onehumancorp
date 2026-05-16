@@ -1,0 +1,49 @@
+import { Button, LineEdit, CheckBox, ComboBox, HorizontalBox, VerticalBox, ScrollView, Switch } from "std-widgets.slint";
+export component PromptTuning inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #000;
+
+    in-out property <string> tone: "Friendly";
+    in-out property <string> focus_topics: "";
+    in-out property <bool> is_advanced_mode: false;
+
+    callback add_example();
+    callback save_tuning();
+    callback toggle_advanced_mode();
+
+    Rectangle {
+        background: #ffffff33;
+        HorizontalBox {
+            VerticalBox {
+                Text { text: "Tone of Voice"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+                Button { text: "Friendly & Warm"; }
+                Button { text: "Professional"; }
+                Button { text: "Energetic"; }
+                Button { text: "Concise"; }
+
+                Text { text: "Focus Topics"; font-size: 24px; font-family: "Outfit"; color: white; }
+                CheckBox { text: "Only about my products"; }
+                CheckBox { text: "Avoid competitor mentions"; }
+                CheckBox { text: "Always reply in language"; }
+
+                Text { text: "Example interactions"; font-family: "Outfit"; color: white; }
+                Button { text: "Add Example Interaction"; clicked => { root.add_example(); } }
+
+                Button { text: "Save"; clicked => { root.save_tuning(); } }
+                Button {
+                    text: root.is_advanced_mode ? "Disable Advanced Mode" : "Advanced Mode";
+                    clicked => { root.toggle_advanced_mode(); }
+                }
+                if (root.is_advanced_mode) {
+                     Text { text: "Raw Config Settings"; font-family: "Inter"; }
+                }
+            }
+            VerticalBox {
+                 Text { text: "Live Preview Sandbox"; font-size: 24px; font-family: "Outfit"; color: white; }
+                 Text { text: "Hi there! 😊"; font-family: "Inter"; color: white; }
+                 LineEdit { placeholder-text: "Type to test agent..."; }
+            }
+        }
+    }
+}

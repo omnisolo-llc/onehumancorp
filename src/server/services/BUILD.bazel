@@ -4,6 +4,8 @@ filegroup(
         "booking.rs",
         "mod.rs",
         "wizard.rs",
+        "wizard_impl.rs",
+        "wizard_tests.rs",
         "//src/server/services/agent:srcs",
         "//src/server/services/autodream:srcs",
         "//src/server/services/b2b:srcs",

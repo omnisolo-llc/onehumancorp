@@ -1,0 +1,111 @@
+import { Button, LineEdit, CheckBox, ComboBox, HorizontalBox, VerticalBox, ScrollView, Switch } from "std-widgets.slint";
+export component SetupWizard inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #000;
+
+    // Properties required by tests
+    in-out property <string> business_name;
+    in-out property <string> business_type;
+    in-out property <string> email;
+    in-out property <string> password;
+    in-out property <string> product_name;
+    in-out property <string> product_price;
+    in-out property <bool> is_advanced_mode: false;
+
+    // Callbacks required by E2E tests
+    callback start_setup();
+    callback next_step();
+    callback generate_description();
+    callback auto_suggest_description();
+    callback publish_business();
+    callback toggle_advanced_mode();
+
+    VerticalBox {
+        alignment: center;
+        Text {
+            text: "Your business, live in minutes.";
+            font-size: 24px;
+            font-family: "Outfit";
+            color: white;
+            accessible-role: heading;
+        }
+
+        Button {
+            text: root.is_advanced_mode ? "Disable Advanced Mode" : "Advanced Mode";
+            clicked => { root.toggle_advanced_mode(); }
+        }
+
+        if (root.is_advanced_mode) {
+             Text { text: "Raw Config Settings"; font-family: "Inter"; }
+        }
+
+        Rectangle {
+            background: #ffffff33;
+            VerticalBox {
+                Text { text: "What kind of business are you building?"; font-family: "Inter"; }
+                Button { text: "Online Store"; clicked => { root.next_step(); } }
+                Button { text: "Service Business"; clicked => { root.next_step(); } }
+                Button { text: "Restaurant / Food"; clicked => { root.next_step(); } }
+                Button { text: "Creative / Portfolio"; clicked => { root.next_step(); } }
+                Button { text: "Local Business"; clicked => { root.next_step(); } }
+            }
+        }
+
+        Rectangle {
+            background: #ffffff33;
+            VerticalBox {
+                Text { text: "What is your business called?"; font-family: "Inter"; }
+                LineEdit { placeholder-text: "e.g. Maya's Cakes"; text <=> root.business_name; }
+                Button { text: "Auto-suggest Description"; clicked => { root.auto_suggest_description(); } }
+            }
+        }
+
+        Rectangle {
+            background: #ffffff33;
+            VerticalBox {
+                Text { text: "What do you sell?"; font-family: "Inter"; }
+                CheckBox { text: "Physical products"; }
+                CheckBox { text: "Digital downloads"; }
+                CheckBox { text: "Services / appointments"; }
+                CheckBox { text: "Food & beverages"; }
+                CheckBox { text: "Subscriptions"; }
+            }
+        }
+
+        Rectangle {
+            background: #ffffff33;
+            VerticalBox {
+                Text { text: "Add your first product"; font-family: "Inter"; }
+                LineEdit { placeholder-text: "What is the name of this product?"; text <=> root.product_name; }
+                LineEdit { placeholder-text: "0.00"; text <=> root.product_price; }
+                Button { text: "Generate AI Description"; clicked => { root.generate_description(); } }
+            }
+        }
+
+        Rectangle {
+            background: #ffffff33;
+            VerticalBox {
+                Text { text: "How do you want to receive payments?"; font-family: "Inter"; }
+                Button { text: "Online only"; }
+                Button { text: "In-person (POS)"; }
+                Button { text: "Both"; }
+                Button { text: "Skip for now"; }
+            }
+        }
+
+        Rectangle {
+            background: #ffffff33;
+            VerticalBox {
+                Text { text: "Administrator account"; font-family: "Inter"; }
+                LineEdit { placeholder-text: "e.g. Maya Smith"; }
+                LineEdit { placeholder-text: "you@email.com"; text <=> root.email; }
+                LineEdit { placeholder-text: "Password"; input-type: password; text <=> root.password; }
+            }
+        }
+
+        Button { text: "Start My Business"; clicked => { root.start_setup(); } }
+        Button { text: "Review & Launch"; clicked => { root.publish_business(); } }
+        Button { text: "Next"; clicked => { root.next_step(); } }
+    }
+}

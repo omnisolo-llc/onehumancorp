@@ -1,0 +1,27 @@
+import { Button, LineEdit, CheckBox, ComboBox, HorizontalBox, VerticalBox, ScrollView, Switch } from "std-widgets.slint";
+export component GrowBusiness inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #000;
+
+    callback execute_recommendation(string);
+    in-out property <bool> is_advanced_mode: false;
+    callback toggle_advanced_mode();
+
+    Rectangle {
+        background: #ffffff33;
+        VerticalBox {
+            Text { text: "Grow my business"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+            Button { text: "Add 5 more products"; clicked => { root.execute_recommendation("products"); } }
+            Button { text: "Connect Instagram"; clicked => { root.execute_recommendation("instagram"); } }
+            Button { text: "Run your first email campaign"; clicked => { root.execute_recommendation("email"); } }
+            Button {
+                text: root.is_advanced_mode ? "Disable Advanced Mode" : "Advanced Mode";
+                clicked => { root.toggle_advanced_mode(); }
+            }
+            if (root.is_advanced_mode) {
+                 Text { text: "Raw Config Settings"; font-family: "Inter"; }
+            }
+        }
+    }
+}

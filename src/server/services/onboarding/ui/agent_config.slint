@@ -1,0 +1,44 @@
+import { Button, LineEdit, CheckBox, ComboBox, HorizontalBox, VerticalBox, ScrollView, Slider, Switch } from "std-widgets.slint";
+export component AgentConfig inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #000;
+
+    in-out property <string> selected_agent;
+    in-out property <bool> capability_reply_messages: false;
+    in-out property <string> schedule_frequency: "Daily";
+    in-out property <bool> is_advanced_mode: false;
+
+    callback hire_helper();
+    callback activate_agent();
+    callback toggle_advanced_mode();
+
+    Rectangle {
+        background: #ffffff33;
+        VerticalBox {
+            Text { text: "Manage my AI team"; font-size: 24px; font-family: "Outfit"; color: white; accessible-role: heading; }
+            Button { text: "Customer Support"; }
+            Button { text: "Social Media Manager"; }
+            Button { text: "SEO Booster"; }
+            Button { text: "Order Manager"; }
+            Button { text: "Email Marketer"; }
+            CheckBox { text: "Reply to customer messages"; checked <=> root.capability_reply_messages; }
+            CheckBox { text: "Post to Instagram & Facebook"; }
+            CheckBox { text: "Write product descriptions"; }
+            CheckBox { text: "Send order updates"; }
+
+            Text { text: "How often should this agent work?"; font-family: "Inter"; color: white; }
+            Slider { minimum: 0; maximum: 3; value: 2; }
+
+            Button { text: "Activate"; clicked => { root.activate_agent(); } }
+
+            Button {
+                text: root.is_advanced_mode ? "Disable Advanced Mode" : "Advanced Mode";
+                clicked => { root.toggle_advanced_mode(); }
+            }
+            if (root.is_advanced_mode) {
+                 Text { text: "Raw Config Settings"; font-family: "Inter"; }
+            }
+        }
+    }
+}

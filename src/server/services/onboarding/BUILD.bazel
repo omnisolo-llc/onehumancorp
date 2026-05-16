@@ -12,6 +12,6 @@ filegroup(
         "provisioner.rs",
         "validation.rs",
         "wizard.rs",
-    ],
+    ] + glob(["ui/*.slint"]),
     visibility = ["//src/server/services:__pkg__"],
 )
