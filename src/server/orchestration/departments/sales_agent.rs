@@ -1,5 +1,6 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, ActionRisk, Department};
+use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, ActionRisk, Department, BaseAgent, AgentTriggerType};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest};
+
 use serde_json::Value;
 
 pub struct SalesAgent {
@@ -19,23 +20,22 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.requested".to_string()]
+        vec![
+            "tenant.lead.captured".to_string(),
+            "tenant.cart.abandoned".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        // Query memory context
-        let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
-        let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
-
-        let risk = ActionRisk::DraftForReview;
-
-        self.orchestrator.execute_action(
-            DepartmentType::Sales,
-            "Quote generated for review".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+        if event.event_type == "tenant.cart.abandoned" {
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let _req = self.request_approval(
+                format!("Drafted abandoned cart recovery email for {}.", customer_name),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute
+            ).await?;
+        }
+        Ok(())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
@@ -46,14 +46,40 @@ impl Department for SalesAgent {
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
-        let embedding = vec![0.5, 0.5, 0.5];
-        // Note: We need a tenant_id here, but the trait signature doesn't provide one.
-        // We'll pass a dummy one or extract it if available.
-        self.orchestrator.query_long_term_memory("default_tenant", &embedding, 5).await
+        Ok(vec![])
     }
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
         self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_sales_agent_handle_event() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = std::sync::Arc::new(DepartmentOrchestrator::new(db, mesh));
+        let agent = SalesAgent::new(orchestrator);
+
+        let event = DepartmentEvent {
+            id: "1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            event_type: "tenant.cart.abandoned".to_string(),
+            payload: serde_json::json!({"customer_name": "Alice"}),
+        };
+
+        let result = agent.handle_event(&event).await;
+        assert!(result.is_ok());
     }
 }
 

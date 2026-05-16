@@ -1,5 +1,6 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, ActionRisk, Department};
+use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, ActionRisk, Department, BaseAgent, AgentTriggerType};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest};
+
 use serde_json::Value;
 
 pub struct OperationsAgent {
@@ -19,32 +20,29 @@ impl Department for OperationsAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.accepted".to_string()]
+        vec![
+            "tenant.order.received".to_string(),
+            "tenant.inventory.low".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = config {
-            if cfg.auto_approve_limits > 0.0 {
+        if event.event_type == "tenant.inventory.low" {
+            let item_name = event.payload.get("item_name").and_then(|v| v.as_str()).unwrap_or("unknown item");
+            let _req = self.request_approval(
+                format!("Inventory low for {}. Draft re-order email to supplier.", item_name),
+                event.tenant_id.clone(),
                 ActionRisk::AutoExecute
-            } else {
-                ActionRisk::DraftForReview
-            }
-        } else {
-            ActionRisk::DraftForReview
-        };
-
-        self.orchestrator.execute_action(
-            DepartmentType::Operations,
-            "Create order and booking".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+            ).await?;
+        }
+        Ok(())
     }
 
-    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 })
+    fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
+        Some(DepartmentConfig {
+            tone_of_voice: "professional".to_string(),
+            auto_approve_limits: 10.0
+        })
     }
 
     fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
@@ -56,6 +54,35 @@ impl Department for OperationsAgent {
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
         self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_operations_agent_handle_event() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = std::sync::Arc::new(DepartmentOrchestrator::new(db, mesh));
+        let agent = OperationsAgent::new(orchestrator);
+
+        let event = DepartmentEvent {
+            id: "1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            event_type: "tenant.inventory.low".to_string(),
+            payload: serde_json::json!({"item_name": "Flour"}),
+        };
+
+        let result = agent.handle_event(&event).await;
+        assert!(result.is_ok());
     }
 }
 

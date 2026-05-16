@@ -3,58 +3,36 @@ use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, 
 
 use serde_json::Value;
 
-pub struct CustomerSuccessAgent {
+pub struct BusinessAdvisoryAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
 
-impl CustomerSuccessAgent {
+impl BusinessAdvisoryAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
         Self { orchestrator }
     }
 }
 
-
 #[async_trait::async_trait]
-impl Department for CustomerSuccessAgent {
+impl Department for BusinessAdvisoryAgent {
     fn department_type(&self) -> DepartmentType {
-        DepartmentType::CustomerSuccess
+        DepartmentType::BusinessAdvisory
     }
 
     fn subscribed_events(&self) -> Vec<String> {
         vec![
-            "tenant.order.fulfillment_ready".to_string(),
-            "tenant.message.received".to_string(),
+            "tenant.weekly_report.generated".to_string(),
+            "tenant.milestone.reached".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.message.received" {
-            let message_content = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-            let sender = event.payload.get("sender").and_then(|v| v.as_str()).unwrap_or("Customer");
+        if event.event_type == "tenant.weekly_report.generated" {
             let _req = self.request_approval(
-                format!("Drafted reply to {} about '{}'", sender, message_content),
+                "Generated weekly performance summary and recommendations.".to_string(),
                 event.tenant_id.clone(),
                 ActionRisk::AutoExecute
             ).await?;
-        } else if event.event_type == "tenant.order.fulfillment_ready" {
-            let config = self.get_config(&event.tenant_id);
-            let risk = if let Some(cfg) = config {
-                if cfg.auto_approve_limits > 0.0 {
-                    ActionRisk::AutoExecute
-                } else {
-                    ActionRisk::DraftForReview
-                }
-            } else {
-                ActionRisk::DraftForReview
-            };
-
-            self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                "Send personalized thank you & shipping ETA".to_string(),
-                event.tenant_id.clone(),
-                risk,
-                event.payload.clone(),
-            ).await.map(|_| ())?;
         }
         Ok(())
     }
@@ -75,12 +53,39 @@ impl Department for CustomerSuccessAgent {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use std::sync::Arc;
 
+    #[tokio::test]
+    async fn test_business_advisory_agent_handle_event() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = std::sync::Arc::new(DepartmentOrchestrator::new(db, mesh));
+        let agent = BusinessAdvisoryAgent::new(orchestrator);
+
+        let event = DepartmentEvent {
+            id: "1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            event_type: "tenant.weekly_report.generated".to_string(),
+            payload: serde_json::json!({}),
+        };
+
+        let result = agent.handle_event(&event).await;
+        assert!(result.is_ok());
+    }
+}
 
 #[async_trait::async_trait]
-impl BaseAgent for CustomerSuccessAgent {
+impl BaseAgent for BusinessAdvisoryAgent {
     fn agent_id(&self) -> String {
-        "customer_success_agent".to_string()
+        "business_advisory_agent".to_string()
     }
 
     fn trigger_type(&self) -> AgentTriggerType {

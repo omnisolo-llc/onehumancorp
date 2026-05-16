@@ -3,58 +3,37 @@ use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, 
 
 use serde_json::Value;
 
-pub struct CustomerSuccessAgent {
+pub struct FinanceAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
 
-impl CustomerSuccessAgent {
+impl FinanceAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
         Self { orchestrator }
     }
 }
 
-
 #[async_trait::async_trait]
-impl Department for CustomerSuccessAgent {
+impl Department for FinanceAgent {
     fn department_type(&self) -> DepartmentType {
-        DepartmentType::CustomerSuccess
+        DepartmentType::Finance
     }
 
     fn subscribed_events(&self) -> Vec<String> {
         vec![
-            "tenant.order.fulfillment_ready".to_string(),
-            "tenant.message.received".to_string(),
+            "tenant.invoice.overdue".to_string(),
+            "tenant.payment.failed".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.message.received" {
-            let message_content = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-            let sender = event.payload.get("sender").and_then(|v| v.as_str()).unwrap_or("Customer");
+        if event.event_type == "tenant.invoice.overdue" {
+            let invoice_id = event.payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let _req = self.request_approval(
-                format!("Drafted reply to {} about '{}'", sender, message_content),
+                format!("Drafted payment reminder for overdue invoice #{}", invoice_id),
                 event.tenant_id.clone(),
                 ActionRisk::AutoExecute
             ).await?;
-        } else if event.event_type == "tenant.order.fulfillment_ready" {
-            let config = self.get_config(&event.tenant_id);
-            let risk = if let Some(cfg) = config {
-                if cfg.auto_approve_limits > 0.0 {
-                    ActionRisk::AutoExecute
-                } else {
-                    ActionRisk::DraftForReview
-                }
-            } else {
-                ActionRisk::DraftForReview
-            };
-
-            self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                "Send personalized thank you & shipping ETA".to_string(),
-                event.tenant_id.clone(),
-                risk,
-                event.payload.clone(),
-            ).await.map(|_| ())?;
         }
         Ok(())
     }
@@ -75,12 +54,39 @@ impl Department for CustomerSuccessAgent {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use std::sync::Arc;
 
+    #[tokio::test]
+    async fn test_finance_agent_handle_event() {
+        if std::env::var("DATABASE_URL").is_err() { return; }
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = std::sync::Arc::new(DepartmentOrchestrator::new(db, mesh));
+        let agent = FinanceAgent::new(orchestrator);
+
+        let event = DepartmentEvent {
+            id: "1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            event_type: "tenant.invoice.overdue".to_string(),
+            payload: serde_json::json!({"invoice_id": "INV-1001"}),
+        };
+
+        let result = agent.handle_event(&event).await;
+        assert!(result.is_ok());
+    }
+}
 
 #[async_trait::async_trait]
-impl BaseAgent for CustomerSuccessAgent {
+impl BaseAgent for FinanceAgent {
     fn agent_id(&self) -> String {
-        "customer_success_agent".to_string()
+        "finance_agent".to_string()
     }
 
     fn trigger_type(&self) -> AgentTriggerType {
