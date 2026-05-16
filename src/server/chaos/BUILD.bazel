@@ -1,0 +1,12 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "chaos_metrics",
+    srcs = ["chaos_metrics.rs"],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "chaos_metrics_test",
+    crate = ":chaos_metrics",
+)
