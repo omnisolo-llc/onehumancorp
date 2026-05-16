@@ -40,7 +40,6 @@ pub mod tools;
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
-
 pub mod services {
     pub mod dashboard;
     pub mod wizard;
@@ -1480,7 +1479,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(mesh_transport)
         .merge(webhook_router)
         .merge(health_router)
-        .nest("/api/v1/wizard", wizard_api::router(hub.pool.clone()))
         .fallback(ui_handler);
 
     let mesh_addr: std::net::SocketAddr = "0.0.0.0:18789".parse().unwrap();
@@ -1630,17 +1628,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin: 0; 
                             line-height: 1.5;
                         }
-
                         .glass { 
-                            background: rgba(255, 255, 255, 0.7) !important;
-                            backdrop-filter: blur(20px) !important;
-                            -webkit-backdrop-filter: blur(20px) !important;
-                            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-                            border-radius: 12px !important;
-                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
-                        }
-
-                        .old-glass {
                             background: var(--card-bg); 
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
@@ -2109,24 +2097,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="updateStateField('business_type', 'Online Store'); nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="updateStateField('business_type', 'Service Business'); nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="updateStateField('business_type', 'Restaurant / Food'); nextStep(3)">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
+                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
+                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
                             <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
                             <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" onchange="updateStateField('business_name', this.value)" />
+                            <input type="text" placeholder="What is your business called?" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox" onchange="updateArrayField('products', 'Physical products', this.checked)"> Physical Products</label>
-                            <label><input type="checkbox" onchange="updateArrayField('products', 'Services / Appointments', this.checked)"> Services / Appointments</label>
+                            <label><input type="checkbox"> Physical Products</label>
+                            <label><input type="checkbox"> Services / Appointments</label>
                             <label><input type="checkbox"> Subscriptions</label>
                             <br/><button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
@@ -2141,7 +2129,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-<p style="font-size: 12px; color: var(--text-secondary);">Estimated time to first payment: Instant</p>
                             <button class="secondary" onclick="nextStep(7)">Online</button>
                             <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
@@ -2160,34 +2147,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
                         </div>
                         <div id="step-9" style="display: none;">
+                            <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="updateStateField('domain', 'ohc'); nextStep('admin')">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="updateStateField('domain', 'custom'); nextStep('admin')">🔗 Connect Custom Domain</button>
-
-                        </div>
-
-                        <div id="step-admin" style="display: none;">
-                            <h1>Create Administrator Account</h1>
-                            <input type="text" placeholder="Full Name" onchange="updateStateField('admin_name', this.value)" />
-                            <input type="email" placeholder="Email Address" onchange="updateStateField('admin_email', this.value)" />
-                            <input type="password" placeholder="Password" onchange="updateStateField('admin_pass', this.value)" />
-                            <p style="font-size: 12px; color: var(--text-secondary);">Password Strength: <span style="color: green;">Strong</span></p>
-                            <button class="secondary">Sign in with Google</button>
-                            <button class="secondary">Sign in with Apple</button>
+                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
                             <br/><button onclick="nextStep(10)">Next →</button>
-                            <button class="secondary" onclick="nextStep(9)">Back</button>
                         </div>
-
+                        <div id="step-9" style="display: none;">
+                            <h1>Choose a Domain</h1>
+                            <h1>Choose your domain</h1>
+                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                        </div>
                         <div id="step-10" style="display: none;">
-                            <h1>Review &amp; Launch</h1>
-                            <p>Almost there</p>
-                            <button onclick="nextStep(11)">Launch!</button>
-                        </div>
-                        <div id="step-11" style="display: none;">
-                            <h1>Onboarding Complete!</h1>
+                            <h1>Ready to launch!</h1>
                             <button onclick="nextStep(100)">Publish my business →</button>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard</button>
-                            <button onclick="showScreen('checklist-screen')">Continue to Setup Checklist</button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
@@ -2265,84 +2239,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meeting-room-screen': '/meetings/room/1'
                         };
 
-
-
-                        function getAuthHeader() {
-                            // Fetch token from localStorage or use a valid mock SPIFFE ID for testing
-                            return { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'spiffe://ohc.app/org/test_tenant/agent/user') };
-                        }
-
-                        let wizardState = {
-
-                            business_type: null,
-                            business_name: null,
-                            description: null,
-                            products: [],
-                            payments: [],
-                            template: null,
-                            domain: null
-                        };
-
-                        async function loadWizardState() {
-                            try {
-                                const response = await fetch('/api/v1/wizard/state', { headers: getAuthHeader() });
-                                if (response.ok) {
-                                    wizardState = await response.json();
-                                    console.log("Loaded state:", wizardState);
-
-                                    if (wizardState.business_name) {
-                                        let input = document.querySelector('input[placeholder="What is your business called?"]');
-                                        if (input) input.value = wizardState.business_name;
-                                    }
-                                    if (wizardState.description) {
-                                        let textarea = document.querySelector('textarea[placeholder="Tell us a bit about it..."]');
-                                        if (textarea) textarea.value = wizardState.description;
-                                    }
-                                    if (wizardState.products && wizardState.products.length > 0) {
-                                        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                                            if (cb.parentNode && cb.parentNode.textContent) {
-                                                const label = cb.parentNode.textContent.trim().toLowerCase();
-                                                if (wizardState.products.some(p => label.includes(p.toLowerCase()))) {
-                                                    cb.checked = true;
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
-                            } catch (e) { console.error("Failed to load state", e); }
-                        }
-
-                        let saveTimeout = null;
-                        function saveWizardState() {
-                            if (saveTimeout) clearTimeout(saveTimeout);
-                            saveTimeout = setTimeout(async () => {
-                                try {
-                                    await fetch('/api/v1/wizard/state', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-                                        body: JSON.stringify(wizardState)
-                                    });
-                                } catch (e) { console.error("Failed to save state", e); }
-                            }, 500);
-                        }
-
-                        function updateStateField(field, value) {
-                            wizardState[field] = value;
-                            saveWizardState();
-                        }
-
-                        function updateArrayField(field, value, isChecked) {
-                            if (!wizardState[field]) wizardState[field] = [];
-                            if (isChecked) {
-                                if (!wizardState[field].includes(value)) wizardState[field].push(value);
-                            } else {
-                                wizardState[field] = wizardState[field].filter(v => v !== value);
-                            }
-                            saveWizardState();
-                        }
-
-                        document.addEventListener('DOMContentLoaded', loadWizardState);
-
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -2383,151 +2279,4 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         "#,
     };
     axum::response::Html(content)
-}
-
-
-pub mod wizard_api {
-    use axum::{Json, Router, routing::{get, post}, extract::State};
-    use serde::{Deserialize, Serialize};
-    use sqlx::{PgPool, Row, Executor};
-
-    #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Debug)]
-    pub struct WizardState {
-        pub business_type: Option<String>,
-        pub business_name: Option<String>,
-        pub description: Option<String>,
-        pub products: Vec<String>,
-        pub payments: Vec<String>,
-        pub template: Option<String>,
-        pub domain: Option<String>,
-        pub admin_name: Option<String>,
-        pub admin_email: Option<String>,
-        pub admin_pass: Option<String>,
-    }
-
-    #[derive(Clone)]
-    pub struct WizardAppState {
-        pub pool: PgPool,
-    }
-
-    pub async fn wizard_auth_middleware(
-        mut req: axum::extract::Request,
-        next: axum::middleware::Next,
-    ) -> Result<axum::response::Response, axum::http::StatusCode> {
-        let auth_header = req.headers().get("authorization")
-            .and_then(|v| v.to_str().ok())
-            .map(|s| s.replace("Bearer ", ""))
-            .unwrap_or_default();
-
-        let tenant_id = if auth_header.starts_with("spiffe://") {
-            let (org_id, _) = crate::auth::parse_spiffe_id(&auth_header).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-            org_id
-        } else {
-            return Err(axum::http::StatusCode::UNAUTHORIZED);
-        };
-
-        req.extensions_mut().insert(tenant_id);
-        Ok(next.run(req).await)
-    }
-
-    pub fn router(pool: PgPool) -> Router {
-        let state = WizardAppState { pool };
-        Router::new()
-            .route("/state", get(get_state).post(save_state))
-            .layer(axum::middleware::from_fn(wizard_auth_middleware))
-            .with_state(state)
-    }
-
-    async fn get_state(State(app_state): State<WizardAppState>, axum::extract::Extension(tenant_id): axum::extract::Extension<String>) -> Result<Json<WizardState>, axum::http::StatusCode> {
-        let mut tx = app_state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        let row = sqlx::query("SELECT state FROM wizard_states WHERE id = $1")
-            .bind(&tenant_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        let _ = tx.commit().await;
-
-        let state = match row {
-            Some(r) => serde_json::from_value(r.try_get("state").unwrap_or_default()).unwrap_or_default(),
-            None => WizardState::default(),
-        };
-        Ok(Json(state))
-    }
-
-    async fn save_state(State(app_state): State<WizardAppState>, axum::extract::Extension(tenant_id): axum::extract::Extension<String>, Json(mut payload): Json<WizardState>) -> Result<Json<WizardState>, axum::http::StatusCode> {
-        // Hash the password if provided and not already hashed (very basic mock check for MVP)
-        if let Some(pass) = payload.admin_pass.as_ref() {
-            if !pass.starts_with("$2b$") && !pass.starts_with("$2a$") {
-                let hashed = bcrypt::hash(pass, bcrypt::DEFAULT_COST).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-                payload.admin_pass = Some(hashed);
-            }
-        }
-
-        let val = serde_json::to_value(&payload).unwrap_or_default();
-        let mut tx = app_state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        sqlx::query("INSERT INTO wizard_states (id, state) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET state = $2")
-            .bind(&tenant_id)
-            .bind(&val)
-            .execute(&mut *tx)
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        let _ = tx.commit().await;
-        Ok(Json(payload))
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use axum::body::Body;
-        use axum::http::Request;
-
-        #[tokio::test]
-        async fn test_wizard_state_default() {
-            let state = WizardState::default();
-            assert_eq!(state.business_type, None);
-            assert_eq!(state.products.len(), 0);
-        }
-
-        #[tokio::test]
-        async fn test_wizard_api_routes() {
-            if let Ok(pool_url) = std::env::var("DATABASE_URL") {
-                if let Ok(pool) = sqlx::PgPool::connect(&pool_url).await {
-                    let mut tx = pool.begin().await.unwrap();
-                    sqlx::query("CREATE TABLE IF NOT EXISTS wizard_states (id VARCHAR(255) PRIMARY KEY, state JSONB)")
-                        .execute(&mut *tx).await.unwrap();
-                    tx.commit().await.unwrap();
-
-                    let app_state = WizardAppState { pool: pool.clone() };
-                    let ext = axum::extract::Extension("test_tenant".to_string());
-
-                    let mut new_state = WizardState::default();
-                    new_state.business_name = Some("Coverage Test".to_string());
-                    let payload = Json(new_state.clone());
-
-                    let save_res = save_state(axum::extract::State(app_state.clone()), ext.clone(), payload).await;
-                    assert!(save_res.is_ok());
-
-                    let get_res = get_state(axum::extract::State(app_state.clone()), ext.clone()).await;
-                    assert!(get_res.is_ok());
-                    assert_eq!(get_res.unwrap().0.business_name.unwrap(), "Coverage Test");
-                }
-            }
-        }
-    }
 }

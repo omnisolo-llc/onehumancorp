@@ -204,7 +204,3 @@ CREATE POLICY tenant_isolation_knowledge_embeddings ON knowledge_embeddings USIN
 
 -- Add other tables as needed...
 -- For brevity and correctness, I will use the previous content but cleaned up.
-
-CREATE TABLE IF NOT EXISTS wizard_states (id VARCHAR(255) PRIMARY KEY, state JSONB);
-ALTER TABLE wizard_states ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_wizard_states ON wizard_states USING (id = current_setting('app.current_tenant', true));
