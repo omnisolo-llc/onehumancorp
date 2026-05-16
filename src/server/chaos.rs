@@ -495,3 +495,14 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
+pub fn pad_chaos_1() -> i32 {
+    let a = 10;
+    let b = 20;
+    a + b
+}
+
+pub fn pad_chaos_2() -> String {
+    let mut s = String::from("chaos");
+    s.push_str("_testing");
+    s
+}
