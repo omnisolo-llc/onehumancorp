@@ -15,9 +15,7 @@ import (
 	"onehumancorp/srcs/server/growth"
 	"onehumancorp/srcs/server/dashboard"
 	"onehumancorp/srcs/server/tiers"
-	"onehumancorp/srcs/server/services/sync"
 
-	"go.opentelemetry.io/otel"
 	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
@@ -99,13 +97,7 @@ func main() {
 	telemetry.InitGlobalSyncEngine(telemetryEngine)
 	go telemetryEngine.StartSyncDaemon(ctx, 30*time.Second)
 
-	// Initialize Sync Escalator Daemon
-	meter := otel.Meter("onehumancorp/sync-escalator")
-	escalator, err := sync.InitWithMeter(db, meter)
-	if err != nil {
-		log.Fatalf("Failed to initialize sync escalator: %v", err)
-	}
-	go escalator.Start(ctx, 15*time.Second)
+
 
 	log.Println("OHC Server is running. AutoDream daemon started.")
 
@@ -140,9 +132,6 @@ func main() {
 	mux.HandleFunc("/api/tiers/check", tierAPI.HandleCheckLimit)
 
 	mux.HandleFunc("/api/dashboard/onboarding/metrics", dashboard.HandleOnboardingMetrics)
-
-	syncAPI := sync.NewAPIHandler(escalator)
-	mux.HandleFunc("/api/v1/orchestration/escalate", syncAPI.HandleEscalate)
 
 	mux.HandleFunc("/api/v1/stream", dashboard.HandleStream)
 	mux.HandleFunc("/api/v1/autodream/sync", dashboard.HandleAutoDreamSync)
