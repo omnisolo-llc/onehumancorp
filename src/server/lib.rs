@@ -2210,6 +2210,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Login</h1>
                         <h2>One Human Corp</h2>
                         <p>Sign in to manage your business</p>
+                        <button class="secondary" onclick="showScreen('settings-screen')">Fix App Issues</button>
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
                         <input type="email" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
