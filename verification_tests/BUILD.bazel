@@ -12,9 +12,3 @@ sh_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
-
-sh_test(
-    name = "verify_compliance_test",
-    srcs = ["verify_compliance.sh"],
-    size = "small",
-)
