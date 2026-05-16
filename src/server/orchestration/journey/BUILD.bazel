@@ -1,0 +1,10 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "events.rs",
+        "mod.rs",
+        "state.rs",
+        "test.rs",
+    ],
+    visibility = ["//src/server/orchestration:__pkg__"],
+)

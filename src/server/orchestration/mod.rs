@@ -7,6 +7,7 @@ pub mod orchestration_test;
 pub mod departments;
 pub mod handoff;
 pub mod state;
+pub mod journey;
 pub mod mesh;
 pub mod health;
 pub mod hub;
