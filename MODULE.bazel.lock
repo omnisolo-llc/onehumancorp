@@ -506,7 +506,7 @@
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "dT/cKtXRfZtxQ48vsOJmeSMAAHSK5f2d62klO41LMQQ=",
-        "usagesDigest": "1fJBoKFEG4fNRxY/FkhQgz9jPdpXkZyDMao5xvf5K2A=",
+        "usagesDigest": "DuZrbUyAIgqugjecLe1WzzUeMqHgfTiSDs2+QNx92g0=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],

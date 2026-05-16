@@ -110,6 +110,17 @@ message EventStreamRequest {
   string topic = 1;
 }
 
+// MeshEvent definition for Teammate Mesh APIs
+message MeshEvent {
+  string event_id = 1;
+  string topic = 2;
+  bytes payload = 3;
+  int64 timestamp = 4;
+}
+
+message PublishMeshEventRequest {
+  MeshEvent event = 1;
+}
 
 // TeammateMeshEvent for rich payload task broadcasting
 message TeammateMeshEvent {
@@ -237,7 +248,8 @@ service HubService {
   rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
   rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
   rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
-rpc PublishMeshEvent(PublishMeshEventRequest) returns (PublishMessageResponse);
+  rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
+  rpc PublishMeshEvent(PublishMeshEventRequest) returns (PublishMessageResponse);
   rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
   rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
   
@@ -245,7 +257,6 @@ rpc PublishMeshEvent(PublishMeshEventRequest) returns (PublishMessageResponse);
   rpc PollTasks(PollTasksRequest) returns (stream SharedTask);
   rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
   rpc ApproveTask(ApproveTaskRequest) returns (ApproveTaskResponse);
-  rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
   rpc GetPendingApprovals(GetPendingApprovalsRequest) returns (GetPendingApprovalsResponse);
   rpc TriggerCustomOrder(TriggerCustomOrderRequest) returns (TriggerCustomOrderResponse);
   rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
@@ -1658,16 +1669,4 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
-}
-
-// MeshEvent definition for Teammate Mesh APIs
-message MeshEvent {
-  string event_id = 1;
-  string topic = 2;
-  bytes payload = 3;
-  int64 timestamp = 4;
-}
-
-message PublishMeshEventRequest {
-  MeshEvent event = 1;
 }
