@@ -161,6 +161,18 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.mesh.acquire_lock(resource, owner, ttl_seconds).await
+    }
+
+    pub async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.mesh.release_lock(resource, owner).await
+    }
+
+    pub fn db(&self) -> Arc<crate::db::DB> {
+        self.db.clone()
+    }
+
     pub async fn dispatch_event(&self, event: DepartmentEvent) -> Result<(), String> {
         let topic = format!("department_event:{}", event.event_type);
         let payload = serde_json::to_vec(&event).map_err(|e| e.to_string())?;
