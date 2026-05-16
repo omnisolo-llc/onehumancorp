@@ -175,3 +175,15 @@ exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+rust_library(
+    name = "chaos",
+    srcs = ["chaos.rs"],
+    edition = "2024",
+)
+
+rust_test(
+    name = "chaos_test",
+    crate = ":chaos",
+    edition = "2024",
+)
