@@ -233,3 +233,4 @@ P2
 
 ### Estimated Scope
 Medium
+resolves #7869

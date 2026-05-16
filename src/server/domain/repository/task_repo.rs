@@ -2,6 +2,7 @@ use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use super::models::Task;
 use chrono::Utc;
+use crate::common::auth_utils::set_org_context;
 
 pub struct TaskRepository {
     db: Arc<DB>,
@@ -15,6 +16,8 @@ impl TaskRepository {
     pub async fn create_task(&self, task: Task) -> Result<Task, String> {
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                set_org_context(&mut *tx, &task.organization_id).await.map_err(|e| e.to_string())?;
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
@@ -32,9 +35,10 @@ impl TaskRepository {
                 .bind(&task.assigned_agent_role)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
