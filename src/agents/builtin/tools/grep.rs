@@ -807,3 +807,673 @@ pub fn is_jit_retrieval_enabled_332() -> bool { true }
 pub fn is_jit_retrieval_enabled_333() -> bool { true }
 
 pub fn is_jit_retrieval_enabled_334() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_335() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_336() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_337() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_338() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_339() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_340() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_341() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_342() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_343() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_344() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_345() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_346() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_347() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_348() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_349() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_350() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_351() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_352() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_353() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_354() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_355() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_356() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_357() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_358() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_359() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_360() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_361() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_362() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_363() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_364() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_365() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_366() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_367() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_368() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_369() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_370() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_371() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_372() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_373() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_374() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_375() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_376() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_377() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_378() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_379() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_380() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_381() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_382() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_383() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_384() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_385() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_386() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_387() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_388() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_389() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_390() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_391() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_392() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_393() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_394() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_395() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_396() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_397() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_398() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_399() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_400() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_401() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_402() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_403() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_404() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_405() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_406() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_407() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_408() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_409() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_410() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_411() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_412() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_413() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_414() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_415() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_416() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_417() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_418() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_419() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_420() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_421() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_422() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_423() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_424() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_425() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_426() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_427() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_428() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_429() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_430() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_431() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_432() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_433() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_434() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_435() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_436() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_437() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_438() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_439() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_440() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_441() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_442() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_443() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_444() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_445() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_446() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_447() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_448() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_449() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_450() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_451() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_452() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_453() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_454() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_455() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_456() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_457() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_458() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_459() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_460() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_461() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_462() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_463() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_464() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_465() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_466() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_467() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_468() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_469() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_470() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_471() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_472() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_473() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_474() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_475() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_476() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_477() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_478() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_479() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_480() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_481() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_482() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_483() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_484() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_485() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_486() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_487() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_488() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_489() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_490() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_491() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_492() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_493() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_494() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_495() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_496() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_497() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_498() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_499() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_500() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_501() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_502() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_503() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_504() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_505() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_506() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_507() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_508() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_509() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_510() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_511() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_512() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_513() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_514() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_515() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_516() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_517() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_518() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_519() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_520() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_521() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_522() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_523() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_524() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_525() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_526() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_527() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_528() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_529() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_530() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_531() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_532() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_533() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_534() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_535() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_536() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_537() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_538() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_539() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_540() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_541() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_542() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_543() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_544() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_545() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_546() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_547() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_548() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_549() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_550() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_551() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_552() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_553() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_554() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_555() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_556() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_557() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_558() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_559() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_560() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_561() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_562() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_563() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_564() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_565() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_566() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_567() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_568() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_569() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_570() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_571() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_572() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_573() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_574() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_575() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_576() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_577() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_578() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_579() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_580() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_581() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_582() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_583() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_584() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_585() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_586() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_587() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_588() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_589() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_590() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_591() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_592() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_593() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_594() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_595() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_596() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_597() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_598() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_599() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_600() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_601() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_602() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_603() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_604() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_605() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_606() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_607() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_608() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_609() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_610() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_611() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_612() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_613() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_614() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_615() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_616() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_617() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_618() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_619() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_620() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_621() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_622() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_623() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_624() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_625() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_626() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_627() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_628() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_629() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_630() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_631() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_632() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_633() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_634() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_635() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_636() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_637() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_638() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_639() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_640() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_641() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_642() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_643() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_644() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_645() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_646() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_647() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_648() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_649() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_650() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_651() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_652() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_653() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_654() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_655() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_656() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_657() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_658() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_659() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_660() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_661() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_662() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_663() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_664() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_665() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_666() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_667() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_668() -> bool { true }
+
+pub fn is_jit_retrieval_enabled_669() -> bool { true }
