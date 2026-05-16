@@ -92,7 +92,7 @@ impl CostAuditor {
 
         // Detect anomalies (simple threshold check)
         if cost > 10.0 {
-            tracing::warn!("Anomaly detected: High token usage cost ({}) for tenant {}", cost, event.tenant_id);
+            tracing::warn!("Anomaly detected: High token usage cost ({}) for tenant [REDACTED]", cost);
         }
         *total_cost += cost;
 

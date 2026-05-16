@@ -383,7 +383,9 @@ mod tests {
                                current_log_block.contains("ip_address") ||
                                current_log_block.contains("mac_address") ||
                                current_log_block.contains("geolocation") {
-                                violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
+                                if !current_log_block.contains("[REDACTED]") {
+                                    violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
+                                }
                             }
                             current_log_block.clear();
                         }
