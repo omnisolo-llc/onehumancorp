@@ -568,3 +568,25 @@ fn test_redact_interface_pii_malicious_payloads() {
     assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
 }
+
+#[test]
+fn test_multi_tenant_pii_leakage_guardrail() {
+    // Automated check for PII leakage in multi-tenant payload structure
+    let payload = serde_json::json!({
+        "tenant_id": "tenant-xyz",
+        "user_email": "sensitive@example.com",
+        "api_key": "sk-secret123",
+        "data": {
+            "credit_card": "4111-1111-1111-1111",
+            "safe_metric": 42
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+
+    assert_eq!(redacted["tenant_id"], "tenant-xyz", "tenant_id should be kept for multi-tenant analytics routing");
+    assert_eq!(redacted["user_email"], "[REDACTED]", "user_email must be redacted");
+    assert_eq!(redacted["api_key"], "[REDACTED]", "api_key must be redacted");
+    assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
+    assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
+}
