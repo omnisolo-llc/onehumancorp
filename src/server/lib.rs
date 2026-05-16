@@ -1755,6 +1755,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
+                            <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
@@ -2206,7 +2207,56 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Login Screen -->
+
+                    <!-- Storefront Builder Screen -->
+                    <div id="storefront-builder-screen" class="screen glass" style="display: none;">
+                        <div class="builder-container">
+                            <div class="builder-header">
+                                <h1>Edit Website</h1>
+                                <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
+                            </div>
+
+                            <div class="builder-preview" id="builder-preview-container">
+                                <!-- Draft Blocks render here -->
+                            </div>
+
+                            <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
+                        </div>
+
+                        <!-- Block Editor Bottom Sheet -->
+                        <div id="block-editor-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2 id="sheet-title">Edit Block</h2>
+                                <button class="bottom-sheet-close" onclick="closeBottomSheet()">×</button>
+                            </div>
+                            <div id="sheet-content">
+                                <!-- Dynamic form inputs -->
+                            </div>
+                            <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
+                        </div>
+
+                        <!-- Domain Setup Bottom Sheet -->
+                        <div id="domain-setup-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Publish Site</h2>
+                                <button class="bottom-sheet-close" onclick="closeDomainSetup()">×</button>
+                            </div>
+                            <div class="domain-setup active" id="domain-step-1">
+                                <p>Choose your domain option:</p>
+                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">🌐 Free OHC Subdomain</button>
+                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">🔗 Connect Custom Domain</button>
+                            </div>
+                            <div class="domain-setup" id="domain-step-free">
+                                <p>Your free domain:</p>
+                                <input type="text" id="free-domain-input" placeholder="mybusiness" /> .ohc.app
+                                <button style="margin-top: 16px; width: 100%;" onclick="publishStorefront()">Publish</button>
+                            </div>
+                        </div>
+
+                        <canvas id="confetti-canvas"></canvas>
+                    </div>
+
+<!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
                         <h2>One Human Corp</h2>
@@ -2220,6 +2270,176 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+                        // Storefront Builder State & Logic
+                        let storefrontDraftState = [
+                            { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
+                            { id: 'b2', type: 'Product Grid', content: { title: 'Featured Products', count: 4 } },
+                            { id: 'b3', type: 'Service List', content: { title: 'Our Services' } },
+                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } }
+                        ];
+                        let rearrangeMode = false;
+                        let activeBlockId = null;
+
+                        function renderStorefrontPreview() {
+                            const container = document.getElementById('builder-preview-container');
+                            if (!container) return;
+                            container.innerHTML = '';
+
+                            storefrontDraftState.forEach((block, index) => {
+                                const el = document.createElement('div');
+                                el.className = 'builder-block glass';
+                                el.onclick = () => rearrangeMode ? null : openBottomSheet(block.id);
+
+                                let innerHtml = `<h2>${block.type}</h2>`;
+                                if (rearrangeMode) {
+                                    innerHtml += `<p>↕ Drag to reorder (simulated)</p>`;
+                                    // Simulation of drag logic
+                                    const upBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, -1);">↑</button>`;
+                                    const downBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, 1);">↓</button>`;
+                                    innerHtml += `<div>${upBtn} ${downBtn}</div>`;
+                                } else {
+                                    if (block.type === 'Hero') {
+                                        innerHtml += `<p><strong>${block.content.title}</strong></p><p>${block.content.subtitle}</p><button class="secondary">${block.content.cta}</button>`;
+                                    } else if (block.type === 'Product Grid') {
+                                        innerHtml += `<p>${block.content.title} (${block.content.count} items)</p>`;
+                                    } else {
+                                        innerHtml += `<p>${block.content.title || block.content.text}</p>`;
+                                    }
+                                }
+                                el.innerHTML = innerHtml;
+                                container.appendChild(el);
+                            });
+                        }
+
+                        function toggleRearrangeMode() {
+                            rearrangeMode = !rearrangeMode;
+                            document.getElementById('toggle-rearrange-btn').textContent = rearrangeMode ? 'Done' : 'Rearrange';
+                            renderStorefrontPreview();
+                        }
+
+                        function moveBlock(index, dir) {
+                            if (index + dir < 0 || index + dir >= storefrontDraftState.length) return;
+                            const temp = storefrontDraftState[index];
+                            storefrontDraftState[index] = storefrontDraftState[index + dir];
+                            storefrontDraftState[index + dir] = temp;
+                            renderStorefrontPreview();
+                        }
+
+                        function openBottomSheet(blockId) {
+                            activeBlockId = blockId;
+                            const block = storefrontDraftState.find(b => b.id === blockId);
+                            document.getElementById('sheet-title').textContent = `Edit ${block.type}`;
+
+                            let html = '';
+                            for (const key in block.content) {
+                                html += `<label style="display:block; margin-top:8px;">${key}</label>`;
+                                html += `<input type="text" id="edit-${key}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
+                            }
+                            document.getElementById('sheet-content').innerHTML = html;
+                            document.getElementById('block-editor-sheet').classList.add('open');
+                        }
+
+                        function closeBottomSheet() {
+                            document.getElementById('block-editor-sheet').classList.remove('open');
+                            activeBlockId = null;
+                        }
+
+                        function saveBlockChanges() {
+                            if (!activeBlockId) return;
+                            const block = storefrontDraftState.find(b => b.id === activeBlockId);
+                            for (const key in block.content) {
+                                const input = document.getElementById(`edit-${key}`);
+                                if (input) block.content[key] = input.value;
+                            }
+                            closeBottomSheet();
+                            renderStorefrontPreview();
+                        }
+
+                        function showDomainSetup() {
+                            document.getElementById('domain-setup-sheet').classList.add('open');
+                            document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
+                            document.getElementById('domain-step-1').classList.add('active');
+                        }
+
+                        function closeDomainSetup() {
+                            document.getElementById('domain-setup-sheet').classList.remove('open');
+                        }
+
+                        function selectDomain(type) {
+                            document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
+                            if (type === 'free') {
+                                document.getElementById('domain-step-free').classList.add('active');
+                            } else {
+                                // simulate custom domain flow
+                                publishStorefront();
+                            }
+                        }
+
+                        function publishStorefront() {
+                            closeDomainSetup();
+                            fireConfetti();
+                            setTimeout(() => {
+                                showScreen('dashboard-screen');
+                            }, 2000);
+                        }
+
+                        function fireConfetti() {
+                            const canvas = document.getElementById('confetti-canvas');
+                            if (!canvas) return;
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = window.innerWidth;
+                            canvas.height = window.innerHeight;
+
+                            let particles = [];
+                            for(let i=0; i<100; i++) {
+                                particles.push({
+                                    x: Math.random() * canvas.width,
+                                    y: Math.random() * canvas.height - canvas.height,
+                                    r: Math.random() * 6 + 2,
+                                    d: Math.random() * 100,
+                                    color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                                    tilt: Math.floor(Math.random() * 10) - 10,
+                                    tiltAngle: 0,
+                                    tiltAngleIncr: (0.07 * Math.random()) + 0.05
+                                });
+                            }
+
+                            let angle = 0;
+                            function draw() {
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                for(let i=0; i<100; i++) {
+                                    let p = particles[i];
+                                    ctx.beginPath();
+                                    ctx.lineWidth = p.r;
+                                    ctx.strokeStyle = p.color;
+                                    ctx.moveTo(p.x + p.tilt + p.r, p.y);
+                                    ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
+                                    ctx.stroke();
+                                }
+                                update();
+                            }
+
+                            let animId;
+                            function update() {
+                                angle += 0.01;
+                                for(let i=0; i<100; i++) {
+                                    let p = particles[i];
+                                    p.y += Math.cos(angle + p.d) + 1 + p.r / 2;
+                                    p.x += Math.sin(angle);
+                                    p.tiltAngle += p.tiltAngleIncr;
+                                    p.tilt = Math.sin(p.tiltAngle) * 15;
+                                }
+                                animId = requestAnimationFrame(draw);
+                            }
+
+                            draw();
+                            setTimeout(() => {
+                                cancelAnimationFrame(animId);
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            }, 3000);
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2231,6 +2451,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
                             'setup-screen': '/website-builder',
+                            'storefront-builder-screen': '/storefront-builder',
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
