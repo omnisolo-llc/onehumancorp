@@ -17,14 +17,14 @@
       "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "html",
-        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">Hybrid Database Metrics</h1>\n</div>"
       },
       "transparent": true
     },
@@ -35,7 +35,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 5
       },
       "datasource": {
         "type": "prometheus",
@@ -80,7 +80,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 2
+        "y": 5
       },
       "datasource": {
         "type": "prometheus",
@@ -125,7 +125,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 13
       },
       "datasource": {
         "type": "prometheus",
@@ -181,7 +181,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 21
       },
       "datasource": {
         "type": "prometheus",

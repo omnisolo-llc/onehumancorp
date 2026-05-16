@@ -11,16 +11,16 @@ backend:
   autoscaling:
     enabled: true
     minReplicas: 3
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "200m"
       memory: "256Mi"
     limits:
       cpu: "1000m"
-      memory: "2Gi"
+      memory: "1Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -56,9 +56,9 @@ ohcCore:
   autoscaling:
     enabled: true
     minReplicas: 3
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
@@ -101,8 +101,8 @@ chatwoot:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "500m"
@@ -144,8 +144,8 @@ powersync:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"

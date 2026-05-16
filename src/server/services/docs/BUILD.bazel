@@ -1,0 +1,9 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+        "tests/service_tests.rs",
+    ],
+    visibility = ["//src/server/services:__pkg__", "//src/server:__pkg__"],
+)
