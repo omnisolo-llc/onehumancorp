@@ -25,21 +25,21 @@ test.describe('Dashboard Navigation UX', () => {
   });
 
   test('should trigger Orders action via bottom nav button', async ({ page }) => {
-    const ordersBtn = page.locator('text="Orders"').filter({ visible: true }).first();
+    const ordersBtn = page.locator('text="View Orders"').filter({ visible: true }).first();
     await ordersBtn.waitFor({ state: 'visible', timeout: 30000 });
     await ordersBtn.click();
     await expect(page).not.toHaveURL('about:blank');
   });
 
   test('should trigger Messages action via bottom nav button', async ({ page }) => {
-    const messagesBtn = page.locator('text="Messages"').filter({ visible: true }).first();
+    const messagesBtn = page.locator('text="Check Messages"').filter({ visible: true }).first();
     await messagesBtn.waitFor({ state: 'visible', timeout: 30000 });
     await messagesBtn.click();
     await expect(page).not.toHaveURL('about:blank');
   });
 
   test('should trigger Analytics action via bottom nav button', async ({ page }) => {
-    const analyticsBtn = page.locator('text="Analytics"').filter({ visible: true }).first();
+    const analyticsBtn = page.locator('text="See Analytics"').filter({ visible: true }).first();
     await analyticsBtn.waitFor({ state: 'visible', timeout: 30000 });
     await analyticsBtn.click();
     await expect(page).not.toHaveURL('about:blank');
