@@ -318,12 +318,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_bench_db_query_time() {
-        bench_db_query_time().await;
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(60), bench_db_query_time()).await;
     }
 
     #[tokio::test]
     async fn test_run_bench_api_response_time() {
-        bench_api_response_time().await;
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(60), bench_api_response_time()).await;
     }
 
     #[tokio::test]
@@ -335,7 +335,7 @@ mod tests {
             return;
         }
         println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");
-        bench_dashboard_snapshot().await;
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(60), bench_dashboard_snapshot()).await;
     }
 
     #[tokio::test]

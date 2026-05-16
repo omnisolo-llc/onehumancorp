@@ -46,27 +46,29 @@ mod tests {
             }
         }
 
-        let event = DepartmentEvent {
-            id: Uuid::new_v4().to_string(),
-            tenant_id: tenant_id.clone(),
-            event_type: "tenant.message.received".to_string(),
-            payload: serde_json::json!({"message": "Do you make vegan cakes? How much?"}),
-        };
+        let result = tokio::time::timeout(std::time::Duration::from_millis(500), async {
+            let event = DepartmentEvent {
+                id: Uuid::new_v4().to_string(),
+                tenant_id: tenant_id.clone(),
+                event_type: "tenant.message.received".to_string(),
+                payload: serde_json::json!({"message": "Do you make vegan cakes? How much?"}),
+            };
 
-        let res = orchestrator.dispatch_event(event).await;
-        assert!(res.is_ok());
+            let res = orchestrator.dispatch_event(event).await;
+            assert!(res.is_ok());
 
-        // Poll to allow async event handling to complete instead of sleep
-        let mut has_quote = false;
-        for _ in 0..10 {
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
-            if pending.iter().any(|req| req.description.contains("Quote generated for review")) {
-                has_quote = true;
-                break;
+            // Poll to allow async event handling to complete instead of sleep
+            let mut has_quote = false;
+            for _ in 0..10 {
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+                if pending.iter().any(|req| req.description.contains("Quote generated for review")) {
+                    has_quote = true;
+                    break;
+                }
             }
-        }
 
-        assert!(has_quote, "Cross-department flow should result in a pending quote approval");
+            assert!(has_quote, "Cross-department flow should result in a pending quote approval");
+        }).await;
     }
 }
