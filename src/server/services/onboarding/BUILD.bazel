@@ -12,6 +12,7 @@ filegroup(
         "provisioner.rs",
         "validation.rs",
         "wizard.rs",
+        "math_helpers.rs",
     ],
     visibility = ["//src/server/services:__pkg__"],
 )
