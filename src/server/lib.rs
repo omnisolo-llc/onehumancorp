@@ -1909,7 +1909,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Continuing...')">Next</button>
                             <button onclick="alert('Continuing...')">Continue</button>
                         </div>
-                        <p>Built with OHC — Start your free business →</p>
+                        <a href="https://onehumancorp.com" target="_blank" style="display: block; margin-top: 20px; color: var(--text-secondary); text-decoration: none; font-size: 14px;">Built with OHC — Start your free business →</a>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
