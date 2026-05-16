@@ -50,7 +50,7 @@ go.work.sum
 # .vscode/
 
 # Bazel outputs
-bazel-*
+/bazel-*
 
 coverage_html/
 /artifacts/
