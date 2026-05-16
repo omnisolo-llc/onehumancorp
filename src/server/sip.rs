@@ -89,7 +89,15 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
+                let seven_days_ago = Utc::now() - chrono::Duration::days(7);
+                let dialect_delete = if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+                    "DELETE FROM agent_missions WHERE (status = 'COMPLETED' AND updated_at < $1) OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $2) AND tenant_id = $3"
+                } else {
+                    "DELETE FROM agent_missions WHERE (status = 'COMPLETED' AND updated_at < $1) OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $2) AND tenant_id = $3"
+                };
+
+                sqlx::query(dialect_delete)
+                    .bind(seven_days_ago)
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)

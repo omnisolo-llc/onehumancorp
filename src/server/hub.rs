@@ -734,7 +734,17 @@ impl Hub {
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = false").fetch_one(&pool4).await
         });
 
-        let (db_ping_res, sync_queue_res_res, sync_errors_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future);
+        let pool5 = self.pool.clone();
+        let oldest_mission_future = tokio::task::spawn(async move {
+            let dialect_query = if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+                "SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(created_at))), 0)::bigint FROM agent_missions WHERE status = 'PENDING'"
+            } else {
+                "SELECT COALESCE(unixepoch('now') - MIN(unixepoch(created_at)), 0) FROM agent_missions WHERE status = 'PENDING'"
+            };
+            sqlx::query_scalar::<_, i64>(dialect_query).fetch_one(&pool5).await
+        });
+
+        let (db_ping_res, sync_queue_res_res, sync_errors_res_res, oldest_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future, oldest_mission_future);
 
         let db_ping = db_ping_res.unwrap_or(0);
         let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -742,6 +752,7 @@ impl Hub {
         let sync_errors_res = sync_errors_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
+        let oldest_pending_mission_age_seconds = oldest_res_res.unwrap_or(Ok(0)).unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
@@ -768,6 +779,7 @@ impl Hub {
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
             "sync_error_count": sync_error_count,
+            "oldest_pending_mission_age_seconds": oldest_pending_mission_age_seconds,
         }))
     }
 }
