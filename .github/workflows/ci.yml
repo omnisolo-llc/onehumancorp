@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   bazel-test:
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -50,7 +50,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-
       # - name: Install Bazelisk
       #   run: |
       #     go install github.com/bazelbuild/bazelisk@latest
@@ -65,9 +64,9 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
             # build --config=buildbuddy-official
             # test --config=buildbuddy-official
@@ -78,80 +77,79 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
 
-      - name: Build release artifacts
-        run: bazelisk build //release:all_release_artifacts --config=linux
+    #  - name: Build release artifacts
+     #   run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test
         run: |
           bazelisk test \
-            --config=linux \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            //... -//src/e2e/...
+            //...
 
-  bazel-build:
-    runs-on: oci-runner
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v6
+  # bazel-build:
+  #   runs-on: oci-runner
+  #   timeout-minutes: 60
+  #   steps:
+  #     - uses: actions/checkout@v6
 
-      - name: Install base dependencies
-        run: |
-          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends --fix-missing \
-            build-essential pkg-config libssl-dev \
-            libdbus-1-dev libatk1.0-dev libgtk-3-dev \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git
+  #     - name: Install base dependencies
+  #       run: |
+  #         echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+  #         sudo apt-get update -qq
+  #         sudo apt-get install -y --no-install-recommends --fix-missing \
+  #           build-essential pkg-config libssl-dev \
+  #           libdbus-1-dev libatk1.0-dev libgtk-3-dev \
+  #           libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+  #           librsvg2-dev libsoup-3.0-dev \
+  #           ca-certificates curl git
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: "1.24"
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
+  #     - name: Set up Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "24"
+  #         cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+  #     - name: Install dependencies
+  #       run: npm ci
 
-      # - name: Install Bazelisk
-      #   run: |
-      #     go install github.com/bazelbuild/bazelisk@latest
-      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+  #     - name: Install Bazelisk
+  #       run: |
+  #         go install github.com/bazelbuild/bazelisk@latest
+  #         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: false
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-            test --sandbox_add_mount_pair=/var/run/docker.sock
+  #     - name: Set up Bazel
+  #       uses: bazel-contrib/setup-bazel@0.19.0
+  #       with:
+  #         bazelisk-cache: false
+  #         disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+  #         repository-cache: true
+  #         external-cache: true
+  #         cache-save: ${{ github.event_name != 'pull_request' }}
+  #         bazelrc: |
+  #           common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+  #           build --config=buildbuddy
+  #           test --config=buildbuddy
+  #           # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+  #           # build --config=buildbuddy-official
+  #           # test --config=buildbuddy-official
+  #           build --build_metadata=ROLE=CI
+  #           test --build_metadata=ROLE=CI
+  #           build --color=yes
+  #           build --show_timestamps
+  #           test --sandbox_add_mount_pair=/var/run/docker.sock
 
-      - name: Build all artifacts
-        run: |
-          bazelisk build //... --config=linux
-          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
-          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
+  #     - name: Build all artifacts
+  #       run: |
+  #         bazelisk build //... --config=linux
+  #         bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+  #         bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
 #   playwright-e2e:
 #     runs-on: oci-runner

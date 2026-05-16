@@ -111,8 +111,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Identifies seasonal trends and opportunities (back-to-school, holidays, local events)\n\
                 - Compares performance to similar businesses (anonymized)\n\
                 - Recommends pricing adjustments based on market data\n\
-                - Flags unusual patterns that might indicate problems (sudden drop in orders, unusual refund requests)\n\
-                - Monitor queue metrics and database contention events. If agents are stuck, draft plain-language warnings ('Your background agents are currently backlogged due to high task volume, but no action is needed.')",
+                - Flags unusual patterns that might indicate problems (sudden drop in orders, unusual refund requests)",
             allowed_tools: vec!["read", "head", "tail", "write", "websearch", "finance_report"],
             confidence_threshold: 0.85,
         },

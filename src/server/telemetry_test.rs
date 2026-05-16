@@ -198,36 +198,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_hybrid_swarm_queue_contention_burst() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
-
-        // Simulate high-throughput burst
-        for _ in 0..100 {
-            let _ = ::server_telemetry::record_sqlite_lock_contention(&pool, "burst_test").await;
-            let _ = ::server_telemetry::record_swarm_job_processing_latency(&pool, 0.5).await;
-            let _ = ::server_telemetry::record_swarm_queue_depth(&pool, "main", 50).await;
-        }
-
-        // Verify metrics are captured with correct tags
-        let rows = sqlx::query("SELECT labels_json, value, metric_name FROM telemetry_buffer WHERE metric_name IN ('ohc_sqlite_lock_contention_total', 'ohc_swarm_job_processing_latency_seconds', 'ohc_swarm_queue_depth') ORDER BY timestamp DESC LIMIT 3")
-            .fetch_all(&pool)
-            .await
-            .unwrap();
-
-        assert_eq!(rows.len(), 3);
-        use sqlx::Row;
-        for row in rows {
-            let labels_json: String = row.get("labels_json");
-            let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
-            assert!(parsed.get("deployment_mode").is_some());
-        }
-    }
-
-    #[tokio::test]
     async fn test_record_swarm_job_latency_by_entity() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {

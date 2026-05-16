@@ -69,42 +69,11 @@ pub async fn record_sync_daemon_error_total(pool: &PgPool, count: f32, mode: &st
 
 
 pub async fn record_sqlite_lock_contention(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
-    buffer_metric(pool, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": operation, "deployment_mode": deployment_mode })).await
+    buffer_metric(pool, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
 }
 
 pub async fn record_sqlite_retry_exhausted(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
-    buffer_metric(pool, "ohc_sqlite_retry_exhausted_total", "counter", 1.0, serde_json::json!({ "operation": operation, "deployment_mode": deployment_mode })).await
-}
-
-pub async fn record_swarm_job_processing_latency(pool: &PgPool, latency: f64) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
-    buffer_metric(
-        pool,
-        "ohc_swarm_job_processing_latency_seconds",
-        "histogram",
-        latency as f32,
-        serde_json::json!({
-            "deployment_mode": deployment_mode,
-        }),
-    )
-    .await
-}
-
-pub async fn record_swarm_queue_depth(pool: &PgPool, queue_type: &str, depth: i32) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
-    buffer_metric(
-        pool,
-        "ohc_swarm_queue_depth",
-        "gauge",
-        depth as f32,
-        serde_json::json!({
-            "queue_type": queue_type,
-            "deployment_mode": deployment_mode,
-        }),
-    )
-    .await
+    buffer_metric(pool, "ohc_sqlite_retry_exhausted_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
 }
 
 pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dyn std::error::Error>> {
@@ -152,7 +121,6 @@ pub async fn record_api_call_cost(pool: &PgPool, organization_id: &str, entity: 
 }
 
 pub async fn record_swarm_job_latency_by_entity(pool: &PgPool, mode: &str, entity: &str, latency: f64) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
     buffer_metric(
         pool,
         "ohc_swarm_job_latency_by_entity_seconds",
@@ -161,7 +129,6 @@ pub async fn record_swarm_job_latency_by_entity(pool: &PgPool, mode: &str, entit
         serde_json::json!({
             "mode": mode,
             "entity": entity,
-            "deployment_mode": deployment_mode,
         }),
     )
     .await
