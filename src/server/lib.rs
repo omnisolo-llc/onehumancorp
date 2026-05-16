@@ -1035,7 +1035,7 @@ impl HubService for MyHubService {
             &req.instruction,
             &req.parent_thread_id,
         ).await.map_err(|e| Status::internal(e))?;
-        tracing::info!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
+        tracing::debug!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
 
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
         let msg = Message {
