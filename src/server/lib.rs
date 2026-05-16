@@ -1738,6 +1738,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
+
+                    <!-- Home/Inbox Screen -->
+                    <div id="home-screen" class="screen glass" style="display: none; padding: 16px;">
+                        <h1 style="font-size: 20px; margin-bottom: 16px;">Pending AI Actions</h1>
+                        <div class="card glass" style="padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-size: 16px; margin-bottom: 8px;">The Ambassador drafted an email.</h3>
+                            <p style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary);">Recipient: customer@example.com</p>
+                            <div style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;">
+                                "Thank you for your order! Your items will be shipped shortly."
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button style="flex: 1; padding: 12px;">Approve</button>
+                                <button class="secondary" style="flex: 1; padding: 12px;">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Alert Overlay -->
+                    <div id="budget-alert" style="display: none; position: fixed; bottom: 20px; left: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 16px; border-radius: 8px; font-family: 'Outfit', sans-serif; z-index: 1000;">
+                        <p style="margin: 0 0 8px 0; font-size: 14px;">Your agents have been busy! You are at 90% of your AI budget.</p>
+                        <button style="width: 100%; background: #4caf50; border: none; padding: 10px; border-radius: 4px; color: white; cursor: pointer;">Upgrade Now</button>
+                    </div>
+
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
@@ -2219,8 +2242,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
+                            'home-screen': '/home',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',

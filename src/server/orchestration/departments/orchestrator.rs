@@ -171,6 +171,13 @@ impl DepartmentOrchestrator {
             let departments = self.departments.read().await;
             for dep_type in dep_types {
                 if let Some(dep) = departments.get(dep_type) {
+
+                    // Deduct 1 budget point for each department invocation
+                    if !self.check_ai_budget(&event.tenant_id, 1).await.unwrap_or(false) {
+                        tracing::warn!("Tenant {} AI Budget exhausted. Cannot dispatch event to {:?}", event.tenant_id, dep_type);
+                        continue;
+                    }
+
                     let lock_key = format!("ohc:lock:{}:{}:{}", event.tenant_id, dep_type, event.id);
                     if self.mesh.acquire_lock(&lock_key, "orchestrator", 30).await.unwrap_or(false) {
                         self.action_counter.add(1, &[
@@ -203,10 +210,7 @@ impl DepartmentOrchestrator {
         risk: ActionRisk,
         _action_payload: serde_json::Value,
     ) -> Result<ApprovalRequest, String> {
-        let cost = 1;
-        if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
-            return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
-        }
+        // Budget is now checked and consumed at the agent invocation level (dispatch_event)
 
         match risk {
             ActionRisk::AutoExecute => {

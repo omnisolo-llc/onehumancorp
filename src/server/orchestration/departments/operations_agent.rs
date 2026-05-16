@@ -19,7 +19,7 @@ impl Department for OperationsAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.accepted".to_string()]
+        vec!["tenant.quote.accepted".to_string(), "tenant.order.placed".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -40,7 +40,19 @@ impl Department for OperationsAgent {
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
-        ).await.map(|_| ())
+        ).await.map(|_| ())?;
+
+        if event.event_type == "tenant.order.placed" {
+            let follow_up = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.order.fulfillment_ready".to_string(),
+                payload: event.payload.clone(),
+            };
+            self.orchestrator.dispatch_event(follow_up).await?;
+        }
+
+        Ok(())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
