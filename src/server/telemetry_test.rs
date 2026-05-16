@@ -261,6 +261,15 @@ mod tests {
         let mut violations = Vec::new();
 
         let mut search_dirs = vec![PathBuf::from(".")];
+        search_dirs.push(PathBuf::from("/app/src/server")); // Robust fallback
+        if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
+            search_dirs.push(PathBuf::from(runfiles_dir.clone()).join("ohc/src/server"));
+            search_dirs.push(PathBuf::from(runfiles_dir).join("ohc/src"));
+        }
+        if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+            search_dirs.push(PathBuf::from(workspace_dir.clone()).join("src/server"));
+            search_dirs.push(PathBuf::from(workspace_dir).join("src"));
+        }
         // Try multiple possible source locations
         let possible_src_roots = vec![
             PathBuf::from("src"),
@@ -394,9 +403,7 @@ mod tests {
 
         let search_dirs_for_error = search_dirs.clone();
         if checked_files == 0 {
-            // No files found to check - likely running in an environment where source files
-            // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
-            println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
+            println!("Data compliance test skipped: Could not find any .rs files even in fallback. Search dirs: {:?}", search_dirs_for_error);
             return;
         }
         assert!(
