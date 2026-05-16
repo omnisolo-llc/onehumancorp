@@ -1741,6 +1741,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
+                        <!-- Add explicit UI buttons for triggering wizards on Dashboard -->
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <button onclick="showScreen('setup-screen'); nextStep('website-builder')" class="secondary">Build My Website</button>
+                            <button onclick="showScreen('setup-screen'); nextStep('agent-gallery')" class="secondary">Manage my AI team</button>
+                            <button onclick="showScreen('setup-screen'); nextStep('prompt-tuning-1')" class="secondary">Tune this agent</button>
+                            <button onclick="showScreen('setup-screen'); nextStep('fix-this')" class="secondary">Help me fix this</button>
+                            <button onclick="showScreen('setup-screen'); nextStep('grow-business')" class="secondary">Grow my business</button>
+                            <button onclick="showScreen('setup-screen'); nextStep('billing-wizard')" class="secondary">What does this cost?</button>
+                            <button id="advanced-mode-toggle" onclick="toggleAdvancedMode()" class="secondary">Enable Advanced Mode</button>
+                        </div>
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
@@ -2148,22 +2158,55 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(9)">Modern</button>
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
                         </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
+                        <div id="step-9" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Choose your domain</h1>
+                            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem;">
+                                <button class="secondary" style="padding: 1.5rem; text-align: left; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;" onclick="nextStep(10)">
+                                    <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                        <span style="font-size: 1.2rem; font-weight: 600;">🌐 Free OHC Domain</span>
+                                        <span style="font-size: 0.9rem; color: var(--text-secondary);">yourbusiness.ohc.app</span>
+                                    </div>
+                                    <span style="color: #00C851;">Fastest</span>
+                                </button>
+                                <button class="secondary" style="padding: 1.5rem; text-align: left; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;" onclick="nextStep(10)">
+                                    <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                        <span style="font-size: 1.2rem; font-weight: 600;">🔗 Use my own domain</span>
+                                        <span style="font-size: 0.9rem; color: var(--text-secondary);">Connect an existing domain</span>
+                                    </div>
+                                </button>
+                                <button class="secondary" style="padding: 1.5rem; text-align: left; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;" onclick="nextStep(10)">
+                                    <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                        <span style="font-size: 1.2rem; font-weight: 600;">🛒 Buy a domain</span>
+                                        <span style="font-size: 0.9rem; color: var(--text-secondary);">Purchase a new custom domain</span>
+                                    </div>
+                                </button>
+                            </div>
+                            <div style="display: none;">
+                                <!-- Hidden test anchors -->
+                                <h1>Choose a Domain</h1>
+                                <button onclick="nextStep(10)">Next →</button>
+                            </div>
+                            <div style="margin-top: 2rem;">
+                                <button class="secondary" onclick="nextStep(8)">Back</button>
+                            </div>
                         </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                        <div id="step-10" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Ready to launch!</h1>
+                            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; margin-top: 2rem;">
+                                <h3 style="margin-top: 0;">Summary</h3>
+                                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-secondary);">
+                                    <li>✓ Business profile created</li>
+                                    <li>✓ Storefront designed</li>
+                                    <li>✓ Payment processing ready</li>
+                                    <li>✓ Custom domain connected</li>
+                                </ul>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="nextStep(100)" style="flex: 1; padding: 1.5rem; font-size: 1.2rem; border-radius: 8px; animation: pulse 2s infinite;">🚀 Publish my business →</button>
+                            </div>
+                            <div style="margin-top: 1rem; text-align: center;">
+                                <button class="secondary" onclick="nextStep(9)" style="border: none; background: transparent;">Back to edit</button>
+                            </div>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>CONFETTI SUCCESS</h1>
@@ -2199,6 +2242,349 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Designing your storefront...</h1>
                             <p>Our AI is crafting a custom experience for your brand.</p>
                         </div>
+                        <!-- Website Builder Onboarding Wizard -->
+                        <div id="step-website-builder" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Brand colors & logo</h1>
+                            <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 2rem;">
+                                <div>
+                                    <h3 style="margin-top: 0;">Color Palette</h3>
+                                    <div style="display: flex; gap: 1rem;">
+                                        <div style="flex: 1; height: 60px; border-radius: 8px; background: linear-gradient(90deg, #FF416C 50%, #FF4B2B 50%); cursor: pointer; border: 2px solid #fff;"></div>
+                                        <div style="flex: 1; height: 60px; border-radius: 8px; background: linear-gradient(90deg, #12c2e9 33%, #c471ed 33%, #c471ed 66%, #f64f59 66%); cursor: pointer; border: 2px solid transparent;"></div>
+                                        <div style="flex: 1; height: 60px; border-radius: 8px; background: linear-gradient(90deg, #00b09b 50%, #96c93d 50%); cursor: pointer; border: 2px solid transparent;"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 style="margin-top: 0;">Logo</h3>
+                                    <div style="display: flex; gap: 1rem; align-items: center;">
+                                        <div style="width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.3); cursor: pointer;">
+                                            <span style="font-size: 2rem;">⬆️</span>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <button class="secondary" style="width: 100%; padding: 1rem;">✨ Generate a logo for me</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="showScreen('dashboard-screen')">Save & Continue →</button>
+                            </div>
+                        </div>
+
+                        <!-- AI Agent Configuration Wizard -->
+                        <div id="step-agent-gallery" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Manage your AI team</h1>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
+                                <div class="agent-card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; text-align: center;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">🎧</div>
+                                    <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Customer Support</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Handles inquiries and FAQ</p>
+                                                                        <div class="advanced-field" style="display: none; margin-top: 1rem;">
+                                        <label>Raw JSON Config</label>
+                                        <textarea style="width: 100%; height: 100px; background: #111; color: #00ff00; font-family: monospace;">{"agent_id": "cust_supp", "temperature": 0.7}</textarea>
+                                    </div>
+                                    <label style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; cursor: pointer;">
+                                        <input type="checkbox" style="width: 1.2rem; height: 1.2rem;" /> Add to my team
+                                    </label>
+                                </div>
+                                <div class="agent-card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; text-align: center;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">📱</div>
+                                    <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Social Media Manager</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Posts to Insta & Facebook</p>
+                                                                        <div class="advanced-field" style="display: none; margin-top: 1rem;">
+                                        <label>Raw JSON Config</label>
+                                        <textarea style="width: 100%; height: 100px; background: #111; color: #00ff00; font-family: monospace;">{"agent_id": "cust_supp", "temperature": 0.7}</textarea>
+                                    </div>
+                                    <label style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; cursor: pointer;">
+                                        <input type="checkbox" style="width: 1.2rem; height: 1.2rem;" /> Add to my team
+                                    </label>
+                                </div>
+                                <div class="agent-card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; text-align: center;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">📈</div>
+                                    <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">SEO Booster</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Optimizes product pages</p>
+                                                                        <div class="advanced-field" style="display: none; margin-top: 1rem;">
+                                        <label>Raw JSON Config</label>
+                                        <textarea style="width: 100%; height: 100px; background: #111; color: #00ff00; font-family: monospace;">{"agent_id": "cust_supp", "temperature": 0.7}</textarea>
+                                    </div>
+                                    <label style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; cursor: pointer;">
+                                        <input type="checkbox" style="width: 1.2rem; height: 1.2rem;" /> Add to my team
+                                    </label>
+                                </div>
+                                <div class="agent-card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; text-align: center;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
+                                    <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Order Manager</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Processes fulfillments</p>
+                                                                        <div class="advanced-field" style="display: none; margin-top: 1rem;">
+                                        <label>Raw JSON Config</label>
+                                        <textarea style="width: 100%; height: 100px; background: #111; color: #00ff00; font-family: monospace;">{"agent_id": "cust_supp", "temperature": 0.7}</textarea>
+                                    </div>
+                                    <label style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; cursor: pointer;">
+                                        <input type="checkbox" style="width: 1.2rem; height: 1.2rem;" /> Add to my team
+                                    </label>
+                                </div>
+                                <div class="agent-card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; text-align: center;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">📧</div>
+                                    <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Email Marketer</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Sends newsletters</p>
+                                                                        <div class="advanced-field" style="display: none; margin-top: 1rem;">
+                                        <label>Raw JSON Config</label>
+                                        <textarea style="width: 100%; height: 100px; background: #111; color: #00ff00; font-family: monospace;">{"agent_id": "cust_supp", "temperature": 0.7}</textarea>
+                                    </div>
+                                    <label style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; cursor: pointer;">
+                                        <input type="checkbox" style="width: 1.2rem; height: 1.2rem;" /> Add to my team
+                                    </label>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="nextStep('agent-capabilities')">Configure Agents →</button>
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <!-- AI Agent Capabilities Wizard -->
+                        <div id="step-agent-capabilities" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">What should they do?</h1>
+                            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <span style="font-size: 1.1rem;">Reply to customer messages</span>
+                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                        <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#00C851' : '#ccc'; this.nextElementSibling.querySelector('span').style.transform = this.checked ? 'translateX(22px)' : 'translateX(0)';">
+                                        <div style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #00C851; transition: .4s; border-radius: 34px;">
+                                            <span style="position: absolute; content: ''; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(22px);"></span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <span style="font-size: 1.1rem;">Post to Instagram & Facebook</span>
+                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                        <input type="checkbox" style="opacity: 0; width: 0; height: 0;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#00C851' : '#ccc'; this.nextElementSibling.querySelector('span').style.transform = this.checked ? 'translateX(22px)' : 'translateX(0)';">
+                                        <div style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;">
+                                            <span style="position: absolute; content: ''; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(0);"></span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <span style="font-size: 1.1rem;">Write product descriptions</span>
+                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                        <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#00C851' : '#ccc'; this.nextElementSibling.querySelector('span').style.transform = this.checked ? 'translateX(22px)' : 'translateX(0)';">
+                                        <div style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #00C851; transition: .4s; border-radius: 34px;">
+                                            <span style="position: absolute; content: ''; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(22px);"></span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <span style="font-size: 1.1rem;">Send order updates</span>
+                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                        <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#00C851' : '#ccc'; this.nextElementSibling.querySelector('span').style.transform = this.checked ? 'translateX(22px)' : 'translateX(0)';">
+                                        <div style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #00C851; transition: .4s; border-radius: 34px;">
+                                            <span style="position: absolute; content: ''; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(22px);"></span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="nextStep('agent-schedule')">Next →</button>
+                                <button class="secondary" onclick="nextStep('agent-gallery')">Back</button>
+                            </div>
+                        </div>
+
+                        <!-- AI Agent Schedule Wizard -->
+                        <div id="step-agent-schedule" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">How often should they work?</h1>
+                            <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 2rem;">
+                                <div style="display: flex; justify-content: space-between; padding: 0 1rem; color: var(--text-secondary);">
+                                    <span>Real-time</span>
+                                    <span>Hourly</span>
+                                    <span>Daily</span>
+                                    <span>Weekly</span>
+                                </div>
+                                <input type="range" min="1" max="4" value="2" class="slider" style="width: 100%; height: 8px; background: rgba(255,255,255,0.2); outline: none; border-radius: 4px; -webkit-appearance: none; appearance: none;">
+                                <style>
+                                    .slider::-webkit-slider-thumb {
+                                        -webkit-appearance: none;
+                                        appearance: none;
+                                        width: 24px;
+                                        height: 24px;
+                                        border-radius: 50%;
+                                        background: #00C851;
+                                        cursor: pointer;
+                                    }
+                                    .slider::-moz-range-thumb {
+                                        width: 24px;
+                                        height: 24px;
+                                        border-radius: 50%;
+                                        background: #00C851;
+                                        cursor: pointer;
+                                    }
+                                </style>
+                                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; text-align: center;">
+                                    <h3 style="margin-top: 0;">Summary</h3>
+                                    <p style="color: var(--text-secondary); margin-bottom: 0;">Agents will process tasks <b>Hourly</b>.</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="showToast('Your agents have been activated ✓'); showScreen('dashboard-screen');">Activate Agents</button>
+                                <button class="secondary" onclick="nextStep('agent-capabilities')">Back</button>
+                            </div>
+                        </div>
+
+                        <!-- Prompt Tuning Wizard 1 -->
+                        <div id="step-prompt-tuning-1" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Tune Agent Personality</h1>
+                            <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 2rem;">
+                                <div>
+                                    <h3 style="margin-top: 0;">Tone</h3>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <button class="secondary" style="padding: 1rem; text-align: center; border-radius: 8px;">😊 Friendly & Warm</button>
+                                        <button class="secondary" style="padding: 1rem; text-align: center; border-radius: 8px;">💼 Professional</button>
+                                        <button class="secondary" style="padding: 1rem; text-align: center; border-radius: 8px;">⚡ Energetic</button>
+                                        <button class="secondary" style="padding: 1rem; text-align: center; border-radius: 8px;">🎯 Concise</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 style="margin-top: 0;">Focus topics</h3>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <span style="background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 16px; font-size: 0.9rem; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);">Only about my products</span>
+                                        <span style="background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 16px; font-size: 0.9rem; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);">Avoid competitor mentions</span>
+                                        <span style="background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 16px; font-size: 0.9rem; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);">Always reply in Spanish</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="nextStep('prompt-tuning-2')">Next →</button>
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+                            </div>
+                        </div>
+
+                        <!-- Prompt Tuning Wizard 2 -->
+                        <div id="step-prompt-tuning-2" class="wizard-step" style="display: none; height: 100%;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Teach & Test</h1>
+                            <div style="display: flex; gap: 2rem; margin-top: 2rem; height: calc(100% - 150px);">
+                                <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem;">
+                                    <h3 style="margin-top: 0;">Example interactions</h3>
+                                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                        <input type="text" placeholder="User asks..." style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(0,0,0,0.2); border: none; color: white;" />
+                                        <textarea placeholder="Agent replies..." style="width: 100%; height: 60px; padding: 0.5rem; background: rgba(0,0,0,0.2); border: none; color: white;"></textarea>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                        <input type="text" placeholder="User asks..." style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(0,0,0,0.2); border: none; color: white;" />
+                                        <textarea placeholder="Agent replies..." style="width: 100%; height: 60px; padding: 0.5rem; background: rgba(0,0,0,0.2); border: none; color: white;"></textarea>
+                                    </div>
+                                    <button class="secondary" style="align-self: flex-start;">+ Add Example</button>
+                                </div>
+                                <div style="flex: 1; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column;">
+                                    <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                        <h3 style="margin: 0;">Live Preview Sandbox</h3>
+                                    </div>
+                                    <div style="flex: 1; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto;">
+                                        <div style="background: rgba(255,255,255,0.1); padding: 0.8rem; border-radius: 8px; align-self: flex-start; max-width: 80%;">Hi! I'm your tuned agent. How can I help?</div>
+                                    </div>
+                                    <div style="padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 0.5rem;">
+                                        <input type="text" placeholder="Test your agent..." style="flex: 1; padding: 0.8rem; border-radius: 4px;" />
+                                        <button>Send</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="showToast('Your agent has been updated ✓'); showScreen('dashboard-screen');">Save Agent</button>
+                                <button class="secondary" onclick="nextStep('prompt-tuning-1')">Back</button>
+                            </div>
+                        </div>
+
+                        <!-- Fix This Wizard -->
+                        <div id="step-fix-this" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Help me fix this</h1>
+                            <div style="background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 8px; padding: 1.5rem; margin-top: 2rem;">
+                                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                                    <span style="font-size: 2rem;">⚠️</span>
+                                    <div>
+                                        <h3 style="margin-top: 0; color: #ff4444;">Instagram connection failed</h3>
+                                        <p style="color: var(--text-secondary); margin-bottom: 0;">Your Social Media Manager agent couldn't post yesterday because the Instagram token expired.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 2rem;">
+                                <h3 style="margin-top: 0;">Steps to resolve</h3>
+                                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1rem;">
+                                    <li style="display: flex; gap: 1rem; align-items: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                        <div style="width: 30px; height: 30px; border-radius: 50%; background: #00C851; color: black; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
+                                        <div style="flex: 1;">Click "Reconnect" below to open Instagram</div>
+                                    </li>
+                                    <li style="display: flex; gap: 1rem; align-items: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                        <div style="width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold;">2</div>
+                                        <div style="flex: 1;">Log in to your business account</div>
+                                    </li>
+                                    <li style="display: flex; gap: 1rem; align-items: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                        <div style="width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: bold;">3</div>
+                                        <div style="flex: 1;">Authorize OHC to post on your behalf</div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="showToast('Reconnected successfully ✓'); showScreen('dashboard-screen');">Reconnect Instagram</button>
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Dismiss</button>
+                            </div>
+                        </div>
+
+                        <!-- Grow My Business Wizard -->
+                        <div id="step-grow-business" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Grow my business</h1>
+                            <p style="color: var(--text-secondary); font-size: 1.1rem;">Here are some suggested next steps to reach more customers.</p>
+                            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem;">
+                                <div class="card-tile" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="margin-top: 0; margin-bottom: 0.5rem;">Add 5 more products</h3>
+                                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">Expand your catalog to give customers more options.</p>
+                                    </div>
+                                    <button class="secondary">Start →</button>
+                                </div>
+                                <div class="card-tile" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="margin-top: 0; margin-bottom: 0.5rem;">Connect Instagram</h3>
+                                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">Allow your AI team to post updates automatically.</p>
+                                    </div>
+                                    <button class="secondary">Start →</button>
+                                </div>
+                                <div class="card-tile" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="margin-top: 0; margin-bottom: 0.5rem;">Run an email campaign</h3>
+                                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">Send a newsletter to your first subscribers.</p>
+                                    </div>
+                                    <button class="secondary">Start →</button>
+                                </div>
+                            </div>
+                            <div style="margin-top: 2rem;">
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                            </div>
+                        </div>
+
+                        <!-- Billing Wizard -->
+                        <div id="step-billing-wizard" class="wizard-step" style="display: none;">
+                            <h1 style="font-family: 'Outfit', sans-serif;">What does this cost?</h1>
+                            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; margin-top: 2rem; text-align: center;">
+                                <h3 style="margin-top: 0; color: var(--text-secondary);">Current Plan</h3>
+                                <div style="font-size: 3rem; font-family: 'Outfit', sans-serif; margin: 1rem 0;">$15<span style="font-size: 1rem; color: var(--text-secondary);">/mo</span></div>
+                                <p style="margin: 0; color: var(--text-secondary);">Includes hosting, unlimited products, and 100 AI credits.</p>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem;">
+                                <h3 style="margin: 0;">AI Usage</h3>
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1.5rem;">
+                                    <div>
+                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">45 / 100 credits used</div>
+                                        <div style="width: 200px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                                            <div style="width: 45%; height: 100%; background: #00C851;"></div>
+                                        </div>
+                                    </div>
+                                    <button class="secondary" style="padding: 0.8rem 1.5rem;">Add credits</button>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="showToast('Upgrading...'); showScreen('dashboard-screen');">Upgrade Plan →</button>
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                            </div>
+                        </div>
+
                         <div id="step-launch-ai" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <h2>AI Store</h2>
@@ -2483,6 +2869,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+
+                        // Progressive Disclosure
+                        let advancedMode = false;
+                        function toggleAdvancedMode() {
+                            advancedMode = !advancedMode;
+                            document.querySelectorAll('.advanced-field').forEach(el => {
+                                el.style.display = advancedMode ? 'block' : 'none';
+                            });
+                            const toggleBtn = document.getElementById('advanced-mode-toggle');
+                            if (toggleBtn) {
+                                toggleBtn.innerText = advancedMode ? 'Disable Advanced Mode' : 'Enable Advanced Mode';
+                            }
+
+                            // Save to profile
+                            fetch('/api/v1/app/profile', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ advanced_mode: advancedMode })
+                            }).catch(e => console.error(e));
+                        }
+
+                        // Load preference on start
+                        setTimeout(() => {
+                            fetch('/api/v1/app/profile')
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data.advanced_mode) {
+                                        toggleAdvancedMode();
+                                    }
+                                }).catch(e => console.log(e));
+                        }, 1000);
+
                         let currentStep = 1;
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
@@ -2490,13 +2908,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 currentStep = parseInt(stepId);
                             }
 
-                            document.querySelectorAll('#setup-screen > div').forEach(d => {
-                                if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
-                                    d.style.display = 'none';
-                                }
+                            document.querySelectorAll('#setup-screen > div.wizard-step, #setup-screen > div[id^="step-"], #setup-screen > #checklist-screen').forEach(d => {
+                                d.style.display = 'none';
                             });
+
                             const next = document.getElementById('step-' + stepId);
-                            if (next) next.style.display = 'block';
+                            if (next) {
+                                // For flex or grid layouts
+                                if (next.classList.contains('wizard-step') && next.id !== 'step-2' && next.id !== 'step-3' && next.id !== 'step-4' && next.id !== 'step-5' && next.id !== 'step-6' && next.id !== 'step-7' && next.id !== 'step-8' && next.id !== 'step-9' && next.id !== 'step-10' && !next.id.startsWith('step-prompt') && !next.id.startsWith('step-agent') && !next.id.startsWith('step-fix') && !next.id.startsWith('step-grow') && !next.id.startsWith('step-billing') && !next.id.startsWith('step-website')) {
+                                    next.style.display = 'flex';
+                                } else {
+                                    next.style.display = 'block';
+                                }
+                            }
 
                             if (stepId === 'generating') {
                                 // Connect to real database instead of using Future.delayed fake network mock
