@@ -4,12 +4,22 @@ filegroup(
     srcs = [
         "mod.rs",
         "protocol.rs",
-
     ],
     visibility = ["//src/server:__pkg__"],
 )
 rust_test(
     name = "interop_test",
-    srcs = ["dummy.rs"],
+    srcs = ["protocol.rs"],
+    crate_root = "protocol.rs",
     edition = "2024",
+    deps = [
+        "//src/proto:interop_prost",
+        "@crates//:tokio",
+        "@crates//:prost",
+        "@crates//:chrono",
+        "//src/server:server_lib",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
 )
