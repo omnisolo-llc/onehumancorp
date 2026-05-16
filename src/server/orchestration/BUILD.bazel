@@ -1,6 +1,7 @@
 filegroup(
     name = "srcs",
     srcs = [
+        "journey_feature.rs",
         "chaos_test.rs",
         "handoff.rs",
         "health.rs",
