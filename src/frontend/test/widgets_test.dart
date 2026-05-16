@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:app/widgets/swarm_velocity_widget.dart';
-import 'package:app/widgets/vector_memory_visualizer.dart';
-import 'package:app/screens/dashboard_screen.dart';
-import 'package:app/screens/swarm_memory_screen.dart';
-import 'package:app/main.dart';
+import 'package:frontend/widgets/swarm_velocity_widget.dart';
+import 'package:frontend/widgets/vector_memory_visualizer.dart';
+import 'package:frontend/screens/dashboard_screen.dart';
+import 'package:frontend/screens/swarm_memory_screen.dart';
+import 'package:frontend/main.dart';
 
 void main() {
   group('SwarmVelocityWidget Tests', () {

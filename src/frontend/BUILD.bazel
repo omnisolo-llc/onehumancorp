@@ -1,15 +1,15 @@
 load("@rules_flutter//flutter:defs.bzl", "dart_library", "flutter_test")
 
 dart_library(
-    name = "app",
-    srcs = glob(["lib/**/*.dart"]) + ["pubspec.yaml"],
+    name = "frontend",
+    srcs = glob(["lib/**/*.dart"]),
     pubspec = "pubspec.yaml",
     visibility = ["//visibility:public"],
 )
 
 flutter_test(
     name = "tests",
-    embed = [":app"],
+    embed = [":frontend"],
     srcs = glob(["test/**/*.dart"]),
     test_files = ["test/"],
     visibility = ["//visibility:public"],
