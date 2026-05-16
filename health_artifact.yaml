@@ -11,7 +11,6 @@ debt_report: |
 
   ## Phase 2: Hygiene
   - Extracted inline test modules into separate files (`health_test.rs`, `sip_test.rs`, `tasks_test.rs`) to clean up structural debt, improving readability and maintainability of core orchestration logic.
-  - Removed functional padding in `sync_daemon.go`.
   - Redundant logs and systemic noise sources have been sanitized in the codebase.
   - Updated `BUILD.bazel` to reflect structural changes.
 
@@ -20,7 +19,7 @@ debt_report: |
   - Validated API correctness regarding tenant-segregation within orchestration modules.
 
   ## Phase 4: Verify
-  - Assessed existing tests (`/home/jules/go/bin/bazelisk test //...`), observing total compliance.
+  - Assessed existing tests (`bazelisk test //...`), observing total compliance.
   - Confirmed the backlog is actively prioritized without persistent blocking in either operating mode.
   </div>
 status: completed
