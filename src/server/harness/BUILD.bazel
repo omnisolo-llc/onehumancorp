@@ -11,6 +11,7 @@ rust_library(
         "sandbox/manager.rs",
         "sandbox/ast.rs",
         "sandbox/permissions.rs",
+        "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
     ],
     crate_root = "mod.rs",
@@ -31,5 +32,15 @@ rust_library(
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
+    ],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_harness_test",
+    crate = ":server_harness",
+    deps = [
+        "@crates//:tokio",
     ],
 )
