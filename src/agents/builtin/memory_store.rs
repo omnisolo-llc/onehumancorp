@@ -2750,3 +2750,31 @@ mod override_tests_resolve {
         assert!(results[0].owner_override, "Winner should have inherited owner_override");
     }
 }
+
+pub async fn setup_test_db(pool: &sqlx::SqlitePool) {
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            agent_id TEXT,
+            content TEXT NOT NULL,
+            embedding BLOB NOT NULL,
+            source_type TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            last_referenced_at DATETIME NOT NULL,
+            reference_count INTEGER NOT NULL DEFAULT 1,
+            reliability_score INTEGER NOT NULL DEFAULT 1,
+            owner_override BOOLEAN NOT NULL DEFAULT 0,
+            metadata TEXT
+        );"
+    ).execute(pool).await.unwrap();
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS auth_users (
+            id TEXT PRIMARY KEY,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at DATETIME NOT NULL
+        );"
+    ).execute(pool).await.unwrap();
+}
