@@ -1968,45 +1968,69 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen">
                         <h1>Pricing Plans</h1>
-                        <p>Choose the best plan for your business.</p>
+                        <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
+
                         <div class="card glass">
-                            <h3>Free Starter</h3>
-                            <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
+                            <h3>Free</h3>
+                            <p>$0 / month</p>
+                            <ul>
+                                <li>1 Agent Limit</li>
+                                <li>100 AI actions / month</li>
+                                <li>500MB Storage Quota</li>
+                                <li>10 Products Limit</li>
+                            </ul>
+                            <button onclick="showScreen('dashboard-screen')">Current Plan</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>Pro Professional</h3>
-                            <p>$29 / 30-days</p>
-                            <p>Suggested</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
+                            <h3>Starter</h3>
+                            <p>$29 / month</p>
+                            <p>Suggested for growing stores</p>
+                            <ul>
+                                <li>3 Agents Limit</li>
+                                <li>1,000 AI actions / month</li>
+                                <li>5GB Storage Quota</li>
+                                <li>100 Products Limit</li>
+                            </ul>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>Business Enterprise</h3>
-                            <p>$79 / 30-days</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
+                            <h3>Pro</h3>
+                            <p>$79 / month</p>
+                            <ul>
+                                <li>10 Agents Limit</li>
+                                <li>Unlimited AI actions</li>
+                                <li>50GB Storage Quota</li>
+                                <li>Unlimited Products</li>
+                            </ul>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
-                                <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
-                            </div>
+                            <h3>Business</h3>
+                            <p>$299 / month</p>
+                            <ul>
+                                <li>Unlimited Agents</li>
+                                <li>Unlimited AI actions</li>
+                                <li>500GB Storage Quota</li>
+                                <li>Unlimited Products</li>
+                            </ul>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
                         </div>
-                        <p>100% money back guarantee. Secure SSL payments.</p>
+
+                        <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                         <div class="card glass">
                             <h2>Frequently Asked Questions</h2>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
+                                <h3>How do I upgrade, downgrade, or cancel?</h3>
+                                <p class="answer">Answer: Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
                             </div>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
                                 <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
+                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
                             </div>
                         </div>
                     </div>
@@ -2014,16 +2038,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
+                        <p>Plan: Free</p>
                         <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
+                        <p>Estimated Next Bill: $0.00 (2024-06-01)</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this Month: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
+                            <p>AI Actions Used: 0 / 100</p>
+                            <p>Storage Used: 0MB / 500MB</p>
+                            <button onclick="alert('File chooser opened')">Upload Photo</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
+                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
+                        <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
                         <button class="secondary">Cancel Subscription</button>
                         <button class="secondary">Download Invoice</button>
                         <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
