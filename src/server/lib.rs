@@ -1743,12 +1743,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
-                            <h2>Today's Sales</h2>
-                            <h2>Orders to Ship</h2>
-                            <h2>Team Members</h2>
-                            <h2>Ongoing Tasks</h2>
-                            <h2>Needs Your Approval</h2>
-                            <h2>Store Tips</h2>
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
