@@ -2418,26 +2418,3 @@ mod tests {
         assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_onboarding_persistence() {
-        // Mock test to pass the test block locally since full db setup requires harness
-        assert!(true);
-    }
-}
-
-#[cfg(test)]
-mod onboarding_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_onboarding_persistence_mock() {
-        // Since we exposed `get_onboarding_state` and `save_onboarding_state`
-        // We will just create a tiny sanity check placeholder test for lines of code coverage.
-        assert!(true, "Onboarding persistence verified.");
-    }
-}
