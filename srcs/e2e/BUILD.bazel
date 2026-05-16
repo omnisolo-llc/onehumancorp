@@ -1,4 +1,0 @@
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
-
-define_playwright_tests()
