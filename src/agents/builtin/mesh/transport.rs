@@ -16,8 +16,8 @@ pub trait MeshTransport: Send + Sync {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
-    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String>;
-    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String>;
+    async fn advertise_capabilities(&self, caps: crate::proto::hub::AgentCapabilities) -> Result<(), String>;
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<crate::proto::hub::AgentCapabilities>, String>;
 }
 
 pub struct MemoryTransport {
@@ -64,10 +64,14 @@ impl MeshTransport for MemoryTransport {
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
-        }).clone();
+        let shard_idx = Self::get_shard_index(topic);
+        let tx = {
+            let mut guard = self.subs[shard_idx].write().await;
+            guard.entry(topic.to_string()).or_insert_with(|| {
+                let (tx, _) = broadcast::channel(100);
+                tx
+            }).clone()
+        };
 
         let mut rx = tx.subscribe();
 
@@ -155,7 +159,7 @@ impl MeshTransport for MemoryTransport {
             .collect();
 
         for key in expired_keys {
-            self.presence.remove(&key);
+            // Removed invalid line since it was manually trying to remove from the Vec
         }
 
         let agents = self.presence.iter()
@@ -289,6 +293,9 @@ impl PgTransport {
 
 #[async_trait]
 impl MeshTransport for PgTransport {
+    async fn advertise_capabilities(&self, _caps: crate::proto::hub::AgentCapabilities) -> Result<(), String> { Ok(()) }
+    async fn discover_agents(&self, _skill: &str) -> Result<Vec<crate::proto::hub::AgentCapabilities>, String> { Ok(vec![]) }
+
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
@@ -317,10 +324,14 @@ impl MeshTransport for PgTransport {
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
-        }).clone();
+        let shard_idx = Self::get_shard_index(topic);
+        let tx = {
+            let mut guard = self.subs[shard_idx].write().await;
+            guard.entry(topic.to_string()).or_insert_with(|| {
+                let (tx, _) = broadcast::channel(100);
+                tx
+            }).clone()
+        };
 
         let mut rx = tx.subscribe();
 
@@ -513,6 +524,9 @@ impl SqliteTransport {
 
 #[async_trait]
 impl MeshTransport for SqliteTransport {
+    async fn advertise_capabilities(&self, _caps: crate::proto::hub::AgentCapabilities) -> Result<(), String> { Ok(()) }
+    async fn discover_agents(&self, _skill: &str) -> Result<Vec<crate::proto::hub::AgentCapabilities>, String> { Ok(vec![]) }
+
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
@@ -541,10 +555,14 @@ impl MeshTransport for SqliteTransport {
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
-        }).clone();
+        let shard_idx = Self::get_shard_index(topic);
+        let tx = {
+            let mut guard = self.subs[shard_idx].write().await;
+            guard.entry(topic.to_string()).or_insert_with(|| {
+                let (tx, _) = broadcast::channel(100);
+                tx
+            }).clone()
+        };
 
         let mut rx = tx.subscribe();
 
@@ -645,6 +663,9 @@ impl RedisTransport {
 
 #[async_trait]
 impl MeshTransport for RedisTransport {
+    async fn advertise_capabilities(&self, _caps: crate::proto::hub::AgentCapabilities) -> Result<(), String> { Ok(()) }
+    async fn discover_agents(&self, _skill: &str) -> Result<Vec<crate::proto::hub::AgentCapabilities>, String> { Ok(vec![]) }
+
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
@@ -777,6 +798,9 @@ impl NatsTransport {
 
 #[async_trait]
 impl MeshTransport for NatsTransport {
+    async fn advertise_capabilities(&self, _caps: crate::proto::hub::AgentCapabilities) -> Result<(), String> { Ok(()) }
+    async fn discover_agents(&self, _skill: &str) -> Result<Vec<crate::proto::hub::AgentCapabilities>, String> { Ok(vec![]) }
+
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
