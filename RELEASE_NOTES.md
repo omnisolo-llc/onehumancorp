@@ -1,3 +1,13 @@
+## v0.4.43 (Cloud) / v0.4.43+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Coordinate multi-environment promotion across Cloud staging.
+- Implement Phase 4 of multi-tenant scaling optimizations.
+
+### Privacy/Offline Improvements
+- Assemble release notes highlighting privacy/offline improvements.
+- Promote Local desktop beta builds for standalone users.
+
 ## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
 
 ### Cloud Scaling Improvements
