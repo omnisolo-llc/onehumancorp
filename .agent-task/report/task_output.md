@@ -233,3 +233,11 @@ P2
 
 ### Estimated Scope
 Medium
+
+---
+## Architecture Blockers & Missing Components
+- No existing webhook ingestion framework exists in `src/server/api` to route Manychat, Shippo, Calendly, Zoom, etc.
+- No DB schema exists to persist these integrations for tenants. The `IntegrationRegistry` is a pure in-memory mock HashMap and no actual database connectivity is set up to store real tokens.
+- Mercado Pago is already implemented inside `src/server/integrations/mercadopago/client.rs`.
+
+**Status: Blocked**
