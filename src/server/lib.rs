@@ -1622,19 +1622,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --sidebar-bg: #ffffff;
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
                         }
-                        .glass { 
-                            background: var(--card-bg); 
-                            border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                            backdrop-filter: blur(20px) saturate(200%);
-                        }
+                        .glass { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); backdrop-filter: blur(20px) saturate(200%); }
                         nav { 
                             padding: 0 40px; 
                             display: flex; 
@@ -1647,7 +1641,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             height: 60px;
                             align-items: center;
                         }
-                        nav a { 
+                        nav a { min-width: 44px; min-height: 44px; display: flex; align-items: center;
                             color: var(--text-secondary); 
                             text-decoration: none; 
                             font-weight: 500; 
@@ -1667,7 +1661,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-bottom: 24px; 
                             border: 1px solid var(--border);
                         }
-                        h1, h2, h3 { color: var(--text); margin-top: 0; }
+                        h1, h2, h3 { font-family: 'Outfit', sans-serif; color: var(--text); margin-top: 0; }
                         input { 
                             width: 100%; 
                             padding: 10px 14px; 
@@ -1685,7 +1679,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-color: var(--primary);
                         }
                         button { 
-                            padding: 10px 20px; 
+                            padding: 12px 20px; min-width: 44px; min-height: 44px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                             background: var(--primary); 
                             border: none; 
                             border-radius: 6px; 
@@ -1718,6 +1712,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+
+                        @media (max-width: 768px) {
+                            nav {
+                                padding: 0 10px;
+                                gap: 10px;
+                                overflow-x: auto;
+                            }
+                            .screen {
+                                padding: 20px;
+                            }
+                        }
+
                     </style>
                 </head>
                 <body>
@@ -2278,9 +2284,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (next) next.style.display = 'block';
 
                             if (stepId === 'generating') {
-                                // Connect to real database instead of using Future.delayed fake network mock
+                                // Connect to real database
                                 try {
-                                    const res = await fetch('/api/v1/app/onboarding', {
+                                    const fetcher = window.fetch || fetch; const res = await fetcher('/api/v1/app/onboarding', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({})
