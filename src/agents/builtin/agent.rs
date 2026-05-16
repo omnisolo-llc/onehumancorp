@@ -24,6 +24,12 @@ pub enum AgentEvent {
     RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PermissionArchitecture {
+    Permissive,
+    Restrictive,
+}
+
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
@@ -63,6 +69,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
+    pub permission_architecture: PermissionArchitecture,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
@@ -112,6 +119,7 @@ enable_llmcompiler_plan_and_execute: false,
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
+            permission_architecture: PermissionArchitecture::Permissive,
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_single_agent_maximization: false,
@@ -2276,8 +2284,15 @@ impl Agent {
         }
 
         // Stage 3: Explicit user confirmation for high-risk operations
-        if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
-            return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+        if cfg.permission_architecture == PermissionArchitecture::Restrictive && !is_read_only {
+            if !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("Restrictive permission architecture enabled: Mutating tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
+        } else {
+            // Permissive (auto-approve default for mutating tools), but still check explicit high_risk_tools
+            if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
         }
 
         Ok(())
@@ -3092,7 +3107,97 @@ mod tests {
         let err_str = result.unwrap_err().to_string();
         assert!(err_str.contains("USER_FIXABLE"));
         assert!(err_str.contains("requires explicit user confirmation"));
+    }
 
+    #[tokio::test]
+    async fn test_permission_architecture() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "mutating_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client.clone(), vec![
+            Tool {
+                name: "mutating_tool".to_string(),
+                description: "write".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+        ]);
+
+        // Test 1: Permissive (auto-approve normal mutating tools)
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+        cfg.permission_architecture = PermissionArchitecture::Permissive;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        // Since it passes gating, it might fail elsewhere (like max iterations or tool execution) but not with USER_FIXABLE
+        if let Err(e) = result {
+            assert!(!e.to_string().contains("USER_FIXABLE"), "Permissive architecture should auto-approve normal mutating tools");
+        }
+
+        // Test 2: Restrictive (blocks normal mutating tools)
+        let client2 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "2".to_string(), name: "mutating_tool".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id2".to_string()),
+                },
+            ]),
+        });
+
+        let agent2 = Agent::new(client2, vec![
+            Tool {
+                name: "mutating_tool".to_string(),
+                description: "write".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: Arc::new(MockToolExecutor),
+            },
+        ]);
+
+        let mut cfg2 = AgentRunConfig::default();
+        cfg2.project_trusted = true;
+        cfg2.permission_architecture = PermissionArchitecture::Restrictive;
+
+        let mut events2 = vec![];
+        let mut on_event2 = |e| { events2.push(e); };
+
+        let result2 = agent2.run(&cfg2, "Hello", &mut on_event2).await;
+        assert!(result2.is_err());
+        let err_str = result2.unwrap_err().to_string();
+        assert!(err_str.contains("USER_FIXABLE"));
+        assert!(err_str.contains("Restrictive permission architecture enabled: Mutating tool"));
     }
 
 
