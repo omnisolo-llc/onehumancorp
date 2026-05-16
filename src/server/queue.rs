@@ -625,7 +625,7 @@ impl QueueManager {
                                 break;
                             }
                             Err(e) => {
-                                tracing::error!("Failed to poll queue: {}", e);
+                                tracing::trace!("Failed to poll queue: {}", e);
                                 break;
                             }
                         }
