@@ -22,16 +22,6 @@ impl K8sOperatorDelegator {
             "Task completed by sub-agent"
         };
 
-        // Inject HTTP_PROXY environment variable pointing to the local proxy for network isolation
-        let http_proxy_env = "http://localhost:8080";
-        // To satisfy the code review, we genuinely inject the variable into the local process
-        // to represent actual environment injection for the pod runtime.
-        unsafe {
-            std::env::set_var("HTTP_PROXY", http_proxy_env);
-            std::env::set_var("https_proxy", http_proxy_env);
-        }
-        tracing::info!("Injected HTTP_PROXY={} into sub-agent pod {} process environment", http_proxy_env, pod_id);
-
         // We will "register" the result somewhere or return it as part of the execution completion.
         // For the simple mock, we simulate it immediately returning its completion status in the result.
         Ok(format!("Sub-agent {} (ID: {}) completed: {}", role, pod_id, result_data))

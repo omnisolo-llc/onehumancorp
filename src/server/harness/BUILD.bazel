@@ -1,24 +1,4 @@
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("@rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "harness_go",
-    srcs = [
-        "bwrap_executor.go",
-        "network_proxy.go",
-    ],
-    importpath = "ohc/src/server/harness",
-    visibility = ["//visibility:public"],
-)
-
-go_test(
-    name = "harness_go_test",
-    srcs = [
-        "bwrap_executor_test.go",
-        "network_proxy_test.go",
-    ],
-    embed = [":harness_go"],
-)
 
 rust_library(
     name = "server_harness",
