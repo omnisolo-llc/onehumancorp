@@ -12,6 +12,7 @@ filegroup(
         "obsidian.rs",
         "registry.rs",
         "//src/server/integrations/nats:srcs",        "//src/server/integrations/stripe:srcs",        "//src/server/integrations/mercadopago:srcs",        "//src/server/integrations/twilio:srcs",        "//src/server/integrations/pubsub:srcs",        "//src/server/integrations/task_scheduler:srcs",        "//src/server/integrations/chromadb:srcs",
+        "//src/server/integrations/google_calendar:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

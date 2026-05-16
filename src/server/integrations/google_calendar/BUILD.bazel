@@ -1,0 +1,24 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "google_calendar",
+    srcs = [
+        "client.rs",
+        "mod.rs",
+        "provider.rs",
+        "widget.rs",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["*.rs"]),
+    visibility = ["//src/server:__subpackages__"],
+)
