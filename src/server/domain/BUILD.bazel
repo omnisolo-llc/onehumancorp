@@ -1,6 +1,10 @@
 filegroup(
     name = "srcs",
     srcs = [
+        "compliance/mod.rs",
+        "compliance/audit.rs",
+        "compliance/rules.rs",
+        "compliance/telemetry_check.rs",
         "b2b.rs",
         "blueprint.rs",
         "compute.rs",
