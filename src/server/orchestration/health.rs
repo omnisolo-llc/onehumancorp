@@ -230,4 +230,3 @@ mod tests {
         handle.abort();
     }
 }
-// dummy
