@@ -43,6 +43,8 @@ rust_library(
         "auth.rs",
         "codex_runner.rs",
         "agent.rs",
+        "agent_stream_tests.rs",
+        "agent_tests.rs",
         "checkpointer.rs",
         "departments.rs",
         "guardrails.rs",
