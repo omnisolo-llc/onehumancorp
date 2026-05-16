@@ -1608,6 +1608,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <!DOCTYPE html>
             <html>
                 <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
                     <style>
@@ -1628,7 +1629,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin: 0; 
                             line-height: 1.5;
                         }
-                        .glass { 
+                        .glass {
+                            backdrop-filter: blur(20px) saturate(200%);
                             background: var(--card-bg); 
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
@@ -1666,7 +1668,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-bottom: 24px; 
                             border: 1px solid var(--border);
                         }
-                        h1, h2, h3 { color: var(--text); margin-top: 0; }
+                        h1, h2, h3 { color: var(--text); margin-top: 0; font-family: 'Outfit', sans-serif; }
                         input { 
                             width: 100%; 
                             padding: 10px 14px; 
@@ -1798,7 +1800,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Referral Dashboard</h1>
                         <div class="card glass">
                             <h3>Your Referral Link</h3>
-                            <p id="referral-link">ohc://join?ref=DEFAULT</p>
+                            <p id="referral-link">Loading...</p>
+                            <script>fetch("/api/user/referral").then(r => r.text()).then(t => document.getElementById("referral-link").innerText = t);</script>
                             <button onclick="alert('Copied!')">Copy</button>
                             <button onclick="location.reload()">Refresh</button>
                         </div>
@@ -1820,17 +1823,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="inbox-screen" class="screen glass">
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
-                        <div class="card glass" onclick="this.classList.toggle('active')">
-                            <h3>Maya</h3>
-                            <p>Do you do vegan cakes?</p>
-                            <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
-                        </div>
+                        <div class="mock-data-stub" style="display: none;"></div>
                         <div class="card glass">
-                            <h3>Facebook User</h3>
-                            <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
-                        </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
@@ -2219,6 +2213,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        function nextStep(step) {
+                            document.querySelectorAll(".screen > div[id^='step-']").forEach(el => el.style.display = "none");
+                            const s = document.getElementById("step-" + step);
+                            if(s) s.style.display = "block";
+                        }
+                        function simulateOrder() {
+                            fetch("/api/orders/simulate", {method: "POST"});
+                        }
+                        function generateAI() {
+                            nextStep("generating");
+                            fetch("/api/ai/generate", {method: "POST"}).then(() => nextStep("launch-ai"));
+                        }
+                        function toggleMenu() {
+                            const m = document.getElementById("extra-menu");
+                            if(m) m.style.display = m.style.display === "none" ? "block" : "none";
+                        }
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2239,6 +2249,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meeting-room-screen': '/meetings/room/1'
                         };
 
+                        function handleLogin(btn) { fetch("/api/login", {method: "POST"}).then(() => showScreen("dashboard-screen")); }
+                        function handleSignup(btn) { fetch("/api/signup", {method: "POST"}).then(() => showScreen("setup-screen")); }
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
