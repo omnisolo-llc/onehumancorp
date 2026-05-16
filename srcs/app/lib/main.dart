@@ -11,7 +11,7 @@ import 'screens/help/ai_help_chat_screen.dart';
 
 import 'screens/referral_program_screen.dart';
 import 'widgets/milestone_notification.dart';
-
+import 'providers/action_center_provider.dart';
 
 void main() {
   runApp(const ProviderScope(child: OHCApp()));
@@ -61,14 +61,14 @@ class GlassContainer extends StatelessWidget {
   }
 }
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _currentStep = -1;
 
   void _startTour() {
@@ -91,6 +91,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pendingCount = ref.watch(actionCenterProvider).actions.length;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       drawer: Drawer(
@@ -253,15 +255,17 @@ IconButton(
                 GlassContainer(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Pending Agent Approvals',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
-                        'No pending approvals.',
-                        style: TextStyle(color: Colors.white70),
+                        pendingCount > 0
+                            ? 'You have $pendingCount pending approval(s).'
+                            : 'No pending approvals.',
+                        style: const TextStyle(color: Colors.white70),
                       ),
                     ],
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/inbox_provider.dart';
+import '../providers/action_center_provider.dart';
 
 class UnifiedInboxScreen extends ConsumerStatefulWidget {
   const UnifiedInboxScreen({super.key});
@@ -44,6 +45,7 @@ class _UnifiedInboxScreenState extends ConsumerState<UnifiedInboxScreen> {
   @override
   Widget build(BuildContext context) {
     final inboxState = ref.watch(inboxProvider);
+    final actionCenterState = ref.watch(actionCenterProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -51,7 +53,7 @@ class _UnifiedInboxScreenState extends ConsumerState<UnifiedInboxScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          "Unified Inbox",
+          "Unified Inbox & Action Center",
           style: TextStyle(
             fontFamily: 'Outfit',
             fontWeight: FontWeight.bold,
@@ -63,6 +65,87 @@ class _UnifiedInboxScreenState extends ConsumerState<UnifiedInboxScreen> {
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width > 600 ? 600 : MediaQuery.of(context).size.width),
           child: Column(
             children: [
+              if (actionCenterState.actions.isNotEmpty)
+                Expanded(
+                  flex: 1,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            "Action Center",
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ...actionCenterState.actions.map((action) => Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(25),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: Colors.white.withAlpha(51)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  action.title,
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  action.description,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                const SizedBox(height: 15),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () {
+                                        ref.read(actionCenterProvider.notifier).rejectAction(action.id);
+                                      },
+                                      child: const Text('Reject', style: TextStyle(color: Colors.white70)),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        ref.read(actionCenterProvider.notifier).approveAction(action.id);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF6B4EFF),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          )).toList(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               if (!inboxState.instagramConnected || !inboxState.whatsappConnected)
                 Padding(
                   padding: const EdgeInsets.all(20.0),
