@@ -4,6 +4,7 @@ filegroup(
         "booking.rs",
         "mod.rs",
         "wizard.rs",
+        "wizard_tests.rs",
         "//src/server/services/agent:srcs",
         "//src/server/services/autodream:srcs",
         "//src/server/services/b2b:srcs",
@@ -19,5 +20,5 @@ filegroup(
         "//src/server/services/scheduler:srcs",
         "//src/server/services/sync:srcs",
     ],
-    visibility = ["//src/server:__pkg__"],
+    visibility = ["//src/server:__pkg__"]
 )

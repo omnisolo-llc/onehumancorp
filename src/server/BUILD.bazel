@@ -46,6 +46,7 @@ rust_library(
     ],
     data = ["//src/server/migrations"],
     edition = "2024",
+    compile_data = ["//src/server/services:srcs"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -118,6 +119,7 @@ rust_binary(
     name = "server",
     srcs = ["main.rs"],
     edition = "2024",
+    compile_data = ["//src/server/services:srcs"],
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:mcp_proxy_tonic",
@@ -133,6 +135,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    compile_data = ["//src/server/services:srcs"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -155,6 +158,7 @@ rust_test(
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
     edition = "2024",
+    compile_data = ["//src/server/services:srcs"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
