@@ -1,199 +1,100 @@
-# Oracle: [Business Journey Architecture]
+# Tool Integration Research Report
 
-## Title
-Business Journey Architecture: End-to-End Persona Workflows
+**Prepared by:** Principal Integrations Engineer (L7)
+**Mission:** Expand OHC's capabilities by discovering and evaluating tools that solve real problems for small business owners in Cloud and Standalone environments.
 
-## Problem Statement
-Small business owners—from bakers to handymen—often abandon software platforms because the journey from discovery to the first successful sale is disjointed, requires technical knowledge, or demands too much manual configuration. OHC needs a standardized, fully mapped end-to-end user journey architecture for our core personas. This architecture must ensure that anyone can go from "zero to live business" in under 10 minutes from their mobile phone, with AI handling the friction points invisibly. Without this map, feature development risks drifting away from the mobile-first, "grandmother test" mandate.
+## Executive Summary
+This report details the evaluation of seven categories of tools critical for small business owners: Social Media Integration, Calendar & Scheduling, Email Marketing, Payment Processing, Shipping & Logistics, SMS & Notifications, and Video Conferencing. For each category, a primary tool was selected based on ease of use for non-technical users, pricing, reliability, and capability to function in both Cloud and Standalone modes.
 
-## Research Report
-*   **Goal**: Define the complete business journey for five core personas: Maya (Baker), Carlos (Handyman), Priya (Boutique Owner), Leo (Music Tutor), and Fatima (Food Cart Operator).
-*   **Competitive Analysis**:
-    *   **Shopify**: Excellent for product inventory, but onboarding is complex and desktop-heavy. Requires manually setting up themes and reading manuals to configure shipping.
-    *   **Wix/Squarespace**: Good for portfolios, but booking and e-commerce require paid add-ons and significant drag-and-drop effort on a desktop.
-    *   **GoDaddy**: Easy to start, but rigid. Upgrading features often involves navigating dense control panels.
-*   **OHC Advantage**: The "Zero to Live in 10 Minutes" promise. Mobile-native creation, AI-driven configuration (e.g., automatically generating product descriptions or service menus from a few photos or chat messages), and a completely unified system without separate "plugins" or "apps."
-*   **Key Findings**:
-    *   Friction points happen at: writing descriptions, setting up payment gateways, and figuring out "what to do next" after publishing.
-    *   Success is defined differently: For Maya, it's a paid deposit. For Leo, it's a booked slot. The platform must dynamically adjust the "Activation" success criteria.
+Detailed issue briefs have been created in `docs/research/` for each selected tool, outlining the problem statement, research findings, design document, and implementation prompt.
 
-## Design Doc
-### Key Design Decisions
-1.  **Conversational Onboarding**: Instead of forms, use "The Advisor" (AI) to ask 3-4 questions via a chat-like interface to instantly scaffold the business structure.
-2.  **Deferred Configuration**: Only ask for critical path items upfront (Name, Main Offering). Defer non-critical setup (Taxes, Custom Domain, Logo) until after the first transaction.
-3.  **Unified Activation State**: The system maintains an "Activation Score" for each tenant, guiding the user via "Next Best Action" cards on the mobile dashboard.
-4.  **Mobile-First Interaction**: All actions are swipeable, tap-friendly, and require minimal text entry.
+---
 
-### Persona Journey Sequence Diagrams
+## 1. Social Media Integration
+**Selected Tool:** Manychat
+**Issue Brief:** `docs/research/[social_media]_manychat.md`
 
-#### 1. Maya (Baker) - Physical Products & Custom Orders
-```mermaid
-sequenceDiagram
-    participant M as Maya (iPhone)
-    participant OHC as OHC Mobile App
-    participant AI as "The Advisor" / "The Manager"
-    participant Cust as Customer (Instagram)
+**Evaluation:**
+Manychat offers robust integrations with Instagram, Facebook Messenger, and WhatsApp. It is user-friendly and features a generous free tier. The primary benefit for OHC users is the ability to aggregate messages from multiple platforms into a single unified inbox, reducing the friction of managing multiple apps and preventing lost sales.
 
-    %% Acquisition & Onboarding
-    M->>OHC: Installs App via TikTok Ad
-    OHC->>AI: Trigger Conversational Setup
-    AI-->>M: "What kind of business are you starting?"
-    M->>AI: "I sell custom cakes"
-    AI->>OHC: Scaffold Physical Products & Deposit Engine
+**Integration Risks:**
+While Cloud integration is straightforward via webhooks, Standalone mode requires either a public tunneling service (e.g., ngrok) or polling, which introduces technical complexity.
 
-    %% Activation
-    M->>OHC: Uploads 3 Cake Photos
-    OHC->>AI: Generate Descriptions & Set Prices
-    AI-->>M: "Looks good? Tap to Publish"
-    M->>OHC: Approves (Published to OHC Subdomain)
+---
 
-    %% Revenue (Custom Order Flow)
-    Cust->>M: DM on Instagram "Vegan cake?"
-    M->>OHC: Generates Custom Quote + Deposit Link
-    OHC-->>Cust: Sends Link
-    Cust->>OHC: Pays Deposit via Tap-to-Pay
-    OHC->>AI: Order Created, Mark as "Awaiting Fulfillment"
-    AI-->>M: Push Notification: "New $50 Deposit Paid!"
+## 2. Calendar & Scheduling
+**Selected Tool:** Calendly
+**Issue Brief:** `docs/research/[calendar]_calendly.md`
 
-    %% Retention
-    AI-->>M: "Want to connect your bank account to withdraw?"
-```
+**Evaluation:**
+Calendly is the undisputed leader in automated scheduling. It offers a very capable free tier and intuitive setup. Integrating Calendly will allow business owners to share booking links that automatically sync with their availability, eliminating back-and-forth emails.
 
-#### 2. Carlos (Handyman) - Services & Quotes
-```mermaid
-sequenceDiagram
-    participant C as Carlos (Android)
-    participant OHC as OHC Mobile App
-    participant AI as "The Salesperson"
-    participant Cust as Customer
+**Integration Risks:**
+Similar to Manychat, Standalone mode requires a polling service or user-managed API keys for two-way data sync, whereas Cloud mode seamlessly handles webhooks. Embedding the iframe works well in both modes.
 
-    %% Acquisition & Onboarding
-    C->>OHC: Word of Mouth -> Installs App
-    OHC->>AI: Trigger Conversational Setup
-    AI-->>C: "What services do you offer?"
-    C->>AI: "Plumbing and basic repair"
-    AI->>OHC: Scaffold Service Listings & Quote Engine
+---
 
-    %% Activation
-    C->>OHC: Sets hourly rate & availability
-    OHC-->>C: Provides unique Link-in-Bio
+## 3. Email Marketing
+**Selected Tool:** Mailchimp
+**Issue Brief:** `docs/research/[email]_mailchimp.md`
 
-    %% Revenue (Quote Flow)
-    Cust->>OHC: Submits repair request via Link
-    OHC->>AI: Draft Quote based on standard rates
-    AI-->>C: "Draft Quote for Repair: $150. Approve?"
-    C->>OHC: 1-Tap Approve
-    OHC-->>Cust: Sends Quote + Booking Calendar
-    Cust->>OHC: Selects Slot & Pays
+**Evaluation:**
+Mailchimp provides an excellent drag-and-drop builder and high deliverability rates. Its free tier (up to 500 contacts) is perfect for micro-businesses. By syncing OHC customer lists with Mailchimp, users can effortlessly manage marketing campaigns.
 
-    %% Retention
-    OHC-->>C: "Appointment Added to Calendar. Next action: Go to site."
-```
+**Integration Risks:**
+The API is robust, but managing OAuth flow and maintaining sync state across distributed Standalone instances requires careful handling of API rate limits and token expirations.
 
-#### 3. Priya (Boutique Owner) - Hybrid Inventory & Subscriptions
-```mermaid
-sequenceDiagram
-    participant P as Priya (iPhone)
-    participant OHC as OHC Mobile App
-    participant AI as "The Manager" / "The Promoter"
-    participant Cust as In-Store Customer
+---
 
-    %% Onboarding
-    P->>OHC: Wants to sync in-store with online
-    OHC->>AI: Trigger setup
-    AI->>OHC: Scaffold Physical Products + Variants + Tap-to-Pay
+## 4. Payment Processing (LATAM Focus)
+**Selected Tool:** Mercado Pago
+**Issue Brief:** `docs/research/[payment]_mercadopago.md`
 
-    %% Activation
-    P->>OHC: Scans barcodes to add inventory quickly
-    OHC->>AI: Auto-categorize & write SEO descriptions
+**Evaluation:**
+Mercado Pago is essential for LATAM markets where Stripe is less dominant. It supports local payment methods (e.g., Pix, OXXO) and installments. There are no monthly fees, and the familiar Checkout Pro experience boosts conversion rates.
 
-    %% Revenue (In-Store)
-    Cust->>P: Wants to buy shirt
-    P->>OHC: Opens Tap-to-Pay
-    Cust->>OHC: Taps card
-    OHC->>AI: Deduct inventory, update dashboard
+**Integration Risks:**
+Handling IPN (Instant Payment Notification) webhooks in Standalone mode requires public endpoints. OHC will need to ensure secure and reliable processing of these webhooks to mark invoices as paid accurately.
 
-    %% Retention & Referral
-    AI-->>P: "Low stock on Red Shirts. Draft email to supplier?"
-    P->>OHC: 1-Tap Approve
-```
+---
 
-#### 4. Leo (Music Tutor) - Booking & Subscriptions
-```mermaid
-sequenceDiagram
-    participant L as Leo (Web/Mobile)
-    participant OHC as OHC Mobile App
-    participant AI as "The Ambassador"
-    participant Student as Student
+## 5. Shipping & Logistics
+**Selected Tool:** EasyPost
+**Issue Brief:** `docs/research/[shipping]_easypost.md`
 
-    %% Onboarding
-    L->>OHC: Needs scheduling and billing
-    OHC->>AI: Setup Service + Calendar + Subscriptions
+**Evaluation:**
+EasyPost offers a unified API for numerous carriers and a generous free tier (120,000 free shipments/year). It streamlines label generation and tracking directly from the OHC dashboard, saving significant time for e-commerce and craft businesses.
 
-    %% Activation
-    L->>OHC: Connects Google Calendar
-    OHC->>AI: Calculate free slots
+**Integration Risks:**
+Requires managing potentially complex logic for fetching live rates based on dimensions and addresses. In Standalone mode, users must manage their own EasyPost API keys, which may be a slight hurdle for completely non-technical users.
 
-    %% Revenue
-    Student->>OHC: Buys 4-lesson package (Subscription)
-    OHC->>AI: Generate Zoom link, add to both calendars
+---
 
-    %% Retention
-    AI-->>Student: "Lesson tomorrow at 4 PM! Here's the link."
-    AI-->>L: "Student hasn't booked next lesson. Send reminder?"
-```
+## 6. SMS & Notifications
+**Selected Tool:** Twilio
+**Issue Brief:** `docs/research/[sms]_twilio.md`
 
-#### 5. Fatima (Food Cart) - Pre-orders & High Velocity
-```mermaid
-sequenceDiagram
-    participant F as Fatima (Low-end Android)
-    participant OHC as OHC Mobile App (Arabic UI)
-    participant AI as "The Manager"
-    participant Cust as Hungry Customer
+**Evaluation:**
+Twilio provides highly reliable, pay-as-you-go SMS capabilities. This is critical for reducing no-shows (via appointment reminders) and communicating with customers who may not check email regularly.
 
-    %% Onboarding
-    F->>OHC: Needs simple menu and pre-orders
-    OHC->>AI: Setup Food & Beverage module
+**Integration Risks:**
+Compliance with local regulations (e.g., A2P 10DLC in the US) can be complex. OHC must guide users through the necessary registration steps or abstract them where possible. In Standalone mode, users manage their own Twilio credentials.
 
-    %% Activation
-    F->>OHC: Uploads photo of handwritten menu
-    AI->>OHC: Digitizes menu, creates items, translates to English
+---
 
-    %% Revenue
-    Cust->>OHC: Scans QR code at cart, pre-orders lunch
-    OHC->>AI: Payment Processed
-    AI-->>F: Loud Audio Notification + Visual Flash: "New Order #12!"
+## 7. Video Conferencing
+**Selected Tool:** Zoom
+**Issue Brief:** `docs/research/[video]_zoom.md`
 
-    %% Retention
-    F->>OHC: 1-Tap "Sold Out" on Falafel
-    OHC->>AI: Update online menu instantly
-```
+**Evaluation:**
+Zoom is universally recognized and offers a free basic tier. Automating the generation of unique meeting links for virtual appointments saves time and reduces administrative overhead for coaches, tutors, and consultants.
 
-### UI Wireframes & Mobile UX Flow (375px First)
+**Integration Risks:**
+Server-to-Server OAuth works well in the Cloud, but Standalone mode may require users to create their own Zoom app credentials, which is complex. Supporting static personal meeting links as a fallback for Standalone users is recommended.
 
-**Screen 1: The AI Onboarding Chat (Glassmorphism UI)**
-*   **Header**: "Welcome to OneHumanCorp" (Subtle motion background)
-*   **Content**: Chat bubbles from "The Advisor".
-    *   Bubble: "Hi Maya! Let's get your business online. What do you sell?"
-    *   Input: Text field with voice-to-text prominently featured.
-*   **Action**: "Next" button (Primary color, 44px touch target).
+---
 
-**Screen 2: The "Activation" Dashboard**
-*   **Header**: "Maya's Cakes" (Status: Draft)
-*   **Content**: A "Next Best Action" card taking up the top half.
-    *   Card: "Add your first product" with a large "+ Add Photo" button.
-*   **Footer**: 4-icon tab bar (Home, Orders, Chat, Settings).
-
-**Screen 3: The 1-Tap AI Approval Flow**
-*   **Overlay**: A modal sliding up from the bottom.
-*   **Content**: "The Manager drafted a product description for 'Vegan Chocolate Cake'." (Shows preview).
-*   **Actions**: Two side-by-side buttons: "Looks Good (Publish)" and "Edit".
-
-## Implementation Prompt
-"Implement the foundational structure for the 'Conversational Onboarding' and 'Next Best Action' dashboard components. This should be a mobile-first, responsive Next.js implementation adhering strictly to OHC Premium Design Standards (Glassmorphism tokens, Outfit/Inter typography). The user should be greeted by a mock 'Advisor' agent that asks 2-3 setup questions. Based on their answers, the dashboard should render a dynamic 'Next Best Action' card guiding them towards activation (e.g., 'Add a product' or 'Connect calendar'). Include full Playwright E2E tests simulating the onboarding journey on a 375px viewport. Do not hardcode database schemas; ensure components are wired correctly for backend state management."
-
-## Priority
-P0
-
-## Estimated Scope
-Large
+## Next Steps
+1. **Review and Prioritize:** The Product and Engineering teams should review these issue briefs. Calendly (P0) and Mailchimp (P1) and Manychat (P1) and Twilio (P1) should be prioritized for near-term implementation.
+2. **Technical Spikes:** Implementers should begin technical spikes on handling webhooks in Standalone mode, as this is the primary shared risk across several integrations (Manychat, Calendly, Mercado Pago).
+3. **Implementation:** Proceed with implementing the features according to the provided issue briefs, ensuring a user-first experience.

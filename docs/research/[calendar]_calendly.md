@@ -1,18 +1,27 @@
-## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Booking
-**Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
-**Research Report**:
-- **Tool**: Calendly
-- **Target Persona**: Carlos (Handyman), Leo (Music Tutor)
-- **Advantages**: Industry standard, highly recognizable to customers. Excellent conflict resolution and timezone handling. Easy API integration.
-- **Risks**: If a user cancels via Calendly directly instead of OHC, state might go out of sync without robust webhook handling.
-- **Pricing**: Free tier available. Premium starts at $10/mo.
-- **Compatibility**: Cloud (OAuth). Standalone (requires API key).
-**Design Doc**:
-- User goes to Sales dashboard and connects Calendly.
-- OHC pulls available event types (e.g., "30-min Consultation") and displays them on the user's public storefront.
-- When a customer clicks to book, they are shown the Calendly widget.
-- Upon successful booking, a webhook notifies OHC to record the appointment in the Operations dashboard.
-**Implementation Prompt**: Create an integration that allows a user to connect their Calendly account. Fetch their existing event types and display a booking widget on their public profile page. Ensure booked events sync back to the OHC dashboard.
-**Priority**: P1
-**Estimated Scope**: Medium
+# Title: Integrate Calendly for Frictionless Client Scheduling
+
+## Problem Statement
+Small business owners, especially consultants, salon owners, and freelancers, lose hours to back-and-forth emails trying to schedule appointments with clients. They need a simple, self-serve booking page they can share via a link, which automatically syncs with their availability so they never get double-booked.
+
+## Research Report
+Calendly is the industry standard for automated scheduling.
+- **Ease of Use:** Incredibly user-friendly for both the business owner and their clients. Setting up availability rules, event types, and connecting a Google/Outlook calendar takes minutes.
+- **Pricing:** Offers a very capable free tier (one active event type). Paid plans start at $10/month to unlock multiple event types and automated workflows. This is highly affordable for micro-businesses.
+- **Reputation:** Universally recognized, which builds trust when clients see the booking link.
+- **Competitors:** Acuity Scheduling (better for complex class bookings, but steeper learning curve), Microsoft Bookings. Calendly remains the most straightforward for simple 1-on-1 meetings.
+- **Cloud vs Standalone:** Excellent for Cloud mode via API/webhooks. Standalone mode can embed the booking page iframe, though two-way data sync back into a local OHC database requires user-managed API keys or a polling service.
+
+## Design Doc
+OHC will allow users to embed their Calendly scheduling page directly into their public profile or website, and sync booked appointments into the OHC internal calendar view.
+- **Trigger:** A client books a meeting via the user's Calendly link or embedded widget.
+- **Action:** OHC receives the booking confirmation and creates an appointment record linked to the specific client in the CRM.
+- **User Interface:** The business owner sees upcoming appointments seamlessly overlaid on their OHC calendar. Clicking an appointment shows the client's details and any pre-booking questionnaire answers.
+
+## Implementation Prompt
+Build a "Booking Settings" module where users can paste their Calendly personal link or authenticate via API. Embed their Calendly booking widget on their public-facing OHC page. Additionally, listen for new bookings (via webhook or polling) and display these upcoming appointments in the internal OHC Calendar dashboard, linking them to existing or new customer profiles in the CRM.
+
+## Priority
+P0
+
+## Estimated Scope
+Small

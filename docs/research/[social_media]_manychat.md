@@ -1,19 +1,27 @@
-## [Social Media] Manychat Integration
-**Title**: Integrate Manychat for Unified Social Media Inbox
-**Problem Statement**: Small business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook Messenger, and WhatsApp. Managing these manually is overwhelming and leads to missed sales. They need a single, unified inbox where an AI agent can read and reply to messages from all platforms automatically.
-**Research Report**:
-- **Tool**: Manychat
-- **Target Persona**: Maya (Home Baker), Priya (Boutique Owner)
-- **Advantages**: Excellent Instagram and WhatsApp API integrations. Robust webhook support for routing messages to OHC's backend. Extremely popular among SMBs for basic automation.
-- **Risks**: Pricing scales with contacts, which may be expensive for high-volume, low-margin businesses. Requires Meta business verification for some features.
-- **Pricing**: Free tier available (up to 1,000 contacts). Pro tier starts at $15/mo.
-- **Compatibility**: Cloud (via webhooks/OAuth). Standalone (would require local reverse proxy for webhooks, possible but complex).
-**Design Doc**:
-- User goes to the Operations dashboard and clicks "Connect Instagram".
-- User authenticates with Facebook/Instagram via OAuth.
-- OHC registers webhooks to receive new DMs.
-- When a DM arrives, the Customer Success agent reads it, generates a reply (e.g., "Yes, we do vegan cakes!"), and sends it back via Manychat's API.
-- The user sees a unified "Customer Inbox" on their phone showing the conversation history.
-**Implementation Prompt**: Implement an OAuth flow to connect a user's Instagram/Facebook account via Manychat. Create a webhook endpoint that receives incoming messages, stores them in the unified inbox, and triggers the Customer Success agent to draft a reply.
-**Priority**: P0
-**Estimated Scope**: Large
+# Title: Integrate Manychat for Unified Social Media Inbox
+
+## Problem Statement
+Small business owners often miss important customer messages because they are spread across Instagram DMs, Facebook comments, WhatsApp, and TikTok. Managing these separate platforms is overwhelming and leads to lost sales. Owners need a single place to view and respond to all customer interactions without switching between apps.
+
+## Research Report
+Manychat is a leading platform for social media messaging automation. It supports direct integrations with Instagram, Facebook Messenger, WhatsApp, and Telegram.
+- **Ease of Use:** Highly intuitive visual builder for non-technical users to set up auto-replies, but for OHC's use case, we primarily want to sync messages into our unified inbox. The setup for connecting accounts is straightforward via standard OAuth.
+- **Pricing:** Has a generous free tier (up to 1,000 contacts), with Pro plans starting at $15/month, making it very accessible for small business owners.
+- **Reputation:** Highly trusted, official Meta Business Partner.
+- **Competitors:** Chatfuel, MobileMonkey. Manychat offers the most seamless multi-platform support and stable webhooks.
+- **Cloud vs Standalone:** Works well in Cloud mode via webhooks. In Standalone mode, users would need a public tunneling service (like ngrok) or polling mechanism to receive webhooks, which adds complexity.
+
+## Design Doc
+When a business owner connects their Manychat account via our settings page, OHC will automatically receive incoming messages from their connected social channels.
+- **Trigger:** A new message arrives on Instagram/Facebook/WhatsApp.
+- **Action:** Manychat forwards the message payload to OHC. OHC creates a new notification or unread message in the unified inbox.
+- **User Interface:** The user sees a new tab or section in their OHC dashboard labeled "Social Messages" with indicators showing the source platform (e.g., an Instagram icon next to the DM). Replies sent from OHC are pushed back out through Manychat.
+
+## Implementation Prompt
+Create a "Social Inbox" feature that allows users to connect their Manychat account. Once connected, all incoming messages from Instagram, Facebook, and WhatsApp should appear in a unified conversation list within OHC. Users must be able to read and reply to these messages directly from our dashboard. Ensure the UI clearly distinguishes between different messaging platforms so the user knows where the conversation is happening.
+
+## Priority
+P1
+
+## Estimated Scope
+Medium
