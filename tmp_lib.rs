@@ -75,7 +75,7 @@ fn get_telemetry_chan() -> &'static mpsc::Sender<Box<dyn FnOnce() + Send>> {
     TELEMETRY_CHAN.get_or_init(|| {
         let (tx, rx) = mpsc::channel::<Box<dyn FnOnce() + Send>>(10000);
         let rx = std::sync::Arc::new(tokio::sync::Mutex::new(rx));
-        
+
         for _ in 0..16 {
             let rx = rx.clone();
             tokio::spawn(async move {
@@ -84,7 +84,7 @@ fn get_telemetry_chan() -> &'static mpsc::Sender<Box<dyn FnOnce() + Send>> {
                         let mut rx = rx.lock().await;
                         rx.recv().await
                     };
-                    
+
                     if let Some(job) = job {
                         job();
                     } else {
@@ -401,7 +401,7 @@ impl HubService for MyHubService {
     ) -> Result<tonic::Response<VerifyEnvironmentResponse>, tonic::Status> {
         let req = request.into_inner();
         let env_vars = req.env_vars;
-        
+
         match services::onboarding::env_verifier::verify_environment(&env_vars) {
             Ok(config) => {
                 Ok(tonic::Response::new(VerifyEnvironmentResponse {
@@ -475,7 +475,7 @@ impl HubService for MyHubService {
         let user_id = auth_info.spiffe_id.clone();
 
         let req = request.into_inner();
-        
+
         let mut state = req.state;
         state.remove("admin_password");
         let current_step = state.get("step").and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
@@ -594,7 +594,7 @@ impl HubService for MyHubService {
         request: tonic::Request<ProvisionRequest>,
     ) -> Result<tonic::Response<ProvisionResponse>, tonic::Status> {
         let _req = request.into_inner();
-        
+
         Ok(tonic::Response::new(ProvisionResponse {
             status: "provisioned".to_string(),
             message: "State persisted successfully".to_string(),
@@ -657,9 +657,9 @@ impl HubService for MyHubService {
         _request: tonic::Request<DiagnosticsRequest>,
     ) -> Result<tonic::Response<DiagnosticsResponse>, tonic::Status> {
         let env_vars = std::env::vars().collect::<std::collections::HashMap<String, String>>();
-        
+
         let config_res = services::onboarding::env_verifier::verify_environment(&env_vars);
-        
+
         let state = std::collections::HashMap::new();
 
         match config_res {
@@ -741,7 +741,7 @@ impl HubService for MyHubService {
             req.description,
             req.priority,
         ).map_err(|e| Status::internal(e))?;
-        
+
         Ok(Response::new(SharedTask {
             id: task.id,
             organization_id: task.organization_id,
@@ -767,14 +767,14 @@ impl HubService for MyHubService {
     }
 
     type PollTasksStream = Pin<Box<dyn Stream<Item = Result<SharedTask, Status>> + Send>>;
-    
+
     async fn poll_tasks(
         &self,
         request: Request<PollTasksRequest>,
     ) -> Result<Response<Self::PollTasksStream>, Status> {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
-        
+
         let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
             Ok(SharedTask {
                 id: task.id,
@@ -799,7 +799,7 @@ impl HubService for MyHubService {
                 proposed_content: task.proposed_content.unwrap_or_default(),
             })
         }).collect();
-        
+
         let stream = tokio_stream::iter(mapped_tasks);
         Ok(Response::new(Box::pin(stream) as Self::PollTasksStream))
     }
@@ -809,7 +809,7 @@ impl HubService for MyHubService {
         request: Request<UpdateTaskStatusRequest>,
     ) -> Result<Response<UpdateTaskStatusResponse>, Status> {
         let req = request.into_inner();
-        
+
         match req.status.as_str() {
             "REVIEW" => {
                 self.hub.task_manager().review_task(&req.task_id, &req.agent_id)
@@ -824,7 +824,7 @@ impl HubService for MyHubService {
                     .map_err(|e| Status::internal(e))?;
             }
         }
-        
+
         Ok(Response::new(UpdateTaskStatusResponse { success: true }))
     }
 
@@ -923,7 +923,7 @@ impl HubService for MyHubService {
         request: Request<DecomposeTaskRequest>,
     ) -> Result<Response<DecomposeTaskResponse>, Status> {
         let req = request.into_inner();
-        
+
         for st in req.sub_tasks {
             let mut filtered_deps = Vec::new();
             for dep in st.dependencies {
@@ -931,7 +931,7 @@ impl HubService for MyHubService {
                     filtered_deps.push(dep);
                 }
             }
-            
+
             self.hub.task_manager().create_task_with_plan(
                 req.organization_id.clone(),
                 String::new(),
@@ -942,7 +942,7 @@ impl HubService for MyHubService {
                 st.priority,
             ).map_err(|e| Status::internal(e))?;
         }
-        
+
         Ok(Response::new(DecomposeTaskResponse { success: true }))
     }
 
@@ -954,20 +954,20 @@ impl HubService for MyHubService {
     ) -> Result<Response<Self::StreamMessagesStream>, Status> {
         let req = request.into_inner();
         let agent_id = req.agent_id.clone();
-        
+
         let rx = self.hub.subscribe(agent_id.clone());
         let drained = self.hub.get_inbox(&agent_id);
-        
+
         let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(msg) => Ok(msg),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         let full_stream = drained_stream.chain(rx_stream);
-        
+
         Ok(Response::new(Box::pin(full_stream) as Self::StreamMessagesStream))
     }
 
@@ -980,7 +980,7 @@ impl HubService for MyHubService {
         if api_key.is_empty() {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
-        
+
         let client = minimax::MinimaxClient::new(api_key);
         match client.reason(&req.prompt).await {
             Ok(content) => Ok(Response::new(ReasonResponse { content })),
@@ -993,11 +993,11 @@ impl HubService for MyHubService {
         request: Request<SubTask>,
     ) -> Result<Response<DelegateTaskResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.task_id.is_empty() || req.target_role.is_empty() {
             return Err(Status::invalid_argument("task_id and target_role are required"));
         }
-        
+
         if self.hub.get_agent(&req.from_agent_id).is_none() {
             return Err(Status::invalid_argument("sender agent is not registered"));
         }
@@ -1006,10 +1006,10 @@ impl HubService for MyHubService {
         if self.hub.get_agents_count() >= 10 {
             return Err(Status::resource_exhausted("VRAM quota limit exceeded, cannot spawn sub-agent"));
         }
-        
+
         let now_nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         let sub_agent_id = format!("sub-agent-{}-{}", req.target_role, now_nano);
-        
+
         let sub_agent = Agent {
             id: sub_agent_id.clone(),
             name: format!("Specialized {} Agent", req.target_role),
@@ -1018,9 +1018,9 @@ impl HubService for MyHubService {
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         };
-        
+
         self.hub.register_agent(sub_agent);
-        
+
         // Prompt injection checks
         if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
             return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
@@ -1028,7 +1028,7 @@ impl HubService for MyHubService {
         if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
             return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
         }
-        
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -1047,7 +1047,7 @@ impl HubService for MyHubService {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
-        
+
         match self.hub.clone().publish(msg) {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
@@ -1062,7 +1062,7 @@ impl HubService for MyHubService {
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agent_id is required"));
         }
-        
+
         match self.hub.advertise_capabilities(req) {
             Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
@@ -1076,13 +1076,13 @@ impl HubService for MyHubService {
         _request: Request<Query>,
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(caps) => Ok(caps),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::DiscoverAgentsStream))
     }
 
@@ -1113,17 +1113,17 @@ impl HubService for MyHubService {
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
         }
-        
+
         self.stream_counter.add(1, &[opentelemetry::KeyValue::new("topic", req.topic.clone())]);
 
         let rx = self.hub.subscribe_mesh_events(req.topic);
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(event) => Ok(event),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
 
@@ -1155,15 +1155,15 @@ impl HubService for MyHubService {
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
         }
-        
+
         let rx = self.hub.subscribe_teammate_mesh(req.topic);
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(event) => Ok(event),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamTeammateMeshStream))
     }
 
@@ -1172,7 +1172,7 @@ impl HubService for MyHubService {
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing required fields"));
         }
@@ -1190,7 +1190,7 @@ impl HubService for MyHubService {
         request: Request<AcceptInviteRequest>,
     ) -> Result<Response<AcceptInviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing invitee_id"));
         }
@@ -1241,7 +1241,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
-    
+
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
@@ -1502,14 +1502,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(::server_auth::Store::new());
-    
+
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
-
-        let hybrid_daemon = std::sync::Arc::new(crate::orchestration::hybrid_sync::daemon::HybridSyncDaemon::new(db.pool.clone(), db.pool.clone()));
-        hybrid_daemon.start();
-let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
+        let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url.clone());
         telemetry_daemon.start();
     }
 
@@ -1624,49 +1621,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --border: #e1e4e8;
                             --sidebar-bg: #ffffff;
                         }
-                        body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
-                            background: var(--bg); 
-                            color: var(--text); 
-                            margin: 0; 
+                        body {
+                            font-family: 'Inter', 'Outfit', sans-serif;
+                            background: var(--bg);
+                            color: var(--text);
+                            margin: 0;
                             line-height: 1.5;
                         }
-
-                        .ohc-hybrid-panel {
-                            backdrop-filter: blur(20px) saturate(200%);
-                            background: rgba(255, 255, 255, 0.03);
-                            border: 1px solid rgba(255, 255, 255, 0.08);
-                            font-family: 'Outfit', 'Inter', sans-serif;
-                            color: #ffffff;
-                            border-radius: 12px;
-                            padding: 24px;
-                            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-                        }
-
-                        .glass { 
-                            background: var(--card-bg); 
-                            border: 1px solid var(--border); 
-                            border-radius: 8px; 
+                        .glass {
+                            background: var(--card-bg);
+                            border: 1px solid var(--border);
+                            border-radius: 8px;
                             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                             backdrop-filter: blur(20px) saturate(200%);
                         }
-                        nav { 
-                            padding: 0 40px; 
-                            display: flex; 
-                            gap: 30px; 
-                            border-bottom: 1px solid var(--border); 
-                            background: var(--sidebar-bg); 
-                            position: sticky; 
-                            top: 0; 
-                            z-index: 100; 
+                        nav {
+                            padding: 0 40px;
+                            display: flex;
+                            gap: 30px;
+                            border-bottom: 1px solid var(--border);
+                            background: var(--sidebar-bg);
+                            position: sticky;
+                            top: 0;
+                            z-index: 100;
                             height: 60px;
                             align-items: center;
                         }
-                        nav a { 
-                            color: var(--text-secondary); 
-                            text-decoration: none; 
-                            font-weight: 500; 
-                            cursor: pointer; 
+                        nav a {
+                            color: var(--text-secondary);
+                            text-decoration: none;
+                            font-weight: 500;
+                            cursor: pointer;
                             font-size: 14px;
                             transition: color 0.2s;
                         }
@@ -1675,23 +1660,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         main { padding: 40px; }
                         .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
-                        .card { 
-                            background: var(--card-bg); 
-                            padding: 24px; 
-                            border-radius: 8px; 
-                            margin-bottom: 24px; 
+                        .card {
+                            background: var(--card-bg);
+                            padding: 24px;
+                            border-radius: 8px;
+                            margin-bottom: 24px;
                             border: 1px solid var(--border);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
-                        input { 
-                            width: 100%; 
-                            padding: 10px 14px; 
-                            margin-bottom: 16px; 
-                            background: #ffffff; 
-                            border: 1px solid var(--border); 
-                            border-radius: 6px; 
-                            color: var(--text); 
-                            box-sizing: border-box; 
+                        input {
+                            width: 100%;
+                            padding: 10px 14px;
+                            margin-bottom: 16px;
+                            background: #ffffff;
+                            border: 1px solid var(--border);
+                            border-radius: 6px;
+                            color: var(--text);
+                            box-sizing: border-box;
                             font-size: 14px;
                             transition: border-color 0.2s;
                         }
@@ -1699,33 +1684,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             outline: none;
                             border-color: var(--primary);
                         }
-                        button { 
-                            padding: 10px 20px; 
-                            background: var(--primary); 
-                            border: none; 
-                            border-radius: 6px; 
-                            color: white; 
-                            font-weight: 600; 
-                            cursor: pointer; 
-                            margin-right: 8px; 
-                            margin-bottom: 8px; 
+                        button {
+                            padding: 10px 20px;
+                            background: var(--primary);
+                            border: none;
+                            border-radius: 6px;
+                            color: white;
+                            font-weight: 600;
+                            cursor: pointer;
+                            margin-right: 8px;
+                            margin-bottom: 8px;
                             font-size: 14px;
                             transition: background 0.2s;
                         }
                         button:hover {
                             background: var(--primary-hover);
                         }
-                        button.secondary { 
-                            background: transparent; 
-                            border: 1px solid var(--border); 
-                            color: var(--text-secondary); 
+                        button.secondary {
+                            background: transparent;
+                            border: 1px solid var(--border);
+                            color: var(--text-secondary);
                         }
                         button.secondary:hover {
                             background: #f8f9fa;
                             border-color: var(--text-secondary);
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
-                        
+
                         /* Login screen specific */
                         #login-screen {
                             max-width: 400px;
@@ -1765,13 +1750,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
-
-                        <div class="ohc-hybrid-panel">
-                            <h3>Swarm Observability Panel</h3>
-                            <p>✅ Your Support Agent replied to 3 customers</p>
-                            <p>📦 Order Manager updated stock for 12 items</p>
-                        </div>
-
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
@@ -1864,7 +1842,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Meetings Screen -->
                     <div id="meetings-screen" class="screen glass">
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;" 
+                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;"
                                 onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
                             Meetings Schedule New Meeting
                         </button>

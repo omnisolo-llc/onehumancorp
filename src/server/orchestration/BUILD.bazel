@@ -1,6 +1,9 @@
 filegroup(
     name = "srcs",
     srcs = [
+        "hybrid_sync/mod.rs",
+        "hybrid_sync/daemon.rs",
+        "hybrid_sync/daemon_test.rs",
         "chaos_test.rs",
         "handoff.rs",
         "health.rs",
