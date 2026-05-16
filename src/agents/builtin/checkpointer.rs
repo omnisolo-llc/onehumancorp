@@ -16,7 +16,7 @@ pub struct Checkpoint {
 
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
-
+    #[allow(dead_code)]
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;

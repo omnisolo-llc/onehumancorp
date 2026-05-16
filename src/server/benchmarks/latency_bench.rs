@@ -188,9 +188,9 @@ pub async fn bench_dashboard_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let _hub1 = hub.clone();
-        let _hub2 = hub.clone();
-        let _hub3 = hub.clone();
+        let hub1 = hub.clone();
+        let hub2 = hub.clone();
+        let hub3 = hub.clone();
 
         let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         use ::server_ohc::app::dashboard_service_server::DashboardService;

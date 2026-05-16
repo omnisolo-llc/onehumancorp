@@ -1,5 +1,5 @@
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
-
+use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -59,7 +59,7 @@ mod tests {
                 Ok(resps.remove(0))
             } else {
                 Ok(ChatResponse {
-                    message: crate::types::Message::assistant("default output"),
+                    message: Message::assistant("default output"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -72,7 +72,7 @@ mod tests {
     async fn test_runner_async() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: crate::types::Message::assistant("async success"),
+                message: Message::assistant("async success"),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
@@ -89,7 +89,7 @@ mod tests {
     fn test_runner_sync() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: crate::types::Message::assistant("sync success"),
+                message: Message::assistant("sync success"),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
@@ -106,7 +106,7 @@ mod tests {
     async fn test_runner_streamed() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: crate::types::Message::assistant("stream success"),
+                message: Message::assistant("stream success"),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),

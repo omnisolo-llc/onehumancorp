@@ -310,14 +310,14 @@ impl MinimaxClient {
     }
 }
 
-
+#[allow(dead_code)]
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
     model: String,
 }
 
-
+#[allow(dead_code)]
 impl LocalLLMClient {
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
@@ -377,13 +377,13 @@ impl LocalLLMClient {
     }
 }
 
-
+#[allow(dead_code)]
 pub struct ResilientClient {
     primary: MinimaxClient,
     fallback: LocalLLMClient,
 }
 
-
+#[allow(dead_code)]
 impl ResilientClient {
     pub fn new(primary: MinimaxClient) -> Self {
         ResilientClient {

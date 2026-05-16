@@ -31,7 +31,7 @@ pub trait SandboxAdapter: Send + Sync {
 pub struct SandboxManager {
     evaluator: PermissionEvaluator,
     wrapper: BashWrapper,
-    _pool: Option<PgPool>,
+    pool: Option<PgPool>,
     violation_store: Arc<ViolationStore>,
 }
 
@@ -41,7 +41,7 @@ impl SandboxManager {
         SandboxManager {
             evaluator: PermissionEvaluator::new(),
             wrapper: BashWrapper::new(),
-            _pool: pool,
+            pool,
             violation_store,
         }
     }
