@@ -1752,51 +1752,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
                         <div class="card glass">
-                            <h3>Growth & Community</h3>
-                            <button onclick="showScreen('referral-dashboard-screen')">🎁 Refer a Friend</button>
-                            <button onclick="showShareBusinessModal()">↗️ Share My Business</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Marketing</h3>
-                            <button onclick="showScreen('email-marketing-screen')">📧 Email Campaigns</button>
-                        </div>
-
-                        <!-- Upgrade Prompt Modal -->
-                        <div id="upgrade-prompt-modal" class="bottom-sheet glass">
-                            <div class="bottom-sheet-header">
-                                <h2>Upgrade to Pro</h2>
-                                <button class="bottom-sheet-close" onclick="closeUpgradePrompt()">×</button>
-                            </div>
-                            <div style="padding: 15px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                                <h3 style="margin-top: 0; color: #4ecca3;">You've reached a limit!</h3>
-                                <p style="font-size: 0.9em; line-height: 1.4;">The Free Starter plan includes 1 AI agent and 10 products. Upgrade to Pro to hire more agents, add unlimited products, and use a custom domain.</p>
-                            </div>
-                            <button style="width: 100%; margin-bottom: 10px; background-color: #4ecca3; color: #1a1a2e; font-weight: bold;" onclick="closeUpgradePrompt(); showScreen('pricing-screen')">View Pro Plans</button>
-                            <button style="width: 100%;" class="secondary" onclick="closeUpgradePrompt()">Maybe Later</button>
-                        </div>
-
-                        <!-- Share Business Modal -->
-                        <div id="share-business-modal" class="bottom-sheet glass">
-                            <div class="bottom-sheet-header">
-                                <h2>Share Business</h2>
-                                <button class="bottom-sheet-close" onclick="closeShareBusinessModal()">×</button>
-                            </div>
-                            <div style="padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.2); margin-bottom: 15px;">
-                                <h3 style="margin-top: 0;">My Awesome Store</h3>
-                                <p style="font-size: 0.9em; opacity: 0.8;">Welcome to our premium storefront</p>
-                                <p style="font-size: 0.8em; opacity: 0.5; margin-bottom: 0;">mybusiness.ohc.app</p>
-                            </div>
-                            <button style="width: 100%; margin-bottom: 10px;" onclick="copyBusinessLink()">Copy Link</button>
-                            <p id="business-link-copied" style="display: none; color: #4ecca3; font-size: 0.9em; text-align: center; margin-bottom: 10px;">Copied to clipboard!</p>
-                            <div style="display: flex; gap: 10px;">
-                                <button style="flex: 1;" class="secondary" onclick="alert('Opening Instagram story...')">Instagram</button>
-                                <button style="flex: 1;" class="secondary" onclick="alert('Opening WhatsApp...')">WhatsApp</button>
-                                <button style="flex: 1;" class="secondary" onclick="alert('Opening X...')">X</button>
-                            </div>
-                        </div>
-
-                        <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
@@ -1819,11 +1774,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p>No recent activity.</p>
                             </div>
                             <button onclick="simulateOrder()">Simulate Order</button>
-                            <button class="secondary" onclick="simulateMilestone()">Simulate Milestone</button>
                         </div>
-
-                        <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;"></div>
-
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
@@ -1848,21 +1799,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
                         <h1>Referral Dashboard</h1>
-                        <p style="margin-bottom: 15px;">Share OHC with a friend, both get 1 month free Pro.</p>
                         <div class="card glass">
                             <h3>Your Referral Link</h3>
-                            <p id="referral-link" style="font-family: monospace; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">ohc://join?ref=DYNAMIC_CODE</p>
-                            <button onclick="copyReferralLink()">Copy Link</button>
-                            <p id="referral-link-copied" style="display: none; color: #4ecca3; font-size: 0.9em; margin-top: 8px;">Copied to clipboard!</p>
+                            <p id="referral-link">ohc://join?ref=DEFAULT</p>
+                            <button onclick="alert('Copied!')">Copy</button>
+                            <button onclick="location.reload()">Refresh</button>
                         </div>
                         <div class="card glass">
-                            <h3>Share & Invite</h3>
-                            <button onclick="inviteToOHC()">📱 Invite via SMS/WhatsApp</button>
+                            <h3>Share</h3>
                             <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
+                            <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
+                            <p id="invite-copied" style="display: none;">Invite message copied!</p>
                         </div>
                         <div class="card glass">
                             <h3>Actions</h3>
                             <button onclick="alert('History shown')">📜 View Referral Logs</button>
+                            <button onclick="alert('Data exported')">📤 Export Data</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
@@ -1946,43 +1898,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>
-                            <button onclick="showUpgradePrompt()">Hire Agent</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Social Media Manager</h3>
-                            <p>Status: Available</p>
-                            <button onclick="showScreen('social-media-agent-screen')">Hire & Configure</button>
+                            <button>Hire Agent</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
-                    <!-- Social Media Agent Screen -->
-                    <div id="social-media-agent-screen" class="screen glass">
-                        <h1>Social Media Auto-Poster</h1>
-                        <p>Connect your accounts and let our AI agent automatically generate and schedule posts for your new products, sales, and milestones.</p>
-
-                        <div class="card glass">
-                            <h3>Connect Accounts</h3>
-                            <button style="margin-bottom: 8px; width: 100%;" onclick="alert('Connected to Instagram!'); this.textContent='✓ Instagram Connected'; this.style.backgroundColor='#333';">📷 Connect Instagram</button>
-                            <button style="margin-bottom: 8px; width: 100%;" onclick="alert('Connected to Facebook!'); this.textContent='✓ Facebook Connected'; this.style.backgroundColor='#333';">📘 Connect Facebook</button>
-                            <button style="width: 100%;" onclick="alert('Connected to X!'); this.textContent='✓ X Connected'; this.style.backgroundColor='#333';">🐦 Connect X</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Upcoming Drafts (Generated by AI)</h3>
-                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
-                                <p style="margin-top: 0; font-size: 0.9em; opacity: 0.7;">Scheduled for: Tomorrow, 10:00 AM</p>
-                                <p><strong>New Arrival!</strong> ✨ We just added something special to our store. Check out our latest collection today. Link in bio! 🛍️ #NewArrival #ShopLocal</p>
-                                <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 5px;" onclick="alert('Post approved for publishing!'); this.textContent='✓ Approved'; this.style.backgroundColor='#333'; this.style.color='#fff';">Approve Post</button>
-                            </div>
-                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                                <p style="margin-top: 0; font-size: 0.9em; opacity: 0.7;">Scheduled for: Friday, 3:00 PM</p>
-                                <p><strong>Flash Sale!</strong> ⚡ Get 20% off all items this weekend only. Don't miss out! #Sale #Discount</p>
-                                <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 5px;" onclick="alert('Post approved for publishing!'); this.textContent='✓ Approved'; this.style.backgroundColor='#333'; this.style.color='#fff';">Approve Post</button>
-                            </div>
-                        </div>
-
-                        <button class="secondary" onclick="showScreen('agents-screen')">Back to Agents</button>
                     </div>
 
                     <!-- Setup Page -->
@@ -1998,52 +1916,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
-
-                    <!-- Email Marketing Screen -->
-                    <div id="email-marketing-screen" class="screen glass">
-                        <h1>Email Campaigns</h1>
-                        <p>Use AI to generate and send targeted emails to your customers.</p>
-
-                        <div class="card glass">
-                            <h3>Create New Campaign</h3>
-                            <p style="margin-bottom: 5px;"><strong>1. Select Contacts</strong></p>
-                            <select style="width: 100%; margin-bottom: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px;">
-                                <option>All Subscribers (1,245)</option>
-                                <option>Recent Buyers (120)</option>
-                                <option>Abandoned Cart (45)</option>
-                            </select>
-
-                            <p style="margin-bottom: 5px;"><strong>2. AI Template</strong></p>
-                            <select style="width: 100%; margin-bottom: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px;">
-                                <option>New Arrivals Announcement</option>
-                                <option>Flash Sale Promotion</option>
-                                <option>Customer Thank You</option>
-                            </select>
-
-                            <button style="width: 100%;" onclick="alert('Generating preview...'); document.getElementById('email-preview').style.display='block';">Generate Preview</button>
-                        </div>
-
-                        <div id="email-preview" class="card glass" style="display: none; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.3);">
-                            <h3 style="margin-top: 0;">Preview</h3>
-                            <p><strong>Subject:</strong> 🌟 Exciting New Arrivals Just for You!</p>
-                            <p style="font-size: 0.9em; opacity: 0.8;">Hi [Name],<br><br>We've just added some amazing new products to our store that we think you'll love. Check them out before they're gone!<br><br>Best,<br>Your Business Name</p>
-                            <button style="background-color: #4ecca3; color: #1a1a2e; font-weight: bold; width: 100%; margin-top: 10px;" onclick="alert('Campaign sent to 1,245 subscribers!'); this.style.display='none';">Send Campaign</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Recent Performance</h3>
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px;">
-                                <span>Spring Sale</span>
-                                <span style="color: #4ecca3;">45% Open Rate</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span>Welcome Series</span>
-                                <span style="color: #4ecca3;">62% Open Rate</span>
-                            </div>
-                        </div>
-
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
