@@ -3,10 +3,10 @@ package growth
 import (
 	"bytes"
 	"context"
+	"onehumancorp/srcs/server/onboarding"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
-	"onehumancorp/srcs/server/onboarding"
 	"testing"
 	"time"
 
@@ -18,9 +18,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Failed to open DB: %v", err)
 	}
-	db.Exec("CREATE TABLE IF NOT EXISTS organizations (id TEXT PRIMARY KEY, plan_tier TEXT, pro_until DATETIME)")
-	db.Exec("CREATE TABLE IF NOT EXISTS referrals (id TEXT PRIMARY KEY, inviter_id TEXT, invitee_id TEXT, clicks INT, conversions INT)")
-	return db
+	db.Exec("CREATE TABLE IF NOT EXISTS organizations (id TEXT PRIMARY KEY, plan_tier TEXT, pro_until DATETIME)"); db.Exec("CREATE TABLE IF NOT EXISTS referrals (id TEXT PRIMARY KEY, inviter_id TEXT, invitee_id TEXT, clicks INT, conversions INT)"); return db
 }
 
 func TestGrowthService_ReferralFlow(t *testing.T) {
@@ -34,8 +32,7 @@ func TestGrowthService_ReferralFlow(t *testing.T) {
 
 	t.Run("HandleReferralClick", func(t *testing.T) {
 		body := `{"id": "ref1"}`
-		req := httptest.NewRequest(http.MethodPost, "/click", bytes.NewBufferString(body))
-		req = req.WithContext(context.WithValue(req.Context(), onboarding.TenantContextKey, "invitee1"))
+		req := httptest.NewRequest(http.MethodPost, "/click", bytes.NewBufferString(body)); req = req.WithContext(context.WithValue(req.Context(), onboarding.TenantContextKey, "org-test"))
 		w := httptest.NewRecorder()
 		svc.HandleReferralClick(w, req)
 		if w.Code != http.StatusOK {
@@ -45,8 +42,7 @@ func TestGrowthService_ReferralFlow(t *testing.T) {
 
 	t.Run("HandleReferralConvert", func(t *testing.T) {
 		body := `{"id": "ref1", "invitee_id": "invitee1"}`
-		req := httptest.NewRequest(http.MethodPost, "/convert", bytes.NewBufferString(body))
-		req = req.WithContext(context.WithValue(req.Context(), onboarding.TenantContextKey, "invitee1"))
+		req := httptest.NewRequest(http.MethodPost, "/convert", bytes.NewBufferString(body)); req = req.WithContext(context.WithValue(req.Context(), onboarding.TenantContextKey, "invitee1"))
 		w := httptest.NewRecorder()
 		svc.HandleReferralConvert(w, req)
 		if w.Code != http.StatusOK {
@@ -73,8 +69,7 @@ func TestGrowthService_ReferralFlow(t *testing.T) {
 
 	t.Run("HandleTeamInviteAccept", func(t *testing.T) {
 		body := `{"id": "inv1"}`
-		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewBufferString(body))
-		req = req.WithContext(context.WithValue(req.Context(), onboarding.TenantContextKey, "invitee1"))
+		req := httptest.NewRequest(http.MethodPost, "/accept", bytes.NewBufferString(body)); req = req.WithContext(context.WithValue(req.Context(), onboarding.TenantContextKey, "org-test"))
 		w := httptest.NewRecorder()
 		svc.HandleTeamInviteAccept(w, req)
 		if w.Code != http.StatusOK {
