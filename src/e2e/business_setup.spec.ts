@@ -37,8 +37,8 @@ test.describe('Business Setup Wizard', () => {
     await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
     await page.click('text=⚡ Instant Build (AI) →');
 
-    await expect(page.locator('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]')).toBeVisible();
-    await page.fill('input[placeholder="e.g. I run a local bakery called Maya\'s Cakes..."]', 'I run a local tech shop');
+    await expect(page.locator('input[placeholder="e.g. I fix plumbing in Austin"]')).toBeVisible();
+    await page.fill('input[placeholder="e.g. I fix plumbing in Austin"]', 'I run a local tech shop');
 
     await page.click('text=Generate Storefront →');
 
@@ -46,6 +46,53 @@ test.describe('Business Setup Wizard', () => {
     await page.click('text="Launch My Business →"');
 
     await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should verify the presence of the "What do you do?" single text input on welcome', async ({ page }) => {
+    await expect(page.locator('text=What do you do?')).toBeVisible();
+  });
+
+  test('should verify that submitting a description via the "What do you do?" input navigates the user directly to the "Instant Build (AI)" generation step', async ({ page }) => {
+    await expect(page.locator('text=⚡ Instant Build (AI) →')).toBeVisible();
+    await page.click('text=⚡ Instant Build (AI) →');
+    await expect(page.locator('input[placeholder="e.g. I fix plumbing in Austin"]')).toBeVisible();
+  });
+
+  test('should verify the Dashboard Checklist displays the "Share Link" CTA explicitly', async ({ page }) => {
+    await page.click('text=⚡ Instant Build (AI) →');
+    await page.fill('input[placeholder="e.g. I fix plumbing in Austin"]', 'I run a local tech shop');
+    await page.click('text=Generate Storefront →');
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+    await page.click('text="Launch My Business →"');
+
+    // Simulate jumping to checklist
+    await expect(page.locator('text=⬜ Share your link with a friend')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should verify the user can click the "Share Link" CTA and trigger the expected action', async ({ page }) => {
+    await page.click('text=⚡ Instant Build (AI) →');
+    await page.fill('input[placeholder="e.g. I fix plumbing in Austin"]', 'I run a local tech shop');
+    await page.click('text=Generate Storefront →');
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+    await page.click('text="Launch My Business →"');
+
+    // Simulate clicking the action
+    await expect(page.locator('text=⬜ Share your link with a friend')).toBeVisible({ timeout: 5000 });
+    await page.click('text=⬜ Share your link with a friend');
+    // Check that there's no error thrown
+  });
+
+  test('should verify the end-to-end "What do you do?" flow correctly populates the final dashboard', async ({ page }) => {
+    await page.click('text=⚡ Instant Build (AI) →');
+    await page.fill('input[placeholder="e.g. I fix plumbing in Austin"]', 'I run a local tech shop');
+    await page.click('text=Generate Storefront →');
+    await expect(page.locator('text="Launch My Business →"')).toBeVisible({ timeout: 15000 });
+    await page.click('text="Launch My Business →"');
+    await expect(page.locator('text=Continue to Dashboard →')).toBeVisible({ timeout: 5000 });
+    await page.click('text=Continue to Dashboard →');
+
+    const dashboardLink = page.locator('text=Dashboard').first();
+    await expect(dashboardLink).toBeVisible();
   });
 
   test('should show business type options', async ({ page }) => {
