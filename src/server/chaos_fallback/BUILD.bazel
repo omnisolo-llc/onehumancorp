@@ -1,0 +1,14 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "chaos_fallback",
+    srcs = ["lib.rs"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "chaos_fallback_test",
+    crate = ":chaos_fallback",
+    edition = "2024",
+)
