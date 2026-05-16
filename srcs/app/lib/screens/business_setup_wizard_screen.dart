@@ -102,7 +102,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(wizardProvider);
 
-    if (state.currentStep == 4) {
+    if (state.currentStep == 11) {
       return const DashboardScreen();
     }
 
@@ -139,10 +139,24 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       case 0:
         return _buildWelcomeScreen();
       case 1:
-        return _buildProductScreen(state);
+        return _buildBusinessProfileScreen(state);
       case 2:
-        return _buildReviewAndLaunchScreen(state);
+        return _buildGoalSelectionScreen(state);
       case 3:
+        return _buildExternalIntegrationsScreen();
+      case 4:
+        return _buildDeploymentPreferenceScreen(state);
+      case 5:
+        return _buildAdministratorAccountScreen();
+      case 6:
+        return _buildTemplateSelectionScreen(state);
+      case 7:
+        return _buildProductScreen(state);
+      case 8:
+        return _buildDomainScreen(state);
+      case 9:
+        return _buildReviewAndLaunchScreen(state);
+      case 10:
         return _buildWelcomeChecklistScreen(state);
       default:
         return const SizedBox.shrink();
