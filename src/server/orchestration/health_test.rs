@@ -1,0 +1,144 @@
+#[cfg(test)]
+
+    use super::*;
+    use sqlx::Row;
+    use std::sync::Arc;
+    use crate::orchestration::mesh::TeammateMesh;
+    use crate::orchestration::health::run_health_monitor;
+    use crate::Hub;
+    use ::ohc_builtin_agent::mesh::transport::MemoryTransport;
+
+        // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
+        // Since Hub takes a PgPool, we have to supply one to construct it, even if unused in this isolated test
+    #[tokio::test]
+    async fn test_health_monitor_fires_unresponsive_agent() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pg_pool));
+
+        // Register an idle agent
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: "agent_idle".to_string(),
+            name: "Idle Agent".to_string(),
+            role: "test".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "test".to_string(),
+        });
+
+        // Register a busy agent
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: "agent_busy".to_string(),
+            name: "Busy Agent".to_string(),
+            role: "test".to_string(),
+            organization_id: "org1".to_string(),
+            status: "BUSY".to_string(),
+            provider_type: "test".to_string(),
+        });
+
+        assert!(hub.get_agent("agent_idle").is_some());
+        assert!(hub.get_agent("agent_busy").is_some());
+
+        // We simulate a transport with NO active agents
+        let transport = Arc::new(MemoryTransport::new());
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_mesh, monitor_hub, false, std::time::Duration::from_millis(10)).await;
+        });
+
+        // Let the monitor loop run once
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+
+        // Both agents should be fired (removed) immediately in standalone mode
+        assert!(hub.get_agent("agent_idle").is_none());
+        assert!(hub.get_agent("agent_busy").is_none());
+        handle.abort();
+    }
+
+
+    #[tokio::test]
+    async fn test_health_monitor_cloud_retry() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pg_pool));
+
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: "agent_cloud".to_string(),
+            name: "Cloud Agent".to_string(),
+            role: "test".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "test".to_string(),
+        });
+
+        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+        assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
+        handle.abort();
+    }
+
+
+    #[tokio::test]
+    async fn test_health_monitor_sync_probe() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect_lazy("postgres://dummy")
+            .unwrap();
+
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pg_pool));
+
+        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
+        let monitor_hub = hub.clone();
+
+        let handle = tokio::spawn(async move {
+            run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        handle.abort();
+    }

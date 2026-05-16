@@ -25,6 +25,7 @@ rust_library(
         "seeder.rs",
         "settings.rs",
         "sip.rs",
+        "sip_test.rs",
         "store.rs",
         "tasks.rs",
         "telemetry_test.rs",
