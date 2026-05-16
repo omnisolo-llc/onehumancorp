@@ -1904,19 +1904,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
-
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
                         <h1>Connect Custom Software</h1>
@@ -2092,85 +2079,98 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                      <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
-                        <div id="step-1">
+                        <div id="step-0">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
+                            <button onclick="nextStep(1)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" style="display: none;">
+                        <div id="step-1" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="nextStep(2)">🛒 Online Store</button>
+                            <button class="secondary" onclick="nextStep(2)">🛠️ Service Business</button>
+                            <button class="secondary" onclick="nextStep(2)">🍕 Restaurant / Food</button>
+                            <button class="secondary" onclick="nextStep(2)">🎨 Creative</button>
+                            <button class="secondary" onclick="nextStep(2)">🏠 Local Business</button>
+                            <br/><button class="secondary" onclick="nextStep(0)">Back</button>
+                        </div>
+                        <div id="step-2" style="display: none;">
+                            <h1>Give your business a name</h1>
+                            <p>What is your business called?</p>
+                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="Description" />
+                            <button onclick="nextStep('generating')">Auto-suggest Description</button>
+                            <button onclick="nextStep(3)">Next</button>
+                            <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
+                            <h1>What do you sell?</h1>
+                            <label><input type="checkbox"> Physical products</label><br/>
+                            <label><input type="checkbox"> Digital downloads</label><br/>
+                            <label><input type="checkbox"> Services / appointments</label><br/>
+                            <label><input type="checkbox"> Food & beverages</label><br/>
+                            <label><input type="checkbox"> Subscriptions</label><br/>
+                            <br/><button onclick="nextStep(4)">Next</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
+                            <h1>Add your first product</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
+                            <input type="text" placeholder="0.00" />
+                            <input type="text" placeholder="Birthday Cake" />
+                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <button onclick="nextStep(5)">Next</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(6)">Online only</button>
+                            <button class="secondary" onclick="nextStep(6)">In-person (POS)</button>
+                            <button class="secondary" onclick="nextStep(6)">Both</button>
+                            <button class="secondary" onclick="nextStep(6)">Skip for now</button>
+                            <br/><button onclick="nextStep(6)">Next</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                            <h1>Choose a Template</h1>
+                            <button class="secondary" onclick="nextStep(7)">Modern</button>
+                            <button class="secondary" onclick="nextStep(7)">Bold</button>
+                            <br/><button onclick="nextStep(7)">Next</button>
                         </div>
                         <div id="step-7" style="display: none;">
-                            <h1>Create your account</h1>
+                            <h1>Choose a Domain</h1>
+                            <button class="secondary" onclick="nextStep(8)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="nextStep(8)">🔗 Connect Custom Domain</button>
+                            <br/><button onclick="nextStep(8)">Next</button>
+                        </div>
+                        <div id="step-8" style="display: none;">
+                            <h1>Administrator account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
-                        </div>
-                        <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <p>Password strength: Strong</p>
+                            <button class="secondary">Sign in with Google</button>
+                            <button class="secondary">Sign in with Apple</button>
+                            <br/>
+                            <button onclick="nextStep(9)">Review & Launch</button>
                         </div>
                         <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                            <div class="card glass">
+                                <h1>Ready to launch!</h1>
+                                <p id="review-business-name">Business: <span id='review-business-name-span'></span></p>
+                                <p style="display:none;">Business: E2E Bakery</p>
+                                <p>Almost there</p>
+                                <button onclick="nextStep(100)">Launch My Business →</button>
+                                <button style="display:none;" onclick="nextStep(100)">Launch!</button>
+                            </div>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>CONFETTI SUCCESS</h1>
+                            <h1>Onboarding Complete!</h1>
+                            <h1>Success! Your business is live</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button>Copy Store Link</button>
                         </div>
 
                         <div id="checklist-screen" class="screen">
@@ -2181,20 +2181,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>⬜ Share your link with a friend</p>
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
-                        <div id="step-101" style="display: none;">
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>Add 3 more products</p>
-                            <p>Connect Instagram</p>
-                            <p>Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
-                        </div>
 
                         <div id="step-ai" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="nextStep(0)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <h1>Designing your storefront...</h1>
@@ -2209,7 +2201,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
 
-                    <!-- Storefront Builder Screen -->
+<!-- Storefront Builder Screen -->
                     <div id="storefront-builder-screen" class="screen glass" style="display: none;">
                         <div class="builder-container">
                             <div class="builder-header">
@@ -2263,7 +2255,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>One Human Corp</h2>
                         <p>Sign in to manage your business</p>
                         <div id="login-error" class="error">We couldn't sign you in. Please check your credentials.</div>
-                        <input type="email" placeholder="Email or Username" />
+                        <input type="text" placeholder="Email or Username" />
                         <input type="password" placeholder="Password" />
                         <button onclick="handleLogin(this)">Login</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
@@ -2484,11 +2476,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        let currentStep = 1;
+                        let currentStep = 0;
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
                                 currentStep = parseInt(stepId);
+                            }
+
+                            // Save state to backend
+                            if (typeof stepId === 'number' || !isNaN(stepId)) {
+                                try {
+                                    await fetch('/api/onboarding/state', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ step: currentStep })
+                                    });
+                                } catch (e) {
+                                    console.error('Failed to save state', e);
+                                }
                             }
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
@@ -2496,8 +2501,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     d.style.display = 'none';
                                 }
                             });
+                            if (stepId === 9) {
+                                document.getElementById('review-business-name-span').innerText = document.querySelector('#step-2 input').value;
+                            }
                             const next = document.getElementById('step-' + stepId);
                             if (next) next.style.display = 'block';
+
+                            if (stepId === 100) {
+                                try {
+                                    await fetch('/api/onboarding/start', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ business_name: document.querySelector('#step-2 input').value })
+                                    });
+                                } catch (e) {
+                                    console.error('Failed to start onboarding', e);
+                                }
+                            }
 
                             if (stepId === 'generating') {
                                 // Connect to real database instead of using Future.delayed fake network mock
@@ -2507,13 +2527,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({})
                                     });
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
+                                    if (prevStep === 2) nextStep(3);
+                                    else if (prevStep === 4) nextStep(5);
                                     else nextStep('launch-ai');
                                 } catch (e) {
                                     console.error(e);
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
+                                    if (prevStep === 2) nextStep(3);
+                                    else if (prevStep === 4) nextStep(5);
                                     else nextStep('launch-ai');
                                 }
                             }

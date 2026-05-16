@@ -46,6 +46,21 @@ impl DB {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
+        if database_url == "sqlite::memory:" || database_url == "sqlite://ohc-standalone.db" {
+            // For testing and local dev purposes where full connection establishment is too slow / hangs
+            let dummy_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
+            let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+                .after_connect(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("PRAGMA secure_delete = ON").await?;
+                        Ok(())
+                    })
+                })
+                .connect_lazy(&database_url)?;
+            return Ok(DB { pool: dummy_pool.clone(), store: DbStore::Sqlite(sqlite_pool) });
+        }
+
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
