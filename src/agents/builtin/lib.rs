@@ -39,3 +39,5 @@ pub mod langgraph;
 pub mod masking_tests;
 pub mod codex_runner;
 pub mod consolidation_worker;
+#[cfg(test)]
+pub mod verification_tests;
