@@ -1035,7 +1035,7 @@ impl HubService for MyHubService {
             &req.instruction,
             &req.parent_thread_id,
         ).await.map_err(|e| Status::internal(e))?;
-        tracing::info!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
+        tracing::debug!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
 
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
         let msg = Message {
@@ -1472,6 +1472,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
@@ -1633,6 +1634,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border: 1px solid var(--border); 
                             border-radius: 8px; 
                             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            backdrop-filter: blur(20px) saturate(200%);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -1754,6 +1756,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
+                            <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
@@ -1965,45 +1968,69 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen">
                         <h1>Pricing Plans</h1>
-                        <p>Choose the best plan for your business.</p>
+                        <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
+
                         <div class="card glass">
-                            <h3>Free Starter</h3>
-                            <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Start Free</button>
+                            <h3>Free</h3>
+                            <p>$0 / month</p>
+                            <ul>
+                                <li>1 Agent Limit</li>
+                                <li>100 AI actions / month</li>
+                                <li>500MB Storage Quota</li>
+                                <li>10 Products Limit</li>
+                            </ul>
+                            <button onclick="showScreen('dashboard-screen')">Current Plan</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>Pro Professional</h3>
-                            <p>$29 / 30-days</p>
-                            <p>Suggested</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
+                            <h3>Starter</h3>
+                            <p>$29 / month</p>
+                            <p>Suggested for growing stores</p>
+                            <ul>
+                                <li>3 Agents Limit</li>
+                                <li>1,000 AI actions / month</li>
+                                <li>5GB Storage Quota</li>
+                                <li>100 Products Limit</li>
+                            </ul>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>Business Enterprise</h3>
-                            <p>$79 / 30-days</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
+                            <h3>Pro</h3>
+                            <p>$79 / month</p>
+                            <ul>
+                                <li>10 Agents Limit</li>
+                                <li>Unlimited AI actions</li>
+                                <li>50GB Storage Quota</li>
+                                <li>Unlimited Products</li>
+                            </ul>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
                         </div>
+
                         <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
-                                <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
-                            </div>
+                            <h3>Business</h3>
+                            <p>$299 / month</p>
+                            <ul>
+                                <li>Unlimited Agents</li>
+                                <li>Unlimited AI actions</li>
+                                <li>500GB Storage Quota</li>
+                                <li>Unlimited Products</li>
+                            </ul>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
                         </div>
-                        <p>100% money back guarantee. Secure SSL payments.</p>
+
+                        <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                         <div class="card glass">
                             <h2>Frequently Asked Questions</h2>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
+                                <h3>How do I upgrade, downgrade, or cancel?</h3>
+                                <p class="answer">Answer: Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
                             </div>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
                                 <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
+                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
                             </div>
                         </div>
                     </div>
@@ -2011,16 +2038,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
+                        <p>Plan: Free</p>
                         <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
+                        <p>Estimated Next Bill: $0.00 (2024-06-01)</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
-                            <button onclick="showScreen('pricing-screen')">Add Credits</button>
+                            <p>AI Actions Used: 0 / 100</p>
+                            <p>Storage Used: 0MB / 500MB</p>
+                            <button onclick="alert('File chooser opened')">Upload Photo</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade Plan</button>
+                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
+                        <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
                         <button class="secondary">Cancel Subscription</button>
                         <button class="secondary">Download Invoice</button>
                         <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
@@ -2205,7 +2234,56 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Login Screen -->
+
+                    <!-- Storefront Builder Screen -->
+                    <div id="storefront-builder-screen" class="screen glass" style="display: none;">
+                        <div class="builder-container">
+                            <div class="builder-header">
+                                <h1>Edit Website</h1>
+                                <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
+                            </div>
+
+                            <div class="builder-preview" id="builder-preview-container">
+                                <!-- Draft Blocks render here -->
+                            </div>
+
+                            <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
+                        </div>
+
+                        <!-- Block Editor Bottom Sheet -->
+                        <div id="block-editor-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2 id="sheet-title">Edit Block</h2>
+                                <button class="bottom-sheet-close" onclick="closeBottomSheet()">×</button>
+                            </div>
+                            <div id="sheet-content">
+                                <!-- Dynamic form inputs -->
+                            </div>
+                            <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
+                        </div>
+
+                        <!-- Domain Setup Bottom Sheet -->
+                        <div id="domain-setup-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Publish Site</h2>
+                                <button class="bottom-sheet-close" onclick="closeDomainSetup()">×</button>
+                            </div>
+                            <div class="domain-setup active" id="domain-step-1">
+                                <p>Choose your domain option:</p>
+                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">🌐 Free OHC Subdomain</button>
+                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">🔗 Connect Custom Domain</button>
+                            </div>
+                            <div class="domain-setup" id="domain-step-free">
+                                <p>Your free domain:</p>
+                                <input type="text" id="free-domain-input" placeholder="mybusiness" /> .ohc.app
+                                <button style="margin-top: 16px; width: 100%;" onclick="publishStorefront()">Publish</button>
+                            </div>
+                        </div>
+
+                        <canvas id="confetti-canvas"></canvas>
+                    </div>
+
+<!-- Login Screen -->
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
                         <h2>One Human Corp</h2>
@@ -2219,6 +2297,176 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+                        // Storefront Builder State & Logic
+                        let storefrontDraftState = [
+                            { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
+                            { id: 'b2', type: 'Product Grid', content: { title: 'Featured Products', count: 4 } },
+                            { id: 'b3', type: 'Service List', content: { title: 'Our Services' } },
+                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } }
+                        ];
+                        let rearrangeMode = false;
+                        let activeBlockId = null;
+
+                        function renderStorefrontPreview() {
+                            const container = document.getElementById('builder-preview-container');
+                            if (!container) return;
+                            container.innerHTML = '';
+
+                            storefrontDraftState.forEach((block, index) => {
+                                const el = document.createElement('div');
+                                el.className = 'builder-block glass';
+                                el.onclick = () => rearrangeMode ? null : openBottomSheet(block.id);
+
+                                let innerHtml = `<h2>${block.type}</h2>`;
+                                if (rearrangeMode) {
+                                    innerHtml += `<p>↕ Drag to reorder (simulated)</p>`;
+                                    // Simulation of drag logic
+                                    const upBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, -1);">↑</button>`;
+                                    const downBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, 1);">↓</button>`;
+                                    innerHtml += `<div>${upBtn} ${downBtn}</div>`;
+                                } else {
+                                    if (block.type === 'Hero') {
+                                        innerHtml += `<p><strong>${block.content.title}</strong></p><p>${block.content.subtitle}</p><button class="secondary">${block.content.cta}</button>`;
+                                    } else if (block.type === 'Product Grid') {
+                                        innerHtml += `<p>${block.content.title} (${block.content.count} items)</p>`;
+                                    } else {
+                                        innerHtml += `<p>${block.content.title || block.content.text}</p>`;
+                                    }
+                                }
+                                el.innerHTML = innerHtml;
+                                container.appendChild(el);
+                            });
+                        }
+
+                        function toggleRearrangeMode() {
+                            rearrangeMode = !rearrangeMode;
+                            document.getElementById('toggle-rearrange-btn').textContent = rearrangeMode ? 'Done' : 'Rearrange';
+                            renderStorefrontPreview();
+                        }
+
+                        function moveBlock(index, dir) {
+                            if (index + dir < 0 || index + dir >= storefrontDraftState.length) return;
+                            const temp = storefrontDraftState[index];
+                            storefrontDraftState[index] = storefrontDraftState[index + dir];
+                            storefrontDraftState[index + dir] = temp;
+                            renderStorefrontPreview();
+                        }
+
+                        function openBottomSheet(blockId) {
+                            activeBlockId = blockId;
+                            const block = storefrontDraftState.find(b => b.id === blockId);
+                            document.getElementById('sheet-title').textContent = `Edit ${block.type}`;
+
+                            let html = '';
+                            for (const key in block.content) {
+                                html += `<label style="display:block; margin-top:8px;">${key}</label>`;
+                                html += `<input type="text" id="edit-${key}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
+                            }
+                            document.getElementById('sheet-content').innerHTML = html;
+                            document.getElementById('block-editor-sheet').classList.add('open');
+                        }
+
+                        function closeBottomSheet() {
+                            document.getElementById('block-editor-sheet').classList.remove('open');
+                            activeBlockId = null;
+                        }
+
+                        function saveBlockChanges() {
+                            if (!activeBlockId) return;
+                            const block = storefrontDraftState.find(b => b.id === activeBlockId);
+                            for (const key in block.content) {
+                                const input = document.getElementById(`edit-${key}`);
+                                if (input) block.content[key] = input.value;
+                            }
+                            closeBottomSheet();
+                            renderStorefrontPreview();
+                        }
+
+                        function showDomainSetup() {
+                            document.getElementById('domain-setup-sheet').classList.add('open');
+                            document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
+                            document.getElementById('domain-step-1').classList.add('active');
+                        }
+
+                        function closeDomainSetup() {
+                            document.getElementById('domain-setup-sheet').classList.remove('open');
+                        }
+
+                        function selectDomain(type) {
+                            document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
+                            if (type === 'free') {
+                                document.getElementById('domain-step-free').classList.add('active');
+                            } else {
+                                // simulate custom domain flow
+                                publishStorefront();
+                            }
+                        }
+
+                        function publishStorefront() {
+                            closeDomainSetup();
+                            fireConfetti();
+                            setTimeout(() => {
+                                showScreen('dashboard-screen');
+                            }, 2000);
+                        }
+
+                        function fireConfetti() {
+                            const canvas = document.getElementById('confetti-canvas');
+                            if (!canvas) return;
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = window.innerWidth;
+                            canvas.height = window.innerHeight;
+
+                            let particles = [];
+                            for(let i=0; i<100; i++) {
+                                particles.push({
+                                    x: Math.random() * canvas.width,
+                                    y: Math.random() * canvas.height - canvas.height,
+                                    r: Math.random() * 6 + 2,
+                                    d: Math.random() * 100,
+                                    color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                                    tilt: Math.floor(Math.random() * 10) - 10,
+                                    tiltAngle: 0,
+                                    tiltAngleIncr: (0.07 * Math.random()) + 0.05
+                                });
+                            }
+
+                            let angle = 0;
+                            function draw() {
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                for(let i=0; i<100; i++) {
+                                    let p = particles[i];
+                                    ctx.beginPath();
+                                    ctx.lineWidth = p.r;
+                                    ctx.strokeStyle = p.color;
+                                    ctx.moveTo(p.x + p.tilt + p.r, p.y);
+                                    ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
+                                    ctx.stroke();
+                                }
+                                update();
+                            }
+
+                            let animId;
+                            function update() {
+                                angle += 0.01;
+                                for(let i=0; i<100; i++) {
+                                    let p = particles[i];
+                                    p.y += Math.cos(angle + p.d) + 1 + p.r / 2;
+                                    p.x += Math.sin(angle);
+                                    p.tiltAngle += p.tiltAngleIncr;
+                                    p.tilt = Math.sin(p.tiltAngle) * 15;
+                                }
+                                animId = requestAnimationFrame(draw);
+                            }
+
+                            draw();
+                            setTimeout(() => {
+                                cancelAnimationFrame(animId);
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            }, 3000);
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2230,6 +2478,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
                             'setup-screen': '/website-builder',
+                            'storefront-builder-screen': '/storefront-builder',
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
@@ -2238,6 +2487,67 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
+
+                        async function handleLogin(btn) {
+                            btn.textContent = 'Logging in...';
+                            const email = document.querySelector('input[type="email"]').value;
+                            const password = document.querySelector('input[type="password"]').value;
+                            try {
+                                const response = await fetch('/api/v1/auth/login', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ username: email, password: password })
+                                });
+                                if (response.ok) {
+                                    showScreen('dashboard-screen');
+                                } else {
+                                    document.getElementById('login-error').style.display = 'block';
+                                }
+                            } catch (e) {
+                                document.getElementById('login-error').style.display = 'block';
+                            } finally {
+                                btn.textContent = 'Login';
+                            }
+                        }
+
+                        let currentStep = 1;
+                        async function nextStep(stepId) {
+                            const prevStep = currentStep;
+                            if (typeof stepId === 'number' || !isNaN(stepId)) {
+                                currentStep = parseInt(stepId);
+                            }
+
+                            document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
+                                    d.style.display = 'none';
+                                }
+                            });
+                            const next = document.getElementById('step-' + stepId);
+                            if (next) next.style.display = 'block';
+
+                            if (stepId === 'generating') {
+                                // Connect to real database instead of using Future.delayed fake network mock
+                                try {
+                                    const res = await fetch('/api/v1/app/onboarding', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({})
+                                    });
+                                    if (prevStep === 3) nextStep(4);
+                                    else if (prevStep === 5) nextStep(6);
+                                    else nextStep('launch-ai');
+                                } catch (e) {
+                                    console.error(e);
+                                    if (prevStep === 3) nextStep(4);
+                                    else if (prevStep === 5) nextStep(6);
+                                    else nextStep('launch-ai');
+                                }
+                            }
+                        }
+
+                        async function generateAI() {
+                            nextStep('generating');
+                        }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');

@@ -5,3 +5,4 @@ pub mod wrapper;
 
 pub use ast::ASTParser;
 pub use manager::{SandboxManager, SandboxAdapter, SandboxPolicy};
+pub mod catalog;
