@@ -188,9 +188,9 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::MyPlanResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default");
+                let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+        let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
         let ai_used = self.hub.tracker().get_tenant_actions_used(tenant_id).await.unwrap_or(0);
@@ -227,9 +227,9 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::CostDashboardResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default");
+                let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+        let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
         let llm_cost_f64 = auditor.get_total_cost();
@@ -258,9 +258,10 @@ impl HubService for MyHubService {
         &self,
         request: tonic::Request<::server_ohc::orchestration::SelectPlanRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::SelectPlanResponse>, tonic::Status> {
-        let tenant_id = request.metadata().get("x-tenant-id")
-            .map(|v| v.to_str().unwrap_or("default"))
-            .unwrap_or("default").to_string();
+                let tenant_id = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
+            .map(|a| a.org_id.clone())
+            .filter(|id| !id.is_empty())
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing valid AuthInfo"))?;
         let req = request.into_inner();
 
         let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
@@ -1323,7 +1324,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             .await;
         }
 
-        let db_path = "ohc-standalone.db";
+        let cfg = crate::config::get();
+        let db_path = cfg.database_url.as_ref()
+            .and_then(|url| url.strip_prefix("sqlite://"))
+            .map(|s| s.split('?').next().unwrap_or("ohc-standalone.db"))
+            .unwrap_or("ohc-standalone.db");
         #[cfg(unix)]
         {
             use std::fs::OpenOptions;
