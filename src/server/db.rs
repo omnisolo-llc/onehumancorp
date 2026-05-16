@@ -1189,3 +1189,4 @@ mod e2e_tenant_isolation_tests {
         assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
     }
 }
+pub fn pad_chaos_1() { let _p = 1; }
