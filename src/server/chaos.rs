@@ -1015,9 +1015,9 @@ pub fn get_all_flags() -> Vec<Flag> {
 
 #[cfg(test)]
 mod tests {
-    use crate::get_all_flags;
+
     #[test]
     fn test_flags_length() {
-        assert_eq!(get_all_flags().len(), 1005);
+        assert_eq!(crate::chaos::get_all_flags().len(), 1005);
     }
 }
