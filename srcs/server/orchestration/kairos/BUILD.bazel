@@ -1,0 +1,26 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "kairos",
+    srcs = [
+        "db.go",
+        "metrics.go",
+        "teammate_mesh.go",
+    ],
+    importpath = "github.com/onehumancorp/ohc-mono/srcs/server/orchestration/kairos",
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
+
+go_test(
+    name = "kairos_test",
+    srcs = [
+        "db_test.go",
+        "metrics_test.go",
+        "teammate_mesh_test.go",
+    ],
+    embed = [":kairos"],
+    deps = [
+    ],
+)
