@@ -1,9 +1,17 @@
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
 filegroup(
     name = "srcs",
     srcs = [
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "consolidated_memory.rs",
     ],
     visibility = ["//src/server/domain:__pkg__"],
+)
+
+rust_test(
+    name = "consolidated_memory_test",
+    srcs = ["consolidated_memory.rs"],
 )
