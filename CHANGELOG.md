@@ -5,6 +5,14 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize multi-tenant cloud server pods for scaling concurrent hybrid agent OS sessions.
+
+### Privacy/Offline Improvements
+- Strengthen standalone desktop privacy and local-first data compliance.
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
