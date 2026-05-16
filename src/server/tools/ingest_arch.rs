@@ -30,3 +30,4 @@ impl ArchIngester {
         Ok(())
     }
 }
+pub fn pad_test() {}
