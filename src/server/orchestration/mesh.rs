@@ -77,14 +77,28 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
-        let msg_id = uuid::Uuid::new_v4().to_string();
-        let ack_topic = format!("mesh:ack:{}", msg_id);
+        use prost::Message as ProstMessage;
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let ack_topic = format!("system:job_ack:{}", job_id);
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
         let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
             let _ = tx.send(());
         })).await?;
+
+        tokio::task::yield_now().await;
+
+        let dispatch = crate::interop::protocol::proto::JobDispatch {
+            job_id: job_id.clone(),
+            tenant_id: "default".to_string(),
+            action_name: topic.to_string(),
+            payload: payload,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let mut retries = 0;
         let mut backoff = 200;
@@ -99,8 +113,8 @@ impl TeammateMesh for CentrifugeNode {
                 agent_id: "sys".to_string(),
                 action: topic.to_string(),
                 status: "pending".to_string(),
-                payload: payload.clone(),
-                msg_id: msg_id.clone(),
+                payload: buf.clone(),
+                msg_id: job_id.clone(),
             };
 
             if let Err(e) = self.transport.publish(topic, event).await {
@@ -127,35 +141,79 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn ping(&self) -> Result<(), String> {
-        self.publish_with_ack("mesh:health:ping", b"ping".to_vec()).await
+        use prost::Message as ProstMessage;
+        let node_id = uuid::Uuid::new_v4().to_string();
+        let ping = crate::interop::protocol::proto::HealthPing {
+            source_node_id: node_id.clone(),
+            current_mode: 0,
+            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+        };
+        let mut buf = Vec::new();
+        ping.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        let ack_topic = format!("system:health_ack:{}", node_id);
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let cancel = self.transport.subscribe(&ack_topic, Box::new(move |_msg| {
+            let _ = tx.send(());
+        })).await?;
+
+        self.transport.publish("system:health_ping", TeammateMeshEvent {
+            agent_id: "sys".to_string(),
+            action: "system:health_ping".to_string(),
+            status: "ok".to_string(),
+            payload: buf,
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        }).await?;
+
+        match tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await {
+            Ok(Some(_)) => {
+                cancel();
+                Ok(())
+            }
+            _ => {
+                cancel();
+                Err("Health ping timed out waiting for ack".to_string())
+            }
+        }
     }
 
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let transport_clone = self.transport.clone();
 
-        self.transport.subscribe("mesh:health:ping", Box::new(move |msg: Message| {
-            let msg_id = msg.msg_id.clone();
-            let ack_topic = format!("mesh:ack:{}", msg_id);
+        self.transport.subscribe("system:health_ping", Box::new(move |msg: Message| {
+            use prost::Message as ProstMessage;
+            if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+                let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
 
-            let t_clone = transport_clone.clone();
-            tokio::spawn(async move {
-                let _ = t_clone.publish(&ack_topic, TeammateMeshEvent {
-                    agent_id: "health_responder".to_string(),
-                    action: ack_topic.clone(),
-                    status: "ok".to_string(),
-                    payload: b"pong".to_vec(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                }).await;
-            });
+                let ack = crate::interop::protocol::proto::HealthAck {
+                    source_node_id: "sys".to_string(),
+                    target_node_id: ping.source_node_id.clone(),
+                    timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                };
+                let mut buf = Vec::new();
+                if ack.encode(&mut buf).is_ok() {
+                    let t_clone = transport_clone.clone();
+                    let ack_topic_clone = ack_topic.clone();
+                    tokio::spawn(async move {
+                        let _ = t_clone.publish(&ack_topic_clone, TeammateMeshEvent {
+                            agent_id: "health_responder".to_string(),
+                            action: ack_topic_clone.clone(),
+                            status: "ok".to_string(),
+                            payload: buf,
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        }).await;
+                    });
+                }
+            }
         })).await
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.publish("mesh:state:handoff", payload).await
+        self.publish("system:state_handoff", payload).await
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe("mesh:state:handoff", handler).await
+        self.subscribe("system:state_handoff", handler).await
     }
 }
 
