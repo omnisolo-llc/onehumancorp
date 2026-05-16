@@ -1,9 +1,7 @@
-# Scout: Tool Integration Research Q4
+# Tool Integration Research Report
 
-## Overview
-This report details the evaluation of 7 external tools across various categories to determine their viability for native integration into the OneHumanCorp (OHC) platform. The primary goal is to empower non-technical small business owners by abstracting away the complexity of third-party platforms while bringing their functionality natively into the OHC ecosystem.
-
----
+## Executive Summary
+This report details the evaluation of seven crucial tool categories designed to empower small business owners using the OHC platform. The primary objective is to identify integrations that reduce friction, automate manual workflows, and expand operational capabilities without requiring technical expertise from the user. We have evaluated tools across Social Media, Calendar & Scheduling, Email Marketing, Payment Processing, Shipping & Logistics, SMS Notifications, and Video Conferencing.
 
 ## 1. Social Media: TikTok Unified Inbox
 ### Title
@@ -60,8 +58,8 @@ While some small business owners use Google Calendar, a significant portion rely
 *   If the user deletes or modifies the event in Outlook, webhooks sync the changes back to OHC.
 
 ### Implementation Prompt
-Integrate Outlook Calendar via the Microsoft Graph API. Allow users to authenticate their Microsoft accounts. Fetch free/busy data to determine booking availability natively within OHC. Push new bookings to the Outlook calendar and listen for updates/cancellations.
-- **Acceptance Criteria**: Connect Outlook account. Free/busy times reflect on the booking widget. Booked appointments appear in Outlook.
+Implement a bidirectional sync between OHC and Microsoft Outlook Calendar. Ensure free/busy checks accurately reflect the external calendar and that OHC appointments correctly generate Outlook events.
+- **Acceptance Criteria**: Connect Outlook account. Booking an OHC service creates an event in Outlook. Deleting the event in Outlook frees the slot in OHC.
 
 ### Priority
 P1
