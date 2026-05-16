@@ -24,7 +24,7 @@ impl MyWizardService {
     }
 }
 
-#[tonic::async_trait]
+#[path = "wizard_impl.rs"]
 mod wizard_impl;
 
 

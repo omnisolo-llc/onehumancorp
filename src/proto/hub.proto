@@ -1685,5 +1685,3 @@ message WizardStateGetRequest {
 message WizardStateResponse {
   string state_json = 1;
 }
-
-message EmptyResponse {}

@@ -7,7 +7,8 @@ impl WizardService for MyWizardService {
 
     async fn persist_wizard_state(&self, request: Request<WizardStateRequest>) -> Result<Response<EmptyResponse>, Status> {
         let req = request.into_inner();
-        let pool = match ::server_common::db::get_pool().await {
+        let pool = crate::db::get_pool();
+        let pool = match Ok::<_, ()>(pool) {
             Ok(p) => p,
             Err(_) => return Err(Status::internal("No DB pool"))
         };
@@ -25,7 +26,8 @@ impl WizardService for MyWizardService {
     async fn get_wizard_state(&self, request: Request<WizardStateGetRequest>) -> Result<Response<WizardStateResponse>, Status> {
         use sqlx::Row;
         let req = request.into_inner();
-        let pool = match ::server_common::db::get_pool().await {
+        let pool = crate::db::get_pool();
+        let pool = match Ok::<_, ()>(pool) {
             Ok(p) => p,
             Err(_) => return Err(Status::internal("No DB pool"))
         };
