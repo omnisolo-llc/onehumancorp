@@ -3,7 +3,6 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "crdtmcp",
     srcs = [
-        "factory.go",
         "mcp.go",
     ],
     importpath = "github.com/onehumancorp/ohc/src/server/tools/crdtmcp",

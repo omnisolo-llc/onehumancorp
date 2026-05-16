@@ -2,6 +2,7 @@ package sync
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +14,7 @@ type mockCrdtStore struct {
 	inserted int
 }
 
-func (m *mockCrdtStore) InsertOrUpdateDelta(ctx interface{}, id, entityID, data string, updatedAt time.Time) error {
+func (m *mockCrdtStore) InsertOrUpdateDelta(ctx context.Context, id, entityID, data string, updatedAt time.Time) error {
 	m.inserted++
 	return nil
 }

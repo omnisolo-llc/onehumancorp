@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "restic",
+    srcs = ["provider.go"],
+    importpath = "onehumancorp/srcs/server/integrations/restic",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "restic_test",
+    srcs = ["provider_test.go"],
+    embed = [":restic"],
+)

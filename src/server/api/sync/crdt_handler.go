@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+	"context"
 )
 
 type CrdtDelta struct {
@@ -18,7 +19,7 @@ type CrdtSyncPayload struct {
 }
 
 type testStore interface {
-	InsertOrUpdateDelta(ctx interface{}, id, entityID, data string, updatedAt time.Time) error
+	InsertOrUpdateDelta(ctx context.Context, id, entityID, data string, updatedAt time.Time) error
 }
 
 func CrdtSyncHandler(store interface{}) http.HandlerFunc {
@@ -37,7 +38,7 @@ func CrdtSyncHandler(store interface{}) http.HandlerFunc {
 		s, ok := store.(testStore)
 		if ok {
 			for _, delta := range payload.Deltas {
-				s.InsertOrUpdateDelta(nil, delta.ID, delta.EntityID, delta.Data, delta.UpdatedAt)
+				s.InsertOrUpdateDelta(r.Context(), delta.ID, delta.EntityID, delta.Data, delta.UpdatedAt)
 			}
 		}
 

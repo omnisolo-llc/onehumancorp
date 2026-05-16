@@ -1,8 +1,14 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "sync",
     srcs = ["crdt_handler.go"],
     importpath = "github.com/onehumancorp/ohc/src/server/api/sync",
     visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "sync_test",
+    srcs = ["crdt_handler_test.go"],
+    embed = [":sync"],
 )

@@ -1,0 +1,34 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "telemetry",
+    srcs = [
+        "buffer_integration.go",
+        "harness_metrics.go",
+        "local_buffer.go",
+        "rag_sync_metrics.go",
+        "redact.go",
+    ],
+    importpath = "onehumancorp/srcs/server/telemetry",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "telemetry_test",
+    srcs = [
+        "harness_metrics_test.go",
+        "local_buffer_test.go",
+        "pii_test.go",
+        "pii_leakage_ast_test.go",
+    ],
+    data = ["//srcs/server:all_go_files"],
+    embed = [":telemetry"],
+    deps = [
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+    ],
+)

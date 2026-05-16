@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "searchmcp",
+    srcs = [
+        "cloud_provider.go",
+        "factory.go",
+        "local_provider.go",
+        "provider.go",
+        "server.go",
+    ],
+    importpath = "onehumancorp/srcs/server/tools/searchmcp",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "searchmcp_test",
+    srcs = ["server_test.go"],
+    embed = [":searchmcp"],
+    deps = [
+        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+        "@com_github_stretchr_testify//assert",
+    ],
+)
