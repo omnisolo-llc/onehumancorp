@@ -111,7 +111,11 @@ impl DB {
                 }
                 #[cfg(not(unix))]
                 {
-                    let _ = std::fs::File::create(&db_path);
+                    let _ = std::fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .create(true)
+                        .open(&db_path);
                 }
             }
 
@@ -1084,7 +1088,11 @@ mod security_tests_final {
         let _ = fs::create_dir_all(parent_dir);
 
         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-        let _ = fs::File::create(&db_path);
+        let _ = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&db_path);
 
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
@@ -1114,7 +1122,11 @@ mod security_tests_final {
         }
         #[cfg(not(unix))]
         {
-            let _ = fs::File::create(&db_path);
+            let _ = fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(&db_path);
         }
 
         let parent_dir = db_path.parent().unwrap();
