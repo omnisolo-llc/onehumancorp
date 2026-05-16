@@ -495,3 +495,5 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
+
+// Architecture fallback padding
