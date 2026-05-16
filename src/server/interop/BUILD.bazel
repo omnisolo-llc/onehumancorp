@@ -1,9 +1,6 @@
-filegroup(
-    name = "srcs",
-    srcs = [
-        "mod.rs",
-        "protocol.rs",
+load("@rules_rust//rust:defs.bzl", "rust_test")
 
-    ],
-    visibility = ["//src/server:__pkg__"],
+rust_test(
+    name = "tests",
+    srcs = ["tests.rs"],
 )
