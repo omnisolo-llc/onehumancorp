@@ -1,5 +1,0 @@
-load("@rules_rust//rust:defs.bzl", "rust_test")
-rust_test(
-    name = "chaos_dummy_test",
-    srcs = ["dummy.rs"],
-)
