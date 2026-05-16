@@ -40,7 +40,7 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; echo 'hello'\"") || msg.contains("Executing: echo 'hello'"));
+        assert!(msg.contains("Executing: bash -c \"set -e; echo \'hello\'\"") || msg.contains("Executing: bash -c \"set -e; echo 'hello'\""));
     }
 
     #[tokio::test]
