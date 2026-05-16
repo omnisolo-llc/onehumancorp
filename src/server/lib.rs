@@ -1623,18 +1623,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --sidebar-bg: #ffffff;
                         }
                         body { 
-                            font-family: 'Inter', 'Outfit', sans-serif; 
+                            font-family: 'Inter', sans-serif;
                             background: var(--bg); 
                             color: var(--text); 
                             margin: 0; 
                             line-height: 1.5;
                         }
+                        h1, h2, h3, h4, h5, h6 {
+                            font-family: 'Outfit', sans-serif;
+                        }
                         .glass { 
-                            background: var(--card-bg); 
-                            border: 1px solid var(--border); 
-                            border-radius: 8px; 
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                            background: rgba(255, 255, 255, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.3);
+                            border-radius: 12px;
+                            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
                             backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                         }
                         nav { 
                             padding: 0 40px; 
@@ -1712,6 +1716,60 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
+                        /* Mobile Sticky Nav */
+                        #mobile-bottom-nav {
+                            display: none;
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            background: rgba(255, 255, 255, 0.8);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            border-top: 1px solid var(--border);
+                            padding: 8px 16px;
+                            justify-content: space-around;
+                            align-items: center;
+                            z-index: 1000;
+                        }
+                        @media (max-width: 768px) {
+                            #mobile-bottom-nav { display: flex; }
+                            body { padding-bottom: 70px; }
+                            nav#main-nav { display: none !important; }
+                        }
+                        .nav-icon-btn {
+                            background: none;
+                            border: none;
+                            padding: 8px;
+                            margin: 0;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            color: var(--text-secondary);
+                            font-size: 10px;
+                            min-width: 64px;
+                        }
+                        .nav-icon-btn svg {
+                            width: 24px;
+                            height: 24px;
+                            margin-bottom: 4px;
+                        }
+                        .nav-icon-btn:hover, .nav-icon-btn.active {
+                            color: var(--primary);
+                        }
+
+                        /* Shimmer Loading */
+                        .shimmer {
+                            background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+                            background-size: 200% 100%;
+                            animation: shimmer 1.5s infinite;
+                            border-radius: 4px;
+                            color: transparent !important;
+                        }
+                        @keyframes shimmer {
+                            0% { background-position: 200% 0; }
+                            100% { background-position: -200% 0; }
+                        }
+
                         /* Login screen specific */
                         #login-screen {
                             max-width: 400px;
@@ -1723,11 +1781,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
-                        <a onclick="showScreen('setup-screen')">Setup Wizard</a>
-                        <a onclick="showScreen('api-screen')">Software</a>
+                        <a onclick="showScreen('dashboard-screen')">Overview</a>
+                        <a onclick="showScreen('agents-screen')">AI Assistants</a>
+                        <a onclick="showScreen('setup-screen')">Launch Site</a>
+                        <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
+
+                    <div id="mobile-bottom-nav">
+                        <button class="nav-icon-btn active" onclick="showScreen('dashboard-screen')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            Home
+                        </button>
+                        <button class="nav-icon-btn" onclick="showScreen('storefront-builder-screen')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Add Product
+                        </button>
+                        <button class="nav-icon-btn" onclick="alert('Viewing Orders...')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                            Orders
+                        </button>
+                        <button class="nav-icon-btn" onclick="showScreen('inbox-screen')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                            Messages
+                        </button>
+                        <button class="nav-icon-btn" onclick="showScreen('referral-dashboard-screen')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                            Share
+                        </button>
+                    </div>
 
 
                     <!-- Signup Screen -->
@@ -1742,27 +1823,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+                        <h1>Overview</h1>
+
+                        <div class="card glass" style="background: linear-gradient(135deg, var(--primary), #6366f1); color: white; padding: 32px; text-align: center;">
+                            <h2 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Today's Sales</h2>
+                            <div style="font-size: 48px; font-weight: 700; margin: 8px 0;">$142.50</div>
+                            <p style="margin: 0; font-size: 14px; opacity: 0.8;">+12% from yesterday</p>
+                        </div>
+
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
+                            <p>Your AI Assistants are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
-                            <button onclick="showScreen('agents-screen')">My Agents</button>
+                            <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
+                            <button onclick="showScreen('agents-screen')">My AI Assistants</button>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
-                            <button onclick="showScreen('agents-screen')">Manage Agents</button>
-                            <button onclick="showScreen('setup-screen')">Start Setup</button>
-                            <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
-                            <button onclick="showScreen('meetings-screen')">Agenda</button>
-                            <button onclick="showScreen('settings-screen')">Settings</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
-                            <button onclick="toggleMenu()">Menu</button>
+                            <h3>Quick Actions <button class="secondary" onclick="document.getElementById('quick-actions-hint').style.display='block'">?</button></h3>
+                            <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 6px; font-size: 13px; color: #4338ca; border: 1px solid #c7d2fe;">These buttons are shortcuts to your most common daily tasks.</p>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 16px;">
+                                <button onclick="showScreen('agents-screen')" style="width: 100%; margin: 0;">Manage Assistants</button>
+                                <button onclick="showScreen('setup-screen')" style="width: 100%; margin: 0;">Launch Site</button>
+                                <button onclick="showScreen('storefront-builder-screen')" style="width: 100%; margin: 0;">Edit Website</button>
+                                <button onclick="showScreen('meetings-screen')" style="width: 100%; margin: 0;">My Schedule</button>
+                                <button onclick="showScreen('settings-screen')" style="width: 100%; margin: 0;">Settings</button>
+                                <button onclick="showScreen('my-plan-screen')" style="width: 100%; margin: 0;">Plan & Billing</button>
+                                <button onclick="showScreen('referral-dashboard-screen')" style="width: 100%; margin: 0;">Get $20 Credit</button>
+                                <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'" style="width: 100%; margin: 0;">Connect Apps</button>
+                            </div>
                         </div>
                         <div id="facebook-integration" class="card glass">
                             <h3>📘 Facebook</h3>
@@ -1771,8 +1859,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Agent Activity</h3>
                             <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
+                                <div class="shimmer" style="height: 20px; margin-bottom: 8px; width: 80%;">Loading activity...</div>
+                                <div class="shimmer" style="height: 20px; margin-bottom: 8px; width: 60%;">Loading activity...</div>
                             </div>
+                            <script>
+                                setTimeout(() => {
+                                    document.getElementById('agent-activity-feed').innerHTML = '<p>No recent activity.</p>';
+                                }, 2000);
+                            </script>
                             <button onclick="simulateOrder()">Simulate Order</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
@@ -1894,38 +1988,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
+                        <h1>AI Assistants</h1>
                         <div class="card glass">
+                            <h3>How this works <button class="secondary" onclick="document.getElementById('agents-hint').style.display='block'">?</button></h3>
+                            <p id="agents-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 6px; font-size: 13px; color: #4338ca; border: 1px solid #c7d2fe;">Your AI Assistants are like digital employees that handle tasks like marketing, sales, and support automatically.</p>
                             <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <p>Status: Working for you</p>
+                            <button>Hire Assistant</button>
                         </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
-                    <!-- Setup Page -->
-                    <div id="setup-screen" class="screen">
-                        <h1>Business Setup</h1>
-                        <div class="card glass">
-                            <h3>Step 1: Details</h3>
-                            <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
-                        </div>
-                        <p>Built with OHC — Start your free business →</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
 
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <h1>Connect Tools</h1>
+                        <h2>Manage Connections</h2>
+                        <p>Link your favorite apps to work with your AI Assistants.</p>
+                        <div class="card glass">
+                            <h3>Available Tools <button class="secondary" onclick="alert('Connect your tools to automate tasks like posting to social media or updating inventory.')">?</button></h3>
+                            <p>Instagram, Facebook, Shopify, and more.</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Overview</button>
                     </div>
 
                     <!-- Settings Screen -->
@@ -2144,23 +2229,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
-                            <h1>Choose a Template</h1>
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="nextStep(9)">Modern</button>
                             <button class="secondary" onclick="nextStep(9)">Bold</button>
                         </div>
                         <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
-                            <br/><button onclick="nextStep(10)">Next →</button>
-                        </div>
-                        <div id="step-9" style="display: none;">
-                            <h1>Choose a Domain</h1>
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <br/><button onclick="nextStep(10)" style="margin-top: 16px;">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
@@ -2541,7 +2618,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                             }
 
-                            if (pathMap[id]) {
+                            if (pathMap[id] && window.location.protocol !== 'file:') {
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
@@ -2550,12 +2627,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
+
+                            // Sync mobile bottom nav
+                            document.querySelectorAll('.nav-icon-btn').forEach(btn => {
+                                btn.classList.remove('active');
+                                if (btn.getAttribute('onclick').includes(id)) {
+                                    btn.classList.add('active');
+                                }
+                            });
                         }
 
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+
+                            // Sync mobile bottom nav on load
+                            document.querySelectorAll('.nav-icon-btn').forEach(btn => {
+                                btn.classList.remove('active');
+                                if (btn.getAttribute('onclick').includes(screenId)) {
+                                    btn.classList.add('active');
+                                }
+                            });
                         };
                     </script>
                 </body>
