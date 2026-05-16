@@ -112,7 +112,7 @@ pub struct OIDCConfig {
 
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
-    roles: RwLock<HashMap<String, Role>>,
+
     by_name: RwLock<HashMap<TenantKey, String>>,
     by_email: RwLock<HashMap<TenantKey, String>>,
     by_oidc: RwLock<HashMap<TenantKey, String>>,
@@ -200,7 +200,7 @@ impl Store {
 
         let store = Store {
             users: RwLock::new(HashMap::new()),
-            roles: RwLock::new(roles),
+
             by_name: RwLock::new(HashMap::new()),
             by_email: RwLock::new(HashMap::new()),
             by_oidc: RwLock::new(HashMap::new()),
