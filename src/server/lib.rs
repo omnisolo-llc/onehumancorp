@@ -2203,6 +2203,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
+                        <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center;">
+                            <a href="/signup" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9em;">Built with OHC — Start your free business →</a>
+                        </div>
                     </div>
 
                     <!-- Login Screen -->
@@ -2238,6 +2241,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
+
+                        function nextStep(step) {
+                            if (step === 'generating') {
+                                document.querySelectorAll('#setup-screen > div').forEach(d => d.style.display = 'none');
+                                document.getElementById('step-generating').style.display = 'block';
+                                setTimeout(() => {
+                                    document.querySelectorAll('#setup-screen > div').forEach(d => d.style.display = 'none');
+                                    document.getElementById('step-launch-ai').style.display = 'block';
+                                }, 1500);
+                                return;
+                            }
+                            if (step === 'ai') {
+                                document.querySelectorAll('#setup-screen > div').forEach(d => d.style.display = 'none');
+                                document.getElementById('step-ai').style.display = 'block';
+                                return;
+                            }
+                            document.querySelectorAll('#setup-screen > div').forEach(d => d.style.display = 'none');
+                            const target = document.getElementById('step-' + step);
+                            if (target) target.style.display = 'block';
+                        }
+
+                        function generateAI() {
+                            nextStep('generating');
+                        }
+
+                        function handleLogin(btn) {
+                            btn.textContent = 'Logging in...';
+                            setTimeout(() => {
+                                showScreen('dashboard-screen');
+                            }, 500);
+                        }
 
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
