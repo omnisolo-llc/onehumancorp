@@ -85,7 +85,7 @@ pub fn all_tools(
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
-    observation_store: Arc<dashmap::DashMap<String, String>>,
+    context_manager: Arc<tokio::sync::Mutex<ohc_builtin_agent_core::context::ContextManager>>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::RealCommandRunner);
     let mut tools = vec![
@@ -119,7 +119,7 @@ pub fn all_tools(
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
         generative_visibility::generative_visibility_tool(),
         magentic::magentic_tool(task_store.clone()),
-        recall::recall_observation_tool(observation_store),
+        recall::recall_observation_tool(context_manager),
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
     ];

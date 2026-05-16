@@ -250,7 +250,7 @@ pub struct Agent {
     pub progress: Arc<AgentProgress>,
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
-    pub observation_store: Arc<dashmap::DashMap<String, String>>,
+    pub context_manager: Arc<tokio::sync::Mutex<crate::context::ContextManager>>,
 }
 
 impl Agent {
@@ -264,7 +264,7 @@ impl Agent {
             progress: Arc::new(AgentProgress::default()),
             memory_store: None,
             checkpointer: None,
-            observation_store: Arc::new(dashmap::DashMap::new()),
+            context_manager: Arc::new(tokio::sync::Mutex::new(crate::context::ContextManager::new())),
         }
     }
 
@@ -477,11 +477,13 @@ impl Agent {
         let llm_tools = tools_def_arc.clone();
         let llm_client = llm.clone();
         let llm_sys = system_prompt.clone();
+        let context_manager_llm = self.context_manager.clone();
         graph.add_node("llm_call", move |state| {
             let llm_client_c = llm_client.clone();
             let llm_sys_c = llm_sys.clone();
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
+            let cm_llm = context_manager_llm.clone();
             Box::pin(async move {
                 let msgs_val = state.get("messages").unwrap().as_array().unwrap();
                 let mut msgs = vec![];
@@ -521,14 +523,23 @@ impl Agent {
                         tool_calls,
                         tool_results,
                         response_id: None,
-                previous_response_id: None,
+                        previous_response_id: None,
                     });
                 }
+
+                let mut cm = cm_llm.lock().await;
+                cm.set_messages(msgs);
+                let final_msgs = cm.get_messages_for_llm(
+                    llm_cfg_c.enable_observation_masking,
+                    llm_cfg_c.observation_masking_threshold,
+                    llm_cfg_c.observation_masking_size_limit,
+                    llm_cfg_c.enable_acon_context_strategy,
+                );
 
                 let req = crate::types::ChatRequest {
                     model: llm_cfg_c.model.clone(),
                     system: llm_sys_c.clone(),
-                    messages: msgs,
+                    messages: final_msgs,
                     tools: llm_tools_c.to_vec(),
                     max_tokens: llm_cfg_c.max_tokens,
                     temperature: llm_cfg_c.temperature,
@@ -1115,7 +1126,7 @@ impl Agent {
             progress: self.progress.clone(),
             memory_store: self.memory_store.clone(),
             checkpointer: self.checkpointer.clone(),
-            observation_store: self.observation_store.clone(),
+            context_manager: self.context_manager.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1144,7 +1155,7 @@ impl Agent {
                 progress: self.progress.clone(),
                 memory_store: Some(ltm.clone()),
                 checkpointer: self.checkpointer.clone(),
-                observation_store: self.observation_store.clone(),
+                context_manager: self.context_manager.clone(),
             };
             self_with_memory = &owned_agent;
         }
@@ -1323,26 +1334,13 @@ impl Agent {
                 message_count: messages.len(),
             });
 
-            let mut final_messages = messages.clone();
-
-            // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
-            if final_cfg.enable_acon_context_strategy {
-                let msg_count = final_messages.len();
-                if msg_count > 3 {
-                    // We preserve the last 2 messages (usually assistant + tool results)
-                    // For older Tool role messages, we strip the raw tool output but keep reasoning
-                    let threshold = msg_count - 2;
-                    for i in 0..threshold {
-                        if final_messages[i].role == Role::Tool {
-                            for tr in &mut final_messages[i].tool_results {
-                                if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
-                                    tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            self.context_manager.lock().await.set_messages(messages.clone());
+            let mut final_messages = self.context_manager.lock().await.get_messages_for_llm(
+                final_cfg.enable_observation_masking,
+                final_cfg.observation_masking_threshold,
+                final_cfg.observation_masking_size_limit,
+                final_cfg.enable_acon_context_strategy,
+            );
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
@@ -1717,7 +1715,6 @@ impl Agent {
                     Ok(r) => {
                         tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
-                        self.observation_store.insert(tc.id.clone(), r.clone());
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -1890,7 +1887,6 @@ impl Agent {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
-                            self.observation_store.insert(tc.id.clone(), r.clone());
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
@@ -2020,41 +2016,7 @@ impl Agent {
                 };
             }
 
-            if final_cfg.enable_observation_masking {
-                // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
-                // but keep the `tool_calls` themselves visible so the model remembers what it did.
-                // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
-                let msg_count = messages.len();
-                for i in 0..msg_count {
-                    if messages[i].role == Role::Tool {
-                        let age = msg_count - i;
-                        if age > final_cfg.observation_masking_threshold {
-                            for tr in &mut messages[i].tool_results {
-                                if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
-                                    let bytes = tr.content.len();
-                                    if bytes > final_cfg.observation_masking_size_limit {
-                                        let preview_chars = 100;
-                                        let char_count = tr.content.chars().count();
-                                        if char_count > preview_chars * 2 {
-                                            let start_preview: String = tr.content.chars().take(preview_chars).collect();
-                                            let end_preview: String = tr.content.chars().skip(char_count - preview_chars).collect();
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, start_preview, end_preview, tr.tool_call_id
-                                            );
-                                        } else {
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, tr.tool_call_id
-                                            );
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Observation masking and ACON are now handled centrally by ContextManager in get_messages_for_llm.
 
             // Append tool results as a user turn.
             messages.push(Message {

@@ -9,6 +9,7 @@ rust_library(
         "auth.rs",
         "budget.rs",
         "caveman.rs",
+        "context.rs",
         "core.rs",
 
         "pubsub.rs",
@@ -23,6 +24,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:chrono",
+        "@crates//:dashmap",
         "@crates//:hmac",
         "@crates//:once_cell",
         "@crates//:regex",

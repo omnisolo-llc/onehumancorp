@@ -7,7 +7,6 @@ mod tests {
     use crate::tools::Tool;
     use std::sync::Arc;
     use tokio::sync::Mutex;
-    use dashmap::DashMap;
 
     struct MockLlm {
         responses: Mutex<Vec<ChatResponse>>,
@@ -40,7 +39,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_recency_aware_masking() {
-        let observation_store = Arc::new(DashMap::new());
         let tool = Tool {
             name: "long_tool".to_string(),
             description: "returns long string".to_string(),
@@ -48,10 +46,6 @@ mod tests {
             parameters: serde_json::json!({}),
             execute: Arc::new(SimpleTool),
         };
-
-        // We want a sequence:
-        // 1. Call tool (Result is NEW, should NOT be masked even if large)
-        // 2. Another turn (Tool result is age 2, threshold is 1, should be masked if large)
 
         let client = Arc::new(MockLlm {
             responses: Mutex::new(vec![
@@ -84,8 +78,7 @@ mod tests {
             ]),
         });
 
-        let mut agent = Agent::new(client, vec![tool]);
-        agent.observation_store = observation_store.clone();
+        let agent = Agent::new(client, vec![tool]);
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_observation_masking = true;
@@ -96,9 +89,10 @@ mod tests {
         let res = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
         assert!(res.is_ok());
 
-        // Check if observation was stored
-        assert!(observation_store.contains_key("call_1"));
-        let full_content = observation_store.get("call_1").unwrap().clone();
+        // Check if observation was stored in ContextManager
+        let cm = agent.context_manager.lock().await;
+        assert!(cm.observation_store.contains_key("call_1"));
+        let full_content = cm.observation_store.get("call_1").unwrap().clone();
         assert!(full_content.contains("very long observation"));
     }
 
@@ -127,10 +121,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_recall_observation_tool() {
-        let observation_store = Arc::new(DashMap::new());
-        observation_store.insert("secret_id".to_string(), "The lost city is at 42, 42".to_string());
+        let agent = Agent::new(Arc::new(MockLlm { responses: Mutex::new(vec![]) }), vec![]);
+        {
+            let cm = agent.context_manager.lock().await;
+            cm.observation_store.insert("secret_id".to_string(), "The lost city is at 42, 42".to_string());
+        }
 
-        let tool = recall_observation_tool(observation_store.clone());
+        let tool = recall_observation_tool(agent.context_manager.clone());
         let args = serde_json::json!({"tool_call_id": "secret_id"});
 
         let result = tool.execute.execute(args).await.unwrap();
@@ -143,7 +140,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_masking_logic_depth() {
-        let observation_store = Arc::new(DashMap::new());
         let client = Arc::new(RecordingMockLlm {
             requests: Mutex::new(vec![]),
             responses: Mutex::new(vec![
@@ -190,18 +186,17 @@ mod tests {
             }
         }
 
-        let mut agent = Agent::new(client.clone(), vec![Tool {
+        let agent = Agent::new(client.clone(), vec![Tool {
             name: "t".to_string(),
             description: "t".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
             execute: Arc::new(FixedTool),
         }]);
-        agent.observation_store = observation_store;
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_observation_masking = true;
-        cfg.observation_masking_threshold = 1; // Only mask if older than 2 messages
+        cfg.observation_masking_threshold = 1; // Only mask if older than 1 messages
         cfg.observation_masking_size_limit = 5; // Content "Long output..." is definitely > 5
 
         let _ = agent.run(&cfg, "Start", &mut |_| {}).await;
@@ -209,11 +204,11 @@ mod tests {
         let reqs = client.requests.lock().await;
         // Turn 1: User prompt
         // Turn 2: history has User, Assistant(Call 1), Tool(Result 1).
-        //   Msg count is 3. i=2 (Tool Result 1). Age = 3-2 = 1. 1 <= 2, so NOT masked.
+        //   Msg count is 3. i=2 (Tool Result 1). Age = 3-2 = 1. 1 <= 1, so NOT masked.
         // Turn 3: history has User, Assistant(Call 1), Tool(Result 1), Assistant(Call 2), Tool(Result 2).
         //   Msg count is 5.
-        //   i=2 (Tool Result 1). Age = 5-2 = 3. 3 > 2, so MASKED.
-        //   i=4 (Tool Result 2). Age = 5-4 = 1. 1 <= 2, so NOT masked.
+        //   i=2 (Tool Result 1). Age = 5-2 = 3. 3 > 1, so MASKED.
+        //   i=4 (Tool Result 2). Age = 5-4 = 1. 1 <= 1, so NOT masked.
 
         let turn3_msgs = &reqs[2].messages;
         let tr1 = &turn3_msgs[2];

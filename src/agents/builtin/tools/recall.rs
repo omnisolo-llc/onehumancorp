@@ -1,12 +1,12 @@
 use ohc_builtin_agent_core::types::ToolError;
+use ohc_builtin_agent_core::context::ContextManager;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use dashmap::DashMap;
 
 use super::{Tool, ToolExecutor};
 
 pub struct RecallObservationExecutor {
-    pub observation_store: Arc<DashMap<String, String>>,
+    pub context_manager: Arc<tokio::sync::Mutex<ContextManager>>,
 }
 
 #[async_trait::async_trait]
@@ -19,14 +19,15 @@ impl ToolExecutor for RecallObservationExecutor {
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("recall_observation: tool_call_id is required".to_string()))?;
 
-        match self.observation_store.get(tool_call_id) {
-            Some(content) => Ok(content.clone()),
+        let cm = self.context_manager.lock().await;
+        match cm.recall_observation(tool_call_id) {
+            Some(content) => Ok(content),
             None => Err(ToolError::LlmRecoverable(format!("recall_observation: Tool call ID '{}' not found in observation store. It may have expired or was never stored.", tool_call_id))),
         }
     }
 }
 
-pub fn recall_observation_tool(observation_store: Arc<DashMap<String, String>>) -> Tool {
+pub fn recall_observation_tool(context_manager: Arc<tokio::sync::Mutex<ContextManager>>) -> Tool {
     Tool {
         name: "RecallObservation".to_string(),
         description: "Retrieves the full original output of a previously masked tool observation. \
@@ -43,6 +44,6 @@ pub fn recall_observation_tool(observation_store: Arc<DashMap<String, String>>) 
             },
             "required": ["tool_call_id"]
         }),
-        execute: Arc::new(RecallObservationExecutor { observation_store }),
+        execute: Arc::new(RecallObservationExecutor { context_manager }),
     }
 }
