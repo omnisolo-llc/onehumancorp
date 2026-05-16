@@ -1455,6 +1455,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .route("/api/v1/help/chat", axum::routing::post(crate::help_chat_handler))
+        .route("/api/v1/help/videos", axum::routing::get(crate::get_video_tutorials_handler))
         .with_state(hub.clone());
 
     let app = axum::Router::new()
@@ -1718,6 +1720,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+
+                        /* Documentation CSS */
+                        .tooltip-container { position: relative; display: inline-block; cursor: help; }
+                        .tooltip-container .tooltip-text { visibility: hidden; width: 200px; background-color: var(--text); color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; z-index: 1000; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 14px; pointer-events: none; }
+                        .tooltip-container:hover .tooltip-text, .tooltip-container:active .tooltip-text { visibility: visible; opacity: 1; }
+                        .tour-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: none; }
+                        .tour-highlight { position: absolute; z-index: 9999; border: 2px solid var(--primary); border-radius: 4px; pointer-events: none; display: none; }
+                        .tour-bubble { position: absolute; z-index: 10000; background: white; padding: 15px; border-radius: 8px; max-width: 250px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; }
+                        .help-chat-fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9997; }
+                        .help-chat-widget { position: fixed; bottom: 90px; right: 20px; width: 300px; background: white; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; flex-direction: column; z-index: 9997; }
+                        .help-chat-header { background: var(--primary); color: white; padding: 10px; border-top-left-radius: 8px; border-top-right-radius: 8px; font-weight: 600; display: flex; justify-content: space-between; }
+                        .help-chat-body { padding: 10px; height: 200px; overflow-y: auto; font-size: 14px; }
+                        .help-chat-input-container { display: flex; border-top: 1px solid var(--border); }
+                        .help-chat-input { flex-grow: 1; border: none; padding: 10px; outline: none; }
+                        .help-chat-send { background: none; border: none; color: var(--primary); cursor: pointer; padding: 10px; font-weight: 600; }
+
                     </style>
                 </head>
                 <body>
@@ -1759,6 +1777,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <button onclick="showScreen('changelog-screen')">What's New</button>
+                            <div class="nav-divider" style="margin: 10px 0; border-top: 1px solid var(--border);"></div>
+                            <button onclick="showScreen('help-screen')">❓ Help</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -1775,6 +1796,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button class="secondary" onclick="showScreen('api_docs_screen')">View API Reference</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
                                 <button onclick="alert('Tutorial started')">Video Tutorials</button>
@@ -1916,7 +1938,102 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                     <!-- API Screen -->
-                    <div id="api-screen" class="screen">
+
+                        <div id="help-screen" class="screen" style="display: none;">
+                            <div id="article-viewer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 10000; align-items:center; justify-content:center;">
+                                <div class="card" style="width: 80%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                                    <h2 id="article-title">Title</h2>
+                                    <div id="article-content" style="margin-bottom: 20px;">Content</div>
+                                    <button class="secondary" onclick="document.getElementById('article-viewer').style.display='none'">Close</button>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <h2>Help Center</h2>
+                                <p>Search for answers or browse topics below.</p>
+                                <input type="text" placeholder="Search for help..." style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 4px;">
+
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                                    <div class="card" style="border: 1px solid var(--border); box-shadow: none;">
+                                        <h3>Getting Started</h3>
+                                        <ul>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('welcome')">Welcome to One Human Corp</a></li>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('profile')">Setting up your profile</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="card" style="border: 1px solid var(--border); box-shadow: none;">
+                                        <h3>My Store</h3>
+                                        <ul>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('storefront')">Setting up your storefront</a></li>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('products')">Adding products</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="card" style="border: 1px solid var(--border); box-shadow: none;">
+                                        <h3>Payments</h3>
+                                        <ul>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('payment')">Accepting your first payment</a></li>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('refunds')">Handling refunds</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="card" style="border: 1px solid var(--border); box-shadow: none;">
+                                        <h3>AI Agents</h3>
+                                        <ul>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('activate')">Activating your AI Support Agent</a></li>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('training')">Training your agent</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="card" style="border: 1px solid var(--border); box-shadow: none;">
+                                        <h3>Marketing</h3>
+                                        <ul>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('social')">Creating a social media post</a></li>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('email')">Email campaigns</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="card" style="border: 1px solid var(--border); box-shadow: none;">
+                                        <h3>Account & Billing</h3>
+                                        <ul>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('subscription')">Managing your subscription</a></li>
+                                            <li><a href="javascript:void(0)" onclick="openArticle('payment_method')">Updating payment methods</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <h3 style="margin-top: 30px;">Interactive Tours</h3>
+                                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                                    <button class="secondary" onclick="startTour('setup-store')">Tour: Setup Store</button>
+                                    <button class="secondary" onclick="startTour('first-payment')">Tour: First Payment</button>
+                                    <button class="secondary" onclick="startTour('ai-agent')">Tour: AI Agent</button>
+                                </div>
+
+                                <h3 style="margin-top: 30px;">Video Tutorials</h3>
+                                <div id="video-tutorials-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                    Loading videos...
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="api_docs_screen" class="screen" style="display: none; width: 100%; height: 100vh;">
+                            <div class="card" style="height: 100%; padding: 0;">
+                                <div style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                                    <h2>API Reference</h2>
+                                    <button class="secondary" onclick="showScreen('api-screen')">Back to Software</button>
+                                </div>
+                                <div id="swagger-ui" style="height: calc(100% - 80px); overflow-y: auto;"></div>
+                            </div>
+                        </div>
+
+                        <div id="changelog-screen" class="screen" style="display: none;">
+                            <div class="card">
+                                <h2>What is New</h2>
+                                <ul>
+                                    <li><strong>v1.2.0:</strong> Added new interactive Help Center and tooltips. <a href="https://example.com/changelog">Read full changelog</a></li>
+                                    <li><strong>v1.1.5:</strong> Improved AI Agent response times.</li>
+                                    <li><strong>v1.1.0:</strong> Launched the Onboarding Wizard.</li>
+                                </ul>
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                            </div>
+                        </div>
+
+                        <div id="api-screen" class="screen">
                         <h1>Connect Custom Software</h1>
                         <h1>Custom Integration</h1>
                         <h1>Custom Software</h1>
@@ -2220,6 +2337,199 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+                        // Routing Additions
+                        pathMap['help-screen'] = '/help';
+                        pathMap['api_docs_screen'] = '/api-docs';
+                        pathMap['changelog-screen'] = '/changelog';
+
+                        const TOOLTIP_REGISTRY = {
+                            "button:contains('Launch My Business')": "Takes you to the main dashboard to view your progress",
+                            "button:contains('Check Inbox')": "View all incoming customer messages and AI replies",
+                            "button:contains('Manage Agents')": "Configure your AI support and marketing agents here",
+                            "button[onclick*='integrations']": "Connect OHC to external services like Facebook",
+                            "button:contains('Upgrade Plan')": "Increase your AI credits and limits",
+                            "button:contains('Start Business Setup')": "The recommended first step to get your store online",
+                            "button:contains('Add Product')": "Create a new product listing in your store"
+                        };
+
+                        function initTooltips() {
+                            for (const [selector, text] of Object.entries(TOOLTIP_REGISTRY)) {
+                                let elements = [];
+                                if (selector.includes(":contains")) {
+                                    const match = selector.match(/(.*):contains\('(.*)'\)/);
+                                    if (match) {
+                                        const tag = match[1] || "*";
+                                        const search = match[2];
+                                        document.querySelectorAll(tag).forEach(el => {
+                                            if (el.textContent.includes(search)) elements.push(el);
+                                        });
+                                    }
+                                } else {
+                                    elements = document.querySelectorAll(selector);
+                                }
+
+                                elements.forEach(el => {
+                                    if (!el.hasAttribute('data-tooltip')) {
+                                        el.setAttribute('data-tooltip', text);
+                                    }
+                                });
+                            }
+
+                            document.querySelectorAll('[data-tooltip]').forEach(el => {
+                                if (!el.classList.contains('tooltip-container')) {
+                                    el.classList.add('tooltip-container');
+                                    const text = document.createElement('span');
+                                    text.className = 'tooltip-text';
+                                    text.innerText = el.getAttribute('data-tooltip');
+                                    el.appendChild(text);
+                                }
+                            });
+                        }
+
+                        async function loadVideos() {
+                            try {
+                                const response = await fetch('/api/v1/help/videos');
+                                const videos = await response.json();
+                                const container = document.getElementById('video-tutorials-container');
+                                if (container) {
+                                    container.innerHTML = videos.map(v => `
+                                        <div style="background: #000; border-radius: 8px; overflow: hidden; aspect-ratio: 9/16; position: relative;">
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center;">▶️<br>${v.title}</div>
+                                        </div>
+                                    `).join('');
+                                }
+                            } catch(e) {
+                                console.error('Failed to load videos', e);
+                            }
+                        }
+
+                        function loadSwaggerUI() {
+                            if (!document.getElementById('swagger-script')) {
+                                const script = document.createElement('script');
+                                script.id = 'swagger-script';
+                                script.src = 'https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js';
+                                script.onload = () => {
+                                    if(window.SwaggerUIBundle) {
+                                        window.ui = SwaggerUIBundle({
+                                            url: "https://petstore.swagger.io/v2/swagger.json",
+                                            dom_id: '#swagger-ui',
+                                        });
+                                    }
+                                };
+                                document.head.appendChild(script);
+
+                                const link = document.createElement('link');
+                                link.rel = 'stylesheet';
+                                link.href = 'https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css';
+                                document.head.appendChild(link);
+                            }
+                        }
+
+                        const ARTICLES = {
+                            "welcome": { title: "Welcome to One Human Corp", content: "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
+                            "profile": { title: "Setting up your profile", content: "Go to settings to update your name, business details, and contact info." },
+                            "storefront": { title: "Setting up your storefront", content: "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
+                            "products": { title: "Adding products", content: "Click Add Product, fill in the details, and hit save." },
+                            "payment": { title: "Accepting your first payment", content: "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
+                            "refunds": { title: "Handling refunds", content: "Go to the Orders tab, select an order, and click Refund." },
+                            "activate": { title: "Activating your AI Support Agent", content: "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
+                            "training": { title: "Training your agent", content: "Provide example conversations to help your agent learn." },
+                            "social": { title: "Creating a social media post", content: "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post." },
+                            "email": { title: "Email campaigns", content: "Send bulk emails to your customers easily." },
+                            "subscription": { title: "Managing your subscription", content: "Upgrade or downgrade your plan in the Billing section." },
+                            "payment_method": { title: "Updating payment methods", content: "Add a new credit card in the Billing settings." }
+                        };
+                        function openArticle(key) {
+                            const article = ARTICLES[key];
+                            if(article) {
+                                document.getElementById('article-title').innerText = article.title;
+                                document.getElementById('article-content').innerText = article.content;
+                                document.getElementById('article-viewer').style.display = 'flex';
+                            }
+                        }
+
+                        const tours = {
+                            'setup-store': [
+                                { selector: 'a[onclick*="agents-screen"]', text: 'Click here to access your Agent settings.' },
+                                { selector: 'a[onclick*="setup-screen"]', text: 'This starts the Setup Wizard to build your store.' }
+                            ],
+                            'first-payment': [
+                                { selector: 'button[onclick*="pricing-screen"]', text: 'To accept payments, ensure your billing plan is active.' },
+                                { selector: 'a[onclick*="dashboard-screen"]', text: 'Go back to your dashboard to see recent transactions.' }
+                            ],
+                            'ai-agent': [
+                                { selector: 'a[onclick*="agents-screen"]', text: 'Manage your AI agents here.' },
+                                { selector: 'button[onclick*="inbox-screen"]', text: 'Check your inbox to see what the AI has answered.' }
+                            ]
+                        };
+                        let currentTour = null;
+                        let currentTourStep = 0;
+                        function startTour(flowName) {
+                            if (tours[flowName]) {
+                                currentTour = tours[flowName];
+                                currentTourStep = 0;
+                                document.getElementById('tour-overlay').style.display = 'block';
+                                showTourStep();
+                            }
+                        }
+                        function showTourStep() {
+                            if (!currentTour || currentTourStep >= currentTour.length) {
+                                document.getElementById('tour-overlay').style.display = 'none';
+                                document.getElementById('tour-highlight').style.display = 'none';
+                                document.getElementById('tour-bubble').style.display = 'none';
+                                currentTour = null;
+                                return;
+                            }
+                            const step = currentTour[currentTourStep];
+                            const el = document.querySelector(step.selector);
+                            if (el) {
+                                const rect = el.getBoundingClientRect();
+                                const hl = document.getElementById('tour-highlight');
+                                hl.style.display = 'block';
+                                hl.style.top = (rect.top - 5) + 'px';
+                                hl.style.left = (rect.left - 5) + 'px';
+                                hl.style.width = (rect.width + 10) + 'px';
+                                hl.style.height = (rect.height + 10) + 'px';
+                                const bubble = document.getElementById('tour-bubble');
+                                bubble.style.display = 'block';
+                                bubble.style.top = (rect.bottom + 10) + 'px';
+                                bubble.style.left = rect.left + 'px';
+                                bubble.innerHTML = step.text + '<br><button onclick="currentTourStep++; showTourStep()" style="margin-top:10px; padding: 5px 10px; font-size: 12px;">Next</button>';
+                            } else {
+                                currentTourStep++;
+                                showTourStep();
+                            }
+                        }
+
+                        function toggleHelpChat() {
+                            const w = document.getElementById('help-chat-widget');
+                            w.style.display = w.style.display === 'none' || w.style.display === '' ? 'flex' : 'none';
+                        }
+
+                        async function sendHelpMessage() {
+                            const input = document.getElementById('help-chat-input');
+                            const val = input.value.trim();
+                            if (!val) return;
+
+                            const body = document.getElementById('help-chat-body');
+                            body.innerHTML += `<div style="text-align:right; margin-bottom:10px;"><strong>You:</strong> ${val}</div>`;
+                            input.value = '';
+
+                            try {
+                                const response = await fetch('/api/v1/help/chat', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ message: val })
+                                });
+                                const data = await response.json();
+                                body.innerHTML += `<div style="text-align:left; margin-bottom:10px; color:var(--primary);"><strong>Agent:</strong> ${data.reply}</div>`;
+                            } catch(e) {
+                                body.innerHTML += `<div style="text-align:left; margin-bottom:10px; color:red;"><strong>Error:</strong> Failed to connect to Help Agent.</div>`;
+                            }
+                            body.scrollTop = body.scrollHeight;
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2323,22 +2633,95 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'help-screen' || id === 'api_docs_screen' || id === 'changelog-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
                         }
 
+
                         window.onload = () => {
+                            try { initTooltips(); } catch(e) { console.error('tooltips', e); }
+                            try { loadVideos(); } catch(e) { console.error('videos', e); }
+                            try { loadSwaggerUI(); } catch(e) { console.error('swagger', e); }
+
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
                     </script>
+
+                    <div id="tour-overlay" class="tour-overlay"></div>
+                    <div id="tour-highlight" class="tour-highlight"></div>
+                    <div id="tour-bubble" class="tour-bubble"></div>
+
+                    <div class="help-chat-fab" onclick="toggleHelpChat()">?</div>
+                    <div id="help-chat-widget" class="help-chat-widget">
+                        <div class="help-chat-header">
+                            Ask Anything
+                            <span style="cursor:pointer;" onclick="toggleHelpChat()">X</span>
+                        </div>
+                        <div id="help-chat-body" class="help-chat-body">
+                            <div style="margin-bottom:10px;"><strong>Agent:</strong> Hi! How can I help you today?</div>
+                        </div>
+                        <div class="help-chat-input-container">
+                            <input type="text" id="help-chat-input" class="help-chat-input" placeholder="Type your question...">
+                            <button class="help-chat-send" onclick="sendHelpMessage()">Send</button>
+                        </div>
+                    </div>
+
                 </body>
             </html>
         "#,
     };
     axum::response::Html(content)
+}
+
+
+use axum::{Json, extract::State};
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize)]
+pub struct HelpChatRequest {
+    message: String,
+}
+
+#[derive(Serialize)]
+pub struct HelpChatResponse {
+    reply: String,
+}
+
+pub async fn help_chat_handler(
+    Json(req): Json<HelpChatRequest>,
+) -> Json<HelpChatResponse> {
+    let reply = format!("I found some information regarding '{}'. <a href=\"javascript:void(0)\" onclick=\"showScreen('help-screen'); toggleHelpChat();\">Read the full article →</a>", req.message);
+    Json(HelpChatResponse { reply })
+}
+
+#[derive(Serialize)]
+pub struct VideoTutorial {
+    id: String,
+    title: String,
+    url: String,
+}
+
+pub async fn get_video_tutorials_handler() -> Json<Vec<VideoTutorial>> {
+    Json(vec![
+        VideoTutorial {
+            id: "vid_1".to_string(),
+            title: "Setup Store".to_string(),
+            url: "https://example.com/vid1.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: "vid_2".to_string(),
+            title: "First Payment".to_string(),
+            url: "https://example.com/vid2.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: "vid_3".to_string(),
+            title: "AI Agent".to_string(),
+            url: "https://example.com/vid3.mp4".to_string(),
+        },
+    ])
 }
