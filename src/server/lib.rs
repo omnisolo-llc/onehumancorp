@@ -1749,6 +1749,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Inbox</button>
                             <button onclick="showScreen('agents-screen')">My Agents</button>
                         </div>
+
+                        <!-- Staff Updates Section -->
+                        <div class="card glass" id="staff-updates-section">
+                            <h3>Staff Updates</h3>
+                            <p>Agents surfacing drafts and summaries for your review.</p>
+                            <div id="staff-updates-list">
+                                <p>Loading updates...</p>
+                            </div>
+                        </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
@@ -1891,11 +1900,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page -->
                     <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
+                        <h1>Staff (Agents)</h1>
                         <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <h3>📦 The Manager</h3>
+                            <p>Order processing, inventory, fulfillment.</p>
+                            <label><input type="checkbox" checked> Auto-pilot</label>
+                        </div>
+                        <div class="card glass">
+                            <h3>📣 The Promoter</h3>
+                            <p>SEO, social media, promotional content.</p>
+                            <label><input type="checkbox"> Auto-pilot</label>
+                        </div>
+                        <div class="card glass">
+                            <h3>🤝 The Salesperson</h3>
+                            <p>Quote generation, lead follow-up, upsells.</p>
+                            <label><input type="checkbox"> Auto-pilot</label>
+                        </div>
+                        <div class="card glass">
+                            <h3>❤️ The Ambassador</h3>
+                            <p>Message replies, order updates, reviews.</p>
+                            <label><input type="checkbox" checked> Auto-pilot</label>
+                        </div>
+                        <div class="card glass">
+                            <h3>💰 The Accountant</h3>
+                            <p>Payment processing, reports, tax summaries.</p>
+                            <label><input type="checkbox"> Auto-pilot</label>
+                        </div>
+                        <div class="card glass">
+                            <h3>⚖️ The Protector</h3>
+                            <p>Terms, policies, contracts, GDPR.</p>
+                            <label><input type="checkbox"> Auto-pilot</label>
+                        </div>
+                        <div class="card glass">
+                            <h3>📈 The Advisor</h3>
+                            <p>Weekly health reports, pricing recommendations.</p>
+                            <label><input type="checkbox" checked> Auto-pilot</label>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
@@ -2266,6 +2305,82 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                             }
+
+                            if (id === 'dashboard-screen') {
+                                fetchPendingApprovals();
+                            }
+                        }
+
+                        function fetchPendingApprovals() {
+                            fetch('/api/agents/approvals')
+                                .then(response => response.json())
+                                .then(data => {
+                                    const list = document.getElementById('staff-updates-list');
+                                    if (list) {
+                                        list.innerHTML = '';
+                                        if (data && data.pending_approvals && data.pending_approvals.length > 0) {
+                                            data.pending_approvals.forEach(approval => {
+                                                const card = document.createElement('div');
+                                                card.className = 'card glass';
+                                                card.style.marginTop = '10px';
+
+                                                // Human friendly department mapping
+                                                const deptMap = {
+                                                    'operations': 'The Manager',
+                                                    'marketing': 'The Promoter',
+                                                    'sales': 'The Salesperson',
+                                                    'customer_success': 'The Ambassador',
+                                                    'finance': 'The Accountant',
+                                                    'legal': 'The Protector',
+                                                    'business_advisory': 'The Advisor'
+                                                };
+                                                const deptName = deptMap[approval.department] || approval.department;
+
+                                                card.innerHTML = `
+                                                    <h4>${deptName}</h4>
+                                                    <p>${approval.description}</p>
+                                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                                        <button class="primary" style="min-width: 44px; min-height: 44px;" onclick="approveAction('${approval.id}', true)">Approve</button>
+                                                        <button class="secondary" style="min-width: 44px; min-height: 44px;" onclick="approveAction('${approval.id}', false)">Edit / Reject</button>
+                                                    </div>
+                                                `;
+                                                list.appendChild(card);
+                                            });
+                                        } else {
+                                            list.innerHTML = '<p>No pending updates at the moment.</p>';
+                                        }
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Failed to fetch approvals', err);
+                                    const list = document.getElementById('staff-updates-list');
+                                    if (list) {
+                                        list.innerHTML = '<p>Error loading updates.</p>';
+                                    }
+                                });
+                        }
+
+                        function approveAction(id, approved) {
+                            fetch(`/api/agents/approvals/${id}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ approved: approved }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert(approved ? 'Action approved!' : 'Action rejected/marked for edit.');
+                                    fetchPendingApprovals(); // Refresh list
+                                } else {
+                                    alert('Failed to process approval.');
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Error approving action', err);
+                                alert('An error occurred.');
+                            });
                         }
 
                         window.onload = () => {
