@@ -151,7 +151,7 @@ mod tests {
     async fn test_ai_token_efficiency() {
         // Ensures AI token efficiency optimization logic correctly compresses text.
         let raw_text = "This is a very long text that has many words and needs to be compressed.";
-        let compressed_text = "This is a very long text that has many words and needs to be compressed."; // Mocking compression behavior
-        assert_eq!(compressed_text.len(), raw_text.len()); // A real compress would be <. Doing this simply to verify test framework detects.
+        let compressed_text = ::server_pricing::compression::reduce_tokens(raw_text);
+        assert!(compressed_text.len() < raw_text.len());
     }
 }
