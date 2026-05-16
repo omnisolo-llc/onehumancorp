@@ -339,9 +339,12 @@ services:
       LOG_LEVEL: "info"
       PROMETHEUS_URL: http://prometheus:9090
       OHC_STANDALONE: $${OHC_STANDALONE:-false}
+      SPIFFE_ENDPOINT_SOCKET: "unix:///var/run/spire/sockets/agent.sock"
     depends_on:
       prometheus:
         condition: service_started
+    volumes:
+      - spire-agent-socket:/var/run/spire/sockets
     deploy:
       resources:
         limits:

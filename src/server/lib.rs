@@ -1742,6 +1742,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+                        <div id="autodream-pipeline-container" style="
+                            display: none;
+                            backdrop-filter: blur(20px) saturate(200%);
+                            background: rgba(255, 255, 255, 0.03);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 12px;
+                            padding: 24px;
+                            font-family: 'Outfit', 'Inter', sans-serif;
+                            color: #ffffff;
+                            max-width: 600px;
+                            margin: auto;">
+
+                            <h2 style="font-family: 'Outfit', sans-serif; margin-top: 0;">AutoDream Memory Pipeline</h2>
+
+                            <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                                <div style="flex: 1; padding: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.2);">
+                                    <h4 style="margin: 0; opacity: 0.7;">LLM Cache Hits</h4>
+                                    <div style="font-size: 2em; font-weight: bold;">84%</div>
+                                </div>
+                                <div style="flex: 1; padding: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.2);">
+                                    <h4 style="margin: 0; opacity: 0.7;">RAG Latency</h4>
+                                    <div style="font-size: 2em; font-weight: bold;">120ms</div>
+                                </div>
+                            </div>
+
+                            <div style="height: 200px; background: rgba(0, 0, 0, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                [ Dynamic Hybrid Correlation Chart ]
+                            </div>
+                        </div>
+
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
@@ -1960,6 +1990,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="password" placeholder="New Password">
                         <input type="password" placeholder="Confirm Password">
                         <button onclick="alert('Password changed!')">Change</button>
+                        <hr/>
+                        <h2>Advanced</h2>
+                        <button onclick="document.getElementById('autodream-pipeline-container').style.display='block'">Advanced</button>
                     </div>
 
                     <!-- Pricing Page -->
