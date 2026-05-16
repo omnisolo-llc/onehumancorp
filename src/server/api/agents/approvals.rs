@@ -12,24 +12,24 @@ use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ApprovalsResponse {
     pub pending_approvals: Vec<ApprovalRequest>,
     pub next_cursor: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct PaginationQuery {
     pub cursor: Option<String>,
     pub limit: Option<usize>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct DecisionRequest {
     pub approved: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct DecisionResponse {
     pub success: bool,
 }
@@ -44,7 +44,7 @@ where
         .with_state(orchestrator)
 }
 
-async fn list_approvals(
+pub async fn list_approvals(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Query(query): Query<PaginationQuery>,
     Extension(claims): Extension<Claims>,
@@ -84,7 +84,7 @@ async fn list_approvals(
     })).into_response()
 }
 
-async fn decide_approval(
+pub async fn decide_approval(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Path(id): Path<String>,
     Extension(claims): Extension<Claims>,
