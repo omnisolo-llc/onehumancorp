@@ -1634,6 +1634,7 @@ message MyPlanResponse {
   int64 storage_used_bytes = 4;
   optional int64 storage_limit_bytes = 5;
   int64 next_bill_estimated = 6;
+  bool soft_limit_reached = 7;
 }
 
 message CostDashboardResponse {

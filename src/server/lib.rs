@@ -213,6 +213,16 @@ impl HubService for MyHubService {
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
 
+        let soft_limit_reached = if let Some(limit) = ai_limit {
+            ai_used as i32 >= limit
+        } else {
+            false
+        } || if let Some(limit) = storage_limit {
+            storage_used_bytes >= limit
+        } else {
+            false
+        };
+
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
@@ -220,6 +230,7 @@ impl HubService for MyHubService {
             storage_used_bytes: storage_used_bytes,
             storage_limit_bytes: storage_limit,
             next_bill_estimated: next_bill_estimated,
+            soft_limit_reached,
         }))
     }
 
@@ -2012,11 +2023,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
                         <p>Status: Active</p>
-                        <p>Next billing: 2024-06-01</p>
+                        <p id="plan-next-billing">Next billing: estimating...</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <p>Projected Cost this cycle: $1.23</p>
+                            <p id="plan-storage-usage">Storage Used: 0MB / 500MB</p>
+                            <p id="plan-ai-actions-usage">AI Actions Used: 0 / 100</p>
+                            <p id="plan-soft-limit-warning" style="display: none; color: orange;">Keep your business running smoothly with a plan upgrade!</p>
+                            <button onclick="alert('File chooser opened')">Upload Photo</button>
+                            <p>Projected Cost this cycle: <span id="plan-projected-cost">...</span></p>
                             <button onclick="showScreen('pricing-screen')">Add Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
@@ -2029,9 +2043,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
-                        <p>LLM Usage: 5,000 tokens</p>
+                        <h1>Cost & AI Usage Dashboard</h1>
+                        <p>Total Costs: <span id="cost-dash-total-costs">...</span></p>
+                        <p>LLM Usage Cost: <span id="cost-dash-llm-cost">...</span></p>
+                        <p>Storage Cost: <span id="cost-dash-storage-cost">...</span></p>
+                        <p>Payment Fees: <span id="cost-dash-payment-fees">...</span></p>
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
@@ -2268,10 +2284,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        async function loadCostData() {
+                            try {
+                                const response = await fetch('/api/v1/orchestration.HubService/GetMyPlan', { method: 'POST' });
+                                if (!response.ok) return;
+                                const data = await response.json();
+                                document.getElementById('plan-next-billing').innerText = 'Next billing: $' + data.nextBillEstimated;
+                                document.getElementById('plan-storage-usage').innerText = 'Storage Used: ' + Math.round(data.storageUsedBytes / (1024*1024)) + 'MB / ' + (data.storageLimitBytes ? Math.round(data.storageLimitBytes / (1024*1024)) + 'MB' : 'Unlimited');
+                                document.getElementById('plan-ai-actions-usage').innerText = 'AI Actions Used: ' + data.aiActionsUsed + ' / ' + (data.aiActionsLimit ? data.aiActionsLimit : 'Unlimited');
+                                document.getElementById('plan-projected-cost').innerText = '$' + data.nextBillEstimated;
+
+                                if (data.softLimitReached) {
+                                    document.getElementById('plan-soft-limit-warning').style.display = 'block';
+                                } else {
+                                    document.getElementById('plan-soft-limit-warning').style.display = 'none';
+                                }
+
+                                const costResponse = await fetch('/api/v1/orchestration.HubService/GetCostDashboard', { method: 'POST' });
+                                if (!costResponse.ok) return;
+                                const costData = await costResponse.json();
+                                document.getElementById('cost-dash-total-costs').innerText = '$' + (costData.totalCosts / 100).toFixed(2);
+                                document.getElementById('cost-dash-llm-cost').innerText = '$' + (costData.llmCost / 100).toFixed(2);
+                                document.getElementById('cost-dash-storage-cost').innerText = '$' + (costData.storageCost / 100).toFixed(2);
+                                document.getElementById('cost-dash-payment-fees').innerText = '$' + (costData.paymentFees / 100).toFixed(2);
+                            } catch (e) {
+                                console.error('Failed to load cost data:', e);
+                            }
+                        }
+
                         window.onload = () => {
                             const path = window.location.pathname;
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+                            loadCostData();
                         };
                     </script>
                 </body>
