@@ -20,6 +20,7 @@ spec:
           podSelector:
             matchLabels:
               app: {{ include "ohc.fullname" . }}-core
+              ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
     - from:
         - namespaceSelector:
             matchLabels:
@@ -27,6 +28,7 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
+              ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
@@ -117,6 +119,7 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
+              ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
       ports:
         - protocol: TCP
           port: {{ .Values.ohcCore.service.port }}
@@ -172,6 +175,7 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
+              ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
       ports:
         - protocol: TCP
           port: {{ .Values.chatwoot.service.port }}
@@ -227,6 +231,7 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
+              ohc_tenant_id: "{{ .Values.tenantId | default \"default\" }}"
       ports:
         - protocol: TCP
           port: {{ .Values.powersync.service.targetPort }}

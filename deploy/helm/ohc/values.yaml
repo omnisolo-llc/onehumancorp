@@ -167,3 +167,9 @@ kube-prometheus-stack:
         label: grafana_dashboard
         labelValue: "1"
 
+    extraConfigmapMounts:
+      - name: ohc-grafana-css
+        configMap: "ohc-grafana-css"
+        mountPath: /usr/share/grafana/public/css/custom.css
+        subPath: "custom.css"
+        readOnly: true

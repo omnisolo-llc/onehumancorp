@@ -302,6 +302,7 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./docker/grafana/public/css/custom.css:/usr/share/grafana/public/css/custom.css:ro
     depends_on:
       - prometheus
     deploy:
