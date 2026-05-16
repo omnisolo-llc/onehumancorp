@@ -10,6 +10,7 @@ filegroup(
         "//src/server/services/billing:srcs",
         "//src/server/services/chat:srcs",
         "//src/server/services/dashboard:srcs",
+        "//src/server/services/docs:srcs",
         "//src/server/services/growth:srcs",
         "//src/server/services/integration:srcs",
         "//src/server/services/mcp:srcs",

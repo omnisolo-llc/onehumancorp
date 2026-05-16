@@ -12,6 +12,7 @@ rust_library(
         "//src/proto:billing_tonic",
         "//src/proto:common_prost",
         "//src/proto:hub_tonic",
+        "//src/proto:docs_tonic",
         "//src/proto:interop_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
