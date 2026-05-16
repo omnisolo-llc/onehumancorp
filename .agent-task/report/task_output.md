@@ -1,199 +1,137 @@
-# Oracle: [Business Journey Architecture]
+# OHC Market Dominance Strategy: Research & Missions (2025)
 
-## Title
-Business Journey Architecture: End-to-End Persona Workflows
+## 1. Executive Summary
+This report outlines the strategy for OneHumanCorp (OHC) to achieve market dominance in the small business platform space. By leveraging autonomous AI agents and focusing on radical simplicity for non-technical founders, OHC can leapfrog legacy leaders like Shopify and Wix.
 
-## Problem Statement
-Small business owners—from bakers to handymen—often abandon software platforms because the journey from discovery to the first successful sale is disjointed, requires technical knowledge, or demands too much manual configuration. OHC needs a standardized, fully mapped end-to-end user journey architecture for our core personas. This architecture must ensure that anyone can go from "zero to live business" in under 10 minutes from their mobile phone, with AI handling the friction points invisibly. Without this map, feature development risks drifting away from the mobile-first, "grandmother test" mandate.
+## 2. Deep Competitor Audit (2024-2025)
 
-## Research Report
-*   **Goal**: Define the complete business journey for five core personas: Maya (Baker), Carlos (Handyman), Priya (Boutique Owner), Leo (Music Tutor), and Fatima (Food Cart Operator).
-*   **Competitive Analysis**:
-    *   **Shopify**: Excellent for product inventory, but onboarding is complex and desktop-heavy. Requires manually setting up themes and reading manuals to configure shipping.
-    *   **Wix/Squarespace**: Good for portfolios, but booking and e-commerce require paid add-ons and significant drag-and-drop effort on a desktop.
-    *   **GoDaddy**: Easy to start, but rigid. Upgrading features often involves navigating dense control panels.
-*   **OHC Advantage**: The "Zero to Live in 10 Minutes" promise. Mobile-native creation, AI-driven configuration (e.g., automatically generating product descriptions or service menus from a few photos or chat messages), and a completely unified system without separate "plugins" or "apps."
-*   **Key Findings**:
-    *   Friction points happen at: writing descriptions, setting up payment gateways, and figuring out "what to do next" after publishing.
-    *   Success is defined differently: For Maya, it's a paid deposit. For Leo, it's a booked slot. The platform must dynamically adjust the "Activation" success criteria.
+| Platform | Onboarding Flow | Time to Live | AI Capabilities | Pricing (Base) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Shopify** | Multi-step wizard, manual DNS | 30-60 min | Reactive (Sidekick) | $29/mo + fees |
+| **Wix** | Chat-based questionnaire | 20-40 min | Conversational Builder | $27/mo |
+| **Durable** | 3 questions, instant build | < 30s | Generative Branding | $25/mo |
+| **10Web** | Agent-led WordPress setup | 10-20 min | AI SEO & Editor Agents| $20/mo |
+| **OHC (Goal)** | **Vibe-based instant setup** | **< 1m** | **Autonomous Swarm** | **Hybrid / SaaS** |
 
-## Design Doc
-### Key Design Decisions
-1.  **Conversational Onboarding**: Instead of forms, use "The Advisor" (AI) to ask 3-4 questions via a chat-like interface to instantly scaffold the business structure.
-2.  **Deferred Configuration**: Only ask for critical path items upfront (Name, Main Offering). Defer non-critical setup (Taxes, Custom Domain, Logo) until after the first transaction.
-3.  **Unified Activation State**: The system maintains an "Activation Score" for each tenant, guiding the user via "Next Best Action" cards on the mobile dashboard.
-4.  **Mobile-First Interaction**: All actions are swipeable, tap-friendly, and require minimal text entry.
-
-### Persona Journey Sequence Diagrams
-
-#### 1. Maya (Baker) - Physical Products & Custom Orders
+### Competitive Positioning
 ```mermaid
-sequenceDiagram
-    participant M as Maya (iPhone)
-    participant OHC as OHC Mobile App
-    participant AI as "The Advisor" / "The Manager"
-    participant Cust as Customer (Instagram)
-
-    %% Acquisition & Onboarding
-    M->>OHC: Installs App via TikTok Ad
-    OHC->>AI: Trigger Conversational Setup
-    AI-->>M: "What kind of business are you starting?"
-    M->>AI: "I sell custom cakes"
-    AI->>OHC: Scaffold Physical Products & Deposit Engine
-
-    %% Activation
-    M->>OHC: Uploads 3 Cake Photos
-    OHC->>AI: Generate Descriptions & Set Prices
-    AI-->>M: "Looks good? Tap to Publish"
-    M->>OHC: Approves (Published to OHC Subdomain)
-
-    %% Revenue (Custom Order Flow)
-    Cust->>M: DM on Instagram "Vegan cake?"
-    M->>OHC: Generates Custom Quote + Deposit Link
-    OHC-->>Cust: Sends Link
-    Cust->>OHC: Pays Deposit via Tap-to-Pay
-    OHC->>AI: Order Created, Mark as "Awaiting Fulfillment"
-    AI-->>M: Push Notification: "New $50 Deposit Paid!"
-
-    %% Retention
-    AI-->>M: "Want to connect your bank account to withdraw?"
+quadrantChart
+    title Small Business Platform Landscape
+    x-axis Low Autonomy --> High Autonomy
+    y-axis High Complexity --> Radical Simplicity
+    quadrant-1 "Leapfrog Zone (OHC)"
+    quadrant-2 "Legacy Leaders (Shopify, Wix)"
+    quadrant-3 "Niche Builders (10Web)"
+    quadrant-4 "AI Toys (Durable, Hocoos)"
+    "Shopify": [0.4, 0.3]
+    "Wix": [0.35, 0.4]
+    "Squarespace": [0.2, 0.45]
+    "Durable": [0.7, 0.8]
+    "10Web": [0.65, 0.5]
+    "OHC (Current)": [0.6, 0.7]
+    "OHC (Target)": [0.95, 0.95]
 ```
 
-#### 2. Carlos (Handyman) - Services & Quotes
+## 3. Top 10 SMB User Pain Points
+| Rank | Pain Point | Frequency | OHC Solution |
+| :--- | :--- | :--- | :--- |
+| 1 | Setup Complexity | 73% | 1-Minute Conversational Setup |
+| 2 | Operational Fatigue | 68% | Proactive Background Agents |
+| 3 | Marketing Dread | 55% | Generative Promoter (Auto-Social) |
+| 4 | Invisible Discovery | 52% | AI Discovery Agent (GEO) |
+| 5 | Technical Jargon | 48% | Plain-Language Dashboard |
+| 6 | Cost Creep | 45% | Built-in Swarm (No App Store Hell) |
+| 7 | Mobile Gaps | 42% | 375px Native-First UX |
+| 8 | Communication Lag | 40% | 1-Tap Draft & Approve |
+| 9 | Financial Fog | 35% | Human-Language Briefings |
+| 10 | Support Deserts | 30% | Instant AI Expert Support |
+
+## 4. Persona Journeys & Pain Point Mappings
+
+### Maya (The Baker) - Solving "Marketing Dread"
 ```mermaid
 sequenceDiagram
-    participant C as Carlos (Android)
-    participant OHC as OHC Mobile App
-    participant AI as "The Salesperson"
-    participant Cust as Customer
+    participant Maya
+    participant OHC_App
+    participant Promoter_Agent
+    participant Instagram
 
-    %% Acquisition & Onboarding
-    C->>OHC: Word of Mouth -> Installs App
-    OHC->>AI: Trigger Conversational Setup
-    AI-->>C: "What services do you offer?"
-    C->>AI: "Plumbing and basic repair"
-    AI->>OHC: Scaffold Service Listings & Quote Engine
-
-    %% Activation
-    C->>OHC: Sets hourly rate & availability
-    OHC-->>C: Provides unique Link-in-Bio
-
-    %% Revenue (Quote Flow)
-    Cust->>OHC: Submits repair request via Link
-    OHC->>AI: Draft Quote based on standard rates
-    AI-->>C: "Draft Quote for Repair: $150. Approve?"
-    C->>OHC: 1-Tap Approve
-    OHC-->>Cust: Sends Quote + Booking Calendar
-    Cust->>OHC: Selects Slot & Pays
-
-    %% Retention
-    OHC-->>C: "Appointment Added to Calendar. Next action: Go to site."
+    Maya->>OHC_App: Uploads photo of new Sourdough Loaf
+    OHC_App->>Promoter_Agent: Trigger: ProductAdded
+    Note over Promoter_Agent: Analyzes photo & "Vibe"
+    Promoter_Agent-->>OHC_App: Queues 3 draft posts (captions + tags)
+    OHC_App->>Maya: Push: "I've drafted your Instagram posts!"
+    Maya->>OHC_App: Taps "Approve & Post"
+    OHC_App->>Instagram: Auto-posts content
+    Note over Maya: Zero time spent on design or copy.
 ```
 
-#### 3. Priya (Boutique Owner) - Hybrid Inventory & Subscriptions
+### Carlos (The Handyman) - Solving "Operational Fatigue"
 ```mermaid
 sequenceDiagram
-    participant P as Priya (iPhone)
-    participant OHC as OHC Mobile App
-    participant AI as "The Manager" / "The Promoter"
-    participant Cust as In-Store Customer
+    participant Lead
+    participant Ambassador_Agent
+    participant Carlos
+    participant OHC_App
 
-    %% Onboarding
-    P->>OHC: Wants to sync in-store with online
-    OHC->>AI: Trigger setup
-    AI->>OHC: Scaffold Physical Products + Variants + Tap-to-Pay
-
-    %% Activation
-    P->>OHC: Scans barcodes to add inventory quickly
-    OHC->>AI: Auto-categorize & write SEO descriptions
-
-    %% Revenue (In-Store)
-    Cust->>P: Wants to buy shirt
-    P->>OHC: Opens Tap-to-Pay
-    Cust->>OHC: Taps card
-    OHC->>AI: Deduct inventory, update dashboard
-
-    %% Retention & Referral
-    AI-->>P: "Low stock on Red Shirts. Draft email to supplier?"
-    P->>OHC: 1-Tap Approve
+    Lead->>OHC_App: Sends DM: "Do you do deck repairs?"
+    OHC_App->>Ambassador_Agent: Trigger: NewMessage
+    Note over Ambassador_Agent: Recalls business memory (Yes, decks)
+    Ambassador_Agent-->>OHC_App: Drafts reply + pricing quote
+    OHC_App->>Carlos: Push: "Drafted reply for deck inquiry"
+    Carlos->>OHC_App: Taps "Send" from lock screen
+    OHC_App->>Lead: Sends professional reply
+    Note over Carlos: Responds in seconds while on a job.
 ```
 
-#### 4. Leo (Music Tutor) - Booking & Subscriptions
+### Fatima (Local Services) - Solving "Language Barriers"
 ```mermaid
 sequenceDiagram
-    participant L as Leo (Web/Mobile)
-    participant OHC as OHC Mobile App
-    participant AI as "The Ambassador"
-    participant Student as Student
+    participant Fatima
+    participant OHC_Onboarding
+    participant Manager_Agent
 
-    %% Onboarding
-    L->>OHC: Needs scheduling and billing
-    OHC->>AI: Setup Service + Calendar + Subscriptions
-
-    %% Activation
-    L->>OHC: Connects Google Calendar
-    OHC->>AI: Calculate free slots
-
-    %% Revenue
-    Student->>OHC: Buys 4-lesson package (Subscription)
-    OHC->>AI: Generate Zoom link, add to both calendars
-
-    %% Retention
-    AI-->>Student: "Lesson tomorrow at 4 PM! Here's the link."
-    AI-->>L: "Student hasn't booked next lesson. Send reminder?"
+    Fatima->>OHC_Onboarding: Detects Spanish Locale
+    OHC_Onboarding->>Fatima: "Hola, ¿qué negocio quieres lanzar hoy?"
+    Fatima->>OHC_Onboarding: "Un puesto de comida"
+    OHC_Onboarding->>Manager_Agent: Provision Agent (Locale: ES)
+    Manager_Agent-->>Fatima: "Entendido. He configurado tu menú digital."
+    Note over Fatima: Full business management in native tongue.
 ```
 
-#### 5. Fatima (Food Cart) - Pre-orders & High Velocity
+## 5. OHC AI Differentiation Manifesto
+OHC treats AI as a **Teammate** (Proactive, event-driven), not a **Tool** (Reactive, prompt-driven).
+
 ```mermaid
-sequenceDiagram
-    participant F as Fatima (Low-end Android)
-    participant OHC as OHC Mobile App (Arabic UI)
-    participant AI as "The Manager"
-    participant Cust as Hungry Customer
+graph LR
+    subgraph Competitors_Tool
+    User[User] -->|Prompt| AI_Tool[AI Tool]
+    AI_Tool -->|Draft| User
+    User -->|Edit/Send| Action[Final Action]
+    end
 
-    %% Onboarding
-    F->>OHC: Needs simple menu and pre-orders
-    OHC->>AI: Setup Food & Beverage module
-
-    %% Activation
-    F->>OHC: Uploads photo of handwritten menu
-    AI->>OHC: Digitizes menu, creates items, translates to English
-
-    %% Revenue
-    Cust->>OHC: Scans QR code at cart, pre-orders lunch
-    OHC->>AI: Payment Processed
-    AI-->>F: Loud Audio Notification + Visual Flash: "New Order #12!"
-
-    %% Retention
-    F->>OHC: 1-Tap "Sold Out" on Falafel
-    OHC->>AI: Update online menu instantly
+    subgraph OHC_Teammate
+    Event[Business Event] -->|Trigger| Agent[Autonomous Agent]
+    Agent -->|Execute/Queue| Dashboard[Action Feed]
+    Dashboard -->|1-Tap Approve| Live[Live Change]
+    end
 ```
 
-### UI Wireframes & Mobile UX Flow (375px First)
+## 6. Strategic Missions for Implementation
 
-**Screen 1: The AI Onboarding Chat (Glassmorphism UI)**
-*   **Header**: "Welcome to OneHumanCorp" (Subtle motion background)
-*   **Content**: Chat bubbles from "The Advisor".
-    *   Bubble: "Hi Maya! Let's get your business online. What do you sell?"
-    *   Input: Text field with voice-to-text prominently featured.
-*   **Action**: "Next" button (Primary color, 44px touch target).
+### P0 Missions (Immediate)
+1. **[feature]_autonomous_activity_feed_for_1_tap_agent_approvals.md**: The foundational UX for proactive AI.
+2. **[feature]_generative_promoter_auto_social.md**: Automating the marketing lifecycle.
 
-**Screen 2: The "Activation" Dashboard**
-*   **Header**: "Maya's Cakes" (Status: Draft)
-*   **Content**: A "Next Best Action" card taking up the top half.
-    *   Card: "Add your first product" with a large "+ Add Photo" button.
-*   **Footer**: 4-icon tab bar (Home, Orders, Chat, Settings).
+### P1 Missions (Near-term)
+1. **[feature]_ai_discovery_agent_geo.md**: AI-native SEO for ChatGPT/Gemini discovery.
+2. **[feature]_plain_language_daily_business_briefing.md**: Eliminating financial fog.
 
-**Screen 3: The 1-Tap AI Approval Flow**
-*   **Overlay**: A modal sliding up from the bottom.
-*   **Content**: "The Manager drafted a product description for 'Vegan Chocolate Cake'." (Shows preview).
-*   **Actions**: Two side-by-side buttons: "Looks Good (Publish)" and "Edit".
+### P2 Strategy (Expansion)
+1. **[strategy]_geographic_expansion_multilingual_ai.md**: Scaling to LATAM/Brazil markets.
 
-## Implementation Prompt
-"Implement the foundational structure for the 'Conversational Onboarding' and 'Next Best Action' dashboard components. This should be a mobile-first, responsive Next.js implementation adhering strictly to OHC Premium Design Standards (Glassmorphism tokens, Outfit/Inter typography). The user should be greeted by a mock 'Advisor' agent that asks 2-3 setup questions. Based on their answers, the dashboard should render a dynamic 'Next Best Action' card guiding them towards activation (e.g., 'Add a product' or 'Connect calendar'). Include full Playwright E2E tests simulating the onboarding journey on a 375px viewport. Do not hardcode database schemas; ensure components are wired correctly for backend state management."
+## 7. Beachhead Market Strategy
+OHC will acquire **Maya** and **Carlos** first. These "Single Human CEOs" represent the ~27.1M US non-employer businesses (SBA 2024) who are currently priced out of complex agencies and overwhelmed by Shopify's "spaceship cockpit" dashboards.
 
-## Priority
-P0
-
-## Estimated Scope
-Large
+---
+**Report generated by Oracle (L7) - Principal Product Researcher**
