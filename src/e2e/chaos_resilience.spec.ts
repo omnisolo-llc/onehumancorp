@@ -118,3 +118,46 @@ test.describe('E2E Chaos Resilience', () => {
     await expect(page.locator('text=/notification|alert/i')).toBeVisible();
   });
 });
+
+test('CUJ: Grandma tests full resilience', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+    await expect(page.locator('text=/Dashboard|Welcome/i').first()).toBeVisible();
+    await page.locator('button:has-text("Website"), button:has-text("Storefront")').filter({ visible: true }).first().click();
+    await expect(page.locator('text=/Website Builder|Design/i')).toBeVisible();
+    const publishBtn = page.locator('button:has-text("Publish"), button:has-text("Go Live")').filter({ visible: true }).first();
+    await publishBtn.click();
+    await expect(page.locator('text=/Publishing|Processing/i')).toBeVisible();
+    await expect(page.locator('text=/Success|Live|Published/i')).toBeVisible({ timeout: 15000 });
+});
+
+test('CUJ: Grandma tests agent resilience', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+    await expect(page.locator('text=/Dashboard|Welcome/i').first()).toBeVisible();
+    await page.locator('button:has-text("Helpers"), button:has-text("Agents")').filter({ visible: true }).first().click();
+    await expect(page.locator('text=/AI Helpers|Workforce/i')).toBeVisible();
+    await page.locator('button:has-text("Run"), button:has-text("Start")').filter({ visible: true }).first().click();
+    await expect(page.locator('text=/Running|Executing/i')).toBeVisible();
+    await expect(page.locator('text=/Running|Retrying/i')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/Completed|Success/i')).toBeVisible({ timeout: 20000 });
+});
+
+test('CUJ: Grandma tests circuit breaker', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Sign In"), button:has-text("Login")').click();
+    await page.waitForURL('**/dashboard**');
+    await expect(page.locator('text=/Dashboard|Welcome/i').first()).toBeVisible();
+    await page.locator('button:has-text("Helpers")').click();
+    await page.locator('button:has-text("Run")').filter({ visible: true }).first().click();
+    await expect(page.locator('text=/Paused|Unavailable|Down/i')).toBeVisible();
+    await expect(page.locator('text=/notification|alert/i')).toBeVisible();
+});
