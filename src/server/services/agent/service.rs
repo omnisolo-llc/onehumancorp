@@ -1,6 +1,18 @@
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+
+use ::server_ohc::orchestration::{
+    AuthAgentProviderRequest, AgentProvidersResponse, IdentitiesResponse, AgentIdentity,
+    SkillsResponse, ImportSkillRequest, SkillPack
+};
+
+
+use ::server_ohc::orchestration::{
+    SnapshotsResponse, CreateSnapshotRequest, OrgSnapshot, DashboardSnapshot,
+    RestoreSnapshotRequest, EmptyRequest
+};
+
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
 use crate::hub::Hub;

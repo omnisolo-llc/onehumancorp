@@ -3,6 +3,7 @@ pub mod api;
 pub mod db;
 pub use ::server_auth as auth;
 pub mod hub;
+use crate::tasks::SharedTask;
 pub mod minimax;
 pub mod billing;
 pub mod ultraplan;
@@ -153,6 +154,56 @@ pub mod proto {
 }
 
 use ::server_ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+
+use ::server_ohc::orchestration::{
+    SnapshotsResponse, CreateSnapshotRequest, OrgSnapshot, DashboardSnapshot,
+    RestoreSnapshotRequest
+};
+
+
+use ::server_ohc::orchestration::{
+    MeetingRoom
+};
+
+
+use ::server_ohc::orchestration::{
+    VerifyEnvironmentRequest, VerifyEnvironmentResponse, DelegateTaskRequest,
+    PublishMessageRequest, OpenMeetingRequest, WizardResponse, RegisterAgentRequest,
+    RegisterAgentResponse, AutoDreamQueryResult, AutoDreamQueryRequest,
+    AutoDreamSyncResponse, AutoDreamSyncRequest, StoreAutoDreamResultResponse,
+    StoreAutoDreamResultRequest, GetStateResponse, GetStateRequest, StreamStateRequest
+};
+
+
+use ::server_ohc::orchestration::{
+    SaveWizardStateRequest, SaveWizardStateResponse, GetWizardStateRequest,
+    GetWizardStateResponse, ResetWizardStateRequest, ResetWizardStateResponse,
+    ProvisionRequest, ProvisionResponse, PublishSiteRequest, PublishSiteResponse,
+    GenerateConfigRequest, GenerateConfigResponse
+};
+
+
+use ::server_ohc::orchestration::{
+    AuditSetupRequest, AuditSetupResponse, DiagnosticsRequest, DiagnosticsResponse,
+    GetWizardProfileRequest, GetWizardProfileResponse, CreateTaskRequest, EnvConfig
+};
+
+
+use ::server_ohc::orchestration::{
+    Agent, AgentCapabilities, MeshEvent, Query, SubTask, CancelSubTaskResponse,
+    DecomposeTaskRequest, DecomposeTaskResponse, ReasonRequest, ReasonResponse,
+    StartSubTaskResponse, StreamMessagesRequest, UpdateSubTaskStatusRequest,
+    UpdateSubTaskStatusResponse, DelegateTaskResponse, PublishTeammateMeshEventRequest,
+    Message, EventStreamRequest, InviteRequest, InviteResponse, PublishMessageResponse,
+    AcceptInviteRequest, AcceptInviteResponse, EmptyRequest, GetMeetingsResponse,
+    StartOnboardingRequest, StartOnboardingResponse, TeammateMeshEvent,
+    PollTasksRequest, UpdateTaskStatusRequest, UpdateTaskStatusResponse,
+    ApproveTaskRequest, ApproveTaskResponse, GetPendingApprovalsRequest,
+    GetPendingApprovalsResponse, TriggerCustomOrderRequest, TriggerCustomOrderResponse,
+    MyPlanResponse
+};
+use crate::tasks::SharedTask;
+
 use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ::server_ohc::billing::billing_service_server::BillingServiceServer;
 use ::server_ohc::orchestration::*;
@@ -1751,6 +1802,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary">?</button></h3>
+                            <button onclick="showScreen('social-posting-screen')">Grow Business</button>
+                            <button onclick="showScreen('email-marketing-screen')">Email Marketing</button>
+                            <button onclick="showScreen('business-share-screen')">Share Business</button>
                             <p id="quick-actions-hint" style="display: none;">These buttons are shortcuts to your most common daily tasks.</p>
                             <button onclick="showScreen('agents-screen')">Manage Agents</button>
                             <button onclick="showScreen('setup-screen')">Start Setup</button>
@@ -1770,7 +1824,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="agent-activity-feed">
                                 <p>No recent activity.</p>
                             </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
+                            <button onclick="simulateOrderReady()">Mark Order Ready</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
@@ -1786,7 +1840,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="console.log('action_add_product')">Add Product</button>
+                            <button class="nav-item" onclick="document.getElementById('upgrade-modal').style.display='block'">Add Product</button>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
@@ -1895,7 +1949,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Marketing Pro</h3>
                             <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                            <button onclick="document.getElementById('upgrade-modal').style.display='block'">Hire Agent</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
@@ -1968,6 +2022,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Choose the best plan for your business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
                         <div class="card glass">
+                            <h3>Free Tier</h3>
                             <h3>Free Starter</h3>
                             <p>$0 / 30-days</p>
                             <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
@@ -2087,7 +2142,114 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
+
+<!-- ADDITIONS -->
+<div id="email-marketing-screen" class="screen glass">
+    <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+    <h1>Email Marketing</h1>
+    <div class="card glass">
+        <h3>Campaign Setup</h3>
+        <select id="email-contact-selector">
+            <option>All Customers</option>
+            <option>Recent Buyers</option>
+            <option>Newsletter Subscribers</option>
+        </select>
+        <select id="email-template-selector" onchange="document.getElementById('email-preview-text').innerText = this.value">
+            <option value="Check out our new arrivals! 🎉">New arrivals</option>
+            <option value="Flash sale! 50% off for the next 24 hours. ⚡">Flash sale</option>
+            <option value="Thank you for your support! ❤️">Thank you</option>
+        </select>
+        <button onclick="document.getElementById('email-preview').style.display='block'">Preview</button>
+    </div>
+    <div id="email-preview" class="card glass" style="display: none;">
+        <h3>Preview</h3>
+        <p id="email-preview-text">Check out our new arrivals! 🎉</p>
+        <button onclick="alert('Sent!')">Send</button>
+    </div>
+</div>
+
+<div id="business-share-screen" class="screen glass">
+    <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+    <h1>Share My Business</h1>
+    <div class="card glass" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div style="width: 100%; height: 150px; background: url('https://placehold.co/600x400/0055ff/ffffff?text=Logo') center/cover; border-radius: 8px;"></div>
+        <h2>My Business</h2>
+        <p>Your favorite local shop</p>
+    </div>
+    <div class="card glass">
+        <button onclick="alert('Link copied!')">Copy Link</button>
+        <button onclick="alert('Shared to Instagram!')">Share to Instagram</button>
+        <button onclick="alert('Shared to WhatsApp!')">Share to WhatsApp</button>
+        <button onclick="alert('Shared to X!')">Share to X</button>
+    </div>
+</div>
+
+<div id="social-posting-screen" class="screen glass">
+    <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+    <h1>Social Media Autoposter AI</h1>
+    <div class="card glass">
+        <button onclick="document.getElementById('fb-connected-btn').style.display='inline-block'; this.style.display='none'">Connect Facebook</button>
+        <button id="fb-connected-btn" style="display:none;" disabled>Facebook Connected</button>
+        <button onclick="document.getElementById('ig-connected-btn').style.display='inline-block'; this.style.display='none'">Connect Instagram</button>
+        <button id="ig-connected-btn" style="display:none;" disabled>📸 Connect Instagram</button>
+        <button onclick="alert('X Connected!')">Connect X</button>
+    </div>
+    <div class="card glass">
+        <h3>Launch Auto-Poster</h3>
+        <button onclick="document.getElementById('social-launch-step2').style.display='block'; this.style.display='none'">Next</button>
+        <div id="social-launch-step2" style="display: none;">
+            <button onclick="document.getElementById('social-launch-step2').style.display='none'; document.getElementById('drafted-post').style.display='block'">Launch Strategy</button>
+        </div>
+        <button class="secondary" onclick="showScreen('dashboard-screen')">Return to Dashboard</button>
+
+        <button onclick="document.getElementById('drafted-post-custom').style.display='block'">Generate Post with AI</button>
+        <div id="drafted-post-custom" style="display: none;">
+            <textarea>Custom generated content</textarea>
+            <button onclick="alert('Scheduled!')">Schedule</button>
+            <button onclick="alert('Approved!')">Approve & Post Now</button>
+        </div>
+    </div>
+    <div id="drafted-post" class="card glass" style="display:none;">
+        <h3>Drafted Instagram Post</h3>
+        <p>Check out our new products!</p>
+        <button onclick="this.parentElement.style.display='none'">Approve & Send</button>
+    </div>
+</div>
+
+<div id="upgrade-modal" class="screen glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:1000;">
+    <h1>Scale Up Your Team</h1>
+    <p>You have reached the limit of your current plan.</p>
+    <button onclick="alert('Upgraded!')">Upgrade to Pro</button>
+    <button onclick="document.getElementById('upgrade-modal').style.display='none'">✕</button>
+</div>
+
+<div id="milestone-notification" class="card glass" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000; animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+    <h3 id="milestone-title">🎉 Milestone!</h3>
+    <p id="milestone-desc">You did it!</p>
+    <button onclick="document.getElementById('milestone-notification').style.display='none'">Dismiss</button>
+</div>
+
+<div id="users-screen" class="screen glass">
+    <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+    <h1>User Management</h1>
+
+    <div class="card glass" onmouseenter="this.style.transform='scale(1.02)'" onmouseleave="this.style.transform='scale(1)'" style="transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+        <h2>Referral Program</h2>
+        <p>Share OHC with a friend, both get 1 month free Pro.</p>
+        <button onclick="document.getElementById('invite-user-input').style.display='block'">Invite User</button>
+        <input id="invite-user-input" type="email" placeholder="Email or Username" style="display: none; margin-top: 10px;" />
+    </div>
+</div>
+
+<div id="business-manager-screen" class="screen glass">
+    <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+    <h1>Business Manager</h1>
+    <button onclick="document.getElementById('upgrade-modal').style.display='block'">+ Add New Offering</button>
+    <button class="secondary">Back to List</button>
+</div>
+<!-- END ADDITIONS -->
+
+                    <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -2233,6 +2395,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
+                            'social-posting-screen': '/social-posting',
+                            'email-marketing-screen': '/email-marketing',
+                            'business-share-screen': '/business-share',
+                            'business-manager-screen': '/business-manager',
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
                             'meetings-screen': '/meetings',
@@ -2261,7 +2427,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'email-marketing-screen' || id === 'business-share-screen' || id === 'social-posting-screen' || id === 'users-screen' || id === 'business-manager-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
@@ -2273,7 +2439,44 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
-                    </script>
+
+                        let ordersReady = 0;
+                        function simulateOrderReady() {
+                            ordersReady++;
+                            const modal = document.getElementById('milestone-notification');
+                            const title = document.getElementById('milestone-title');
+                            const desc = document.getElementById('milestone-desc');
+
+                            if (ordersReady === 1) {
+                                title.innerText = 'First Sale!';
+                                desc.innerText = 'You completed your first order!';
+                                modal.style.display = 'block';
+                            } else if (ordersReady === 3) {
+                                title.innerText = '🎉 3rd Order!';
+                                desc.innerText = 'You completed 3 orders!';
+                                modal.style.display = 'block';
+                            } else if (ordersReady === 10) {
+                                title.innerText = '🎉 10th Order!';
+                                desc.innerText = 'You completed 10 orders!';
+                                modal.style.display = 'block';
+                            }
+                        }
+
+                        setTimeout(() => {
+                            const modal = document.getElementById('milestone-notification');
+                            if (modal) {
+                                document.getElementById('milestone-title').innerText = '🚀 100 Visitors Today!';
+                                document.getElementById('milestone-desc').innerText = 'Your store is blowing up!';
+                                modal.style.display = 'block';
+                            }
+                        }, 5000);
+
+                        </script>
+
+                    <footer style="margin-top: 50px; text-align: center; font-size: 0.9em; opacity: 0.8;">
+                        <a href="https://onehumancorp.com" style="color: var(--primary); text-decoration: none;">Built with OHC — Start your free business →</a>
+                    </footer>
+
                 </body>
             </html>
         "#,
