@@ -17,6 +17,12 @@ spec:
         - name: powersync
           image: {{ .Values.powersync.image }}
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - "ALL"
           ports:
             - containerPort: {{ .Values.powersync.service.targetPort }}
           env:

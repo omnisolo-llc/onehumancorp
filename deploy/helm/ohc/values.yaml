@@ -32,12 +32,12 @@ backend:
 resourceQuota:
   enabled: true
   requests:
-    cpu: "20"
-    memory: "20Gi"
+    cpu: "10"
+    memory: "16Gi"
     ephemeralStorage: "50Gi"
   limits:
-    cpu: "60"
-    memory: "120Gi"
+    cpu: "40"
+    memory: "64Gi"
     ephemeralStorage: "150Gi"
     pods: "200"
 

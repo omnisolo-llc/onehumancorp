@@ -25,6 +25,20 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "Premium CSS Override",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>\\n* { font-family: \\'Outfit\\', \\'Inter\\', sans-serif; }\\n.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }\\n.grafana-app { backdrop-filter: blur(20px) saturate(200%) !important; background: rgba(255, 255, 255, 0.03) !important; background-color: #0b0c10 !important; }\\n</style>"
+      }
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -86,7 +100,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "id": 1,
       "options": {
@@ -176,7 +190,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 2
       },
       "id": 2,
       "options": {
@@ -266,7 +280,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 10
       },
       "id": 3,
       "options": {
@@ -311,7 +325,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Tenant Cost Visibility (💰 Miser)",
+  "title": "Tenant Cost Visibility (\ud83d\udcb0 Miser)",
   "uid": "tenant_costs",
   "version": 1,
   "weekStart": ""

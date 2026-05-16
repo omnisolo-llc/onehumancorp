@@ -65,12 +65,26 @@
   "panels": [
     {
       "type": "text",
+      "title": "Premium CSS Override",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>\\n* { font-family: \\'Outfit\\', \\'Inter\\', sans-serif; }\\n.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }\\n.grafana-app { backdrop-filter: blur(20px) saturate(200%) !important; background: rgba(255, 255, 255, 0.03) !important; background-color: #0b0c10 !important; }\\n</style>"
+      }
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "id": 1,
       "options": {
@@ -87,7 +101,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 5
       },
       "datasource": {
         "type": "prometheus",
@@ -177,7 +191,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 5
       },
       "datasource": {
         "type": "prometheus",
@@ -267,7 +281,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 13
       },
       "datasource": {
         "type": "prometheus",
