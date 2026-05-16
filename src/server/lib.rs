@@ -1965,47 +1965,48 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen">
                         <h1>Pricing Plans</h1>
+                        <h2>Plan Comparison</h2>
                         <p>Choose the best plan for your business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
                         <div class="card glass">
                             <h3>Free Starter</h3>
                             <p>$0 / 30-days</p>
-                            <ul><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
+                            <ul class="feature-list"><li>1 Agent Limit</li><li>500MB Storage</li><li>Email Support</li></ul>
                             <button onclick="showScreen('dashboard-screen')">Start Free</button>
                         </div>
                         <div class="card glass">
                             <h3>Pro Professional</h3>
                             <p>$29 / 30-days</p>
-                            <p>Suggested</p>
-                            <ul><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
-                            <button onclick="showScreen('dashboard-screen')">Choose Pro</button>
+                            <p>Recommended</p>
+                            <ul class="feature-list"><li>10 Agents Limit</li><li>10GB Storage</li><li>Priority Support</li></ul>
+                            <button onclick="showScreen('checkout-screen')">Choose Pro</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Enterprise</h3>
                             <p>$79 / 30-days</p>
-                            <ul><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
-                            <button>Contact Sales</button>
+                            <ul class="feature-list"><li>Unlimited Agents</li><li>100GB Storage</li><li>24/7 Support</li></ul>
+                            <button onclick="showScreen('contact-sales-screen')">Contact Sales</button>
                         </div>
                         <div class="card glass">
-                            <h3>FAQ</h3>
-                            <div class="faq-item">
+                            <h2>Frequently Asked Questions</h2>
+                            <div class="faq-item" onclick="this.classList.toggle('active')">
                                 <p class="question">How do I upgrade?</p>
-                                <p class="answer">Answer: Click the upgrade button.</p>
+                                <p class="answer description">Answer: Click the upgrade button.</p>
+                            </div>
+                            <div class="faq-item" onclick="this.classList.toggle('active')">
+                                <p class="question">What is the storage limit?</p>
+                                <p class="answer description">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
                             </div>
                         </div>
                         <p>100% money back guarantee. Secure SSL payments.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade?</h3>
-                                <p class="answer">Answer: You can upgrade anytime from the My Plan page.</p>
-                            </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free.</p>
-                            </div>
-                        </div>
+                    </div>
+
+                    <!-- Contact Sales Screen -->
+                    <div id="contact-sales-screen" class="screen">
+                        <h1>Contact Sales</h1>
+                        <p>Email us at sales@example.com</p>
+                        <button onclick="showScreen('pricing-screen')">Back</button>
                     </div>
 
                     <!-- My Plan Page -->
