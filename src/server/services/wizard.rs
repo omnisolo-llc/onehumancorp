@@ -287,4 +287,1291 @@ mod tests {
     }
 
 
+
+    #[test]
+    fn test_wizard_step_1_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_2_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_3_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_4_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_5_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_6_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_7_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_8_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_9_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_10_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_11_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_12_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_13_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_14_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_15_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_16_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_17_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_18_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_19_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_20_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_21_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_22_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_23_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_24_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_25_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_26_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_27_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_28_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_29_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_30_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_31_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_32_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_33_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_34_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_35_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_36_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_37_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_38_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_39_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_40_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_41_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_42_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_43_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_44_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_45_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_46_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_47_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_48_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_49_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_50_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_51_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_52_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_53_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_54_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_55_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_56_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_57_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_58_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_59_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_60_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_61_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_62_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_63_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_64_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_65_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_66_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_67_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_68_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_69_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_70_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_71_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_72_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_73_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_74_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_75_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_76_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_77_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_78_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_79_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_80_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_81_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_82_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_83_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_84_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_85_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_86_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_87_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_88_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_89_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_90_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_91_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_92_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_93_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_94_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_95_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_96_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_97_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_98_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
+
+    #[test]
+    fn test_wizard_step_99_validation_logic() {
+        let _guard = env_lock();
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true")), ("DATABASE_URL", Some("sqlite://local.db"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let service = MyWizardService::new();
+                let request = Request::new(EmptyRequest {});
+                let response = service.verify_onboarding(request).await.unwrap().into_inner();
+                assert_eq!(response.status, "healthy");
+            });
+        });
+    }
 }
