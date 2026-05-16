@@ -77,14 +77,12 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage }}
-{{- if .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
-{{- end }}
+          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage | default 90 }}
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
@@ -108,12 +106,10 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage }}
-{{- if .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
-{{- end }}
+          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage | default 90 }}
 {{- end }}

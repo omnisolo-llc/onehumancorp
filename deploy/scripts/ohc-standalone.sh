@@ -19,9 +19,9 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-export TOKIO_WORKER_THREADS=1
-export MALLOC_ARENA_MAX=1
-export RAYON_NUM_THREADS=2
+export TOKIO_WORKER_THREADS=2
+export MALLOC_ARENA_MAX=2
+export RAYON_NUM_THREADS=4
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
@@ -100,6 +100,9 @@ function cleanup {
   echo -e "\n${DIM}[Shutting down Standalone Desktop...]${RESET}"
   # Terminate child processes gracefully
   kill -TERM $APP_PID $SERVER_PID $PRUNE_PID 2>/dev/null || true
+
+  docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
+  docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
 
   # Resource Cleanup: Clean additional temporary artifact directories
   echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
