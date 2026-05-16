@@ -202,11 +202,30 @@ pub fn redact_interface_pii(val: Value) -> Value {
             Value::Array(new_arr)
         }
         Value::String(s) => {
-            if is_email(&s) {
-                Value::String("[EMAIL_REDACTED]".to_string())
-            } else {
-                Value::String(s)
+            let mut sanitized = s.clone();
+            if is_email(&sanitized) {
+                return Value::String("[EMAIL_REDACTED]".to_string());
             }
+            // Basic SSN heuristic
+            if sanitized.len() == 11 && sanitized.chars().nth(3) == Some('-') && sanitized.chars().nth(6) == Some('-') {
+                if sanitized.chars().filter(|c| c.is_ascii_digit()).count() == 9 {
+                    return Value::String("[SSN_REDACTED]".to_string());
+                }
+            }
+            // Credit card heuristic
+            let digits: String = sanitized.chars().filter(|c| c.is_ascii_digit()).collect();
+            if digits.len() >= 13 && digits.len() <= 19 {
+                if !sanitized.contains('-') && !sanitized.contains(' ') {
+                    return Value::String("[CC_REDACTED]".to_string());
+                }
+                if sanitized.len() > 10 {
+                    let parts: Vec<&str> = sanitized.split(|c| c == '-' || c == ' ').collect();
+                    if parts.len() == 4 && parts.iter().all(|p| p.len() == 4) {
+                        return Value::String("[CC_REDACTED]".to_string());
+                    }
+                }
+            }
+            Value::String(sanitized)
         }
         _ => val,
     }

@@ -498,6 +498,25 @@ fi"#;
     );
 }
 
+
+#[test]
+fn test_advanced_redact_interface_pii() {
+    let payload = serde_json::json!({
+        "safe_ident_val": "123-45-6789",
+        "safe_cc_val_1": "1234123412341234",
+        "safe_cc_val_2": "1234-1234-1234-1234",
+        "safe_cc_val_3": "1234 1234 1234 1234",
+        "safe": "hello world"
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+    assert_eq!(redacted["safe_ident_val"], "[SSN_REDACTED]");
+    assert_eq!(redacted["safe_cc_val_1"], "[CC_REDACTED]");
+    assert_eq!(redacted["safe_cc_val_2"], "[CC_REDACTED]");
+    assert_eq!(redacted["safe_cc_val_3"], "[CC_REDACTED]");
+    assert_eq!(redacted["safe"], "hello world");
+}
+
 #[test]
 fn test_redact_interface_pii_malicious_payloads() {
     let payload = serde_json::json!({
