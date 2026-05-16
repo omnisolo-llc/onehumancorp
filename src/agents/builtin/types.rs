@@ -21,6 +21,22 @@ impl std::fmt::Display for Role {
     }
 }
 
+/// Architecture for permission checking on tool calls.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PermissionArchitecture {
+    /// Permissive (auto-approve): All tools are allowed to execute automatically unless explicitly blocked or high-risk.
+    Permissive,
+    /// Restrictive (require approval): All mutating tools require explicit user approval before execution.
+    Restrictive,
+}
+
+impl Default for PermissionArchitecture {
+    fn default() -> Self {
+        Self::Permissive
+    }
+}
+
 /// A single message in the conversation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {

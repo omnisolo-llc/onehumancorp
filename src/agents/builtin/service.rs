@@ -375,6 +375,15 @@ impl AgentServiceImpl {
             0.0
         };
 
+        let perm_arch = if let Some(cfg) = &req.runtime_config {
+            match cfg.permission_architecture.to_lowercase().as_str() {
+                "restrictive" => crate::types::PermissionArchitecture::Restrictive,
+                _ => crate::types::PermissionArchitecture::Permissive,
+            }
+        } else {
+            crate::types::PermissionArchitecture::Permissive
+        };
+
         AgentRunConfig {
             max_retries: 2,
             enable_single_agent_maximization: false,
@@ -401,6 +410,7 @@ impl AgentServiceImpl {
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
+            permission_architecture: perm_arch,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             guardrails: None,
@@ -721,6 +731,14 @@ impl AgentService for AgentServiceImpl {
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
+            permission_architecture: if let Some(cfg) = &sub_req.runtime_config {
+                match cfg.permission_architecture.to_lowercase().as_str() {
+                    "restrictive" => crate::types::PermissionArchitecture::Restrictive,
+                    _ => crate::types::PermissionArchitecture::Permissive,
+                }
+            } else {
+                crate::types::PermissionArchitecture::Permissive
+            },
                 enable_context_compaction: true,
                 compaction_threshold_tokens: 60_000,
                 guardrails: None,

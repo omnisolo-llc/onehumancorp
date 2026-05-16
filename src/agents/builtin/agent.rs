@@ -63,6 +63,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
+    pub permission_architecture: crate::types::PermissionArchitecture,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
@@ -112,6 +113,7 @@ enable_llmcompiler_plan_and_execute: false,
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
+            permission_architecture: crate::types::PermissionArchitecture::Permissive,
             thread_id: None,
             resume_from_checkpoint_id: None,
             enable_single_agent_maximization: false,
@@ -2275,6 +2277,11 @@ impl Agent {
             }
         }
 
+        // Architectural Decision 5: Permission Architecture (Permissive vs Restrictive)
+        if cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive && !is_read_only && !cfg.approved_tool_calls.contains(&tc.id) {
+            return Err(ToolError::UserFixable(format!("Permission Architecture is Restrictive. Mutating tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+        }
+
         // Stage 3: Explicit user confirmation for high-risk operations
         if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
             return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
@@ -3933,6 +3940,38 @@ mod tests {
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await.unwrap();
         assert_eq!(result, "Final Answer");
+    }
+
+    #[tokio::test]
+    async fn test_permission_architecture_restrictive() {
+        // Struct unused in test since we only test check_tool_gating logic directly
+        let tc = crate::types::ToolCall {
+            id: "call_123".to_string(),
+            name: "mutating_tool".to_string(),
+            arguments: serde_json::json!({}),
+        };
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+
+        // Default is Permissive, should pass because it's not high risk and not blocked
+        let res = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res.is_ok());
+
+        // Set to Restrictive, should fail with UserFixable because it is mutating (is_read_only = false)
+        cfg.permission_architecture = crate::types::PermissionArchitecture::Restrictive;
+        let res2 = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res2.is_err());
+        if let Err(ToolError::UserFixable(msg)) = res2 {
+            assert!(msg.contains("Permission Architecture is Restrictive"));
+        } else {
+            panic!("Expected UserFixable error");
+        }
+
+        // Approve it, should pass
+        cfg.approved_tool_calls.push("call_123".to_string());
+        let res3 = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res3.is_ok());
     }
 
     #[tokio::test]
