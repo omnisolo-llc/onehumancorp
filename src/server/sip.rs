@@ -65,7 +65,7 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE ((status = 'PENDING' OR status = 'BURSTING')) AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -83,7 +83,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE ((status = 'PENDING' OR status = 'BURSTING')) AND created_at < $1 AND tenant_id = $2")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -228,7 +228,7 @@ impl SipDB {
         let mut final_status = status.to_string();
 
         // Implement Elastic Swarm Bursting: Check for queue saturation
-        let pending_count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE tenant_id = $1 AND (status = 'PENDING' OR status = 'RUNNING')")
+        let pending_count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE tenant_id = $1 AND ((status = 'PENDING' OR status = 'RUNNING'))")
             .bind(&self.org_id)
             .fetch_one(&mut **tx)
             .await?;
