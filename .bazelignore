@@ -13,4 +13,3 @@ bazel-testlogs
 .bazel-output-root
 %workspace%
 srcs
-test_padding
