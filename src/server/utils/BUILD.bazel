@@ -3,6 +3,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 rust_library(
     name = "server_utils",
     srcs = [
+        "payload_validator.rs",
+        "sip_protocol.rs",
         "cache.rs",
         "dialect.rs",
         "fs.rs",

@@ -261,6 +261,15 @@ mod tests {
         let mut violations = Vec::new();
 
         let mut search_dirs = vec![PathBuf::from(".")];
+        search_dirs.push(PathBuf::from("/app/src/server")); // Robust fallback
+        if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
+            search_dirs.push(PathBuf::from(runfiles_dir.clone()).join("ohc/src/server"));
+            search_dirs.push(PathBuf::from(runfiles_dir).join("ohc/src"));
+        }
+        if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+            search_dirs.push(PathBuf::from(workspace_dir.clone()).join("src/server"));
+            search_dirs.push(PathBuf::from(workspace_dir).join("src"));
+        }
         // Try multiple possible source locations
         let possible_src_roots = vec![
             PathBuf::from("src"),
@@ -394,9 +403,7 @@ mod tests {
 
         let search_dirs_for_error = search_dirs.clone();
         if checked_files == 0 {
-            // No files found to check - likely running in an environment where source files
-            // are not accessible (e.g., some bazel sandboxes). Skip the test gracefully.
-            println!("PII test skipped: Could not find any .rs files. Search dirs: {:?}", search_dirs_for_error);
+            println!("Data compliance test skipped: Could not find any .rs files even in fallback. Search dirs: {:?}", search_dirs_for_error);
             return;
         }
         assert!(
@@ -560,4 +567,26 @@ fn test_redact_interface_pii_malicious_payloads() {
     assert_eq!(redacted["array_of_evil"][0]["email"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["address"], "[REDACTED]");
     assert_eq!(redacted["array_of_evil"][1]["phone"], "[REDACTED]");
+}
+
+#[test]
+fn test_multi_tenant_pii_leakage_guardrail() {
+    // Automated check for PII leakage in multi-tenant payload structure
+    let payload = serde_json::json!({
+        "tenant_id": "tenant-xyz",
+        "user_email": "sensitive@example.com",
+        "api_key": "sk-secret123",
+        "data": {
+            "credit_card": "4111-1111-1111-1111",
+            "safe_metric": 42
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+
+    assert_eq!(redacted["tenant_id"], "tenant-xyz", "tenant_id should be kept for multi-tenant analytics routing");
+    assert_eq!(redacted["user_email"], "[REDACTED]", "user_email must be redacted");
+    assert_eq!(redacted["api_key"], "[REDACTED]", "api_key must be redacted");
+    assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
+    assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
 }

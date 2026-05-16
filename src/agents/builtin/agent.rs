@@ -1450,31 +1450,13 @@ impl Agent {
             }
 
             // Unified Cost Calculation Mechanic
-            // Note: We use the local pricing calculator logic to avoid a direct
-            // dependency on server_lib which would cause a circular dependency.
-            let input_cost_per_m = match final_cfg.model.to_lowercase().as_str() {
-                m if m.contains("gpt-4o") && !m.contains("mini") => 5.0,
-                m if m.contains("gpt-4-turbo") => 10.0,
-                m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.15,
-                m if m.contains("gemini-1.5-pro") => 3.5,
-                m if m.contains("gemini-1.5-flash") => 0.075,
-                m if m.contains("claude-3-5-sonnet") => 3.0,
-                m if m.contains("claude-3-haiku") => 0.25,
-                _ => 3.0,
-            };
-            let output_cost_per_m = match final_cfg.model.to_lowercase().as_str() {
-                m if m.contains("gpt-4o") && !m.contains("mini") => 15.0,
-                m if m.contains("gpt-4-turbo") => 30.0,
-                m if m.contains("gpt-3.5") || m.contains("gpt-4o-mini") => 0.60,
-                m if m.contains("gemini-1.5-pro") => 10.5,
-                m if m.contains("gemini-1.5-flash") => 0.30,
-                m if m.contains("claude-3-5-sonnet") => 15.0,
-                m if m.contains("claude-3-haiku") => 1.25,
-                _ => 15.0,
-            };
-
-            let turn_cost = (turn_input_tokens as f64 * input_cost_per_m / 1_000_000.0) +
-                            (output_tokens as f64 * output_cost_per_m / 1_000_000.0);
+            // Uses server_pricing directly to prevent duplication and avoid depending on server_lib (circular dependency)
+            let turn_cost = ::server_pricing::calculator::calculate_cost(
+                final_cfg.model.to_lowercase().as_str(),
+                turn_input_tokens as i64,
+                output_tokens as i64,
+                0,
+            );
 
             if turn_cost > 0.0 {
                 cost_counter.add(turn_cost, &[model_label, agent_label]);

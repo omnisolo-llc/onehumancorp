@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize multi-tenant scaling to enhance multi-environment promotion across Cloud staging.
+
+### Privacy/Offline Improvements
+- Enforce improved local offline usage and privacy for Standalone desktop beta builds.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
@@ -8,6 +16,7 @@
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
+- ✍️ Scribe: Implemented the In-App Help Center & Contextual Tooltip API, enabling non-technical users to access step-by-step guides, onboarding walkthroughs, and plain-language assistance directly within the app.
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
 ### Privacy/Offline Improvements
