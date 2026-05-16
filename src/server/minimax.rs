@@ -190,6 +190,16 @@ impl MinimaxClient {
 
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
+        // 1. Check Cache
+        if let Some(cached) = self.cache.get(prompt) {
+            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
+            let cached_text = cached.text.clone();
+            tokio::spawn(async move {
+                let _ = tx.send(Ok(cached_text)).await;
+            });
+            return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
+        }
+
         tokio::spawn(async move {
             let client = reqwest::Client::new();
             let request_body = MinimaxRequest {
