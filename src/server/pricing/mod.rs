@@ -6,3 +6,5 @@ pub mod calculator;
 pub mod compression;
 pub mod prompt_caching;
 pub mod rate_limit;
+
+pub mod miser_pad;
