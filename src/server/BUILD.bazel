@@ -6,6 +6,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "server_lib",
     srcs = [
+        "mock_config.rs",
         "analytics.rs",
         "autodream_sync.rs",
         "billing.rs",
