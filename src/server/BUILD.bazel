@@ -15,6 +15,7 @@ rust_library(
         "db.rs",
         "hub.rs",
         "lib.rs",
+        "ui.rs",
         "minimax.rs",
         "msgbus.rs",
         "pipeline.rs",
