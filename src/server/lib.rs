@@ -1760,13 +1760,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button onclick="showScreen('orders-screen')">Orders</button>
+                            <button onclick="showScreen('marketing-screen')">Marketing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="facebook-integration" class="card glass">
-                            <h3>📘 Facebook</h3>
-                            <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
+                            <h3>📅 Calendar & Scheduling</h3>
+                            <button onclick="alert('Google Workspace Connected');">Connect Google Calendar</button>
+                            <button onclick="alert('Outlook Connected');">Connect Outlook</button>
+                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 15px 0;" />
+                            <h3>📘 Social Integrations</h3>
+                            <button onclick="alert('Configuring Social Media...'); showScreen('inbox-screen')">Connect Instagram/Facebook</button>
                         </div>
                         <div class="card glass">
                             <h3>Agent Activity</h3>
@@ -1819,26 +1825,99 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+                    <!-- Orders Screen -->
+                    <div id="orders-screen" class="screen glass">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                        <h1>Order Management</h1>
+                        <div class="card glass">
+                            <h3>Order #1024 - Priya's Boutique</h3>
+                            <p>Status: Ready to Ship</p>
+                            <p>Dimensions: 10x8x6 in</p>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button onclick="alert('Label PDF Generated via EasyPost/Shippo. Open Print Dialog...')">Buy Shipping Label</button>
+                            </div>
+                        </div>
+                        <div class="card glass">
+                            <h3>Order #1025 - Fatima's Cart</h3>
+                            <p>Status: Preparing</p>
+                            <p>Item: Falafel Wrap</p>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button onclick="alert('SMS Sent via Twilio: Your order is ready at the cart!')">Notify Ready for Pickup</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Marketing Screen -->
+                    <div id="marketing-screen" class="screen glass">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                        <h1>Email Marketing</h1>
+                        <div class="card glass">
+                            <h3>Campaign Builder</h3>
+                            <p>Describe your campaign prompt:</p>
+                            <input type="text" placeholder="e.g., Send a 10% off coupon to VIP customers" style="width: 100%; margin-bottom: 10px;" />
+                            <button onclick="alert('Campaign dispatched via Amazon SES/Resend!\nOpen Rate: 45%\nClick Rate: 12%')">Send to VIP Customers</button>
+                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 15px 0;" />
+                            <h4>SMTP Fallback (Standalone)</h4>
+                            <button class="secondary" onclick="alert('Configure custom SMTP credentials')">Configure Local SMTP</button>
+                        </div>
+                    </div>
+
                     <!-- Inbox Screen -->
                     <div id="inbox-screen" class="screen glass">
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
-                        <h1>Customer Inbox</h1>
+                        <h1>Unified Social Inbox</h1>
+                        <div style="display: flex; gap: 10px; overflow-x: auto; margin-bottom: 15px;">
+                            <button class="secondary" style="flex: 1; border-bottom: 2px solid #4ecca3;">All DMs</button>
+                            <button class="secondary" style="flex: 1;">Instagram</button>
+                            <button class="secondary" style="flex: 1;">Facebook</button>
+                            <button class="secondary" style="flex: 1;">TikTok</button>
+                        </div>
+
                         <div class="card glass" onclick="this.classList.toggle('active')">
+                            <span style="font-size: 0.8em; color: #888;">WhatsApp</span>
                             <h3>Maya</h3>
                             <p>Do you do vegan cakes?</p>
-                            <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
+                                <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
+                                <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
+                            </div>
                         </div>
-                        <div class="card glass">
+
+                        <div class="card glass" onclick="this.classList.toggle('active')">
+                            <span style="font-size: 0.8em; color: #888;">Instagram</span>
+                            <h3>Instagram User</h3>
+                            <p>Is this available?</p>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
+                                <button onclick="document.getElementById('reply-input').value = 'Yes, it is available! Would you like to place an order?'">✨ AI Draft</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass" onclick="this.classList.toggle('active')">
+                            <span style="font-size: 0.8em; color: #888;">Facebook</span>
                             <h3>Facebook User</h3>
                             <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
+                                <button onclick="document.getElementById('reply-input').value = 'Hello! How can we help you today?'">✨ AI Draft</button>
+                            </div>
                         </div>
-                        <div id="chat-window" class="card glass">
+
+                        <div class="card glass" onclick="this.classList.toggle('active')">
+                            <span style="font-size: 0.8em; color: #888;">TikTok</span>
+                            <h3>TikTok User</h3>
+                            <p>Love your videos! Do you ship internationally?</p>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px;">
+                                <button onclick="document.getElementById('reply-input').value = 'Thank you! Yes, we ship worldwide. You can check our rates on our website.'">✨ AI Draft</button>
+                            </div>
+                        </div>
+
+                        <div id="chat-window" class="card glass" style="margin-top: 20px; border: 1px solid rgba(255,255,255,0.2);">
                             <p>Select a conversation</p>
-                            <div id="messages-list"></div>
-                            <input id="reply-input" type="text" placeholder="Type a message...">
-                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
+                            <div id="messages-list" style="min-height: 150px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;">
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <input id="reply-input" type="text" placeholder="Type an iMessage-style reply..." style="flex: 1; border-radius: 20px; padding: 10px 15px;">
+                                <button style="border-radius: 20px; padding: 10px 20px;" onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('div'); p.style.cssText = 'background: #4ecca3; color: #1a1a2e; padding: 10px 15px; border-radius: 18px 18px 0 18px; align-self: flex-end; max-width: 80%; margin-bottom: 5px;'; p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1861,8 +1940,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <input type="date">
                             <input type="time">
                             <input type="email" placeholder="Participant Email">
+                            <select style="width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;">
+                                <option>Location: In-Person</option>
+                                <option>Location: Online (Google Meet)</option>
+                                <option>Location: Online (Zoom)</option>
+                            </select>
                             <button onclick="alert('Participant added')">Add</button>
-                            <button onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
+                            <button onclick="alert('Booking confirmed. Meeting URL auto-generated & injected into email/calendar.'); document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
                         </div>
                         <div class="tabs">
                             <button onclick="alert('History shown')">📜 View Log</button>
@@ -2039,12 +2123,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                      <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
+                     <div id="checkout-screen" class="screen glass">
                          <h1>Checkout</h1>
-                         <p>Please enter your payment details below.</p>
+                         <p>Select your payment method.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+                             <select style="width: 100%; padding: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;">
+                                 <option>Credit Card (Stripe)</option>
+                                 <option>Pix (Mercado Pago)</option>
+                                 <option>UPI (Razorpay)</option>
+                                 <option>Alipay</option>
+                             </select>
+                             <button onclick="alert('Payment Pending Webhook Confirmation...'); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>
@@ -2448,6 +2538,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'pricing-screen': '/pricing',
                             'my-plan-screen': '/my-plan',
                             'agents-screen': '/agents',
+                            'orders-screen': '/orders',
+                            'marketing-screen': '/marketing',
                             'diagnostics-screen': '/diagnostics',
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
@@ -2545,7 +2637,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'orders-screen' || id === 'marketing-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';

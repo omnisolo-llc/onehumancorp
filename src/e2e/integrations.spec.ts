@@ -334,3 +334,69 @@ test.describe('Pipeline Management', () => {
 
 });
 });
+
+test.describe('Additional Integrations Verification', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.waitForURL('**/*');
+  });
+
+  test('verify calendar and scheduling Google/Outlook connection', async ({ page }) => {
+    await page.click('button:has-text("Integrations")');
+    await expect(page.locator('text="📅 Calendar & Scheduling"')).toBeVisible();
+    await page.click('button:has-text("Connect Google Calendar")');
+    await expect(page.locator('text="Google Workspace Connected"')).toBeVisible();
+  });
+
+  test('verify email marketing UI', async ({ page }) => {
+    await page.click('button:has-text("Marketing")');
+    await expect(page.locator('text="Email Marketing"')).toBeVisible();
+    await page.fill('input[placeholder="e.g., Send a 10% off coupon to VIP customers"]', 'Promote new arrivals');
+    await page.click('button:has-text("Send to VIP Customers")');
+    await expect(page.locator('text="Campaign dispatched via Amazon SES/Resend!"')).toBeVisible();
+  });
+
+  test('verify shipping labels UI via Orders', async ({ page }) => {
+    await page.click('button:has-text("Orders")');
+    await expect(page.locator('text="Order Management"')).toBeVisible();
+    await expect(page.locator(`text="Order #1024 - Priya's Boutique"`)).toBeVisible();
+    await page.click('button:has-text("Buy Shipping Label")');
+    await expect(page.locator('text="Label PDF Generated via EasyPost/Shippo. Open Print Dialog..."')).toBeVisible();
+  });
+
+  test('verify SMS notifications UI via Orders', async ({ page }) => {
+    await page.click('button:has-text("Orders")');
+    await expect(page.locator(`text="Order #1025 - Fatima's Cart"`)).toBeVisible();
+    await page.click('button:has-text("Notify Ready for Pickup")');
+    await expect(page.locator('text="SMS Sent via Twilio: Your order is ready at the cart!"')).toBeVisible();
+  });
+
+  test('verify video conferencing generation UI', async ({ page }) => {
+    await page.click('button:has-text("Agenda")');
+    await expect(page.locator('text="Meetings"')).toBeVisible();
+    await page.click('button:has-text("Meetings Schedule New Meeting")');
+
+    // Select dropdown
+    const select = page.locator('#scheduler select');
+    await select.selectOption({ label: 'Location: Online (Zoom)' });
+
+    await page.click('button:has-text("Save")');
+    await expect(page.locator('text="Booking confirmed. Meeting URL auto-generated & injected into email/calendar."')).toBeVisible();
+  });
+
+  test('verify global payment gateways UI on checkout', async ({ page }) => {
+    // Navigate to pricing and then checkout
+    await page.goto('/pricing');
+    await page.click('button:has-text("Choose Pro")');
+    await expect(page.locator('text="Checkout"')).toBeVisible();
+
+    const select = page.locator('#checkout-screen select');
+    await select.selectOption({ label: 'Pix (Mercado Pago)' });
+
+    await page.click('button:has-text("Pay Now")');
+    await expect(page.locator('text="Payment Pending Webhook Confirmation..."')).toBeVisible();
+  });
+});
