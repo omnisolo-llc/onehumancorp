@@ -1,17 +1,29 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+# Title: SMS Customer Notifications
+
+## Problem Statement
+For many customers, especially those with lower digital literacy or those outside major urban centers, email is rarely checked. Small businesses need a way to send critical updates (like "Your order is ready for pickup" or "Appointment reminder") directly via SMS to ensure the message is seen quickly.
+
+## Research Report
+**Tool Analyzed**: Twilio
+**Ease of Use**: Developer-centric, but the end-user experience can be abstracted completely behind simple OHC toggles.
+**Reputation**: The industry standard for programmatic SMS. Extremely reliable with global reach.
+**Pricing**: Pay-as-you-go, typically around $0.0079 per SMS in the US. Very cost-effective for transactional messages. Compliance fees (A2P 10DLC) apply in the US.
+**Environment**: Cloud API. Perfectly viable for Standalone mode via standard outbound HTTP requests.
+**AI Integration**: AI can help summarize long notifications into concise, 160-character SMS formats to save costs.
+
+## Design Doc
+**Integration Trigger**: The owner enables "SMS Notifications" in settings and provides a payment method to cover usage costs (or uses an included quota).
+**Actions Taken**:
+- Customers are asked for a phone number and opt-in consent during checkout/booking.
+- Key events (order fulfilled, appointment tomorrow) trigger an outbound API call to Twilio.
+- Twilio dispatches the SMS to the customer.
+**User View**: The owner sees a simple toggle list of which events should trigger an SMS (e.g., [x] Order Shipped, [x] Appointment Reminder). The customer receives a standard text message.
+
+## Implementation Prompt
+Integrate Twilio to handle transactional SMS notifications. Create a settings UI where the business owner can enable SMS for specific triggers (Order Confirmation, Shipping Update, Appointment Reminder). Update the checkout/booking flows to collect phone numbers and explicit SMS opt-in. Implement the backend logic to dispatch these messages via the Twilio API when the respective events occur.
+
+## Priority
+P1
+
+## Estimated Scope
+Medium
