@@ -1466,6 +1466,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
+        .route("/api/v1/orders/simulate", axum::routing::post(simulate_order_handler).with_state(db.clone()))
+        .route("/api/v1/agent-activity", axum::routing::get(agent_activity_handler).with_state(db.clone()))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -1765,7 +1767,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="facebook-integration" class="card glass">
                             <h3>📘 Facebook</h3>
-                            <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <div class="card glass">
                             <h3>Agent Activity</h3>
@@ -1778,7 +1779,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Video Tutorials</button>
                                 <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
                             </div>
                         </div>
@@ -1801,19 +1801,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Your Referral Link</h3>
                             <p id="referral-link">ohc://join?ref=DEFAULT</p>
-                            <button onclick="alert('Copied!')">Copy</button>
                             <button onclick="location.reload()">Refresh</button>
                         </div>
                         <div class="card glass">
                             <h3>Share</h3>
-                            <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
-                            <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
                             <p id="invite-copied" style="display: none;">Invite message copied!</p>
                         </div>
                         <div class="card glass">
                             <h3>Actions</h3>
-                            <button onclick="alert('History shown')">📜 View Referral Logs</button>
-                            <button onclick="alert('Data exported')">📤 Export Data</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
@@ -1831,7 +1826,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Facebook User</h3>
                             <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
@@ -1860,14 +1854,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <input type="date">
                             <input type="time">
                             <input type="email" placeholder="Participant Email">
-                            <button onclick="alert('Participant added')">Add</button>
                             <button onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
                         </div>
                         <div class="tabs">
-                            <button onclick="alert('History shown')">📜 View Log</button>
-                            <button onclick="alert('Records')">Past</button>
-                            <button onclick="alert('Calendar')">Calendar</button>
-                            <button onclick="alert('Archive')">Archive</button>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
@@ -1885,9 +1874,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="document.getElementById('status-text').textContent = 'Sharing Screen'">Share</button>
                             <button onclick="document.getElementById('status-text').textContent = 'Hand Raised'">Signal</button>
                             <button onclick="document.getElementById('status-text').textContent = 'Recording'">Record</button>
-                            <button onclick="alert('Participants list')">Participants List</button>
-                            <button onclick="alert('Chat opened')">Chat</button>
-                            <button class="danger" onclick="document.getElementById('status-text').textContent = 'left'; alert('Left meeting')">End</button>
                         </div>
                     </div>
 
@@ -1908,8 +1894,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Step 1: Details</h3>
                             <p>Configure your business profile.</p>
-                            <button onclick="alert('Continuing...')">Next</button>
-                            <button onclick="alert('Continuing...')">Continue</button>
                         </div>
                         <p>Built with OHC — Start your free business →</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
@@ -1942,7 +1926,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="document.body.className='light-theme'">Light</button>
                         <p>Date Format</p>
                         <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
-                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
 
                         <hr/>
@@ -1953,7 +1936,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <textarea placeholder="Bio"></textarea>
                         <input type="email" placeholder="Email or Username">
                         <input type="tel" placeholder="Phone Number">
-                        <button onclick="alert('Profile updated!')">Update</button>
 
                         <hr/>
                         <h2>Security</h2>
@@ -1961,7 +1943,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="password" placeholder="Current Password">
                         <input type="password" placeholder="New Password">
                         <input type="password" placeholder="Confirm Password">
-                        <button onclick="alert('Password changed!')">Change</button>
                     </div>
 
                     <!-- Pricing Page -->
@@ -2017,7 +1998,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Next billing: 2024-06-01</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
                             <p>Projected Cost this Month: $1.23</p>
                             <button onclick="showScreen('pricing-screen')">Add Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
@@ -2043,7 +2023,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>
@@ -2059,7 +2038,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>CPU: 5%</p>
                          <p>Disk: 10GB / 100GB</p>
                          <p>Network: 1MB/s</p>
-                         <button onclick="alert('Running tests...')">Run Test</button>
                          <div class="card glass">
                             <h2>Recent Logs</h2>
                             <p>All good.</p>
@@ -2522,6 +2500,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             nextStep('generating');
                         }
 
+                        let simulateOrderInterval = null;
+                        async function simulateOrder() {
+                            try {
+                                if (simulateOrderInterval) clearInterval(simulateOrderInterval);
+                                await fetch('/api/v1/orders/simulate', { method: 'POST' });
+                                simulateOrderInterval = setInterval(async () => {
+                                    try {
+                                        const res = await fetch('/api/v1/agent-activity');
+                                        if (res.ok) {
+                                            const activities = await res.json();
+                                            const feed = document.getElementById('agent-activity-feed');
+                                            if (activities.length > 0) {
+                                                feed.innerHTML = activities.map(a => `<p>${a}</p>`).join('');
+                                                if (activities.includes("Customer Success drafted confirmation")) {
+                                                    clearInterval(simulateOrderInterval);
+                                                }
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                }, 1000);
+                            } catch(e) {
+                                console.error(e);
+                            }
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -2562,4 +2567,92 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         "#,
     };
     axum::response::Html(content)
+}
+
+
+async fn simulate_order_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    req: axum::extract::Request,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = match req.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
+        _ => "00000000-0000-0000-0000-000000000000".to_string(), // fallback for testing if no auth
+    };
+
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let payload = serde_json::json!({"items": [{"product_id": "test_product"}]});
+
+    let is_ok = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "INSERT INTO department_tasks (id, tenant_id, department, event_type, status, payload) VALUES ($1, $2, 'operations', 'OrderReceived', 'PENDING', $3)"
+            )
+            .bind(&task_id)
+            .bind(&tenant_id)
+            .bind(&payload)
+            .execute(&db.pool)
+            .await
+            .is_ok()
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query(
+                "INSERT INTO department_tasks (id, tenant_id, department, event_type, status, payload) VALUES (?, ?, 'operations', 'OrderReceived', 'PENDING', ?)"
+            )
+            .bind(&task_id)
+            .bind(&tenant_id)
+            .bind(payload.to_string())
+            .execute(pool)
+            .await
+            .is_ok()
+        }
+    };
+
+    if is_ok {
+        axum::response::Json(serde_json::json!({"status": "ok"}))
+    } else {
+        axum::response::Json(serde_json::json!({"status": "error"}))
+    }
+}
+
+async fn agent_activity_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    req: axum::extract::Request,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = match req.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
+        _ => "00000000-0000-0000-0000-000000000000".to_string(),
+    };
+
+    let mut activities = Vec::new();
+
+    let rows: Vec<String> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            use sqlx::Row;
+            let db_rows = sqlx::query("SELECT department FROM department_tasks WHERE status = 'COMPLETED' AND tenant_id = $1 ORDER BY updated_at DESC LIMIT 10")
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await
+                .unwrap_or_default();
+            db_rows.into_iter().map(|r| r.get("department")).collect()
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            use sqlx::Row;
+            let db_rows = sqlx::query("SELECT department FROM department_tasks WHERE status = 'COMPLETED' AND tenant_id = ? ORDER BY updated_at DESC LIMIT 10")
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await
+                .unwrap_or_default();
+            db_rows.into_iter().map(|r| r.get("department")).collect()
+        }
+    };
+
+    for dept in rows {
+        if dept == "operations" {
+            activities.push("Operations processed OrderReceived".to_string());
+        } else if dept == "customer_success" {
+            activities.push("Customer Success drafted confirmation".to_string());
+        }
+    }
+
+    axum::response::Json(activities)
 }
