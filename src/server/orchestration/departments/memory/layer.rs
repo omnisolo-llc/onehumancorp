@@ -1,5 +1,41 @@
 use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 use std::sync::Arc;
+use chrono::{DateTime, Utc};
+
+/// The PersistentMemoryLayer wraps the underlying VectorRepository
+/// to provide domain-specific context consolidation, conflict resolution,
+/// and stale context pruning logic for the AI Agent departments.
+pub struct PersistentMemoryLayer {
+    repo: Arc<VectorRepository>,
+}
+
+impl PersistentMemoryLayer {
+    pub fn new(repo: Arc<VectorRepository>) -> Self {
+        Self { repo }
+    }
+
+    /// Stores AI agent context long-term, scoped by tenant.
+    pub async fn store_context(&self, record: EmbeddingRecord) -> Result<(), String> {
+        self.repo.upsert(&record).await
+    }
+
+    /// Retrieves context related to the query, inherently cross-departmental
+    /// by searching the shared tenant index.
+    pub async fn retrieve_context(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        self.repo.semantic_search(tenant_id, query_embedding, limit).await
+    }
+
+    /// Resolves conflicts when the same fact is stored multiple times.
+    /// It automatically resolves based on recency, source reliability, or explicit owner override.
+    pub async fn resolve_conflicts(&self) -> Result<usize, String> {
+        self.repo.auto_resolve_conflicts().await
+    }
+
+    /// Prunes stale context automatically based on the configured threshold.
+    pub async fn prune_stale_context(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+        self.repo.prune_stale(older_than).await
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -38,14 +74,8 @@ mod tests {
         .await
         .expect("Failed to create consolidated_memory table");
 
-        // The VectorRepository's `semantic_search` uses vector functions for Postgres.
-        // For SQLite, it uses `vec_distance_cosine`, or falls back to returning all matches or none
-        // based on extension availability. Let's provide a mock function so `vec_distance_cosine` succeeds
-        // inside `semantic_search` if the repository calls it. If `sqlite-vss` is not available,
-        // we can still test the cross-department schema integrity and the logic surrounding context sharing
-        // by verifying the records can be stored and retrieved successfully.
-
         let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+        let layer = PersistentMemoryLayer::new(repo);
 
         // Dept A: Customer Success notes customer is unhappy
         let rec1 = EmbeddingRecord {
@@ -62,7 +92,7 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&rec1).await.expect("Failed to upsert Dept A record");
+        layer.store_context(rec1).await.expect("Failed to upsert Dept A record");
 
         // Dept B: Operations
         let rec2 = EmbeddingRecord {
@@ -79,11 +109,8 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&rec2).await.expect("Failed to upsert Dept B record");
+        layer.store_context(rec2).await.expect("Failed to upsert Dept B record");
 
-        // Prove that context is cross-departmental by checking directly against the database
-        // to bypass the SQLite vector extension requirement for `semantic_search` in test environments.
-        // This validates the structure allows cross-departmental data retrieval.
         let rows = sqlx::query("SELECT agent_id FROM consolidated_memory WHERE tenant_id = 'org1'")
             .fetch_all(&pool)
             .await
@@ -96,21 +123,14 @@ mod tests {
         assert!(agent_ids.contains(&"cs_agent_1".to_string()), "Customer Success agent record should exist");
         assert!(agent_ids.contains(&"ops_agent_1".to_string()), "Operations agent record should exist");
 
-        // Dept C: Business Advisory tries to retrieve context about delays
-        // In Cloud mode with Postgres, `semantic_search` would be called.
-        // We will call it here, handling the Result safely if the SQLite vector extension is missing.
         let query_embedding = vec![0.5, 0.5, 0.5];
-        match repo.semantic_search("org1", &query_embedding, 5).await {
+        match layer.retrieve_context("org1", &query_embedding, 5).await {
             Ok(results) => {
                 let cs_found = results.iter().any(|r| r.agent_id == "cs_agent_1");
                 let ops_found = results.iter().any(|r| r.agent_id == "ops_agent_1");
-
-                // If the query succeeds, ensure both were found (or at least one of the similar ones)
                 assert!(cs_found || ops_found, "Cross-department context sharing should return records from other agents.");
             },
             Err(e) => {
-                // In SQLite test environments without the vec_distance_cosine extension loaded,
-                // it is acceptable for `semantic_search` to return an error related to missing functions.
                 assert!(e.contains("no such function: vec_distance_cosine") || e.contains("syntax error") || e.contains("no such table"), "Unexpected semantic_search error: {}", e);
             }
         }
