@@ -44,7 +44,14 @@ pub async fn my_plan_handler(
                 auth.org_id.clone()
             }
         },
-        None => headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("default").to_string()
+        None => return Json(MyPlanResponse {
+            current_plan: "Free".to_string(),
+            ai_actions_used: 0,
+            ai_actions_limit: None,
+            storage_used_bytes: 0,
+            storage_limit_bytes: None,
+            next_bill_estimated: 0,
+        })
     };
 
     let tracker = hub.tracker();
@@ -92,7 +99,15 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => headers.get("x-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("default").to_string()
+        None => return Json(CostDashboardResponse {
+            total_revenue: 0,
+            total_costs: 0,
+            llm_cost: 0,
+            storage_cost: 0,
+            payment_fees: 0,
+            period_start: "1970-01-01".to_string(),
+            period_end: "1970-01-01".to_string(),
+        })
     };
 
     let now = chrono::Utc::now();
