@@ -29,8 +29,8 @@ pub async fn tier_middleware(
                     warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
                 }
             }
-            Err(e) => {
-                tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+            Err(_) => {
+                tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
             }
         }
     }
