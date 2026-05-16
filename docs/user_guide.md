@@ -933,11 +933,62 @@ export interface InternalObjectModelTier27 {
 
 The `InternalObjectModelTier27` structure is heavily utilized by the dashboard routing logic. When a user requests a deep-link into a specific resource tier, the Next.js Server Components utilize the `id` to pre-fetch this object directly from the Postgres read-replica. This eliminates the traditional SPA loading spinner, providing a near-instantaneous navigation experience that aligns perfectly with the OHC performance guidelines.
 
-</div>
+### B.28 Schema Definition: Object Model Tier 28
+```typescript
+export interface InternalObjectModelTier28 {
+  /** Unique cryptographically secure identifier */
+  id: string;
+  /** Canonical reference to the associated Tenant organization */
+  organizationId: string;
+  /** Timestamp of initial creation (ISO 8601 format) */
+  createdAt: string;
+  /** Timestamp of most recent mutation (ISO 8601 format) */
+  updatedAt: string;
+  /** Current operational phase within the KAIROS state machine */
+  lifecycleState: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED';
+  /** Optional JSON blob for extensible plugin metadata */
+  metadata?: Record<string, unknown>;
+  /** Vector array representation for RAG retrieval operations */
+  embeddingSignature?: number[];
+  /** Flag indicating if this record was synced from a standalone SIPDB instance */
+  isLocalFirstOrigin: boolean;
+  /** Confidence score assigned by the auditor agent during verification */
+  verificationConfidence: number;
+  /** Reference to the specific LLM model version used to generate this object (if applicable) */
+  generativeSourceModel?: string;
+}
+```
 
-<div markdown="1" style="font-family: Outfit, Inter, sans-serif; padding: 20px; font-size: 12px; color: #888;">
-Last synced: 2026-05-15 17:55:00
-</div>
+The `InternalObjectModelTier28` structure is heavily utilized by the dashboard routing logic. When a user requests a deep-link into a specific resource tier, the Next.js Server Components utilize the `id` to pre-fetch this object directly from the Postgres read-replica. This eliminates the traditional SPA loading spinner, providing a near-instantaneous navigation experience that aligns perfectly with the OHC performance guidelines.
+
+### B.29 Schema Definition: Object Model Tier 29
+```typescript
+export interface InternalObjectModelTier29 {
+  /** Unique cryptographically secure identifier */
+  id: string;
+  /** Canonical reference to the associated Tenant organization */
+  organizationId: string;
+  /** Timestamp of initial creation (ISO 8601 format) */
+  createdAt: string;
+  /** Timestamp of most recent mutation (ISO 8601 format) */
+  updatedAt: string;
+  /** Current operational phase within the KAIROS state machine */
+  lifecycleState: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED';
+  /** Optional JSON blob for extensible plugin metadata */
+  metadata?: Record<string, unknown>;
+  /** Vector array representation for RAG retrieval operations */
+  embeddingSignature?: number[];
+  /** Flag indicating if this record was synced from a standalone SIPDB instance */
+  isLocalFirstOrigin: boolean;
+  /** Confidence score assigned by the auditor agent during verification */
+  verificationConfidence: number;
+  /** Reference to the specific LLM model version used to generate this object (if applicable) */
+  generativeSourceModel?: string;
+}
+```
+
+The `InternalObjectModelTier29` structure is heavily utilized by the dashboard routing logic. When a user requests a deep-link into a specific resource tier, the Next.js Server Components utilize the `id` to pre-fetch this object directly from the Postgres read-replica. This eliminates the traditional SPA loading spinner, providing a near-instantaneous navigation experience that aligns perfectly with the OHC performance guidelines.
+
 ## Appendix C: Security, Compliance, and Zero-Trust Architecture
 
 ### C.1 SPIFFE/SPIRE Identity Provisioning
@@ -988,6 +1039,16 @@ To defend against sophisticated volumetric attacks, perimeter protocol 9 leverag
 
 Furthermore, protocol 9 strictly enforces Cross-Origin Resource Sharing (CORS) headers, mitigating the risk of Cross-Site Request Forgery (CSRF). The Content Security Policy (CSP) is rigorously defined to forbid inline scripts (`unsafe-inline`) and `eval()`, effectively nullifying the vast majority of Cross-Site Scripting (XSS) vectors. All secrets, database connection strings, and LLM provider keys are injected exclusively via Kubernetes Secrets at runtime and are never serialized into logs or application memory dumps.
 
+### C.2.10 Network Perimeter Hardening Protocol 10
+To defend against sophisticated volumetric attacks, perimeter protocol 10 leverages a combination of Anycast DNS routing, edge-cached Web Application Firewalls (WAF), and eBPF-based packet inspection at the hypervisor level. The Next.js static assets are deployed directly to a global CDN edge network, ensuring that the origin Rust servers are entirely shielded from brute-force GET requests. Only authenticated, well-formed GraphQL mutations and REST payloads are permitted to traverse the WAF and hit the internal API layer.
+
+Furthermore, protocol 10 strictly enforces Cross-Origin Resource Sharing (CORS) headers, mitigating the risk of Cross-Site Request Forgery (CSRF). The Content Security Policy (CSP) is rigorously defined to forbid inline scripts (`unsafe-inline`) and `eval()`, effectively nullifying the vast majority of Cross-Site Scripting (XSS) vectors. All secrets, database connection strings, and LLM provider keys are injected exclusively via Kubernetes Secrets at runtime and are never serialized into logs or application memory dumps.
+
+### C.2.11 Network Perimeter Hardening Protocol 11
+To defend against sophisticated volumetric attacks, perimeter protocol 11 leverages a combination of Anycast DNS routing, edge-cached Web Application Firewalls (WAF), and eBPF-based packet inspection at the hypervisor level. The Next.js static assets are deployed directly to a global CDN edge network, ensuring that the origin Rust servers are entirely shielded from brute-force GET requests. Only authenticated, well-formed GraphQL mutations and REST payloads are permitted to traverse the WAF and hit the internal API layer.
+
+Furthermore, protocol 11 strictly enforces Cross-Origin Resource Sharing (CORS) headers, mitigating the risk of Cross-Site Request Forgery (CSRF). The Content Security Policy (CSP) is rigorously defined to forbid inline scripts (`unsafe-inline`) and `eval()`, effectively nullifying the vast majority of Cross-Site Scripting (XSS) vectors. All secrets, database connection strings, and LLM provider keys are injected exclusively via Kubernetes Secrets at runtime and are never serialized into logs or application memory dumps.
+
 
 ### C.3 Runtime Verification Diagnostics
 Beyond static perimeter defenses, the OHC architecture employs rigorous runtime diagnostics. The KAIROS engine embeds a deterministic watchdog thread that continuously monitors heap allocations and garbage collection cycles within the V8 engine (Next.js server-side) and the Rust Tokio runtime. If the system detects a memory leak signature (e.g., a linear growth curve over 5 minutes exceeding 85% of total provisioned RAM), the watchdog automatically invokes the `fail_fast` protocol.
@@ -1000,3 +1061,8 @@ The `fail_fast` protocol gracefully terminates the specific pod without corrupti
 
 ### C.4 Conclusion and Compliance Summary
 The holistic combination of SPIFFE identity management, Next.js App Router edge caching, eBPF packet filtering, and deterministic KAIROS state recovery ensures that the OHC application platform significantly exceeds standard SOC 2 Type II and ISO 27001 requirements. The system guarantees both the integrity of user data ('Data Truth') and the consistency of the visual presentation ('Visual Truth') across all supported viewports and operating modes.
+</div>
+
+<div markdown="1" style="font-family: Outfit, Inter, sans-serif; padding: 20px; font-size: 12px; color: #888;">
+Last synced: 2026-05-15 17:55:00
+</div>
