@@ -987,3 +987,16 @@ Furthermore, protocol 8 strictly enforces Cross-Origin Resource Sharing (CORS) h
 To defend against sophisticated volumetric attacks, perimeter protocol 9 leverages a combination of Anycast DNS routing, edge-cached Web Application Firewalls (WAF), and eBPF-based packet inspection at the hypervisor level. The Next.js static assets are deployed directly to a global CDN edge network, ensuring that the origin Rust servers are entirely shielded from brute-force GET requests. Only authenticated, well-formed GraphQL mutations and REST payloads are permitted to traverse the WAF and hit the internal API layer.
 
 Furthermore, protocol 9 strictly enforces Cross-Origin Resource Sharing (CORS) headers, mitigating the risk of Cross-Site Request Forgery (CSRF). The Content Security Policy (CSP) is rigorously defined to forbid inline scripts (`unsafe-inline`) and `eval()`, effectively nullifying the vast majority of Cross-Site Scripting (XSS) vectors. All secrets, database connection strings, and LLM provider keys are injected exclusively via Kubernetes Secrets at runtime and are never serialized into logs or application memory dumps.
+
+
+### C.3 Runtime Verification Diagnostics
+Beyond static perimeter defenses, the OHC architecture employs rigorous runtime diagnostics. The KAIROS engine embeds a deterministic watchdog thread that continuously monitors heap allocations and garbage collection cycles within the V8 engine (Next.js server-side) and the Rust Tokio runtime. If the system detects a memory leak signature (e.g., a linear growth curve over 5 minutes exceeding 85% of total provisioned RAM), the watchdog automatically invokes the `fail_fast` protocol.
+
+The `fail_fast` protocol gracefully terminates the specific pod without corrupting the PostgreSQL transaction log. This is achieved via a multi-phase SIGTERM interception:
+1. **Drain Queue:** Stop accepting new OHC-SIP connections.
+2. **Flush Telemetry:** Immediately dispatch pending OpenTelemetry spans to the Grafana collector.
+3. **Commit State:** Persist any uncommitted KAIROS DAG progress to Redis.
+4. **Terminate:** Exit process, allowing the Kubernetes replica set controller to provision a fresh instance.
+
+### C.4 Conclusion and Compliance Summary
+The holistic combination of SPIFFE identity management, Next.js App Router edge caching, eBPF packet filtering, and deterministic KAIROS state recovery ensures that the OHC application platform significantly exceeds standard SOC 2 Type II and ISO 27001 requirements. The system guarantees both the integrity of user data ('Data Truth') and the consistency of the visual presentation ('Visual Truth') across all supported viewports and operating modes.
