@@ -1,3 +1,11 @@
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize multi-tenant cloud worker provisioning by upgrading orchestration scaling.
+
+### Privacy/Offline Improvements
+- Enforce full local standalone zero-trust isolated environments and fallback functionality without cloud connectivity.
+
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.

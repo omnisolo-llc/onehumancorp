@@ -1,5 +1,20 @@
 # Release Notes
 
+## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
+
+
+
+### Cloud Scaling Improvements
+
+- Optimize multi-tenant cloud worker provisioning by upgrading orchestration scaling.
+
+
+
+### Privacy/Offline Improvements
+
+- Enforce full local standalone zero-trust isolated environments and fallback functionality without cloud connectivity.
+
+
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
