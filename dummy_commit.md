@@ -998,4 +998,3 @@ padding
 padding
 padding
 padding
-trigger2
