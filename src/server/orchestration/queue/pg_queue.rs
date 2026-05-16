@@ -65,7 +65,7 @@ impl TaskQueue for PgTaskQueue {
         Ok(())
     }
 
-    async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
+    async fn dequeue(&self, roles: Vec<String>, _estimated_vram: i64, _estimated_tokens: i64) -> Result<Option<Job>, String> {
         if roles.is_empty() {
             return Ok(None);
         }
@@ -76,7 +76,8 @@ impl TaskQueue for PgTaskQueue {
         let query_str = format!(
             "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
              FROM sub_agent_jobs
-             WHERE status = 'QUEUED' AND agent_role IN ({})
+             WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
+             ORDER BY run_after ASC, created_at ASC
              LIMIT 1
              FOR UPDATE SKIP LOCKED",
             role_placeholders
@@ -107,6 +108,9 @@ impl TaskQueue for PgTaskQueue {
                 tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };
 
+            // Basic quota enforcement stub (could be a separate table check here)
+            // e.g. SELECT check_quota(organization_id, vram, tokens) ...
+
             sqlx::query("UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                 .bind(&job.id)
                 .execute(&mut *tx)
@@ -131,11 +135,41 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let row = sqlx::query("SELECT attempts, max_attempts FROM sub_agent_jobs WHERE id = $1 FOR UPDATE")
             .bind(job_id)
-            .execute(&*self.pool)
+            .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+
+        if let Some(r) = row {
+            let current_attempts: i32 = r.try_get("attempts").unwrap_or(0);
+            let max_attempts: i32 = r.try_get("max_attempts").unwrap_or(3);
+            let next_attempt = current_attempts + 1;
+
+            if next_attempt >= max_attempts {
+                // Poison pill
+                sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED', attempts = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                    .bind(next_attempt)
+                    .bind(job_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            } else {
+                // Exponential backoff
+                let backoff_seconds = 1 << next_attempt;
+                sqlx::query("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = $1, run_after = CURRENT_TIMESTAMP + ($2 || ' seconds')::interval, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                    .bind(next_attempt)
+                    .bind(backoff_seconds)
+                    .bind(job_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }
