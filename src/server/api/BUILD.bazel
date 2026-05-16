@@ -2,6 +2,7 @@ filegroup(
     name = "srcs",
     srcs = [
         "autodream.rs",
+        "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
         "growth.rs",

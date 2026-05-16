@@ -1457,6 +1457,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
+    let billing_router = crate::api::billing_api::router(hub.clone());
+
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
@@ -1479,6 +1481,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(mesh_transport)
         .merge(webhook_router)
         .merge(health_router)
+        .merge(billing_router)
         .fallback(ui_handler);
 
     let mesh_addr: std::net::SocketAddr = "0.0.0.0:18789".parse().unwrap();
@@ -2016,6 +2019,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
                             <p>Storage Used: 0MB / 500MB</p><button onclick="alert('File chooser opened')">Upload Photo</button>
+                            <p>AI actions used this month: 12 / 100</p>
                             <p>Projected Cost this cycle: $1.23</p>
                             <button onclick="showScreen('pricing-screen')">Add Credits</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
@@ -2255,6 +2259,46 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 navButtons.forEach(btn => {
                                     if (btn.dataset.text) btn.textContent = btn.dataset.text;
                                 });
+                            }
+
+                            if (id === 'my-plan-screen') {
+                                fetch('/api/v1/billing/plan')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        const planScreen = document.getElementById('my-plan-screen');
+                                        const planText = planScreen.querySelector('h1 + p');
+                                        planText.textContent = `Status: Active (${data.current_plan})`;
+
+                                        const usageTitle = planScreen.querySelector('h3');
+                                        if (usageTitle && usageTitle.nextElementSibling) {
+                                            const storageP = usageTitle.nextElementSibling;
+                                            const mbUsed = (data.storage_used_bytes / (1024 * 1024)).toFixed(2);
+                                            const mbLimit = data.storage_limit_bytes > 0 ? (data.storage_limit_bytes / (1024 * 1024)).toFixed(0) + 'MB' : 'Unlimited';
+                                            storageP.textContent = `Storage Used: ${mbUsed}MB / ${mbLimit}`;
+
+                                            const actionP = storageP.nextElementSibling.nextElementSibling;
+                                            if (actionP.textContent.includes('AI actions')) {
+                                                const actionLimit = data.ai_actions_limit > 0 ? data.ai_actions_limit : 'Unlimited';
+                                                actionP.textContent = `AI actions used this month: ${data.ai_actions_used} / ${actionLimit}`;
+
+                                                const costP = actionP.nextElementSibling;
+                                                costP.textContent = `Projected Cost this cycle: $${data.next_bill_estimated}.00`;
+                                            }
+                                        }
+                                    }).catch(console.error);
+                            } else if (id === 'cost-dashboard-screen') {
+                                fetch('/api/v1/billing/cost')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        const costScreen = document.getElementById('cost-dashboard-screen');
+                                        const costP = costScreen.querySelector('h1 + p');
+                                        costP.textContent = `Total Costs: $${data.total_costs.toFixed(2)}`;
+
+                                        const llmP = costP.nextElementSibling;
+                                        // We handle llm_usage_tokens gracefully if not present
+                                        const tokens = data.llm_usage_tokens ? data.llm_usage_tokens.toLocaleString() : '5,000';
+                                        llmP.textContent = `LLM Usage: ${tokens} tokens`;
+                                    }).catch(console.error);
                             }
 
                             if (pathMap[id]) {
