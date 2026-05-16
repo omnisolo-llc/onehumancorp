@@ -33,6 +33,12 @@ pub async fn broadcast_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
+    if payload.message.agent_id.is_empty() || payload.message.action.is_empty() || payload.message.status.is_empty() {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            axum::response::Json(serde_json::json!({ "error": "agent_id, action, and status are required OHC-SIP fields" })),
+        ).into_response();
+    }
     match transport.publish(&payload.topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {

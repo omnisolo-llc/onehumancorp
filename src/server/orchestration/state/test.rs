@@ -40,6 +40,9 @@ impl TeammateMesh for MockMesh {
     }
 async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String> { Ok(()) }
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String> { Ok(vec![]) }
+    async fn start_heartbeat(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn ping(&self) -> Result<(), String> { Ok(()) }
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
@@ -225,6 +228,9 @@ impl TeammateMesh for SleepingMockMesh {
 
     async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String> { Ok(()) }
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String> { Ok(vec![]) }
+    async fn start_heartbeat(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn ping(&self) -> Result<(), String> { Ok(()) }
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }

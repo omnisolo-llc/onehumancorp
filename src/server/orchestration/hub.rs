@@ -38,6 +38,14 @@ impl MeshTransport for RedisMeshTransport {
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         self.inner.get_active_agents().await
     }
+
+    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String> {
+        self.inner.advertise_capabilities(caps).await
+    }
+
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String> {
+        self.inner.discover_agents(skill).await
+    }
 }
 
 pub struct MemoryMeshTransport {
@@ -76,6 +84,14 @@ impl MeshTransport for MemoryMeshTransport {
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         self.inner.get_active_agents().await
+    }
+
+    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String> {
+        self.inner.advertise_capabilities(caps).await
+    }
+
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String> {
+        self.inner.discover_agents(skill).await
     }
 }
 // dummy validation comment

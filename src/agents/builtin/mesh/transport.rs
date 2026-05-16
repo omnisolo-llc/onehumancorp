@@ -16,26 +16,48 @@ pub trait MeshTransport: Send + Sync {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
+    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String>;
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String>;
 }
 
 pub struct MemoryTransport {
-    subs: DashMap<String, broadcast::Sender<Message>>,
-    presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
+    subs: Vec<tokio::sync::RwLock<std::collections::HashMap<String, broadcast::Sender<Message>>>>,
+    presence: Vec<tokio::sync::RwLock<std::collections::HashMap<String, (String, std::time::Instant)>>>,
+    locks: Vec<tokio::sync::RwLock<std::collections::HashMap<String, (String, std::time::Instant)>>>,
 }
 
 impl MemoryTransport {
     pub fn new() -> Self {
-        MemoryTransport {
-            subs: DashMap::new(),
-            presence: DashMap::new(),
+        let mut subs = Vec::with_capacity(256);
+        let mut presence = Vec::with_capacity(256);
+        let mut locks = Vec::with_capacity(256);
+        for _ in 0..256 {
+            subs.push(tokio::sync::RwLock::new(std::collections::HashMap::new()));
+            presence.push(tokio::sync::RwLock::new(std::collections::HashMap::new()));
+            locks.push(tokio::sync::RwLock::new(std::collections::HashMap::new()));
         }
+        MemoryTransport {
+            subs,
+            presence,
+            locks,
+        }
+    }
+
+    fn get_shard_index(key: &str) -> usize {
+        let mut hash = 0usize;
+        for b in key.bytes() {
+            hash = hash.wrapping_add(b as usize);
+        }
+        hash % 256
     }
 }
 
 #[async_trait]
 impl MeshTransport for MemoryTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
-        if let Some(tx) = self.subs.get(topic) {
+        let shard_idx = Self::get_shard_index(topic);
+        let guard = self.subs[shard_idx].read().await;
+        if let Some(tx) = guard.get(topic) {
             let _ = tx.send(message);
         }
         Ok(())
@@ -117,7 +139,9 @@ impl MeshTransport for MemoryTransport {
     }
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
         let expires_at = std::time::Instant::now() + std::time::Duration::from_secs(ttl_seconds);
-        self.presence.insert(agent_id.to_string(), (status.to_string(), expires_at));
+        let shard_idx = Self::get_shard_index(agent_id);
+        let mut guard = self.presence[shard_idx].write().await;
+        guard.insert(agent_id.to_string(), (status.to_string(), expires_at));
         Ok(())
     }
 

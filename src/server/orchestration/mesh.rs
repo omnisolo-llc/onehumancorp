@@ -18,6 +18,9 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
+    async fn start_heartbeat(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String>;
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String>;
 
     async fn ping(&self) -> Result<(), String>;
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String>;
@@ -122,12 +125,41 @@ impl TeammateMesh for CentrifugeNode {
         self.transport.register_presence(agent_id, status, ttl_seconds).await
     }
 
+    async fn start_heartbeat(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let transport = self.transport.clone();
+        let agent_id = agent_id.to_string();
+        let status = status.to_string();
+        let interval = tokio::time::Duration::from_secs(std::cmp::max(1, ttl_seconds / 2));
+
+        let cancel_token = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let cancel_clone = cancel_token.clone();
+
+        tokio::spawn(async move {
+            while !cancel_clone.load(std::sync::atomic::Ordering::SeqCst) {
+                let _ = transport.register_presence(&agent_id, &status, ttl_seconds).await;
+                tokio::time::sleep(interval).await;
+            }
+        });
+
+        Ok(Box::new(move || {
+            cancel_token.store(true, std::sync::atomic::Ordering::SeqCst);
+        }))
+    }
+
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         self.transport.get_active_agents().await
     }
 
     async fn ping(&self) -> Result<(), String> {
         self.publish_with_ack("mesh:health:ping", b"ping".to_vec()).await
+    }
+
+    async fn advertise_capabilities(&self, caps: ::server_ohc::orchestration::AgentCapabilities) -> Result<(), String> {
+        self.transport.advertise_capabilities(caps).await
+    }
+
+    async fn discover_agents(&self, skill: &str) -> Result<Vec<::server_ohc::orchestration::AgentCapabilities>, String> {
+        self.transport.discover_agents(skill).await
     }
 
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
