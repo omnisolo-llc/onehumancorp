@@ -16,3 +16,13 @@ rust_library(
         "//src/server/common:server_common",
     ],
 )
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_oidc_test",
+    crate = ":server_oidc",
+    deps = [
+        "@crates//:temp-env",
+    ],
+)

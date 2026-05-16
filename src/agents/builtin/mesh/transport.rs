@@ -152,7 +152,7 @@ pub struct PgTransport {
 impl PgTransport {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::postgres::PgPoolOptions;
-        let pool = PgPoolOptions::new()
+        let pool = PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(db_url).await.map_err(|e| e.to_string())?;
 

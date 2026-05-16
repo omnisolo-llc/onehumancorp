@@ -373,7 +373,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let saver = PgCheckpointer::new(pool);
@@ -393,7 +393,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pg_checkpointer_list_checkpoints() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let saver = PgCheckpointer::new(pool);

@@ -47,6 +47,7 @@ if [ -z "$OHC_LOCAL_DB_KEY" ]; then
     (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
   fi
+  export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
   export OHC_LOCAL_DB_KEY="$(cat "$KEY_FILE")"
 fi
 
