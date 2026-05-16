@@ -2,6 +2,7 @@ filegroup(
     name = "srcs",
     srcs = [
         "e2e_journey_test.rs",
+        "hybrid_sync.rs",
         "layer.rs",
         "mod.rs",
     ],

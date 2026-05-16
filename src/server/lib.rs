@@ -1251,8 +1251,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
+    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone());
     consolidation_worker.start();
+
+    let hybrid_sync_worker = crate::orchestration::departments::memory::hybrid_sync::HybridSyncWorker::new(vector_repo);
+    let hybrid_sync_worker_arc = std::sync::Arc::new(hybrid_sync_worker);
+    tokio::spawn(async move {
+        hybrid_sync_worker_arc.run_sync_loop().await;
+    });
 
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
