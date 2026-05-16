@@ -128,7 +128,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         use std::os::unix::fs::OpenOptionsExt;
         use std::os::unix::fs::PermissionsExt;
 
-        let db_path = "ohc-standalone.db";
+        let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
         match OpenOptions::new()
             .read(true)
             .write(true)

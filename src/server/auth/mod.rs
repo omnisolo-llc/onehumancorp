@@ -413,7 +413,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
         let mut revoked = self.revoked.write().unwrap();
         revoked.insert(jti, exp);
 
@@ -601,7 +601,24 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn logout(&self, _request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+    async fn logout(&self, request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+        if let Some(auth_info) = request.extensions().get::<AuthInfo>() {
+            if let Some(auth_header) = request.metadata().get("authorization") {
+                if let Ok(auth_str) = auth_header.to_str() {
+                    let token = if auth_str.to_lowercase().starts_with("bearer ") {
+                        &auth_str[7..]
+                    } else {
+                        auth_str
+                    };
+
+                    if let Ok(claims) = self.store.validate_token(token).await {
+                        // Securely revoke the session
+                        let exp = chrono::DateTime::from_timestamp(claims.exp, 0).unwrap_or_else(chrono::Utc::now);
+                        self.store.revoke_token(claims.jti, exp, &auth_info.org_id).await;
+                    }
+                }
+            }
+        }
         Ok(Response::new(EmptyResponse {}))
     }
 
