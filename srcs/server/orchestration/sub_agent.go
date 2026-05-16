@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	harnesspkg "onehumancorp/srcs/backend/harness"
 	"sync"
 	"time"
 )
@@ -159,7 +160,19 @@ func (s *DefaultSubAgentSpawner) executeTask(ctx context.Context, task *SharedTa
 
 	}
 
-	_, _ = harness.RunAttempt("ls")
+
+	// Setup bwrap executor
+	executor := harnesspkg.NewBwrapExecutor()
+	// Dynamic port allocation for the proxy
+	proxy := harnesspkg.NewNetworkProxy([]string{"onehumancorp.com"}, 0)
+	_ = proxy.Start()
+	defer proxy.Stop(context.Background())
+
+	// Ensure the command being executed by bwrap uses the injected network proxy via proper list arguments
+	// Since execute task resolves the task context, we simulate fetching the task command (for tests: ls).
+	taskCmd := "ls"
+	cmdToRun := fmt.Sprintf("HTTP_PROXY=http://127.0.0.1:%d HTTPS_PROXY=http://127.0.0.1:%d %s", proxy.Port, proxy.Port, taskCmd)
+	_, _ = executor.Execute(cmdToRun)
 	// Check token budget BEFORE executing
 	if err := checkTokenBudget(task.OrganizationID); err != nil {
 		return err

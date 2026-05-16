@@ -39,6 +39,7 @@ var (
 	bubblewrapSpawnTotalCounter metric.Int64Counter
 	bubblewrapExecutionLatencyHistogram metric.Float64Histogram
 	bubblewrapViolationTotalCounter metric.Int64Counter
+	sandboxViolationTotalCounter    metric.Int64Counter
 )
 
 func init() {
@@ -105,6 +106,14 @@ func init() {
 	)
 	if err != nil {
 		log.Printf("Failed to create bubblewrapExecutionLatencyHistogram: %v", err)
+	}
+
+	sandboxViolationTotalCounter, err = meter.Int64Counter(
+		"telemetry.sandbox_violation_total",
+		metric.WithDescription("Total number of sandbox violations"),
+	)
+	if err != nil {
+		log.Printf("Failed to create sandboxViolationTotalCounter: %v", err)
 	}
 
 	bubblewrapViolationTotalCounter, err = meter.Int64Counter(
@@ -257,6 +266,21 @@ func RecordBubblewrapViolation(ctx context.Context, violationType string) error 
 			getDeploymentModeAttribute(),
 		)
 		bubblewrapViolationTotalCounter.Add(ctx, 1, opts)
+	}
+	return nil
+}
+
+// RecordSandboxViolation increments the counter for a sandbox violation.
+func RecordSandboxViolation(ctx context.Context, violationType string) error {
+	if !isTelemetryEnabled() {
+		return nil
+	}
+	if sandboxViolationTotalCounter != nil {
+		opts := metric.WithAttributes(
+			attribute.String("violation_type", violationType),
+			getDeploymentModeAttribute(),
+		)
+		sandboxViolationTotalCounter.Add(ctx, 1, opts)
 	}
 	return nil
 }
