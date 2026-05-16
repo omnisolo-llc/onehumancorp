@@ -25,6 +25,36 @@ pub enum AgentEvent {
 }
 
 /// Configuration for a single agent run.
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LangGraphErrorMechanics {
+    pub max_retries: usize,
+    pub base_backoff_secs: u64,
+}
+
+impl Default for LangGraphErrorMechanics {
+    fn default() -> Self {
+        Self { max_retries: 3, base_backoff_secs: 1 }
+    }
+}
+
+impl LangGraphErrorMechanics {
+    pub fn new(max_retries: usize, base_backoff_secs: u64) -> Self {
+        Self { max_retries, base_backoff_secs }
+    }
+
+    pub fn calculate_backoff(&self, current_retry: usize) -> u64 {
+        if current_retry >= self.max_retries {
+            return 0;
+        }
+        self.base_backoff_secs * (2_u64.pow(current_retry as u32))
+    }
+
+    pub fn is_exhausted(&self, current_retry: usize) -> bool {
+        current_retry >= self.max_retries
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
     pub agent_id: String,
@@ -2330,6 +2360,7 @@ impl Agent {
         session_tools: &[Tool],
         current_messages: &[Message],
     ) -> Result<String, ToolError> {
+        let error_mechanics = LangGraphErrorMechanics::default();
         let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
@@ -2350,7 +2381,28 @@ impl Agent {
             return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
-        tool.execute.execute(args).await
+        // LangGraph Mechanic: 4-types error routing & backoff
+        let mut retries = 0;
+        loop {
+            match tool.execute.execute(args.clone()).await {
+                Ok(result) => return Ok(result),
+                Err(ToolError::Transient(msg)) => {
+                    if error_mechanics.is_exhausted(retries) {
+                        return Err(ToolError::Transient(msg));
+                    }
+                    let backoff = error_mechanics.calculate_backoff(retries);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(backoff)).await;
+                    retries += 1;
+                    tracing::info!("Retrying transient error, attempt {}", retries);
+                    continue;
+                },
+                Err(ToolError::LlmRecoverable(msg)) => return Err(ToolError::LlmRecoverable(msg)),
+                Err(ToolError::UserFixable(msg)) => return Err(ToolError::UserFixable(msg)),
+                Err(ToolError::Fatal(msg)) => return Err(ToolError::Fatal(msg)),
+                Err(ToolError::Unexpected(msg)) => return Err(ToolError::Unexpected(msg)),
+                Err(ToolError::HandoffRequested(target)) => return Err(ToolError::HandoffRequested(target)),
+            }
+        }
     }
 }
 
