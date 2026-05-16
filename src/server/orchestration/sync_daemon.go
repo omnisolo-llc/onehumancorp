@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 var throttleSemaphore = make(chan struct{}, 10) // Allow up to 10 concurrent syncs
@@ -26,8 +27,13 @@ func NewHybridMCPRAGDaemon(db *sql.DB, remoteURL string) *HybridMCPRAGDaemon {
 // SyncPendingMissions queries the database for agent_missions with status 'CLOUD_ESCALATION' or 'BURSTING'
 // and synced_to_cloud = false, then attempts to sync them to the remote API.
 func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
+	mode := "Standalone"
+
 	rows, err := d.db.QueryContext(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes')) LIMIT 100")
 	if err != nil {
+		if SyncDaemonErrorTotal != nil {
+			SyncDaemonErrorTotal.WithLabelValues(mode, "DB Query Error").Inc()
+		}
 		return fmt.Errorf("sync_daemon: failed to query agent_missions: %w", err)
 	}
 
@@ -48,13 +54,24 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 
 	if err := rows.Err(); err != nil {
 		rows.Close()
+		if SyncDaemonErrorTotal != nil {
+			SyncDaemonErrorTotal.WithLabelValues(mode, "DB Iteration Error").Inc()
+		}
 		return fmt.Errorf("sync_daemon: rows iteration error: %w", err)
 	}
 	rows.Close()
 
+	if SyncDaemonBatchSize != nil {
+		SyncDaemonBatchSize.WithLabelValues(mode).Set(float64(len(missions)))
+	}
 	var syncedCount int
 
 	for _, m := range missions {
+		start := time.Now()
+		if SyncPayloadSize != nil {
+			SyncPayloadSize.WithLabelValues(mode).Observe(float64(len(m.payload)))
+		}
+
 		select {
 		case throttleSemaphore <- struct{}{}:
 			// Acquired semaphore
@@ -68,8 +85,16 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		if err != nil {
 			// Release semaphore on error
 			<-throttleSemaphore
+			if SyncDaemonErrorTotal != nil {
+				SyncDaemonErrorTotal.WithLabelValues(mode, "Sync Failure").Inc()
+			}
 			_, _ = d.db.ExecContext(ctx, "UPDATE agent_missions SET sync_error = $1, last_synced_at = datetime('now') WHERE id = $2", err.Error(), m.id)
 			continue
+		}
+
+		latencyMs := float64(time.Since(start).Milliseconds())
+		if SyncLatency != nil {
+			SyncLatency.WithLabelValues(mode).Observe(latencyMs)
 		}
 
 		// Mark as synced locally
@@ -78,10 +103,17 @@ func (d *HybridMCPRAGDaemon) SyncPendingMissions(ctx context.Context) error {
 		// Release semaphore after db transaction
 		<-throttleSemaphore
 		if err != nil {
+			if SyncDaemonErrorTotal != nil {
+				SyncDaemonErrorTotal.WithLabelValues(mode, "DB Update Error").Inc()
+			}
 			continue
 		}
 
 		syncedCount++
+	}
+
+	if syncedCount > 0 && SyncEscalationTotal != nil {
+		SyncEscalationTotal.WithLabelValues(mode).Add(float64(syncedCount))
 	}
 
 	return nil
