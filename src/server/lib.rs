@@ -1763,6 +1763,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
+                            <button id="approvals-btn" onclick="showScreen('approvals-screen'); loadApprovals();">Review Pending Approvals</button>
                         </div>
                         <div id="facebook-integration" class="card glass">
                             <h3>📘 Facebook</h3>
@@ -1784,6 +1785,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
+                        <div class="card glass">
+                            <h3>Pending Approvals</h3>
+                            <button id="approvals-btn" onclick="showScreen('approvals-screen'); loadApprovals();">Review Pending Approvals</button>
+                        </div>
+
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
@@ -1794,6 +1800,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Distribute</button>
                         </nav>
+                    </div>
+
+                    <!-- Approvals Workflow Screen -->
+                    <div id="approvals-screen" class="screen glass">
+                        <h1>Pending AI Approvals</h1>
+                        <p>Your agents have drafted these actions and are awaiting your review.</p>
+                        <div id="approvals-list-container">
+                            <p>Loading approvals...</p>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="margin-top: 20px; width: 100%; min-height: 44px;">Back to Dashboard</button>
                     </div>
 
                     <!-- Referral Dashboard -->
@@ -2272,6 +2288,109 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <script>
 
+                        // Approvals Workflow Logic
+                        async function loadApprovals() {
+                            const container = document.getElementById('approvals-list-container');
+                            container.innerHTML = '<p>Loading approvals...</p>';
+                            try {
+                                const response = await fetch('/api/agents/approvals');
+                                if (!response.ok) {
+                                    container.innerHTML = '<p>Failed to load approvals.</p>';
+                                    return;
+                                }
+                                const data = await response.json();
+                                if (!data.pending_approvals || data.pending_approvals.length === 0) {
+                                    container.innerHTML = '<p>No pending approvals. All good!</p>';
+                                    return;
+                                }
+
+                                let html = '';
+                                data.pending_approvals.forEach(approval => {
+                                    html += `
+                                        <div class="card glass" id="approval-card-${approval.id}" style="margin-bottom: 16px;">
+                                            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                                                <span>${approval.department || 'Agent'}</span>
+                                            </h3>
+                                            <p style="margin: 8px 0;">${approval.description}</p>
+                                            <div style="display: flex; gap: 10px; margin-top: 16px;">
+                                                <button class="primary" onclick="approveAction('${approval.id}', true)" style="flex: 1; min-height: 44px; background: #28a745; border-color: #28a745;">Approve & Send</button>
+                                                <button class="secondary" onclick="approveAction('${approval.id}', false)" style="flex: 1; min-height: 44px; color: #dc3545; border-color: #dc3545;">Reject</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                container.innerHTML = html;
+                            } catch (e) {
+                                console.error('Error fetching approvals', e);
+                                container.innerHTML = '<p>An error occurred loading approvals.</p>';
+                            }
+                        }
+
+                        async function approveAction(id, approved) {
+                            try {
+                                const response = await fetch(`/api/agents/approvals/${id}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ approved })
+                                });
+
+                                if (response.ok) {
+                                    showToast(approved ? 'Action approved and executed!' : 'Action rejected and discarded.');
+                                    // Remove the card with exit motion
+                                    const card = document.getElementById(`approval-card-${id}`);
+                                    if (card) {
+                                        card.style.transition = 'opacity 200ms ease, transform 200ms ease';
+                                        card.style.opacity = '0';
+                                        card.style.transform = 'scale(0.95)';
+                                        setTimeout(() => {
+                                            card.remove();
+                                            // Reload to see if list is empty
+                                            const container = document.getElementById('approvals-list-container');
+                                            if (container.children.length === 0) {
+                                                container.innerHTML = '<p>No pending approvals. All good!</p>';
+                                            }
+                                        }, 200);
+                                    }
+                                } else {
+                                    alert('Failed to process approval.');
+                                }
+                            } catch (e) {
+                                console.error('Error deciding approval', e);
+                                alert('An error occurred.');
+                            }
+                        }
+
+                        function showToast(message) {
+                            let toast = document.getElementById('toast-notification');
+                            if (!toast) {
+                                toast = document.createElement('div');
+                                toast.id = 'toast-notification';
+                                toast.className = 'glass';
+                                toast.style.position = 'fixed';
+                                toast.style.bottom = '20px';
+                                toast.style.left = '50%';
+                                toast.style.transform = 'translateX(-50%) translateY(100px)';
+                                toast.style.padding = '12px 24px';
+                                toast.style.borderRadius = '8px';
+                                toast.style.background = '#333';
+                                toast.style.color = 'white';
+                                toast.style.zIndex = '1000';
+                                toast.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)';
+                                document.body.appendChild(toast);
+                            }
+                            toast.textContent = message;
+
+                            // Entrance
+                            requestAnimationFrame(() => {
+                                toast.style.transform = 'translateX(-50%) translateY(0)';
+                            });
+
+                            // Exit
+                            setTimeout(() => {
+                                toast.style.transform = 'translateX(-50%) translateY(100px)';
+                            }, 3000);
+                        }
+
                         // Storefront Builder State & Logic
                         let storefrontDraftState = [
                             { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
@@ -2443,6 +2562,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
+                            'approvals-screen': '/approvals',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
@@ -2545,7 +2665,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 window.history.pushState({}, '', pathMap[id]);
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'approvals-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
