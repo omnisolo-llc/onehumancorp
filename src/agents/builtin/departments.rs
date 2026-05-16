@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Department {
-    Operations,
-    Marketing,
-    Sales,
-    CustomerSuccess,
-    Finance,
+    OrderManager,
+    SocialMediaManager,
+    SEOBooster,
+    CustomerSupport,
+    EmailMarketer,
     Legal,
     BusinessAdvisory,
 }
@@ -15,11 +15,11 @@ impl FromStr for Department {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "operations" => Ok(Department::Operations),
-            "marketing" => Ok(Department::Marketing),
-            "sales" => Ok(Department::Sales),
-            "customersuccess" | "customer_success" => Ok(Department::CustomerSuccess),
-            "finance" => Ok(Department::Finance),
+            "operations" | "ordermanager" | "order_manager" => Ok(Department::OrderManager),
+            "marketing" | "socialmediamanager" | "social_media_manager" => Ok(Department::SocialMediaManager),
+            "sales" | "seobooster" | "seo_booster" => Ok(Department::SEOBooster),
+            "customersuccess" | "customer_success" | "customersupport" | "customer_support" => Ok(Department::CustomerSupport),
+            "finance" | "emailmarketer" | "email_marketer" => Ok(Department::EmailMarketer),
             "legal" => Ok(Department::Legal),
             "businessadvisory" | "business_advisory" => Ok(Department::BusinessAdvisory),
             _ => Err(format!("Unknown department: {}", s)),
@@ -35,8 +35,8 @@ pub struct DepartmentConfig {
 
 pub fn get_department_config(dep: Department) -> DepartmentConfig {
     match dep {
-        Department::Operations => DepartmentConfig {
-            system_prompt: "Department: Operations — 'The Manager'\n\
+        Department::OrderManager => DepartmentConfig {
+            system_prompt: "Department: OrderManager — 'Order Manager'\n\
                 Handles the day-to-day execution of orders, bookings, inventory, and deliveries.\n\
                 - Processes orders from placement to fulfillment\n\
                 - Manages booking calendars and sends reminders\n\
@@ -46,8 +46,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
             allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get"],
             confidence_threshold: 0.85,
         },
-        Department::Marketing => DepartmentConfig {
-            system_prompt: "Department: Marketing & Advertising — 'The Promoter'\n\
+        Department::SocialMediaManager => DepartmentConfig {
+            system_prompt: "Department: SocialMediaManager & Advertising — 'Social Media Manager'\n\
                 Gets the business noticed. Handles everything from website design to social media to getting found on Google.\n\
                 - Designs and publishes the business website (drag-and-drop, AI-assisted)\n\
                 - Optimizes the website so customers find it on Google (SEO)\n\
@@ -58,8 +58,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
             allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
             confidence_threshold: 0.70,
         },
-        Department::Sales => DepartmentConfig {
-            system_prompt: "Department: Sales & Acquisition — 'The Salesperson'\n\
+        Department::SEOBooster => DepartmentConfig {
+            system_prompt: "Department: SEOBooster & Acquisition — 'The SEO Booster'\n\
                 Turns interest into revenue. Helps the business owner find and win customers.\n\
                 - Generates and sends quotes and proposals\n\
                 - Follows up with interested prospects who haven't booked\n\
@@ -69,8 +69,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
             allowed_tools: vec!["read", "head", "tail", "write", "sendmessage"],
             confidence_threshold: 0.80,
         },
-        Department::CustomerSuccess => DepartmentConfig {
-            system_prompt: "Department: Customer Success — 'The Ambassador'\n\
+        Department::CustomerSupport => DepartmentConfig {
+            system_prompt: "Department: Customer Success — 'Customer Support'\n\
                 Keeps customers happy and coming back. Handles all post-sale relationship management.\n\
                 - Responds to customer messages (chat, email, Instagram DM, WhatsApp) with AI-generated drafts\n\
                 - Sends order confirmations, shipping updates, and delivery notifications\n\
@@ -80,8 +80,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
             allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list"],
             confidence_threshold: 0.90,
         },
-        Department::Finance => DepartmentConfig {
-            system_prompt: "Department: Finance & Payments — 'The Accountant'\n\
+        Department::EmailMarketer => DepartmentConfig {
+            system_prompt: "Department: EmailMarketer & Payments — 'Email Marketer'\n\
                 Makes sure money flows correctly. Handles pricing, payments, and financial visibility.\n\
                 - Processes online payments via card, Apple Pay, Google Pay, and bank transfer\n\
                 - Manages deposits, partial payments, and payment plans\n\

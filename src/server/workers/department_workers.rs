@@ -6,12 +6,12 @@ use uuid::Uuid;
 use sqlx::Row;
 use serde_json::json;
 
-pub struct OperationsWorker {
+pub struct OrderManagerWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
 }
 
-impl OperationsWorker {
+impl OrderManagerWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
@@ -31,7 +31,7 @@ impl OperationsWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            tracing::error!("OperationsWorker error: {}", e);
+                            tracing::error!("OrderManagerWorker error: {}", e);
                             break;
                         }
                     }
@@ -161,12 +161,12 @@ impl OperationsWorker {
     }
 }
 
-pub struct CustomerSuccessWorker {
+pub struct CustomerSupportWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
 }
 
-impl CustomerSuccessWorker {
+impl CustomerSupportWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
@@ -186,7 +186,7 @@ impl CustomerSuccessWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            tracing::error!("CustomerSuccessWorker error: {}", e);
+                            tracing::error!("CustomerSupportWorker error: {}", e);
                             break;
                         }
                     }

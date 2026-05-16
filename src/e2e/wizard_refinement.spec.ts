@@ -56,7 +56,7 @@ test.describe('Wizard Refinement E2E', () => {
     // Verify Personas
     await expect(page.locator('text=The Ambassador')).toBeVisible();
     await expect(page.locator('text=The Promoter')).toBeVisible();
-    await expect(page.locator('text=The Salesperson')).toBeVisible();
+    await expect(page.locator('text=The SEO Booster')).toBeVisible();
 
     await page.locator('text=The Ambassador').click();
     await page.locator('button:has-text("Next")').click();

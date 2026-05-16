@@ -178,7 +178,7 @@ impl DepartmentOrchestrator {
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
-                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
+                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::OrderManager);
                         let status = match status_str.as_str() {
                             "PENDING" => ApprovalStatus::Pending,
                             "APPROVED" => ApprovalStatus::Approved,
@@ -206,7 +206,7 @@ impl DepartmentOrchestrator {
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
-                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
+                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::OrderManager);
                         let status = match status_str.as_str() {
                             "PENDING" => ApprovalStatus::Pending,
                             "APPROVED" => ApprovalStatus::Approved,
@@ -272,35 +272,35 @@ pub async fn setup_dummy_orchestrator(db: Arc<crate::db::DB>) -> Arc<DepartmentO
     let orchestrator = Arc::new(DepartmentOrchestrator::new(db));
 
     let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-        DepartmentType::Operations,
+        DepartmentType::OrderManager,
         vec!["OrderPlaced".to_string(), "InventoryLow".to_string()],
         orchestrator.clone()
     )));
     orchestrator.register_department(operations).await;
 
     let marketing = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-        DepartmentType::Marketing,
+        DepartmentType::SocialMediaManager,
         vec!["NewProductAdded".to_string()],
         orchestrator.clone()
     )));
     orchestrator.register_department(marketing).await;
 
     let sales = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-        DepartmentType::Sales,
+        DepartmentType::SEOBooster,
         vec!["LeadGenerated".to_string()],
         orchestrator.clone()
     )));
     orchestrator.register_department(sales).await;
 
     let customer_success = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-        DepartmentType::CustomerSuccess,
+        DepartmentType::CustomerSupport,
         vec!["CustomerMessageReceived".to_string(), "OrderDelivered".to_string()],
         orchestrator.clone()
     )));
     orchestrator.register_department(customer_success).await;
 
     let finance = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-        DepartmentType::Finance,
+        DepartmentType::EmailMarketer,
         vec!["PaymentReceived".to_string(), "OrderPlaced".to_string()],
         orchestrator.clone()
     )));
@@ -358,21 +358,21 @@ mod tests {
         let orchestrator = Arc::new(DepartmentOrchestrator::new(db));
 
         let operations = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-            DepartmentType::Operations,
+            DepartmentType::OrderManager,
             vec!["OrderPlaced".to_string()],
             orchestrator.clone()
         )));
         orchestrator.register_department(operations.clone()).await;
 
         let finance = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-            DepartmentType::Finance,
+            DepartmentType::EmailMarketer,
             vec!["OrderPlaced".to_string()],
             orchestrator.clone()
         )));
         orchestrator.register_department(finance.clone()).await;
 
         let marketing = Arc::new(tokio::sync::RwLock::new(DummyDepartment::new(
-            DepartmentType::Marketing,
+            DepartmentType::SocialMediaManager,
             vec!["NewProductAdded".to_string()],
             orchestrator.clone()
         )));
@@ -434,7 +434,7 @@ mod tests {
         let req = ApprovalRequest {
             id: "req1".to_string(),
             tenant_id: "tenant1".to_string(),
-            department: DepartmentType::CustomerSuccess,
+            department: DepartmentType::CustomerSupport,
             description: "Reply to angry customer".to_string(),
             status: ApprovalStatus::Pending,
             action_risk: "HIGH".to_string(),
