@@ -462,7 +462,16 @@ impl Store {
                     enabled: oidc_cfg_internal.enabled,
                 };
                 if oidc_cfg.enabled {
-                    return crate::oidc::validate_oidc_token(_token, &oidc_cfg).await;
+                    return match crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                        Ok(claims) => {
+                            if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
+                                Err("token revoked".to_string())
+                            } else {
+                                Ok(claims)
+                            }
+                        }
+                        Err(e) => Err(e),
+                    };
                 }
             }
         }
@@ -746,5 +755,27 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn create_role(&self, request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Utc, Duration};
+
+    #[tokio::test]
+    async fn test_oidc_token_revocation() {
+        let store = Store::new();
+        let jti = "test-jti-123".to_string();
+        let org_id = "test-org".to_string();
+
+        // Check it's not revoked initially
+        assert!(!store.is_revoked(&jti, &org_id));
+
+        // Revoke it
+        store.revoke_token(jti.clone(), Utc::now() + Duration::hours(1), &org_id);
+
+        // Check it is now revoked
+        assert!(store.is_revoked(&jti, &org_id));
     }
 }

@@ -111,7 +111,20 @@ impl DB {
                 }
                 #[cfg(not(unix))]
                 {
-                    let _ = std::fs::File::create(&db_path);
+                    if let Ok(file) = std::fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .create(true)
+                        .open(&db_path)
+                    {
+                        if let Ok(mut perms) = file.metadata().map(|m| m.permissions()) {
+                            // On non-Unix, just applying best effort restricted permissions,
+                            // ensuring it isn't read-only if it's the database file
+                            #[allow(clippy::permissions_set_readonly_false)]
+                            perms.set_readonly(false);
+                            let _ = file.set_permissions(perms);
+                        }
+                    }
                 }
             }
 

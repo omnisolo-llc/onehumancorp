@@ -4,7 +4,12 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if org_id == "system" && !::server_config::get().multitenant {
+    if org_id == "system" {
+        if ::server_config::get().multitenant {
+            // Strictly fail if someone attempts to bypass RLS with "system" in multitenant mode.
+            return Err(sqlx::Error::Configuration("Attempted to use system tenant in multitenant mode, violating isolation.".to_string().into()));
+        }
+
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
         // and we cannot call execute multiple times because E is consumed.
