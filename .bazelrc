@@ -56,11 +56,20 @@ test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
 test --local_test_jobs=1
-# Allow up to 200 parallel remote build actions during tests.
-test --jobs=200
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
+
+# ── Fast test loop (use --config=no-e2e) ─────────────────────────────────────
+# Optional local shortcut for skipping Docker-backed browser tests. The default
+# `bazel test //...` intentionally includes them.
+test:no-e2e --test_tag_filters=-e2e,-requires-docker
+
+# ── High parallelism (use --config=remote-jobs) ──────────────────────────────
+# Useful with a remote executor/cache setup. Keep the default local test path
+# conservative so `bazel test //...` can include Docker-backed Playwright tests
+# without overwhelming the Bazel server or host.
+test:remote-jobs --jobs=200
 
 # ── Test environment pass-through ─────────────────────────────────────────────
 test --test_env=GEMINI_API_KEY
