@@ -63,31 +63,70 @@ impl DashboardService for MyDashboardService {
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
 
+        let req_clone = req.clone();
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub1.get_agents())
+                let agents = hub1.get_agents_by_org(&req_clone.organization_id);
+
+                let mut status_map = std::collections::HashMap::new();
+                for a in agents.iter() {
+                    *status_map.entry(a.status.clone()).or_insert(0) += 1;
+                }
+                let statuses: Vec<_> = status_map
+                    .into_iter()
+                    .map(|(status, count)| StatusCount { status, count })
+                    .collect();
+
+                let final_agents: Vec<_> = agents
+                    .iter()
+                    .map(|a| {
+                        let name = if req_clone.mobile_optimized {
+                            String::new()
+                        } else {
+                            ::server_pricing::compression::reduce_tokens(&a.name)
+                        };
+
+                        ::server_ohc::agent::Agent {
+                            id: a.id.clone(),
+                            name,
+                            role: ::server_ohc::common::Role::Unspecified as i32,
+                            status: ::server_ohc::common::AgentStatus::Idle as i32,
+                            organization_id: a.organization_id.clone(),
+                        }
+                    })
+                    .collect();
+
+                Ok::<_, String>((agents, final_agents, statuses))
             }),
             tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub2.get_meetings())
+                let meetings = hub2.get_meetings();
+                // Filter meetings by org if possible, currently we return all but map transcripts
+                Ok::<_, String>(meetings)
             }),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
-                    cost_auditor.get_total_cost(),
-                    cost_auditor.get_total_tokens(),
-                    cost_auditor.get_agent_costs_snapshot(),
-                ))
+                let total_cost = cost_auditor.get_total_cost();
+                let total_tokens = cost_auditor.get_total_tokens();
+                let agent_costs = cost_auditor.get_agent_costs_snapshot();
+
+                Ok::<_, String>((total_cost, total_tokens, agent_costs))
             }),
             async {
                 let org_id = org_id1;
-                let cache_key = format!("hub:products:{}", org_id);
+                let mobile = req.mobile_optimized;
+                let cache_key = format!("hub:products:{}:mobile={}", org_id, mobile);
                 let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
 
                 if let Some(products) = cache.get(&cache_key).await {
                     return Ok::<_, String>(products);
                 }
 
-                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
+                let q = if mobile {
+                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, '' as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                } else {
+                    "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                };
+
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
@@ -96,15 +135,13 @@ impl DashboardService for MyDashboardService {
                             for r in rows {
                                 let p = ::server_ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r
-                                        .try_get("organization_id")
-                                        .unwrap_or_default(),
+                                    organization_id: r.try_get("organization_id").unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                    currency: r.try_get("currency").unwrap_or_default(),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    metadata_json: if mobile { String::new() } else { r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string() },
                                 };
                                 results.push(p);
                             }
@@ -115,15 +152,13 @@ impl DashboardService for MyDashboardService {
                             for r in rows {
                                 let p = ::server_ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r
-                                        .try_get("organization_id")
-                                        .unwrap_or_default(),
+                                    organization_id: r.try_get("organization_id").unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                    currency: r.try_get("currency").unwrap_or_default(),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    metadata_json: if mobile { String::new() } else { r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string() },
                                 };
                                 results.push(p);
                             }
@@ -136,14 +171,20 @@ impl DashboardService for MyDashboardService {
             },
             async {
                 let org_id = org_id2;
-                let cache_key = format!("hub:orders:{}", org_id);
+                let mobile = req.mobile_optimized;
+                let cache_key = format!("hub:orders:{}:mobile={}", org_id, mobile);
                 let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
 
                 if let Some(orders) = cache.get(&cache_key).await {
                     return Ok::<_, String>(orders);
                 }
 
-                let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
+                let q = if mobile {
+                    "SELECT id, 0.0 as total_amount, '' as status, '' as tenant_id FROM orders WHERE tenant_id = $1 LIMIT 10"
+                } else {
+                    "SELECT id, COALESCE(total_amount, 0) as total_amount, status, tenant_id FROM orders WHERE tenant_id = $1 LIMIT 10"
+                };
+
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db2.store {
@@ -153,8 +194,8 @@ impl DashboardService for MyDashboardService {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("tenant_id").unwrap_or_default(),
-                                    product_id: "".to_string(),
+                                    organization_id: if mobile { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                                    product_id: String::new(),
                                     amount_cents: (amount_real * 100.0) as i64,
                                     status: r.try_get("status").unwrap_or_default(),
                                     created_at_unix: 0,
@@ -169,8 +210,8 @@ impl DashboardService for MyDashboardService {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("tenant_id").unwrap_or_default(),
-                                    product_id: "".to_string(),
+                                    organization_id: if mobile { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                                    product_id: String::new(),
                                     amount_cents: (amount_real * 100.0) as i64,
                                     status: r.try_get("status").unwrap_or_default(),
                                     created_at_unix: 0,
@@ -236,7 +277,7 @@ impl DashboardService for MyDashboardService {
             }
         );
 
-        let agents = agents_res
+        let (org_agents_arc, final_agents, statuses) = agents_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res
@@ -249,35 +290,6 @@ impl DashboardService for MyDashboardService {
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
-
-        let products = if req.mobile_optimized {
-            products
-                .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
-                })
-                .collect()
-        } else {
-            products
-        };
-
-        let orders = if req.mobile_optimized {
-            orders
-                .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
-                })
-                .collect()
-        } else {
-            orders
-        };
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
@@ -302,38 +314,11 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
-            .iter()
-            .filter(|a| {
-                a.organization_id == req.organization_id
-                    || a.id.starts_with(&format!("{}-", req.organization_id))
-            })
-            .cloned()
-            .collect();
-
-        let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
-            *status_map.entry(a.status.clone()).or_insert(0) += 1;
-        }
-        let statuses = status_map
-            .into_iter()
-            .map(|(status, count)| StatusCount { status, count })
-            .collect();
-
         // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
 
-
-        let org_agents: Vec<_> = agents
-            .iter()
-            .filter(|a| {
-                a.organization_id == req.organization_id
-                    || a.id.starts_with(&format!("{}-", req.organization_id))
-            })
-            .collect();
-
-        for agent in org_agents {
+        for agent in org_agents_arc.iter() {
             let prompt = &agent.name;
             let orig_len = prompt.len();
             if orig_len > 0 {
@@ -382,26 +367,6 @@ impl DashboardService for MyDashboardService {
             agents: agent_summaries,
         };
 
-        let mut final_agents = _filtered_agents
-            .into_iter()
-            .map(|a| {
-                let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
-
-                ::server_ohc::agent::Agent {
-                    id: a.id,
-                    name: compressed_name,
-                    role: ::server_ohc::common::Role::Unspecified as i32,
-                    status: ::server_ohc::common::AgentStatus::Idle as i32,
-                    organization_id: a.organization_id,
-                }
-            })
-            .collect::<Vec<_>>();
-
-        if req.mobile_optimized {
-            for agent in final_agents.iter_mut() {
-                agent.name = String::new();
-            }
-        }
 
         let org = if req.mobile_optimized {
             org.map(|mut o| {
@@ -653,6 +618,8 @@ mod tests {
             assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
         }
         if !res_mobile.orders.is_empty() {
+            // We optimized the SQL query but kept the struct population for code simplicity.
+            // Since organization_id was removed from SQL selection for mobile, it will be empty if we map it correctly.
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
     }

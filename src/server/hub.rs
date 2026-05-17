@@ -43,6 +43,7 @@ pub struct Hub {
     pub(crate) pool: sqlx::PgPool,
     pub redis_client: Option<redis::Client>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
+    org_agent_cache: RwLock<HashMap<String, Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
 }
 
@@ -97,6 +98,7 @@ impl Hub {
             telemetry_tx: telemetry_tx.clone(),
             agents: RwLock::new(HashMap::new()),
             agent_cache: RwLock::new(None),
+            org_agent_cache: RwLock::new(HashMap::new()),
             meetings: RwLock::new(HashMap::new()),
             meetings_cache: RwLock::new(None),
             inbox: RwLock::new(HashMap::new()),
@@ -123,8 +125,14 @@ impl Hub {
         }
     }
 
-    fn invalidate_agent_cache(&self) {
+    fn invalidate_agent_cache(&self, org_id: Option<&str>) {
         *self.agent_cache.write().unwrap() = None;
+        if let Some(org) = org_id {
+            self.org_agent_cache.write().unwrap().remove(org);
+        } else {
+            self.org_agent_cache.write().unwrap().clear();
+        }
+
         if let Some(client) = self.redis_client.clone() {
             tokio::task::spawn_blocking(move || {
                 if let Ok(mut conn) = client.get_connection() {
@@ -154,9 +162,10 @@ impl Hub {
     }
 
     pub fn register_agent(&self, agent: Agent) {
+        let org_id = agent.organization_id.clone();
         let mut agents = self.agents.write().unwrap();
         agents.insert(agent.id.clone(), agent);
-        self.invalidate_agent_cache();
+        self.invalidate_agent_cache(Some(&org_id));
     }
 
     pub fn get_agent(&self, id: &str) -> Option<Agent> {
@@ -171,11 +180,12 @@ impl Hub {
 
     pub fn fire_agent(&self, id: &str) {
         let mut agents = self.agents.write().unwrap();
+        let org_id = agents.get(id).map(|a| a.organization_id.clone());
         let mut inbox = self.inbox.write().unwrap();
         
         agents.remove(id);
         inbox.remove(id);
-        self.invalidate_agent_cache();
+        self.invalidate_agent_cache(org_id.as_deref());
     }
 
     pub fn get_agents(&self) -> Arc<Vec<Agent>> {
@@ -220,14 +230,24 @@ impl Hub {
         arc
     }
 
-    pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
+    pub fn get_agents_by_org(&self, org_id: &str) -> Arc<Vec<Agent>> {
+        {
+            let cache = self.org_agent_cache.read().unwrap();
+            if let Some(agents) = cache.get(org_id) {
+                return Arc::clone(agents);
+            }
+        }
+
         let agents = self.agents.read().unwrap();
         let mut agents_vec: Vec<Agent> = agents.values()
             .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
             .cloned()
             .collect();
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
-        agents_vec
+
+        let arc = Arc::new(agents_vec);
+        self.org_agent_cache.write().unwrap().insert(org_id.to_string(), Arc::clone(&arc));
+        arc
     }
 
     pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
@@ -243,13 +263,17 @@ impl Hub {
         
         meetings.insert(id, meeting.clone());
         
+        let mut affected_orgs = std::collections::HashSet::new();
         for participant in participants {
             if let Some(agent) = agents.get_mut(&participant) {
                 agent.status = "IN_MEETING".to_string();
+                affected_orgs.insert(agent.organization_id.clone());
             }
         }
         
-        self.invalidate_agent_cache();
+        for org in affected_orgs {
+            self.invalidate_agent_cache(Some(&org));
+        }
         self.invalidate_meetings_cache();
 
         meeting
@@ -438,7 +462,7 @@ impl Hub {
         };
 
         agents.insert(sub_agent_id.clone(), sub_agent);
-        self.invalidate_agent_cache();
+        self.invalidate_agent_cache(Some("dynamic-delegation"));
         drop(agents);
 
         // Spawn K8s Pod via Operator
@@ -675,8 +699,9 @@ impl Hub {
             provider_type: parent.provider_type.clone(),
         };
         
+        let child_org = child.organization_id.clone();
         agents.insert(child_id.clone(), child);
-        self.invalidate_agent_cache();
+        self.invalidate_agent_cache(Some(&child_org));
         drop(agents); // Release lock before calling publish!
         
         // Copy history
