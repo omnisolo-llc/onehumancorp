@@ -57,7 +57,7 @@ test --test_timeout=60,120,300,600
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
 test --local_test_jobs=1
 # Allow up to 200 parallel remote build actions during tests.
-test --jobs=200
+test --jobs=2
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
@@ -97,7 +97,7 @@ build --action_env=CI
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 # Prevents CacheNotFoundException from failing repository rule fetches.
 # common:buildbuddy-official --experimental_remote_downloader_local_fallback
-# common:buildbuddy-official --jobs=200
+# common:buildbuddy-official --jobs=2
 # Default read-only API key (public, read-only – cannot push artifacts or
 # modify any BuildBuddy state; safe to keep in version control).
 # common:buildbuddy-official --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
@@ -117,7 +117,7 @@ build --action_env=CI
 # # common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 # common:buildbuddy --experimental_remote_downloader_local_fallback
-# common:buildbuddy --jobs=200
+# common:buildbuddy --jobs=2
 # Read only Bazel cache
 # common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 # common:buildbuddy --remote_timeout=10m
