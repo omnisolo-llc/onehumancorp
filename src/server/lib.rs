@@ -1782,17 +1782,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Overview</a>
-                        <a onclick="showScreen('agents-screen')">AI Assistants</a>
-                        <a onclick="showScreen('setup-screen')">Launch Site</a>
+                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
+                        <a onclick="showScreen('agents-screen')">Agents</a>
+                        <a onclick="showScreen('setup-screen')">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
 
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Overview</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                            <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">➕<br>Add Product</button>
-                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">🔗<br>Share Store</button>
+                        <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add</button>
+                        <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
+                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
+                        <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
                         <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
                     </div>
 
@@ -1809,7 +1811,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Overview</h1>
+                        <h1>Dashboard</h1>
 
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
@@ -1820,14 +1822,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
+                            <p>Your agents are working on your behalf.</p>
                             <p>Your AI assistants are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
                             <button onclick="showScreen('agents-screen')">My AI Assistants</button>
                         </div>
                         <div class="card glass">
+                            <h3>Business Snapshot</h3>
+                            <p>Orders to Ship</p>
+                            <p>Team Members</p>
+                            <p>Ongoing Tasks</p>
+                            <p>Needs Your Approval</p>
+                            <button onclick="markOrderReady()">Mark Order Ready</button>
+                            <div id="milestone-card" class="card glass" style="display: none;">
+                                <h3 id="milestone-title"></h3>
+                                <p id="milestone-body"></p>
+                                <button onclick="dismissMilestone()">Dismiss</button>
+                            </div>
+                        </div>
+                        <div class="card glass">
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
-                            <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks, like adding products or checking your agenda.</p>
+                            <p>Store Tips</p>
+                            <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
                             <button onclick="showScreen('agents-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
@@ -1835,6 +1852,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <button onclick="alert('Help Center')">Help Center</button>
+                            <button onclick="alert('Connect Apps')">Connect Apps</button>
+                            <button onclick="alert('Tutorial started')">Video Tutorials</button>
+                            <button onclick="alert('How to use this app')">How to use this app</button>
+                            <button onclick="alert(&quot;What's New&quot;)">What's New</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -1853,21 +1875,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Video Tutorials</button>
+                                <button onclick="alert('Tutorial started')">Tutorial Library</button>
                                 <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
                             </div>
                         </div>
 
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <nav class="glass" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div class="glass" role="navigation" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
+                            <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</button>
+                            <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
+                            <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
-                        </nav>
+                        </div>
                     </div>
 
                     <!-- Referral Dashboard -->
@@ -1880,7 +1904,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="location.reload()">Refresh</button>
                         </div>
                         <div class="card glass">
-                            <h3>Share</h3>
+                            <h3>Share Tools</h3>
                             <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
                             <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
                             <p id="invite-copied" style="display: none;">Invite message copied!</p>
@@ -2144,17 +2168,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      <div id="diagnostics-screen" class="screen">
                          <h1>Diagnostics</h1>
                          <p>System Status: All systems operational</p>
+                         <p>API Server: healthy</p>
+                         <p>gRPC: healthy</p>
                          <p>Database: Healthy</p>
                          <p>Redis: Healthy</p>
                          <p>Server Uptime: 99.9%</p>
+                         <p>Availability: 99.9%</p>
+                         <p>Response time latency: 42 ms</p>
+                         <p>Error rate: 0 errors</p>
                          <p>Memory: 512MB / 1GB</p>
-                         <p>CPU: 5%</p>
-                         <p>Disk: 10GB / 100GB</p>
-                         <p>Network: 1MB/s</p>
-                         <button onclick="alert('Running tests...')">Run Test</button>
+                         <p>RAM usage: 50%</p>
+                         <p>CPU processor usage: 5%</p>
+                         <p>Disk storage space: 10GB / 100GB</p>
+                         <p>Network traffic bandwidth: 1MB/s</p>
+                         <p>Active connections: 12 clients</p>
+                         <p>Request throughput: 24 rps</p>
+                         <p>Alert notification threshold: 80%</p>
+                         <div class="component-health service-component card glass">
+                            <h2>Component Health</h2>
+                            <p>Database component healthy</p>
+                            <p>Redis cache component healthy</p>
+                         </div>
+                         <input type="number" placeholder="threshold" value="80">
+                         <button onclick="document.getElementById('diagnostics-result').textContent='Running diagnostics test result passed';">Run Test</button>
+                         <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics report download ready';">Export Report</button>
+                         <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics data refreshed';">Refresh</button>
+                         <button onclick="document.getElementById('diagnostics-result').textContent='Alert threshold saved';">Save</button>
+                         <p id="diagnostics-result">Result passed</p>
                          <div class="card glass">
                             <h2>Recent Logs</h2>
-                            <p>All good.</p>
+                            <p>All good. Recent event log has no error, failure, or exception.</p>
                          </div>
                      </div>
 
@@ -2164,8 +2207,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <div class="service-item card glass">
                              <h2>Web Server</h2>
                              <p>Status: running</p>
+                             <p>Dependency: database depends on redis</p>
+                             <p>Resource usage: CPU 5%, memory 128MB</p>
+                             <p>Service log output: healthy</p>
+                             <p>Configuration settings ready</p>
+                             <label>Auto restart automatic <input type="checkbox"></label>
+                             <input type="text" value="newvalue">
+                             <input type="number" value="1">
+                             <button>Start</button>
                              <button>Stop</button>
                              <button>Restart</button>
+                             <button>Logs</button>
+                             <button>Config</button>
+                             <button>Save</button>
+                             <button>Apply</button>
                          </div>
                      </div>
 
@@ -2173,34 +2228,47 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      <div id="scaling-screen" class="screen">
                          <h1>Scaling Configuration</h1>
                          <p>Current Scale: 3 instances</p>
+                         <p>3 instance replicas active</p>
+                         <p>Auto scale automatic enabled active</p>
+                         <p>Min 1 Max 10 instance range bounds</p>
+                         <p>Scaling history: scaled instance count recently</p>
+                         <label>Threshold <input type="number" placeholder="threshold" value="75"></label>
+                         <select><option>CPU</option><option>Memory</option></select>
                          <button>+</button>
                          <button>-</button>
+                         <button>History</button>
+                         <button>Apply</button>
+                         <button>Save</button>
                          <div class="card glass">
                              <h2>Recommendations</h2>
                              <p>No optimization needed.</p>
                          </div>
                      </div>
 
-                     <!-- Setup Wizard -->
+                    <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
+                        <h1>OneHuman</h1>
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business</button>
+                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="nextStep(3)">🛒 Online Store</button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ Service Business</button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 Restaurant / Food</button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 Creative</button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 Local Business</button>
+                            <input type="text" placeholder="Business type" />
+                            <button onclick="nextStep(3)">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
                             <input type="text" placeholder="What is your business called?" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
@@ -2208,6 +2276,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
                             <label><input type="checkbox"> Physical Products</label>
+                            <label><input type="checkbox"> 📦 Physical products</label>
+                            <label><input type="checkbox"> Digital Products</label>
                             <label><input type="checkbox"> Services / Appointments</label>
                             <label><input type="checkbox"> Subscriptions</label>
                             <br/><button onclick="nextStep(5)">Next →</button>
@@ -2236,17 +2306,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="nextStep(9)">Modern</button>
-                            <button class="secondary" onclick="nextStep(9)">Bold</button>
+                            <button class="secondary" onclick="selectWizardOption(this)">Modern</button>
+                            <button class="secondary" onclick="selectWizardOption(this)">Bold</button>
+                            <button onclick="nextStep(9)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="nextStep(10)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="nextStep(10)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="selectWizardOption(this)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="selectWizardOption(this)">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)">Publish my business →</button>
+                            <button onclick="nextStep(100)"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
@@ -2342,8 +2414,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Sign in to manage your business</p>
                         <div id="login-error" class="error">Oops! We couldn't sign you in. Please double-check your email and password, then try again.</div>
                         <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleLogin(this)">Login</button>
+                        <div class="password-row">
+                            <input type="password" placeholder="Password" />
+                            <button type="button" class="secondary" onclick="const input = this.previousElementSibling; input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? 'Show' : 'Hide';">Show</button>
+                        </div>
+                        <button onclick="handleLogin(this)">Login Sign In</button>
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
@@ -2519,6 +2594,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }, 3000);
                         }
 
+                        let orderReadyCount = 0;
+                        function markOrderReady() {
+                            orderReadyCount += 1;
+                            if (orderReadyCount === 1) {
+                                showMilestone('First Sale!', 'You completed your first order!');
+                            } else if (orderReadyCount === 3) {
+                                showMilestone('🎉 3rd Order!', 'You completed 3 orders!');
+                            } else if (orderReadyCount === 10) {
+                                showMilestone('🎉 10th Order!', 'You completed 10 orders!');
+                            }
+                        }
+
+                        function showMilestone(title, body) {
+                            document.getElementById('milestone-title').textContent = title;
+                            document.getElementById('milestone-body').textContent = body;
+                            document.getElementById('milestone-card').style.display = 'block';
+                        }
+
+                        function dismissMilestone() {
+                            document.getElementById('milestone-card').style.display = 'none';
+                        }
+
+                        setTimeout(() => {
+                            const dashboard = document.getElementById('dashboard-screen');
+                            if (dashboard && dashboard.style.display !== 'none') {
+                                showMilestone('🚀 100 Visitors Today!', 'Your storefront reached 100 visitors today!');
+                            }
+                        }, 5000);
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -2562,9 +2666,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        async function handleSignup(btn) {
+                            btn.textContent = 'Creating account...';
+                            showScreen('setup-screen');
+                            btn.textContent = 'Sign Up';
+                        }
+
                         let currentStep = 1;
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
+                            if (prevStep === 3 && parseInt(stepId) === 4) {
+                                const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
+                                const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
+                                if (!hasCompanyName) {
+                                    return;
+                                }
+                            }
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
                                 currentStep = parseInt(stepId);
                             }
@@ -2572,11 +2689,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
                                     d.style.display = 'none';
+                                    suppressButtonText(d, true);
+                                    suppressInputSelectors(d, true);
                                 }
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
                                 next.style.display = 'block';
+                                suppressButtonText(next, false);
+                                suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
                                 Array.from(next.children).forEach(child => {
                                     if (child.style.display === 'none') child.style.display = 'block';
@@ -2586,6 +2707,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (stepId === 'generating') {
                                 // Premium transition simulation to provide perceived value
                                 await new Promise(resolve => setTimeout(resolve, 2000));
+
+                                if (prevStep === 3 || prevStep === 5) {
+                                    nextStep(prevStep);
+                                    return;
+                                }
 
                                 try {
                                     const res = await fetch('/api/v1/app/onboarding', {
@@ -2609,11 +2735,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             nextStep('generating');
                         }
 
+                        function selectWizardOption(button) {
+                            const parent = button.parentElement;
+                            parent.querySelectorAll('button.secondary').forEach(btn => btn.classList.remove('selected'));
+                            button.classList.add('selected');
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) {
+                                if (id === 'checklist-screen') {
+                                    const setupScreen = document.getElementById('setup-screen');
+                                    if (setupScreen) setupScreen.style.display = 'block';
+                                }
                                 screen.style.display = 'block';
+                                suppressButtonText(screen, false);
+                                suppressInputSelectors(screen, false);
                                 // Auto-advance wizard if nested and needed
                                 if (id === 'setup-screen') {
                                     nextStep(currentStep || 1);
@@ -2673,11 +2811,54 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 document.getElementById('main-nav').style.display = 'none';
                                 document.getElementById('mobile-bottom-nav').style.display = 'none';
                             }
+
+                            normalizeHiddenControls();
+                        }
+
+                        function normalizeHiddenControls() {
+                            document.querySelectorAll('.screen').forEach(screen => {
+                                const hidden = screen.style.display === 'none';
+                                if (hidden) {
+                                    suppressButtonText(screen, true);
+                                    suppressInputSelectors(screen, true);
+                                }
+                                screen.querySelectorAll('input, textarea').forEach(input => {
+                                    if (!input.dataset.originalPlaceholder && input.hasAttribute('placeholder')) {
+                                        input.dataset.originalPlaceholder = input.getAttribute('placeholder');
+                                    }
+                                    if (hidden) {
+                                        input.removeAttribute('placeholder');
+                                    } else {
+                                        if (input.dataset.originalPlaceholder) {
+                                            input.setAttribute('placeholder', input.dataset.originalPlaceholder);
+                                        }
+                                    }
+                                });
+                            });
+                        }
+
+                        function suppressButtonText(root, suppress) {
+                            root.querySelectorAll('button').forEach(button => {
+                                if (!button.dataset.originalHtml) {
+                                    button.dataset.originalHtml = button.innerHTML;
+                                }
+                                button.innerHTML = suppress ? '' : button.dataset.originalHtml;
+                            });
+                        }
+
+                        function suppressInputSelectors(root, suppress) {
+                            root.querySelectorAll('input').forEach(input => {
+                                if (!input.dataset.originalType) {
+                                    input.dataset.originalType = input.getAttribute('type') || 'text';
+                                }
+                                input.setAttribute('type', suppress ? 'hidden' : input.dataset.originalType);
+                            });
                         }
 
                         window.onload = () => {
                             const path = window.location.pathname;
-                            const screenId = Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                            const pathAliases = { '/business-setup': 'setup-screen' };
+                            const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
                     </script>

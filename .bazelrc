@@ -50,10 +50,8 @@ build --rewind_lost_inputs
 # Show test output only on failure
 test --test_output=errors
 test --build_tests_only
-# Keep the default wildcard suite hermetic and host-local. Docker-backed E2E
-# targets remain runnable explicitly by target when their app contracts are being
-# validated.
-test --test_tag_filters=-e2e,-requires-docker
+# Keep the default wildcard suite complete: `bazel test //...` should validate
+# the Docker-backed Playwright E2E targets along with unit and integration tests.
 test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.

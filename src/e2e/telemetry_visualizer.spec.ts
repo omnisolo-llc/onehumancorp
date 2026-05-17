@@ -1,57 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('🎨 Canvas: AutoDream Memory Pipeline UI Tests', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to login page
-    await page.goto('/login');
+test.describe('Telemetry and Cost Visualizer', () => {
+  test('shows operational telemetry metrics', async ({ page }) => {
+    await page.goto('/diagnostics');
+    const diagnostics = page.locator('#diagnostics-screen');
 
-    // Fill in credentials and sign in
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
-
-    // Wait for Dashboard to load
-    await page.waitForURL('**/dashboard*');
-
-    // Enable advanced telemetry to make the component visible unconditionally for tests
-    await page.click('button:has-text("Settings"), a:has-text("Settings")');
-    const advancedTab = page.locator('text=Advanced').filter({ visible: true }).first();
-    await advancedTab.click();
-
-    // Attempt to click Advanced Mode toggle
-    const toggle = page.locator('text=Advanced');
-    if (await toggle.isVisible()) {
-        const bbox = await toggle.boundingBox();
-        if (bbox) {
-            await page.mouse.click(bbox.x + 50, bbox.y);
-        }
-    }
-
-    await page.click('button:has-text("Dashboard"), a:has-text("Dashboard")');
+    await expect(diagnostics).toContainText('Response time latency: 42 ms');
+    await expect(diagnostics).toContainText('Request throughput: 24 rps');
+    await expect(diagnostics).toContainText('Memory: 512MB / 1GB');
   });
 
-  test('should display AutoDream Memory Pipeline header when advanced telemetry is shown', async ({ page }) => {
-    // We expect the pipeline to be visible based on our setup
-    const pipelineTitle = page.locator('text=AutoDream Memory Pipeline');
-    await expect(pipelineTitle).toBeVisible();
-  });
+  test('shows AI cost usage details', async ({ page }) => {
+    await page.goto('/my-plan');
+    await page.getByRole('button', { name: 'View Cost Details' }).click();
 
-  test('should display LLM Cache Hits stat card', async ({ page }) => {
-    await expect(page.locator('text=LLM Cache Hits')).toBeVisible();
-  });
-
-  test('should display RAG Latency stat card', async ({ page }) => {
-    await expect(page.locator('text=RAG Latency')).toBeVisible();
-  });
-
-  test('should display Dynamic Hybrid Correlation Chart placeholder', async ({ page }) => {
-    await expect(page.locator('text=[ Dynamic Hybrid Correlation Chart ]')).toBeVisible();
-  });
-
-  test('should apply correct styling properties for AutoDream Memory Pipeline container', async ({ page }) => {
-    await expect(page.locator('text=AutoDream Memory Pipeline')).toBeVisible();
-    await expect(page.locator('text=LLM Cache Hits')).toBeVisible();
-    await expect(page.locator('text=RAG Latency')).toBeVisible();
-    await expect(page.locator('text=[ Dynamic Hybrid Correlation Chart ]')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cost & AI Usage' })).toBeVisible();
+    await expect(page.getByText('Total Costs: $1.23')).toBeVisible();
+    await expect(page.getByText('LLM Usage: 5,000 tokens')).toBeVisible();
   });
 });

@@ -26,7 +26,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/:id/handoff", post(handoff_mission_endpoint))
+        .route("/{id}/handoff", post(handoff_mission_endpoint))
         .with_state(sip_db)
 }
 
