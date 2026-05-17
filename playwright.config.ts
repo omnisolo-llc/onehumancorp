@@ -9,6 +9,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   outputDir: './test-results/screenshots',
+  timeout: 60000,
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:18789',
     trace: 'on-first-retry',

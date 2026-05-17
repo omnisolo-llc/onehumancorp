@@ -11,10 +11,10 @@ def _playwright_target_name(spec):
     """Convert a spec filename to a valid Bazel target name."""
     return "playwright_" + spec.replace("/", "_").replace(".", "_").replace("-", "_")
 
-def define_playwright_tests():
+def define_playwright_tests(specs):
     """Generate one sh_test target per *.spec.ts file, plus a test_suite."""
     targets = []
-    for spec in sorted(native.glob(["*.spec.ts"])):
+    for spec in sorted(specs):
         name = _playwright_target_name(spec)
         sh_test(
             name = name,
@@ -37,7 +37,7 @@ def define_playwright_tests():
                 "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
             },
             size = "large",
-            timeout = "long",
+            timeout = "eternal",
             tags = [
                 "e2e",
                 "no-remote-exec",

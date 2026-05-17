@@ -21,8 +21,6 @@ pub mod domain;
 pub use ::server_pricing as pricing;
 pub mod analytics;
 pub use ::server_telemetry as telemetry;
-#[cfg(test)]
-pub mod telemetry_test;
 pub mod chaos;
 pub mod integrations;
 pub use ::server_utils as utils;
@@ -1237,7 +1235,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
 
-    let addr = "0.0.0.0:8081".parse()?;
+    let grpc_port = std::env::var("OHC_GRPC_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(8081);
+    let addr = format!("0.0.0.0:{}", grpc_port).parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
@@ -1482,7 +1484,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .merge(health_router)
         .fallback(ui_handler);
 
-    let mesh_addr: std::net::SocketAddr = "0.0.0.0:18789".parse().unwrap();
+    let port = std::env::var("OHC_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(18789);
+    let mesh_addr: std::net::SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);

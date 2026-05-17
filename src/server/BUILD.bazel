@@ -20,14 +20,12 @@ rust_library(
         "pipeline.rs",
         "powersync.rs",
         "queue.rs",
-        "queue_test.rs",
         "scheduler.rs",
         "seeder.rs",
         "settings.rs",
         "sip.rs",
         "store.rs",
         "tasks.rs",
-        "telemetry_test.rs",
         "ultraplan.rs",
         "//src/server/api:srcs",
         "//src/server/autodream:srcs",
@@ -127,10 +125,82 @@ rust_binary(
     ],
 )
 
+# Individual unit test targets for server_lib
+[
+    rust_test(
+        name = module + "_unit_test",
+        size = "large",
+        crate = ":server_lib",
+        args = ["--test", module],
+        data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+        edition = "2024",
+        env = {
+            "RUST_TEST_THREADS": "1",
+        },
+        proc_macro_deps = [
+            "@crates//:async-trait",
+        ],
+        target_compatible_with = select({
+            "@platforms//os:linux": [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        }),
+        deps = [
+            "@crates//:tempfile",
+            "@crates//:tokio-tungstenite",
+        ],
+    )
+    for module in [
+        "analytics",
+        "db",
+        "msgbus",
+        "pipeline",
+        "powersync",
+        "scheduler",
+        "settings",
+        "tasks",
+        "ultraplan",
+    ]
+]
+
 rust_test(
-    name = "server_test",
+    name = "queue_test",
+    size = "large",
+    srcs = ["queue_test.rs"],
+    edition = "2024",
+    deps = [
+        ":server_lib",
+        "@crates//:tokio",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:sqlx",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+rust_test(
+    name = "telemetry_test",
+    size = "large",
+    srcs = ["telemetry_test.rs"],
+    edition = "2024",
+    deps = [
+        ":server_lib",
+        "@crates//:tokio",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+rust_test(
+    name = "powersync_test",
     size = "large",
     crate = ":server_lib",
+    args = ["--test", "power_sync"],
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
     env = {

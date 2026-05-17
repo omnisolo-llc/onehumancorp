@@ -3,10 +3,15 @@ load("@aspect_rules_js//js:defs.bzl", "js_library")
 js_library(
     name = "components",
     srcs = [
+        "AgentStatus.test.tsx",
         "AgentStatus.tsx",
+        "ErrorState.test.tsx",
         "ErrorState.tsx",
+        "MarkdownText.test.tsx",
         "MarkdownText.tsx",
+        "PromptInput.test.tsx",
         "PromptInput.tsx",
+        "ToolProgress.test.tsx",
         "ToolProgress.tsx",
     ],
     visibility = ["//visibility:public"],

@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use crate::db::{DB, DbStore};
+    use server_lib::db::{DB, DbStore};
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
-    use crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator;
+    use server_lib::services::sync::power_sync_orchestrator::PowerSyncOrchestrator;
 
     #[tokio::test]
     async fn test_power_sync_orchestrator_push() {

@@ -27,7 +27,18 @@ build --linkopt=-fuse-ld=bfd
 build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
+# ── Rust toolchains ─────────────────────────────────────────────────────────────
+# Default Rust toolchain (stable channel)
 build --@rules_rust//rust/toolchain/channel=stable
+
+# Use rust_toolchains for asan and windows builds (like nativelink)
+# because asan explicitly needs to _not_ use the Nix toolchains
+# and Windows doesn't support LRE.
+build:asan --extra_toolchains=@rust_toolchains//:all
+build:windows --extra_toolchains=@rust_toolchains//:all
+
+# Nightly toolchain
+build:nightly --@rules_rust//rust/toolchain/channel=nightly
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost

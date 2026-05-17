@@ -30,7 +30,6 @@ rust_library(
         "tail.rs",
         "task.rs",
         "todowrite.rs",
-        "todowrite_test.rs",
         "toolsearch.rs",
         "webfetch.rs",
         "websearch.rs",
@@ -63,4 +62,17 @@ rust_library(
         "@crates//:async-trait",
     ],
 
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "todowrite_test",
+    srcs = ["todowrite_test.rs"],
+    edition = "2024",
+    deps = [
+        ":tools",
+        "@crates//:tokio",
+        "@crates//:serde_json",
+    ],
 )
