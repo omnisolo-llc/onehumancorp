@@ -9,30 +9,8 @@ filegroup(
         "local_repository_impl.rs",
         "mod.rs",
         "power_sync_orchestrator.rs",
-        "power_sync_test.rs",
         "service.rs",
         "telemetry_sync.rs",
     ],
     visibility = ["//src/server/services:__pkg__"],
-)
-
-rust_test(
-    name = "power_sync_test",
-    size = "large",
-    srcs = ["power_sync_test.rs"],
-    edition = "2024",
-    deps = [
-        "//src/server:server_lib",
-        "//src/server/ohc:server_ohc",
-        "@crates//:tokio",
-        "@crates//:serde_json",
-        "@crates//:sqlx",
-        "@crates//:tonic",
-        "@crates//:tokio-stream",
-        "@crates//:chrono",
-    ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )

@@ -189,7 +189,14 @@ rust_test(
     deps = [
         ":server_lib",
         "@crates//:tokio",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:walkdir",
+        "@crates//:temp-env",
+        "//src/server/telemetry:server_telemetry",
+        "//src/server/config:server_config",
     ],
+    data = ["//deploy/scripts:ohc-standalone.sh"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
