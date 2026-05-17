@@ -192,7 +192,6 @@ sh_test(
     size = "large",
     timeout = "eternal",
     srcs = ["tests/kind_e2e_test.sh"],
-    tags = ["disabled"],
     data = [
         "helm/ohc/Chart.yaml",
         "helm/ohc/dashboards/harness_efficiency.json",
@@ -225,7 +224,7 @@ sh_test(
         "//src/server:server",
     ],
     tags = [
-
+        "disabled",
         "large",
         "local",
         "no-remote-exec",
