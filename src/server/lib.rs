@@ -2096,13 +2096,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
                         <h1>My Current Plan</h1>
-                        <p>Plan: Free</p>
+                        <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
-                        <p>Estimated Next Bill: $0.00 (2024-06-01)</p>
+                        <p id="my-plan-next-bill">Estimated Next Bill: $0.00</p>
                         <div class="card glass">
                             <h3>Your Current Usage</h3>
-                            <p>AI Actions Used: 0 / 100</p>
-                            <p>Storage Used: 0MB / 500MB</p>
+                            <p id="my-plan-ai-usage">AI Actions Used: 0 / 100</p>
+                            <p id="my-plan-storage-usage">Storage Used: 0MB / 500MB</p>
                             <button onclick="alert('File chooser opened')">Upload Photo</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
@@ -2117,8 +2117,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
                         <h1>Cost & AI Usage</h1>
-                        <p>Total Costs: $1.23</p>
-                        <p>LLM Usage: 5,000 tokens</p>
+                        <p id="cost-dashboard-total">Total Costs: $0.00</p>
+                        <p id="cost-dashboard-llm">LLM Usage: $0.00</p>
+                        <p id="cost-dashboard-storage">Storage: $0.00</p>
+                        <p id="cost-dashboard-period">Period: -</p>
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
@@ -2627,6 +2629,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (pathMap[id] && window.location.protocol !== 'file:') {
                                 window.history.pushState({}, '', pathMap[id]);
+                            }
+
+                            if (id === 'my-plan-screen') {
+                                fetch('/api/billing/my-plan')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        document.getElementById('my-plan-name').textContent = 'Plan: ' + data.current_plan;
+                                        document.getElementById('my-plan-next-bill').textContent = 'Estimated Next Bill: $' + data.next_bill_estimated + '.00';
+
+                                        let aiLimit = data.ai_actions_limit ? data.ai_actions_limit : 'Unlimited';
+                                        document.getElementById('my-plan-ai-usage').textContent = 'AI Actions Used: ' + data.ai_actions_used + ' / ' + aiLimit;
+
+                                        let storageUsedMB = Math.round(data.storage_used_bytes / (1024 * 1024));
+                                        let storageLimitText = data.storage_limit_bytes ? Math.round(data.storage_limit_bytes / (1024 * 1024)) + 'MB' : 'Unlimited';
+                                        document.getElementById('my-plan-storage-usage').textContent = 'Storage Used: ' + storageUsedMB + 'MB / ' + storageLimitText;
+                                    })
+                                    .catch(err => console.error('Error fetching plan info:', err));
+                            }
+
+                            if (id === 'cost-dashboard-screen') {
+                                fetch('/api/billing/cost-dashboard')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        document.getElementById('cost-dashboard-total').textContent = 'Total Costs: $' + (data.total_costs / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-llm').textContent = 'LLM Usage: $' + (data.llm_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-storage').textContent = 'Storage: $' + (data.storage_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
+                                    })
+                                    .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
                             if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
