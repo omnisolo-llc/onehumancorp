@@ -1,89 +1,136 @@
 -- Migration 004: Enforce Hybrid Multi-tenant RLS Policies
 
--- For tables that have `tenant_id`
-ALTER TABLE shared_tasks_v4 ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_shared_tasks_v4 ON shared_tasks_v4;
-CREATE POLICY tenant_isolation_shared_tasks_v4 ON shared_tasks_v4 USING (tenant_id::text = current_setting('app.current_tenant', true));
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'shared_tasks_v4',
+            'shared_tasks',
+            'agent_approvals',
+            'onboarding_state',
+            'referrals',
+            'competitor_metrics',
+            'agent_violations',
+            'hybrid_fs_sync_queue',
+            'department_tasks',
+            'autodream_memories',
+            'state_machine_transitions',
+            'pages',
+            'memories',
+            'consolidated_memory',
+            'agent_inbox',
+            'meeting_rooms'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t_name);
 
-ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_shared_tasks ON shared_tasks;
-CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));
+            pol_name := format('tenant_isolation_%s', t_name);
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_policies
+                WHERE schemaname = current_schema()
+                    AND tablename = t_name
+                    AND policyname = pol_name
+            ) THEN
+                EXECUTE format(
+                    'CREATE POLICY %I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true))',
+                    pol_name,
+                    t_name
+                );
+            END IF;
+        END IF;
+    END LOOP;
+END
+$$;
 
-ALTER TABLE agent_approvals ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_agent_approvals ON agent_approvals;
-CREATE POLICY tenant_isolation_agent_approvals ON agent_approvals USING (tenant_id::text = current_setting('app.current_tenant', true));
+DO $$
+BEGIN
+    IF to_regclass('shared_tasks_decomposition') IS NOT NULL THEN
+        ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE onboarding_state ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_onboarding_state ON onboarding_state;
-CREATE POLICY tenant_isolation_onboarding_state ON onboarding_state USING (tenant_id::text = current_setting('app.current_tenant', true));
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = current_schema()
+                AND tablename = 'shared_tasks_decomposition'
+                AND policyname = 'tenant_isolation_shared_tasks_decomposition'
+        ) THEN
+            CREATE POLICY tenant_isolation_shared_tasks_decomposition
+                ON shared_tasks_decomposition
+                USING (organization_id::text = current_setting('app.current_tenant', true));
+        END IF;
+    END IF;
+END
+$$;
 
-ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_referrals ON referrals;
-CREATE POLICY tenant_isolation_referrals ON referrals USING (tenant_id::text = current_setting('app.current_tenant', true));
+DO $$
+BEGIN
+    IF to_regclass('agent_session_data') IS NOT NULL THEN
+        ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE competitor_metrics ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_competitor_metrics ON competitor_metrics;
-CREATE POLICY tenant_isolation_competitor_metrics ON competitor_metrics USING (tenant_id::text = current_setting('app.current_tenant', true));
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = current_schema()
+                AND tablename = 'agent_session_data'
+                AND policyname = 'tenant_isolation_agent_session_data'
+        ) THEN
+            CREATE POLICY tenant_isolation_agent_session_data
+                ON agent_session_data
+                USING (agent_id IN (SELECT id FROM agents WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+        END IF;
+    END IF;
 
-ALTER TABLE agent_violations ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_agent_violations ON agent_violations;
-CREATE POLICY tenant_isolation_agent_violations ON agent_violations USING (tenant_id::text = current_setting('app.current_tenant', true));
+    IF to_regclass('swarm_truth_embeddings') IS NOT NULL THEN
+        ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue;
-CREATE POLICY tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue USING (tenant_id::text = current_setting('app.current_tenant', true));
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = current_schema()
+                AND tablename = 'swarm_truth_embeddings'
+                AND policyname = 'tenant_isolation_swarm_truth_embeddings'
+        ) THEN
+            CREATE POLICY tenant_isolation_swarm_truth_embeddings
+                ON swarm_truth_embeddings
+                USING (memory_id IN (SELECT id FROM agent_memories WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+        END IF;
+    END IF;
 
-ALTER TABLE department_tasks ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_department_tasks ON department_tasks;
-CREATE POLICY tenant_isolation_department_tasks ON department_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));
+    IF to_regclass('swarm_tasks') IS NOT NULL THEN
+        ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_autodream_memories ON autodream_memories;
-CREATE POLICY tenant_isolation_autodream_memories ON autodream_memories USING (tenant_id::text = current_setting('app.current_tenant', true));
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = current_schema()
+                AND tablename = 'swarm_tasks'
+                AND policyname = 'tenant_isolation_swarm_tasks'
+        ) THEN
+            CREATE POLICY tenant_isolation_swarm_tasks
+                ON swarm_tasks
+                USING (mission_id IN (SELECT id FROM agent_missions WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+        END IF;
+    END IF;
 
-ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_state_machine_transitions ON state_machine_transitions;
-CREATE POLICY tenant_isolation_state_machine_transitions ON state_machine_transitions USING (tenant_id::text = current_setting('app.current_tenant', true));
+    IF to_regclass('meeting_transcripts') IS NOT NULL THEN
+        ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE pages ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_pages ON pages;
-CREATE POLICY tenant_isolation_pages ON pages USING (tenant_id::text = current_setting('app.current_tenant', true));
-
-ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_memories ON memories;
-CREATE POLICY tenant_isolation_memories ON memories USING (tenant_id::text = current_setting('app.current_tenant', true));
-
-ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_consolidated_memory ON consolidated_memory;
-CREATE POLICY tenant_isolation_consolidated_memory ON consolidated_memory USING (tenant_id::text = current_setting('app.current_tenant', true));
-
-ALTER TABLE agent_inbox ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_agent_inbox ON agent_inbox;
-CREATE POLICY tenant_isolation_agent_inbox ON agent_inbox USING (tenant_id::text = current_setting('app.current_tenant', true));
-
-ALTER TABLE meeting_rooms ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_meeting_rooms ON meeting_rooms;
-CREATE POLICY tenant_isolation_meeting_rooms ON meeting_rooms USING (tenant_id::text = current_setting('app.current_tenant', true));
-
--- Handle table with 'organization_id' instead of 'tenant_id'
-ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition;
-CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (organization_id::text = current_setting('app.current_tenant', true));
-
--- Handle tables without direct 'tenant_id' or where the rule asks to use a subquery check
-ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_agent_session_data ON agent_session_data;
-CREATE POLICY tenant_isolation_agent_session_data ON agent_session_data USING (agent_id IN (SELECT id FROM agents WHERE tenant_id::text = current_setting('app.current_tenant', true)));
-
-ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_swarm_truth_embeddings ON swarm_truth_embeddings;
-CREATE POLICY tenant_isolation_swarm_truth_embeddings ON swarm_truth_embeddings USING (memory_id IN (SELECT id FROM agent_memories WHERE tenant_id::text = current_setting('app.current_tenant', true)));
-
-ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_swarm_tasks ON swarm_tasks;
-CREATE POLICY tenant_isolation_swarm_tasks ON swarm_tasks USING (mission_id IN (SELECT id FROM agent_missions WHERE tenant_id::text = current_setting('app.current_tenant', true)));
-
--- Subquery for meeting_transcripts as requested by prompt rule despite having a tenant_id column
-ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_meeting_transcripts ON meeting_transcripts;
-CREATE POLICY tenant_isolation_meeting_transcripts ON meeting_transcripts USING (meeting_id IN (SELECT id FROM meeting_rooms WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE schemaname = current_schema()
+                AND tablename = 'meeting_transcripts'
+                AND policyname = 'tenant_isolation_meeting_transcripts'
+        ) THEN
+            CREATE POLICY tenant_isolation_meeting_transcripts
+                ON meeting_transcripts
+                USING (meeting_id IN (SELECT id FROM meeting_rooms WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+        END IF;
+    END IF;
+END
+$$;

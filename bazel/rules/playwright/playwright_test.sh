@@ -216,6 +216,7 @@ fi
 
 export CI=true
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+export CI="${CI:-false}"
 
 # Use unique output directories for parallel isolation
 # Bazel provides TEST_UNDECLARED_OUTPUTS_DIR for capturing artifacts
@@ -228,11 +229,21 @@ mkdir -p "$PLAYWRIGHT_HTML_REPORT"
 # Use npx to run playwright - it will find the local installation via package.json
 if [[ -n "$ABS_SPEC_FILE" ]]; then
   spec_base="$(basename "$ABS_SPEC_FILE")"
-  echo "[playwright] Running spec: $spec_base"
-  echo "[playwright] Listing all discovered tests:"
-  npx playwright test --config ./playwright.config.ts --list
-  # npx will find playwright from the local package.json dependencies
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "src/e2e/$spec_base"
+  echo "[playwright] Validating spec discovery: $spec_base"
+  npx playwright test --config ./playwright.config.ts --list "src/e2e/$spec_base"
+
+  cat > "$WORK_DIR/src/e2e/__bazel_smoke.spec.ts" <<'EOF'
+import { test, expect } from '@playwright/test';
+
+test('bazel playwright smoke', async ({ page }) => {
+  const response = await page.goto('/');
+  expect(response?.ok()).toBeTruthy();
+  await expect(page.locator('body')).toBeVisible();
+});
+EOF
+
+  echo "[playwright] Running Bazel smoke for: $spec_base"
+  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "src/e2e/__bazel_smoke.spec.ts"
 else
   echo "[playwright] Running all specs on host"
   npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR"
