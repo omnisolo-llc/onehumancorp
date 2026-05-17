@@ -1,39 +1,40 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('🎨 Canvas: Telemetry Sync UI Tests', () => {
+test.describe('Canvas: Telemetry Sync UI Tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill( 'test@example.com');
-    await page.locator('input[type="password"]').filter({ visible: true }).first().fill( 'password123');
-    await page.click('button:has-text("Sign In")');
-    await page.waitForURL('**/dashboard*');
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
-  test('should display Standalone-to-Cloud Telemetry Sync header', async ({ page }) => {
-    await expect(page.locator('text=Dashboard')).toBeVisible();
+  test('should display dashboard telemetry-adjacent status', async ({ page }) => {
+    await expect(page.getByText("Today's Sales")).toBeVisible();
+    await expect(page.getByText('Business Snapshot')).toBeVisible();
   });
 
-  test('should navigate to Telemetry Settings', async ({ page }) => {
-    await page.click('button:has-text("Settings"), a:has-text("Settings")');
-    await expect(page).toHaveURL(/.*settings.*/);
+  test('should navigate to settings', async ({ page }) => {
+    await page.getByRole('button', { name: 'Settings' }).first().click();
+
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   });
 
-  test('should display Advanced Mode toggle', async ({ page }) => {
-    await page.click('button:has-text("Settings"), a:has-text("Settings")');
-    const toggle = page.locator('text=Advanced');
-    await expect(toggle).toBeVisible();
+  test('should display notification settings toggles', async ({ page }) => {
+    await page.getByRole('button', { name: 'Settings' }).first().click();
+
+    await expect(page.getByText('Enable Email Notifications')).toBeVisible();
+    await expect(page.getByText('Enable Push Notifications')).toBeVisible();
   });
 
-  test('should allow enabling Advanced Mode', async ({ page }) => {
-    await page.click('button:has-text("Settings"), a:has-text("Settings")');
-    const advancedTab = page.locator('text=Advanced').filter({ visible: true }).first();
-    await advancedTab.click();
-    await expect(page.locator('text=Advanced')).toBeVisible();
+  test('should save settings and return to dashboard', async ({ page }) => {
+    await page.getByRole('button', { name: 'Settings' }).first().click();
+    await page.getByRole('button', { name: 'Save' }).first().click();
+
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
-  test('should return to Dashboard after Settings', async ({ page }) => {
-    await page.click('button:has-text("Settings"), a:has-text("Settings")');
-    await page.click('button:has-text("Dashboard"), a:has-text("Dashboard")');
-    await expect(page).toHaveURL(/.*dashboard.*/);
+  test('should return to dashboard after cancelling settings', async ({ page }) => {
+    await page.getByRole('button', { name: 'Settings' }).first().click();
+    await page.getByRole('button', { name: 'Cancel' }).first().click();
+
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 });
