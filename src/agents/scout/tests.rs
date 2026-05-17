@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::db::ScoutDb;
-    use crate::agent::ScoutAgent;
+    use scout_lib::db::ScoutDb;
+    use scout_lib::agent::ScoutAgent;
     use ohc_builtin_agent_core::pubsub::SubagentBus;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::sync::Arc;

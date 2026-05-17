@@ -49,7 +49,6 @@ rust_library(
         "harness.rs",
         "langgraph.rs",
         "autogen.rs",
-        "masking_tests.rs",
         "lib.rs",
         "json_store.rs",
         "memory_store.rs",
@@ -162,10 +161,46 @@ rust_binary(
     ],
 )
 
+# Individual test targets for better caching
+[
+    rust_test(
+        name = module + "_unit_test",
+        crate = ":ohc_builtin_agent_lib",
+        args = [module],
+        edition = "2024",
+        target_compatible_with = select({
+            "@platforms//os:linux": [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        }),
+    )
+    for module in [
+        "agent",
+        "auth",
+        "budget",
+        "caveman",
+        "checkpointer",
+        "codex_runner",
+        "guardrails",
+        "harness",
+        "memory_store",
+        "pubsub",
+        "registry",
+    ]
+]
+
 rust_test(
-    name = "unit_tests",
-    crate = ":ohc_builtin_agent_lib",
+    name = "masking_tests",
+    srcs = ["masking_tests.rs"],
     edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "@crates//:tokio",
+        "@crates//:dashmap",
+        "@crates//:serde_json",
+    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -183,4 +218,3 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
-# Adding langgraph to srcs

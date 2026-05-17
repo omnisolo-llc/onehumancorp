@@ -3,6 +3,7 @@ load("@aspect_rules_js//js:defs.bzl", "js_library")
 js_library(
     name = "hooks",
     srcs = [
+        "useOrchestrator.test.ts",
         "useOrchestrator.ts",
     ],
     visibility = ["//visibility:public"],
