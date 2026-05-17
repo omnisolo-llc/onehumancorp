@@ -8,6 +8,7 @@ startup --output_user_root=~/.cache/bazel/bazel-output-ohc
 # # BuildBuddy configs are available explicitly with --config=buildbuddy-official
 # # or --config=buildbuddy. Keep the default path local so `bazel test //...`
 # does not depend on external cache/BES availability.
+build --jobs=2
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
