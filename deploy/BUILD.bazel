@@ -224,7 +224,7 @@ sh_test(
         "//src/server:server",
     ],
     tags = [
-        "disabled",
+        "manual",
         "large",
         "local",
         "no-remote-exec",
