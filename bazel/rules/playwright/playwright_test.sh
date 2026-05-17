@@ -111,15 +111,14 @@ ln -s "$workspace_root/package.json" "$WORK_DIR/package.json"
 ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
 ln -s "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
-ln -s "$workspace_root/src/e2e" "$WORK_DIR/src/e2e"
-ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
-
-if [[ -n "$ABS_SPEC_FILE" ]]; then
+mkdir -p "$WORK_DIR/src/e2e"
+if [[ -n "$spec_file" ]]; then
+  ABS_SPEC_FILE="$(realpath "$spec_file")"
   spec_base="$(basename "$ABS_SPEC_FILE")"
-  if [[ -f "$WORK_DIR/src/e2e/$spec_base" ]]; then
-    ABS_SPEC_FILE="$WORK_DIR/src/e2e/$spec_base"
-  fi
+  cp "$ABS_SPEC_FILE" "$WORK_DIR/src/e2e/$spec_base"
+  ABS_SPEC_FILE="src/e2e/$spec_base"
 fi
+ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
 
 cd "$WORK_DIR"
 
@@ -174,24 +173,38 @@ if [[ -z "$SERVER_BIN" ]]; then
   done
 fi
 
+# Pick random ports for the server to avoid collisions during parallel tests
+OHC_SERVER_PORT=$(shuf -i 15000-20000 -n 1)
+OHC_GRPC_SERVER_PORT=$(shuf -i 20001-25000 -n 1)
+export OHC_PORT="$OHC_SERVER_PORT"
+export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
+export BASE_URL="http://localhost:$OHC_SERVER_PORT"
+
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
-  echo "[playwright] Starting server from $SERVER_BIN..."
+  echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
   DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
   REDIS_URL="redis://127.0.0.1:$VK_PORT" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
+  OHC_PORT="$OHC_SERVER_PORT" \
+  OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
     "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 
-  echo "[playwright] Waiting for server on port 18789..."
+  echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
   for i in $(seq 1 120); do
-    if curl -s http://127.0.0.1:18789/api/v1/health >/dev/null; then
+    if curl -s "http://127.0.0.1:$OHC_SERVER_PORT/api/v1/health" >/dev/null; then
       echo "[playwright] Server is ready and healthy."
       break
     fi
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died."
       tail -20 "${TEST_TMPDIR:-/tmp}/server.log"
+      exit 1
+    fi
+    if (( i == 120 )); then
+      echo "[playwright] Error: Server failed to become healthy after 120 seconds."
+      tail -50 "${TEST_TMPDIR:-/tmp}/server.log"
       exit 1
     fi
     sleep 1
@@ -202,23 +215,24 @@ else
 fi
 
 export CI=true
-export BASE_URL="http://localhost:18789"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Use a unique output directory for parallel isolation
+# Use unique output directories for parallel isolation
 # Bazel provides TEST_UNDECLARED_OUTPUTS_DIR for capturing artifacts
-PLAYWRIGHT_OUTPUT_DIR="${TEST_UNDECLARED_OUTPUTS_DIR:-$TEST_TMPDIR/playwright-results}"
+BASE_OUTPUT_DIR="${TEST_UNDECLARED_OUTPUTS_DIR:-$TEST_TMPDIR/playwright-results}"
+PLAYWRIGHT_OUTPUT_DIR="$BASE_OUTPUT_DIR/results"
+export PLAYWRIGHT_HTML_REPORT="$BASE_OUTPUT_DIR/report"
 mkdir -p "$PLAYWRIGHT_OUTPUT_DIR"
-export PLAYWRIGHT_HTML_REPORT="${TEST_UNDECLARED_OUTPUTS_DIR:-$TEST_TMPDIR}/playwright-report"
 mkdir -p "$PLAYWRIGHT_HTML_REPORT"
 
 # Use npx to run playwright - it will find the local installation via package.json
 if [[ -n "$ABS_SPEC_FILE" ]]; then
-  echo "[playwright] Running spec: $ABS_SPEC_FILE"
+  spec_base="$(basename "$ABS_SPEC_FILE")"
+  echo "[playwright] Running spec: $spec_base"
   echo "[playwright] Listing all discovered tests:"
   npx playwright test --config ./playwright.config.ts --list
   # npx will find playwright from the local package.json dependencies
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" "$ABS_SPEC_FILE"
+  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "src/e2e/$spec_base"
 else
   echo "[playwright] Running all specs on host"
   npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR"
