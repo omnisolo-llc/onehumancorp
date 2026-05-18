@@ -87,29 +87,26 @@ build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
-# ── BuildBuddy official (default) ─────────────────────────────────────────────
-# # Remote cache + executor at onehumancorp.buildbuddy.io with BES streaming.
-# common:buildbuddy --bes_timeout=600s
-# build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
-# build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
+# ── nativelink official (default) ─────────────────────────────────────────────
+# Remote cache + executor at nativelink.phslc.com with BES streaming.
+# common:nativelink --bes_timeout=600s
+# build:nativelink --bes_results_url=https://nativelink.phslc.com/invocation/
+# build:nativelink --bes_backend=grpcs://nativelink-grpc.phslc.com
 # Upload BES data asynchronously so the build/test result is available sooner.
-# build:buildbuddy-official --bes_upload_mode=fully_async
-# build:buildbuddy-official --verbose_failures
-# common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
-# # common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
-# Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
-# common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
-# common:buildbuddy-official --remote_upload_local_results
-# common:buildbuddy-official --remote_timeout=10m
-# # common:buildbuddy-official --remote_cache_compression
-# common:buildbuddy-official --remote_local_fallback
-# Fall back to direct download when BuildBuddy CAS doesn't have the blob.
+# build:nativelink --bes_upload_mode=fully_async
+build:nativelink --verbose_failures
+common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
+common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
+# Proxy artifact downloads through nativelink's CAS for faster blob fetches.
+common:nativelink --experimental_remote_downloader=grpcs://nativelink-grpc.phslc.com
+common:nativelink --remote_upload_local_results
+common:nativelink --remote_timeout=10m
+# common:nativelink --remote_cache_compression
+common:nativelink --remote_local_fallback
+# Fall back to direct download when CAS doesn't have the blob.
 # Prevents CacheNotFoundException from failing repository rule fetches.
-# common:buildbuddy-official --experimental_remote_downloader_local_fallback
-# common:buildbuddy-official --jobs=200
-# Default read-only API key (public, read-only – cannot push artifacts or
-# modify any BuildBuddy state; safe to keep in version control).
-# common:buildbuddy-official --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
+common:nativelink --experimental_remote_downloader_local_fallback
+common:nativelink --jobs=8
 
 # ── BuildBuddy self-hosted ──────────────────────────────────────
 # # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
