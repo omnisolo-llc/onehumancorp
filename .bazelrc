@@ -4,11 +4,12 @@
 # be left behind by Docker-backed Playwright tests in Bazel's default cache.
 startup --output_user_root=~/.cache/bazel/bazel-output-ohc
 
+build --color=yes
+build --config=remote
+build --config=nativelink
+
 # ── Default: local builds/tests ───────────────────────────────────────────────
-# # BuildBuddy configs are available explicitly with --config=buildbuddy-official
-# # or --config=buildbuddy. Keep the default path local so `bazel test //...`
-# does not depend on external cache/BES availability.
-build --jobs=2
+build --jobs=8
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -37,6 +38,7 @@ build --@rules_rust//rust/toolchain/channel=stable
 # and Windows doesn't support LRE.
 build:asan --extra_toolchains=@rust_toolchains//:all
 build:windows --extra_toolchains=@rust_toolchains//:all
+build:windows --keep_going
 
 # Nightly toolchain
 build:nightly --@rules_rust//rust/toolchain/channel=nightly
@@ -96,7 +98,7 @@ build --action_env=CI
 # build:nativelink --bes_upload_mode=fully_async
 build:nativelink --verbose_failures
 common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
-common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
+# common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
 # Proxy artifact downloads through nativelink's CAS for faster blob fetches.
 common:nativelink --experimental_remote_downloader=grpcs://nativelink-grpc.phslc.com
 common:nativelink --remote_upload_local_results
