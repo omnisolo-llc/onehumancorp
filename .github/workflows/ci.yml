@@ -70,17 +70,13 @@ jobs:
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             # build --config=buildbuddy
             # test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            build --config=nativelink
+            test --config=nativelink
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
-
-    #  - name: Build release artifacts
-     #   run: bazelisk build //release:all_release_artifacts --config=linux
 
       - name: Test non-E2E targets
         run: |
@@ -136,12 +132,8 @@ jobs:
   #         external-cache: true
   #         cache-save: ${{ github.event_name != 'pull_request' }}
   #         bazelrc: |
-  #           common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-  #           build --config=buildbuddy
-  #           test --config=buildbuddy
-  #           # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-  #           # build --config=buildbuddy-official
-  #           # test --config=buildbuddy-official
+            # build --config=nativelink
+            # test --config=nativelink
   #           build --build_metadata=ROLE=CI
   #           test --build_metadata=ROLE=CI
   #           build --color=yes

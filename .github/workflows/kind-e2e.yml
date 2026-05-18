@@ -99,6 +99,8 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
+            build --config=nativelink
+            test --config=nativelink
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
