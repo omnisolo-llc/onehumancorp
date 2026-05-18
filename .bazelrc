@@ -144,7 +144,10 @@ test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
 build:linux_x86_64 --platforms=//bazel/platforms:linux_x86_64
+build:linux_arm64 --platforms=//bazel/platforms:linux_arm64
+build:linux_arm64 --extra_execution_platforms=//bazel/platforms:linux_arm64
 build:linux_aarch64 --platforms=//bazel/platforms:linux_aarch64
+build:linux_aarch64 --extra_execution_platforms=//bazel/platforms:linux_aarch64
 build:android --platforms=//bazel/platforms:android_aarch64
 build:ios --platforms=//bazel/platforms:ios_aarch64
 build:macos --platforms=//bazel/platforms:macos_aarch64
