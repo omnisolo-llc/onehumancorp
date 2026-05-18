@@ -10,7 +10,7 @@ One Human Corp (OHC) is building a Hybrid Agentic OS to empower a single human t
 
 **Design:**
 - **State Machine:** A strict state machine enforces deterministic transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-- **Distributed Locking:** Utilizes `rueidis` distributed locks (Cloud mode) or DB row-level locks (Standalone mode) to prevent race conditions during state transitions.
+- **Distributed Locking:** Utilizes `redis` distributed locks (Cloud mode) or DB row-level locks (Standalone mode) to prevent race conditions during state transitions.
 - **Dependency Resolution:** Agents evaluate a DAG (Directed Acyclic Graph) of dependencies. A task is only `PENDING` if all its dependencies are `COMPLETED`.
 
 ### 2.2 Realtime Teammate Mesh APIs
@@ -29,7 +29,7 @@ One Human Corp (OHC) is building a Hybrid Agentic OS to empower a single human t
 **Design:**
 - **Queue Interface:** A `TaskQueue` interface handles Enqueue, Dequeue, Complete, and Fail operations.
 - **Implementations:**
-  - `RedisTaskQueue`: Built on `rueidis`, utilizing Redis Lists or Sorted Sets for delayed execution and robust retry mechanisms.
+  - `RedisTaskQueue`: Built on `redis`, utilizing Redis Lists or Sorted Sets for delayed execution and robust retry mechanisms.
   - `SQLiteTaskQueue`: Built on `database/sql`, mapping to a local `sub_agent_jobs` table, utilizing concurrent write locking for dequeuing.
 - **Features:** Granular timeouts, retry policies, and OpenTelemetry instrumentation for queue length and processing time.
 

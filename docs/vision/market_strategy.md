@@ -62,6 +62,6 @@ Our orchestration stability rests on three pillars:
 ## 5. Market Positioning
 OHC targets the "Single Human CEO" who needs to orchestrate a vast workforce of AI agents without the overhead of managing infrastructure or sacrificing data sovereignty. We are the "Agentic OS" for the privacy-conscious power user.
 
-*For more technical details, see the [KAIROS Architecture](../technical/KAIROS_AI_OS_ARCHITECTURE.md) and the [API Playbook](../api/playbook.md).*
+*For more technical details, see the [KAIROS Architecture](../technical/architecture/kairos/master-design-doc.md) and the [API Playbook](../api/playbook.md).*
 
 </div>

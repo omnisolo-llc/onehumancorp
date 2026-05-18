@@ -6,6 +6,7 @@ repo_name: onehumancorp/mono
 repo_url: https://github.com/onehumancorp/mono
 exclude_docs: |
     /README.md
+    /user_guide.md
 theme:
   name: material
   features:
@@ -29,64 +30,34 @@ nav:
   - Home: index.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
-      - Universal Transport Bridge: architecture/universal_transport_bridge.md
-      - RAG Synthesis: architecture/rag_synthesis.md
-      - architecture/index.md
-      - Chaos Engineering: architecture/chaos_engineering.md
-      - KAIROS Features Design: architecture/kairos_hybrid_os_architecture.md
-      - KAIROS Master Design: architecture/kairos_master_design_doc.md
-      - Hybrid PubSub MCP: research/[integrations]_hybrid_pubsub_mcp.md
-  - Developer:
-      - developer/index.md
-  - UI:
-      - Day One Onboarding: ui/guide_proactive_onboarding.md
-      - Hybrid Health Check: ui/guide_proactive_onboarding_health_check.md
-  - API:
-      - api/index.md
-      - "Interactive Api Playbook": api/playbook.md
+      - KAIROS Master Design: technical/architecture/kairos/master-design-doc.md
+      - Hybrid OS Design: technical/architecture/kairos/hybrid-os-design.md
+      - Shared Task Mesh Architecture: technical/architecture/kairos/shared-task-mesh-architecture.md
+      - Sub-Agent Queue Design: technical/architecture/kairos/sub-agent-queue-design.md
+      - Task Decomposition: technical/architecture/kairos/task-decomposition-design.md
   - Features:
-      - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
-      - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
-      - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
-      - Core Tool Integrations: research/core_tool_integrations_research.md
-      - features/index.md
       - KAIROS Orchestration: features/kairos_orchestration.md
-      - KAIROS Sub-Agent Queue: features/kairos/sub_agent_queue.md
       - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md
       - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
-      - KAIROS Orchestration Architecture Overview: features/kairos/architecture_overview.md
-      - KAIROS Premium Hybrid Design: features/kairos/premium_hybrid_os_design.md
-      - KAIROS Master Design Doc: features/kairos/master_design_doc.md
-      - Hybrid LLM Routing Gateway MCP: research/[integrations]_hybrid_llm_routing_gateway_mcp.md
-      - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
-      - Hybrid Circuit Breaker MCP: research/[integrations]_hybrid_circuit_breaker_mcp.md
-      - NATS Hybrid Event Mesh: research/[backend]_nats_hybrid_event_mesh.md
-      - Proactive RAG MCP: research/[backend]_scribe_proactive_rag_mcp.md
-  - Walkthroughs:
-      - Sub-Agent Orchestration Queue Walkthrough: walkthroughs/sub_agent_orchestration.md
-      - KAIROS Orchestrator CLI Walkthrough: technical/walkthroughs/kairos_orchestrator_cli.md
-      - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
-      - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
-      - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
-      - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
-      - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
-      - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
-      - Teammate Mesh Walkthrough: walkthroughs/teammate_mesh_walkthrough.md
-      - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
-      - Virtual Meeting Room Walkthrough: walkthroughs/virtual_meeting_room_walkthrough.md
-      - Hybrid FS MCP Architecture: technical/walkthroughs/hybrid_fs_mcp_architecture.md
-      - Hybrid MCP RAG Protocol: walkthroughs/hybrid_mcp_rag_protocol.md
-      - walkthroughs/index.md
+      - KAIROS Memory Consolidation: features/kairos/memory_consolidation.md
+      - Hybrid MCP Config Sync: features/hybrid_mcp_config_sync.md
+  - Technical:
+      - Architecture Overview: technical/architecture/architecture-overview.md
+      - System Overview: technical/architecture/system-overview.md
+      - System Design: technical/architecture/system-design.md
+      - API Reference: technical/api/api-reference.md
+      - KAIROS Master API Guide: technical/api/kairos-master-api-guide.md
+  - Developer:
+      - Developer Guide: developer/index.md
   - Operations:
-      - operations/index.md
-      - Task Tracking: operations/task-tracking.md
-      - Issue Migration Seed: operations/github-issues-migration.md
-      - Docs Audit: reports/docs-site-audit.md
-      - Market Research Report: reports/ohc_market_research_report.md
-  - Releases:
-      - public/index.md
-      - Changelog: public/CHANGELOG.md
-      - Release Notes: public/release_notes.md
-  - Archive:
-      - archive/index.md
-      - Legacy Design: archive/design/KAIROS_AI_OS_HYBRID_ARCHITECTURE.md
+      - Operations: technical/operations/index.md
+  - Business:
+      - Roadmap: business/roadmap.md
+      - Execution Plan: business/execution-plan.md
+  - Walkthroughs:
+      - Sub-Agent Orchestration: walkthroughs/sub_agent_orchestration.md
+      - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
+      - AutoDream CLI: walkthroughs/autodream_cli_guide.md
+      - Teammate Mesh: walkthroughs/teammate_mesh_walkthrough.md
+  - Research:
+      - Research Index: technical/research/index.md
