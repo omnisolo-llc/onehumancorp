@@ -21,6 +21,7 @@ const actionTimeout = process.env.PLAYWRIGHT_ACTION_TIMEOUT
 
 export default defineConfig({
   testDir: './src/e2e',
+  globalSetup: './src/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: Number.isFinite(retries) ? retries : 0,

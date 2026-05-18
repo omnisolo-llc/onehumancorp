@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Grandmother UX End-to-End Flow Validation', () => {
   test('first-time user sees plain language dashboard headers', async ({ page }) => {

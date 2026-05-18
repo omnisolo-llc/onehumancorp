@@ -137,13 +137,38 @@ bazelisk run //src/ui/tauri:app
 
 ### E2E Tests with Playwright
 
-The `//src/e2e:playwright` target runs 56 Playwright E2E tests covering:
-- Login, authentication, social auth
-- Dashboard, navigation, UX flows
-- Agents, chat, inbox, tasks
-- Integrations, billing, settings
-- Onboarding, meetings, referrals
-- And 30+ more feature areas
+The `//src/e2e:playwright` target runs the Playwright E2E suite against the real server, real browser UI, Postgres, and Redis. The suite currently discovers 250 tests across 61 spec files.
+
+E2E tests follow a strict no-substitution contract:
+- Test data is seeded only through the database, using `src/e2e/e2e-seed.sql`.
+- The Playwright global setup in `src/e2e/global-setup.ts` waits for the real app, seeds Postgres, and signs in through the visible login UI.
+- Every browser spec imports `src/e2e/fixtures.ts`, which logs in as the seeded admin user before each test.
+- A seeded regular team member is also available through the `memberPage` fixture, so role-sensitive tests can verify the real member experience.
+- Playwright network substitution is blocked in the shared fixture. Tests should exercise product UI and backend behavior, not intercepted API responses.
+
+Seeded E2E users:
+
+| Role | Email / username | Password |
+|------|------------------|----------|
+| Admin | `test@example.com` | `password123` |
+| Team member | `member@example.com` | `MemberPass123!` |
+
+Run the full Bazel-managed suite:
+
+```bash
+bazelisk test //src/e2e:playwright
+```
+
+Run the local Playwright suite against an already running app:
+
+```bash
+DATABASE_URL=postgres://ohc:ohc@localhost:5432/ohc \
+REDIS_URL=redis://localhost:6379 \
+MINIMAX_API_KEY=... \
+npx playwright test
+```
+
+AI-generating tests may call the real MiniMax API. When a test validates generated output, it must use the AI judge helper in `src/e2e/ai-judge.ts`; the helper asks MiniMax to score the output from 0 to 10 and the test only passes when the score is greater than 9.
 
 Tests capture screenshots on every page to `test-results/screenshots/` and explicit `page.screenshot()` calls save to `test-results/*.png`.
 
@@ -174,6 +199,7 @@ bazelisk run //src/server:server
 | Variable | Description |
 |----------|-------------|
 | `GEMINI_API_KEY` | Google Gemini API key |
+| `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows and AI judge scoring |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI API key |
 | `DATABASE_URL` | PostgreSQL DSN. When unset, the server falls back to in-memory repositories and local SQLite-backed SIPDB support |
@@ -189,6 +215,7 @@ bazelisk run //src/server:server
 | `OHC_DEFAULT_AGENT_NAME` | Optional display name for the bootstrapped internal default agent |
 | `OHC_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
 | `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
+| `OHC_DEFAULT_TENANT_ID` | Default tenant used by local E2E login when the browser form does not submit an explicit organization ID; defaults to `e2e-tenant` in the test harness |
 
 Kubernetes secrets are used to inject credentials at runtime without committing them to source.
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Dashboard Navigation UX', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe('Dashboard Navigation UX', () => {
     const addProductBtn = page.locator('text="Add Product"').filter({ visible: true }).first();
     await addProductBtn.waitFor({ state: 'visible', timeout: 30000 });
 
-    // Listen for dialogs or console messages to assert action was taken, since slint mocks actions
+    // Listen for dialogs or console messages to assert the visible action path was taken.
     let actionTriggered = false;
     page.on('console', msg => {
       if (msg.text().includes('action_add_product')) actionTriggered = true;

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Success Milestones Notifications', () => {
   test('should verify milestone functionality when order threshold is reached', async ({ page }) => {
@@ -10,7 +10,7 @@ test.describe('Success Milestones Notifications', () => {
     await page.waitForURL('**/*');
 
     // 2. Wait for the dashboard to load and show the "Mark Order Ready" button
-    // The test mock usually sets new_orders_count = 3
+    // The seeded order state exercises the milestone threshold.
     const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
     await expect(markReadyBtn).toBeVisible({ timeout: 10000 });
 
@@ -58,8 +58,7 @@ test.describe('Success Milestones Notifications', () => {
     const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
     await expect(markReadyBtn).toBeVisible();
 
-    // Using simple mock triggers if the loop isn't sufficient for 10
-    // If the loop doesn't generate 10, the mock provides an automated path. We just test the loop
+    // Exercise the real button path until the 10th-order milestone appears.
     for (let i = 0; i < 10; i++) {
         await markReadyBtn.click();
         await page.waitForTimeout(50);
