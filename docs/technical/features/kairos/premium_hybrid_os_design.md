@@ -19,7 +19,7 @@ This document finalizes the Phase 4 orchestration and aesthetic design for the O
 ### 1.2 Teammate Mesh (The Nerves)
 - **Role:** Sub-millisecond realtime communication and background queuing for autonomous coordination.
 - **Implementation:**
-  - **Cloud Mode:** Redis Pub/Sub (`rueidis`) and CentrifugeNode for robust message routing across agent pods.
+  - **Cloud Mode:** Redis Pub/Sub (`redis`) and CentrifugeNode for robust message routing across agent pods.
   - **Standalone Mode:** In-memory event bus and runtime-memory logging degrading gracefully when external dependencies are absent.
 
 ### 1.3 AutoDream Pipeline (The Memory)

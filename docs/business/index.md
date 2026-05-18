@@ -4,10 +4,9 @@ This section contains business documentation for the One Human Corp (OHC) platfo
 
 ## Contents
 
-- [Product Overview](public/index.md) - Product capabilities and features
+- [Product Overview](business/public/index.md) - Product capabilities and features
 - [Roadmap](roadmap.md) - Product roadmap and future plans
 - [Vision](../vision/market_strategy.md) - Company vision and strategy
-- [Cost Blueprint](COST_BLUEPRINT.md) - Cost and pricing information
 - [Growth Strategy](growth_strategy_audit.md) - Business growth analysis
 
 ## Resources

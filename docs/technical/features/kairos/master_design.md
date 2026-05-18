@@ -19,7 +19,7 @@ A durable, distributed state machine and task queue.
 
 ### 2.2 Teammate Mesh (The Nerves)
 A highly available, low-latency communication layer.
-- **Realtime Pub/Sub:** Powered by `CentrifugeNode` and Redis Pub/Sub (`rueidis`).
+- **Realtime Pub/Sub:** Powered by `CentrifugeNode` and Redis Pub/Sub (`redis`).
 - **Resilient Transport:** Seamlessly switches between `RedisMeshTransport` (Cloud) and `MemoryMeshTransport` (Standalone).
 - **Coordination Channels:** Dedicated channels for `mesh:tasks`, `mesh:coordination`, and `mesh:ultraplan`.
 

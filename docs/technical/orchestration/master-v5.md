@@ -18,7 +18,7 @@ A distributed state machine that serves as the source of truth for all swarm act
 
 ### 1.2 The Nerves: Teammate Mesh (Centrifuge & Redis)
 A highly available, low-latency communication layer for realtime agent coordination.
-- **Hybrid Broker**: Uses `RedisMeshBroker` (via `rueidis`) for Cloud and `LocalMeshBroker` (in-memory channels) for Standalone.
+- **Hybrid Broker**: Uses `RedisMeshBroker` (via `redis`) for Cloud and `LocalMeshBroker` (in-memory channels) for Standalone.
 - **Channels**:
   - `mesh:tasks`: Broadcasts task state changes (CREATED, CLAIMED, COMPLETED).
   - `mesh:presence`: Heartbeats and capability advertisements (`AdvertiseCapabilities`).

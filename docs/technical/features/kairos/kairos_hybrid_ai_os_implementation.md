@@ -75,7 +75,7 @@ A high-availability, low-latency pub/sub coordination layer.
 **Description:** Upgrades the connection to a WebSocket for real-time mesh events, authenticated via SPIFFE/SPIRE JWTs.
 
 ### 3.2 Transport Architecture
-- **Cloud Mode (`OHC_MULTITENANT=true`):** Utilizes `CentrifugeNode` backed by `rueidis` for horizontal scaling across K8s pods.
+- **Cloud Mode (`OHC_MULTITENANT=true`):** Utilizes `CentrifugeNode` backed by `redis` for horizontal scaling across K8s pods.
 - **Standalone Mode:** Uses an in-memory event bus (`MemoryMeshTransport`) to eliminate external dependencies while maintaining the same API interface.
 
 ## 4. Phase 3: AutoDream Data Pipelines (Consolidation)

@@ -7,8 +7,6 @@ toc:
     path: /docs/technical/architecture/index.md
   - title: System Design
     path: /docs/technical/architecture/system-design.md
-  - title: RAG Synthesis
-    path: /docs/architecture/rag_synthesis.md
   - title: Developer Guide
     path: /docs/technical/developer/index.md
   - title: API Reference
@@ -21,31 +19,13 @@ toc:
     path: /docs/technical/operations/index.md
   - title: Research
     path: /docs/technical/research/index.md
-  - title: NATS Hybrid Event Mesh
-    path: /docs/research/[backend]_nats_hybrid_event_mesh.md
-  - title: Proactive RAG MCP
-    path: /docs/technical/research/[backend]_scribe_proactive_rag_mcp.md
   - title: Reports
     path: /docs/technical/reports/index.md
   - title: Walkthroughs
-    path: /docs/technical/walkthroughs/index.md
-  - title: KAIROS Central Orchestration CLI Guide
-    path: /docs/technical/walkthroughs/kairos_central_orchestration_cli_guide.md
-  - title: Templates
-    path: /docs/technical/templates/index.md
-  - title: MCP Protocol
-    path: /docs/technical/mcp/hybrid-mcp-playbook.md
+    path: /docs/walkthroughs/index.md
   - title: Business Documentation
     path: /docs/business/index.md
-  - title: Product Overview
-    path: /docs/business/public/index.md
-  - title: User Guide
-    path: /docs/business/user_guide.md
   - title: Roadmap
     path: /docs/business/roadmap.md
   - title: Vision
     path: /docs/vision/market_strategy.md
-  - title: Cost Blueprint
-    path: /docs/business/cost-blueprint.md
-  - title: Growth Strategy
-    path: /docs/business/growth_strategy_audit.md

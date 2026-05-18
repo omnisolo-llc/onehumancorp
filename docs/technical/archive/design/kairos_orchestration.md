@@ -51,7 +51,7 @@ sequenceDiagram
 
 <h2>2. Phase 2: Teammate Mesh APIs (Orchestration)</h2>
 The Teammate Mesh provides low-latency communication via Centrifuge node integration.
-- **Cloud-Native Mode:** Uses Redis Pub/Sub (`rueidis`) over channels like `mesh:tasks` and `mesh:coordination`.
+- **Cloud-Native Mode:** Uses Redis Pub/Sub (`redis`) over channels like `mesh:tasks` and `mesh:coordination`.
 - **Standalone Mode:** Uses `MemoryMeshTransport` for in-memory Go channel broadcast to degrade gracefully.
 
 <h2>3. Phase 3: AutoDream Data Pipelines (Memory)</h2>

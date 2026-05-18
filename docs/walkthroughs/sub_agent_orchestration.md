@@ -14,7 +14,7 @@ As the OHC Swarm handles more complex workloads, we require a distributed execut
 graph TD
     subgraph Cloud Native Mode
         A1[Task Manager] -->|Enqueue Job| R1[(Redis Task Queue)]
-        R1 -->|Dequeue via rueidis| W1[Sub-Agent Worker Pod]
+        R1 -->|Dequeue via redis| W1[Sub-Agent Worker Pod]
         W1 -->|Execute| C1[Task Complete]
     end
 

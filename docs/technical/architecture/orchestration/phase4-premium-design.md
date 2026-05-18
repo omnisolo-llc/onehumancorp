@@ -12,7 +12,7 @@ The queue utilizes a state-machine driven backend to coordinate jobs.
 - **Worker Nodes**: Isolated sub-agents spawned to execute specific payloads.
 
 ### Hybrid Strategy
-- **Cloud-Native Mode**: Leverages Redis (e.g., BullMQ style semantics via `rueidis`) to manage highly concurrent distributed queues. PostgreSQL `FOR UPDATE SKIP LOCKED` ensures robust task claiming across Kubernetes pods without race conditions.
+- **Cloud-Native Mode**: Leverages Redis (e.g., BullMQ style semantics via `redis`) to manage highly concurrent distributed queues. PostgreSQL `FOR UPDATE SKIP LOCKED` ensures robust task claiming across Kubernetes pods without race conditions.
 - **Standalone Mode**: Gracefully degrades to an in-memory or SQLite-backed transaction system, utilizing application-level `sync.Mutex` locks to ensure safe local task dispatch.
 
 ## 3. Database Schema

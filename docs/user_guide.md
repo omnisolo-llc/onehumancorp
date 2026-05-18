@@ -1,4 +1,4 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
 # User Guide: OHC Slint App
 
@@ -21,6 +21,7 @@ The OHC Slint app features a comprehensive 12-step onboarding wizard:
 9.  **Domain Choice**: Choosing between a free OHC subdomain or a custom domain.
 10. **Review & Launch**: Summary of setup and triggering the AI deployment.
 11. **Checklist**: Post-launch checklist for the business owner.
+12. **Deployment**: AI-powered storefront deployment.
 
 ## 3. Running Tests
 
@@ -33,7 +34,8 @@ bazelisk test //src/app:app_test
 ## 4. Documentation
 
 Please refer to the detailed architecture documents in the `docs/` folder:
-- [KAIROS Orchestration Design Phase 4](./business/features/kairos_orchestration_phase4/design-doc.md)
+- [KAIROS Architecture](../technical/architecture/kairos/master-design-doc.md)
+- [API Playbook](../api/playbook.md)
 
 </div>
 

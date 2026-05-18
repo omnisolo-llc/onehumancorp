@@ -9,7 +9,7 @@ A durable state machine decomposing complex tasks.
 
 ## 2. Teammate Mesh (The Nerves)
 A realtime coordination mesh.
-- Relies on Redis Pub/Sub (`rueidis`) and `CentrifugeNode` for high throughput.
+- Relies on Redis Pub/Sub (`redis`) and `CentrifugeNode` for high throughput.
 - Enforces Zero Secrets by authenticating purely via SPIFFE/SPIRE.
 
 ## 3. AutoDream (The Memory)

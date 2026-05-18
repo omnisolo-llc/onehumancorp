@@ -74,7 +74,7 @@ Returns a list of all configured agents within the OHC swarm.
 The OHC API routes dynamically based on the active OHC Hybrid Architecture mode.
 
 ### Cloud-Native Mode
-- Queue requests are routed to Rueidis ZSETs backed by K8s pods.
+- Queue requests are routed to Redis ZSETs backed by K8s pods.
 - Sub-agent coordination uses Redis Pub/Sub channels.
 
 ### Standalone Desktop Mode

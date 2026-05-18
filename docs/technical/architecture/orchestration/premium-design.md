@@ -48,9 +48,9 @@ sequenceDiagram
 ```
 
 ## 3. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via Centrifuge node integration in `src/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh` in `src/server/orchestration/mesh.go`.
+Realtime communication via Centrifuge node integration in `src/server/orchestration/mesh.rs` and transport components like `LocalTeammateMesh` in `src/server/orchestration/mesh.rs`.
 
-- **Cloud-Native Mode:** Uses Redis Pub/Sub (`rueidis`) to manage highly concurrent distributed queues.
+- **Cloud-Native Mode:** Uses Redis Pub/Sub (`redis`) to manage highly concurrent distributed queues.
 - **Standalone Mode:** Degrades gracefully to an in-memory channel broadcast to ensure low-latency IPC.
 
 ### 3.1 Broadcast API Contract (`POST /api/v1/mesh/broadcast`)
