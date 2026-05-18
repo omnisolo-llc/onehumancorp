@@ -67,9 +67,9 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            # build --config=nativelink
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            build --config=nativelink
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
@@ -132,9 +132,9 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            # build --config=nativelink
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            build --config=nativelink
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
@@ -195,9 +195,7 @@ jobs:
   #         cache-save: ${{ github.event_name != 'pull_request' }}
   #         bazelrc: |
   #           build --config=nativelink
-  #           test --config=nativelink
   #           build --build_metadata=ROLE=CI
-  #           test --build_metadata=ROLE=CI
   #           build --color=yes
   #           build --show_timestamps
   #           test --sandbox_add_mount_pair=/var/run/docker.sock
