@@ -23,8 +23,13 @@ actions:
             ca-certificates curl git
           go install github.com/bazelbuild/bazelisk@latest
           export PATH=$PATH:$(go env GOPATH)/bin
+          case "$(uname -m)" in
+            x86_64) BAZEL_PLATFORM_CONFIG=linux ;;
+            aarch64|arm64) BAZEL_PLATFORM_CONFIG=linux_arm64 ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
           # Build the server first
-          bazelisk build //src/server:server --config=linux
+          bazelisk build //src/server:server --config="${BAZEL_PLATFORM_CONFIG}"
 
           # Run Playwright tests with screenshots
           # Uses playwright_test.sh which handles Docker infra (postgres, redis) and server startup
@@ -114,12 +119,17 @@ actions:
             ca-certificates curl git
           go install github.com/bazelbuild/bazelisk@latest
           export PATH=$PATH:$(go env GOPATH)/bin
+          case "$(uname -m)" in
+            x86_64) BAZEL_PLATFORM_CONFIG=linux ;;
+            aarch64|arm64) BAZEL_PLATFORM_CONFIG=linux_arm64 ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
           # Build release artifacts first (needed by verification_tests)
-          bazelisk build //release:all_release_artifacts --config=linux
+          bazelisk build //release:all_release_artifacts --config="${BAZEL_PLATFORM_CONFIG}"
           # Run fast non-E2E tests on Linux. Slow E2E targets have their own actions.
           bazelisk test \
             --config=no-e2e \
-            --config=linux \
+            --config="${BAZEL_PLATFORM_CONFIG}" \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
@@ -151,7 +161,12 @@ actions:
             ca-certificates curl git
           go install github.com/bazelbuild/bazelisk@latest
           export PATH=$PATH:$(go env GOPATH)/bin
-          bazelisk build //... --config=linux
+          case "$(uname -m)" in
+            x86_64) BAZEL_PLATFORM_CONFIG=linux ;;
+            aarch64|arm64) BAZEL_PLATFORM_CONFIG=linux_arm64 ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          bazelisk build //... --config="${BAZEL_PLATFORM_CONFIG}"
           # Cross-platform builds (assumes CI environment has toolchains)
           bazelisk build //... --config=windows || echo "Warning: Windows build failed"
           bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
