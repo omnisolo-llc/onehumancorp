@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 KAIROS missions regularly spawn asynchronous sub-agents for executing isolated tasks, retries, and scoped execution paths. This logic is managed by the Sub-Agent Orchestration Queue.
 
 ### 4.1 Queue Architecture
-A background worker system polls the internal state machine queue. Cloud implementations degrade from high-throughput distributed tools (e.g. `rueidis` Redis sets) to host-bound SQLite tables (`sub_agent_queue`).
+A background worker system polls the internal state machine queue. Cloud implementations degrade from high-throughput distributed tools (e.g. `redis` Redis sets) to host-bound SQLite tables (`sub_agent_queue`).
 
 ```sql
 CREATE TABLE IF NOT EXISTS sub_agent_queue (

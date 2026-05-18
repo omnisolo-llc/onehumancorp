@@ -12,7 +12,7 @@ To support both Cloud-Native and Standalone Desktop modes, the Shared Task List 
 ## 3. Realtime Teammate Mesh APIs
 The Teammate Mesh facilitates inter-agent communication and task state broadcasting.
 - **Channels**: Standardized channels such as `mesh:tasks` and `mesh:coordination`.
-- **Implementation (Cloud)**: Backed by Redis Pub/Sub (e.g., using `rueidis`).
+- **Implementation (Cloud)**: Backed by Redis Pub/Sub (e.g., using `redis`).
 - **Implementation (Local)**: Backed by an in-memory event bus to degrade gracefully when Redis is absent.
 
 ## 4. AutoDream Data Pipeline

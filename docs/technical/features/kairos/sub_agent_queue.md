@@ -12,7 +12,7 @@ When a primary agent (e.g., an Architect) delegates work, the tasks are enqueued
 
 The queue seamlessly transitions between different storage backends depending on the operating mode:
 
-- **Cloud-Native Mode:** Uses Redis (via `rueidis`) Lists (`RPUSH`/`LPOP`) and Sorted Sets (ZSETs) for delayed execution, allowing for horizontal scalability across Kubernetes pods.
+- **Cloud-Native Mode:** Uses Redis (via `redis`) Lists (`RPUSH`/`LPOP`) and Sorted Sets (ZSETs) for delayed execution, allowing for horizontal scalability across Kubernetes pods.
 - **Standalone Mode:** Uses an internal SQLite table (`sub_agent_jobs`). Dequeuing relies on explicit transactions with concurrent read/write locks (simulating `FOR UPDATE SKIP LOCKED`) to prevent `SQLITE_BUSY` contention during parallel local processing.
 
 ### Architecture Flow

@@ -12,7 +12,7 @@ The OHC Swarm requires robust, distributed infrastructure to coordinate, track d
 - **Concurrency:** Ensure robust execution across multi-tenant deployments and single-machine setups.
 
 ### Phase 2: Realtime Teammate Mesh APIs (Orchestration)
-- **Coordination Layer:** Implement `MeshTransport` supporting both `RedisMeshTransport` (rueidis) and `MemoryMeshTransport` (fallback) to allow agents to sync dynamically via the Centrifuge Hub.
+- **Coordination Layer:** Implement `MeshTransport` supporting both `RedisMeshTransport` (redis) and `MemoryMeshTransport` (fallback) to allow agents to sync dynamically via the Centrifuge Hub.
 
 ### Phase 3: AutoDream Data Pipeline
 - **Vector Intelligence:** Utilize `pgvector` (`autodream_memories`) to consolidate long-term episodic memory for all agents, degrading gracefully to standard blobs in local standalone environments.

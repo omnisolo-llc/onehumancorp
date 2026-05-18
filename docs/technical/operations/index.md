@@ -1,11 +1,12 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Operations
 
 Operations docs cover repository governance, task tracking policy, and documentation maintenance.
 
 ## Primary References
 
-- `docs/operations/task-tracking.md`
-- `docs/operations/github-issues-migration.md`
-- `docs/reports/docs-site-audit.md`
+- Task tracking is managed via GitHub issues (source of truth for active work)
+- See `docs/business/roadmap.md` for strategic direction
 
-This is the home for process-level guidance that should not live in ad hoc root files.
+</div>
