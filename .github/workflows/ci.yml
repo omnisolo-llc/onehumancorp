@@ -23,7 +23,7 @@ defaults:
 
 jobs:
   bazel-test:
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
