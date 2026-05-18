@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Grandmother Test - Plain Language Check', () => {
   test('should display login page with form', async ({ page }) => {

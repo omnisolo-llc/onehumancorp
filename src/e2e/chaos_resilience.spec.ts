@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { judgeGeneratedOutput } from './ai-judge';
 
 test.describe('E2E Chaos Resilience', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,16 +21,22 @@ test.describe('E2E Chaos Resilience', () => {
     await expect(page.getByText('Welcome back, Human.')).toBeVisible({ timeout: 5000 });
   });
 
-  test('keeps dashboard and inbox interactions responsive', async ({ page }) => {
+  test('keeps dashboard and inbox interactions responsive', async ({ page }, testInfo) => {
+    test.skip(!process.env.MINIMAX_API_KEY, 'MINIMAX_API_KEY is required for real AI draft generation and judging.');
     await expect(page.getByText("Today's Sales")).toBeVisible();
     await page.getByRole('button', { name: 'Check Messages' }).click();
 
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
     await page.getByRole('button', { name: /AI Draft/ }).click();
-    await expect(page.locator('#reply-input')).toHaveValue('Sure, we have plenty of vegan options!');
+    await expect(page.locator('#reply-input')).not.toHaveValue('');
+    const draft = await page.locator('#reply-input').inputValue();
+    await judgeGeneratedOutput(testInfo, {
+      output: draft,
+      rubric: 'The reply must directly answer that vegan birthday cake options are available, sound helpful and professional, avoid making unsupported promises, and be ready to send to a customer.',
+    });
 
     await page.getByRole('button', { name: 'Send' }).click();
-    await expect(page.locator('#messages-list')).toContainText('Sure, we have plenty of vegan options!');
+    await expect(page.locator('#messages-list')).toContainText(draft);
   });
 
   test('keeps the agents page functional after navigation', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Free Tier & Upgrade Funnel', () => {
   test('shows current free plan details', async ({ page }) => {

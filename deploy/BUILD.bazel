@@ -18,13 +18,23 @@ pkg_tar(
     package_dir = "/usr/local/bin",
 )
 
+pkg_tar(
+    name = "server_migrations_pkg",
+    srcs = ["//src/server/migrations:migrations"],
+    package_dir = "/src/server/migrations",
+    strip_prefix = "src/server/migrations",
+)
+
 # Published as onehumancorp/server – the single canonical image.
 # Serves both the API and the Flutter web UI (static assets).
 oci_image(
     name = "server_image",
     base = "@distroless_cc",
-    entrypoint = ["/usr/local/bin/ohc"],
-    tars = [":backend_pkg"],
+    entrypoint = ["/usr/local/bin/server"],
+    tars = [
+        ":backend_pkg",
+        ":server_migrations_pkg",
+    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -81,8 +91,11 @@ oci_image(
     base = "@distroless_cc",
     # The agent container runs the ohc server; the ironclaw binary is available
     # as a sidecar tool inside the container.
-    entrypoint = ["/usr/local/bin/ohc"],
-    tars = [":agent_pkg"],
+    entrypoint = ["/usr/local/bin/server"],
+    tars = [
+        ":agent_pkg",
+        ":server_migrations_pkg",
+    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -105,8 +118,11 @@ oci_image(
     base = "@distroless_cc",
     # Internal default agent runtime: same Bazel-built server image, configured
     # to bootstrap the builtin provider when no external workforce exists.
-    entrypoint = ["/usr/local/bin/ohc"],
-    tars = [":agent_pkg"],
+    entrypoint = ["/usr/local/bin/server"],
+    tars = [
+        ":agent_pkg",
+        ":server_migrations_pkg",
+    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -152,6 +168,9 @@ sh_test(
     srcs = ["tests/deploy_artifacts_test.sh"],
     data = [
         "helm/ohc/Chart.yaml",
+        "helm/ohc/dashboards/agent_audit_dashboard.json",
+        "helm/ohc/dashboards/database_metrics.json",
+        "helm/ohc/dashboards/grafana-dashboard.json",
         "helm/ohc/dashboards/harness_efficiency.json",
         "helm/ohc/dashboards/hybrid-telemetry.json",
         "helm/ohc/dashboards/infra-observability.json",
@@ -164,6 +183,9 @@ sh_test(
         "helm/ohc/templates/backend-service.yaml",
         "helm/ohc/templates/chatwoot-service.yaml",
         "helm/ohc/templates/chatwoot.yaml",
+        "helm/ohc/templates/fluent-bit-config.yaml",
+        "helm/ohc/templates/fluent-bit.yaml",
+        "helm/ohc/templates/grafana-custom-css-configmap.yaml",
         "helm/ohc/templates/grafana-dashboard-configmap.yaml",
         "helm/ohc/templates/_helpers.tpl",
         "helm/ohc/templates/hpa.yaml",
@@ -190,10 +212,13 @@ sh_test(
 sh_test(
     name = "kind_e2e_test",
     size = "large",
-    timeout = "eternal",
+    timeout = "long",
     srcs = ["tests/kind_e2e_test.sh"],
     data = [
         "helm/ohc/Chart.yaml",
+        "helm/ohc/dashboards/agent_audit_dashboard.json",
+        "helm/ohc/dashboards/database_metrics.json",
+        "helm/ohc/dashboards/grafana-dashboard.json",
         "helm/ohc/dashboards/harness_efficiency.json",
         "helm/ohc/dashboards/hybrid-telemetry.json",
         "helm/ohc/dashboards/infra-observability.json",
@@ -206,6 +231,9 @@ sh_test(
         "helm/ohc/templates/backend-service.yaml",
         "helm/ohc/templates/chatwoot-service.yaml",
         "helm/ohc/templates/chatwoot.yaml",
+        "helm/ohc/templates/fluent-bit-config.yaml",
+        "helm/ohc/templates/fluent-bit.yaml",
+        "helm/ohc/templates/grafana-custom-css-configmap.yaml",
         "helm/ohc/templates/grafana-dashboard-configmap.yaml",
         "helm/ohc/templates/_helpers.tpl",
         "helm/ohc/templates/hpa.yaml",
@@ -225,6 +253,7 @@ sh_test(
     ],
     tags = [
         "manual",
+        "e2e",
         "large",
         "local",
         "no-remote-exec",

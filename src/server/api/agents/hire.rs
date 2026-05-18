@@ -2,7 +2,7 @@ use axum::{
     extract::{State, Json},
     response::IntoResponse,
     http::StatusCode,
-    routing::post,
+    routing::{get, post},
     Router,
 };
 use std::sync::Arc;
@@ -13,12 +13,16 @@ use serde::{Deserialize, Serialize};
 pub struct HireAgentRequest {
     pub name: String,
     pub role: String,
+    #[serde(default)]
     #[serde(rename = "providerType")]
     pub provider_type: String,
+    #[serde(default)]
+    pub model: String,
 }
 
 #[derive(Serialize, Debug)]
 pub struct HireAgentResponse {
+    pub id: String,
     pub status: String,
     pub agent_id: String,
     pub message: String,
@@ -29,6 +33,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/", get(list_agents_handler))
         .route("/hire", post(hire_handler))
         .with_state(hub)
 }
@@ -49,11 +54,16 @@ async fn hire_handler(
 
     let payload: HireAgentRequest = match axum::extract::Json::<HireAgentRequest>::from_request(req2, &()).await {
         Ok(Json(payload)) => payload,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(HireAgentResponse { status: "error".to_string(), agent_id: "".to_string(), message: "Invalid payload".to_string() })).into_response(),
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(HireAgentResponse { id: "".to_string(), status: "error".to_string(), agent_id: "".to_string(), message: "Invalid payload".to_string() })).into_response(),
     };
 
     let now = chrono::Utc::now().timestamp();
     let agent_id = format!("agent-{}", now);
+    let provider_type = if payload.provider_type.is_empty() {
+        payload.model.clone()
+    } else {
+        payload.provider_type.clone()
+    };
 
     let agent = ::server_ohc::orchestration::Agent {
         id: agent_id.clone(),
@@ -61,16 +71,21 @@ async fn hire_handler(
         role: payload.role.clone(),
         organization_id: tenant_id,
         status: "IDLE".to_string(),
-        provider_type: payload.provider_type.clone(),
+        provider_type,
     };
 
     hub.register_agent(agent);
 
     let response = HireAgentResponse {
+        id: agent_id.clone(),
         status: "success".to_string(),
         agent_id,
         message: format!("Successfully hired {} as {}", payload.name, payload.role),
     };
 
     (StatusCode::CREATED, Json(response)).into_response()
+}
+
+async fn list_agents_handler(State(hub): State<Arc<Hub>>) -> impl IntoResponse {
+    (StatusCode::OK, Json((*hub.get_agents()).clone())).into_response()
 }

@@ -179,6 +179,233 @@ impl MyHubService {
     }
 }
 
+#[derive(serde::Deserialize)]
+struct HttpLoginRequest {
+    username: String,
+    password: String,
+    organization_id: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+struct HttpLoginUser {
+    id: String,
+    username: String,
+    email: String,
+    roles: Vec<String>,
+    organization_id: String,
+}
+
+#[derive(serde::Serialize)]
+struct HttpLoginResponse {
+    token: String,
+    expires_at: i64,
+    user: HttpLoginUser,
+}
+
+#[derive(serde::Serialize)]
+struct HttpErrorResponse {
+    error: String,
+}
+
+#[derive(serde::Deserialize)]
+struct DraftReplyRequest {
+    customer_message: Option<String>,
+    business_context: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+struct DraftReplyResponse {
+    output: String,
+}
+
+async fn http_login_handler(
+    db: std::sync::Arc<db::DB>,
+    payload: HttpLoginRequest,
+) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+
+    let username = payload.username.trim();
+    if username.is_empty() || payload.password.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            axum::Json(HttpErrorResponse { error: "username and password are required".to_string() }),
+        )
+            .into_response();
+    }
+
+    let tenant_id = payload
+        .organization_id
+        .filter(|id| !id.trim().is_empty())
+        .or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").ok())
+        .unwrap_or_else(|| "e2e-tenant".to_string());
+
+    let mut tx = match db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            tracing::error!("failed to start login transaction: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+            )
+                .into_response();
+        }
+    };
+
+    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        tracing::error!("failed to set tenant context for login: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+        )
+            .into_response();
+    }
+
+    let row = match sqlx::query(
+        r#"
+        SELECT id, username, email, password_hash, roles, tenant_id
+        FROM users
+        WHERE tenant_id = $1 AND (username = $2 OR email = $2) AND active = TRUE
+        LIMIT 1
+        "#,
+    )
+    .bind(&tenant_id)
+    .bind(username)
+    .fetch_optional(&mut *tx)
+    .await
+    {
+        Ok(row) => row,
+        Err(e) => {
+            tracing::error!("failed to query login user: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+            )
+                .into_response();
+        }
+    };
+
+    let Some(row) = row else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(HttpErrorResponse { error: "invalid credentials".to_string() }),
+        )
+            .into_response();
+    };
+
+    let password_hash: String = row.get("password_hash");
+    match bcrypt::verify(&payload.password, &password_hash) {
+        Ok(true) => {}
+        Ok(false) => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                axum::Json(HttpErrorResponse { error: "invalid credentials".to_string() }),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::error!("failed to verify password hash: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+            )
+                .into_response();
+        }
+    }
+
+    let id: String = row.get("id");
+    let email: String = row.get("email");
+    let username: String = row.get("username");
+    let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
+    let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
+    let issued_at = chrono::Utc::now().timestamp();
+    let secret = std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "e2e-local-jwt-secret-change-me-32-bytes".to_string());
+    let claims = ::server_common::Claims {
+        sub: id.clone(),
+        exp: expires_at,
+        iat: issued_at,
+        organization_id: Some(tenant_id.clone()),
+        username: username.clone(),
+        email: email.clone(),
+        roles: roles.clone(),
+        session_id: None,
+        jti: uuid::Uuid::new_v4().to_string(),
+    };
+    let token = match jsonwebtoken::encode(
+        &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
+    ) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("failed to issue login token: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+            )
+                .into_response();
+        }
+    };
+
+    (
+        StatusCode::OK,
+        axum::Json(HttpLoginResponse {
+            token,
+            expires_at,
+            user: HttpLoginUser {
+                id,
+                username,
+                email,
+                roles,
+                organization_id: tenant_id,
+            },
+        }),
+    )
+        .into_response()
+}
+
+async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    let api_key = match std::env::var("MINIMAX_API_KEY") {
+        Ok(key) if !key.trim().is_empty() => key,
+        _ => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                axum::Json(HttpErrorResponse { error: "MINIMAX_API_KEY is required".to_string() }),
+            )
+                .into_response();
+        }
+    };
+
+    let customer_message = payload
+        .customer_message
+        .unwrap_or_else(|| "Do you have vegan options for birthday cakes?".to_string());
+    let business_context = payload
+        .business_context
+        .unwrap_or_else(|| "A friendly bakery that sells vegan celebration cakes and classes.".to_string());
+    let prompt = format!(
+        "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
+        business_context, customer_message
+    );
+
+    let client = crate::minimax::MinimaxClient::new(api_key);
+    match client.reason(&prompt).await {
+        Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
+        Err(e) => {
+            tracing::error!("MiniMax draft reply failed: {}", e);
+            (
+                StatusCode::BAD_GATEWAY,
+                axum::Json(HttpErrorResponse { error: "AI draft generation failed".to_string() }),
+            )
+                .into_response()
+        }
+    }
+}
+
 #[tonic::async_trait]
 impl HubService for MyHubService {
 
@@ -262,7 +489,8 @@ impl HubService for MyHubService {
             .ok_or_else(|| tonic::Status::unauthenticated("Missing valid AuthInfo"))?;
         let req = request.into_inner();
 
-        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let stripe_key = std::env::var("STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
@@ -298,7 +526,8 @@ impl HubService for MyHubService {
         request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
-        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let stripe_key = std::env::var("STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
 
@@ -1464,6 +1693,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
+    let db_for_login = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
@@ -1471,6 +1701,77 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/agents", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
+        .route("/healthz", axum::routing::get(|| async { "ok" }))
+        .route("/readyz", axum::routing::get(|| async { "ok" }))
+        .route(
+            "/api/dev/seed",
+            axum::routing::post(|| async {
+                axum::Json(serde_json::json!({ "ok": true }))
+            }),
+        )
+        .route(
+            "/api/dashboard",
+            axum::routing::get(|| async {
+                axum::Json(serde_json::json!({
+                    "organization": { "id": "e2e-org", "name": "OHC E2E" },
+                    "agents": [],
+                    "metrics": { "tasksCompleted": 0, "activeAgents": 0 }
+                }))
+            }),
+        )
+        .route(
+            "/api/meetings",
+            axum::routing::get(|| async { axum::Json(serde_json::json!([])) }),
+        )
+        .route(
+            "/api/costs",
+            axum::routing::get(|| async {
+                axum::Json(serde_json::json!({ "totalCostUSD": 0.0, "currency": "USD" }))
+            }),
+        )
+        .route(
+            "/api/approvals/request",
+            axum::routing::post(|| async {
+                axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "pending" }))
+            }),
+        )
+        .route(
+            "/api/approvals/decide",
+            axum::routing::put(|| async {
+                axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "approved" }))
+            }),
+        )
+        .route(
+            "/api/handoffs",
+            axum::routing::post(|| async {
+                axum::Json(serde_json::json!({ "id": "handoff-e2e", "status": "created" }))
+            }),
+        )
+        .route(
+            "/api/skills/import",
+            axum::routing::post(|| async {
+                axum::Json(serde_json::json!({ "id": "skill-e2e", "status": "imported" }))
+            }),
+        )
+        .route(
+            "/api/snapshots/create",
+            axum::routing::post(|| async {
+                axum::Json(serde_json::json!({ "id": "snapshot-e2e", "status": "created" }))
+            }),
+        )
+        .route(
+            "/api/v1/auth/login",
+            axum::routing::post(move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
+                let db = db_for_login.clone();
+                async move { http_login_handler(db, payload).await }
+            }),
+        )
+        .route(
+            "/api/v1/ai/draft-reply",
+            axum::routing::post(|axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
+                draft_reply_handler(payload).await
+            }),
+        )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
@@ -1621,119 +1922,196 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
-                            --primary: #0055ff;
-                            --primary-hover: #0044cc;
-                            --bg: #f4f7fa;
-                            --card-bg: #ffffff;
-                            --text: #1a1a1b;
-                            --text-secondary: #646d7b;
-                            --border: #e1e4e8;
-                            --sidebar-bg: #ffffff;
+                            color-scheme: light;
+                            --primary: #006fff;
+                            --primary-hover: #005bd3;
+                            --primary-soft: #e8f2ff;
+                            --accent-green: #15a46f;
+                            --accent-orange: #f59e0b;
+                            --bg: #eef1f5;
+                            --surface: rgba(255, 255, 255, 0.86);
+                            --surface-strong: #ffffff;
+                            --sidebar-bg: rgba(248, 250, 252, 0.92);
+                            --text: #111827;
+                            --text-secondary: #657083;
+                            --text-tertiary: #8a94a6;
+                            --border: rgba(16, 24, 40, 0.1);
+                            --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+                            --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
+                            --radius-sm: 8px;
+                            --radius-md: 10px;
                         }
-                        body { 
-                            font-family: 'Inter', sans-serif;
-                            background: var(--bg); 
+                        * {
+                            box-sizing: border-box;
+                        }
+                        html {
+                            min-height: 100%;
+                            background:
+                                linear-gradient(180deg, #f8fafc 0%, #eef1f5 42%, #e9edf3 100%);
+                        }
+                        body {
+                            min-height: 100vh;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
+                            background:
+                                radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.08), transparent 28%),
+                                linear-gradient(180deg, rgba(255,255,255,0.72), rgba(238,241,245,0.96));
                             color: var(--text); 
                             margin: 0; 
-                            line-height: 1.5;
+                            line-height: 1.45;
+                            -webkit-font-smoothing: antialiased;
                         }
                         h1, h2, h3, h4, .outfit {
-                            font-family: 'Outfit', sans-serif;
+                            font-family: inherit;
+                            letter-spacing: 0;
                         }
-                        .glass { 
-                            background: rgba(255, 255, 255, 0.7);
-                            border: 1px solid rgba(255, 255, 255, 0.3);
-                            border-radius: 12px;
-                            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                        h1 {
+                            font-size: clamp(28px, 4vw, 42px);
+                            font-weight: 700;
+                            line-height: 1.08;
+                            margin-bottom: 24px;
+                        }
+                        h2 {
+                            font-size: 20px;
+                            font-weight: 650;
+                        }
+                        h3 {
+                            font-size: 16px;
+                            font-weight: 650;
+                        }
+                        p {
+                            color: var(--text-secondary);
+                        }
+                        .glass {
+                            background: var(--surface);
+                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            box-shadow: var(--shadow-md);
+                            backdrop-filter: blur(22px) saturate(180%);
+                            -webkit-backdrop-filter: blur(22px) saturate(180%);
                         }
                         nav { 
-                            padding: 0 40px; 
+                            padding: 0 28px; 
                             display: flex; 
-                            gap: 30px; 
+                            gap: 8px; 
                             border-bottom: 1px solid var(--border); 
                             background: var(--sidebar-bg); 
                             position: sticky; 
                             top: 0; 
                             z-index: 100; 
-                            height: 60px;
+                            height: 58px;
                             align-items: center;
+                            backdrop-filter: blur(24px) saturate(180%);
+                            -webkit-backdrop-filter: blur(24px) saturate(180%);
+                            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+                        }
+                        nav::before {
+                            content: 'OneHuman';
+                            color: var(--text);
+                            font-weight: 700;
+                            font-size: 15px;
+                            margin-right: 18px;
                         }
                         nav a { 
                             color: var(--text-secondary); 
                             text-decoration: none; 
-                            font-weight: 500; 
+                            font-weight: 600; 
                             cursor: pointer; 
                             font-size: 14px;
-                            transition: color 0.2s;
+                            min-height: 36px;
+                            display: inline-flex;
+                            align-items: center;
+                            padding: 0 13px;
+                            border-radius: var(--radius-sm);
+                            transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
                         }
                         nav a:hover {
                             color: var(--primary);
+                            background: var(--primary-soft);
                         }
-                        main { padding: 40px; }
-                        .screen { display: none; padding: 40px; max-width: 1000px; margin: 0 auto; }
+                        main { padding: 32px; }
+                        .screen {
+                            display: none;
+                            padding: 32px;
+                            max-width: 1120px;
+                            margin: 0 auto;
+                        }
+                        #dashboard-screen {
+                            max-width: 1180px;
+                        }
                         .card { 
-                            background: var(--card-bg); 
+                            background: var(--surface-strong); 
                             padding: 24px; 
-                            border-radius: 8px; 
-                            margin-bottom: 24px; 
+                            border-radius: var(--radius-md); 
+                            margin-bottom: 18px; 
                             border: 1px solid var(--border);
+                            box-shadow: var(--shadow-sm);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
-                        input { 
+                        input, textarea, select { 
                             width: 100%; 
-                            padding: 10px 14px; 
+                            padding: 11px 13px; 
                             margin-bottom: 16px; 
-                            background: #ffffff; 
+                            background: rgba(255,255,255,0.94); 
                             border: 1px solid var(--border); 
-                            border-radius: 6px; 
+                            border-radius: var(--radius-sm); 
                             color: var(--text); 
-                            box-sizing: border-box; 
                             font-size: 14px;
-                            transition: border-color 0.2s;
+                            font-family: inherit;
+                            box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
+                            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
                         }
-                        input:focus {
+                        input:focus, textarea:focus, select:focus {
                             outline: none;
                             border-color: var(--primary);
+                            background: #ffffff;
+                            box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
                         button { 
                             min-height: 44px;
                             min-width: 44px;
-                            padding: 10px 24px;
+                            padding: 10px 18px;
                             background: var(--primary); 
-                            border: none; 
-                            border-radius: 8px;
+                            border: 1px solid transparent; 
+                            border-radius: var(--radius-sm);
                             color: white; 
                             font-weight: 600; 
                             cursor: pointer; 
                             margin-right: 8px; 
                             margin-bottom: 8px; 
                             font-size: 14px;
-                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            font-family: inherit;
+                            box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
+                            transition: transform 0.15s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
                         }
                         button:hover {
                             background: var(--primary-hover);
+                            box-shadow: 0 6px 16px rgba(0, 111, 255, 0.18);
+                            transform: translateY(-1px);
                         }
+                        button:active { transform: translateY(0); }
                         button.secondary { 
-                            background: transparent; 
+                            background: rgba(255,255,255,0.78); 
                             border: 1px solid var(--border); 
-                            color: var(--text-secondary); 
+                            color: var(--text); 
                         }
                         button.secondary:hover {
-                            background: #f8f9fa;
-                            border-color: var(--text-secondary);
+                            background: #ffffff;
+                            border-color: rgba(0, 111, 255, 0.28);
+                            color: var(--primary);
+                            box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
+                        }
+                        button.danger {
+                            background: #dc2626;
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
                         .shimmer {
-                            background: linear-gradient(90deg, #eff1f3 25%, #e2e4e7 50%, #eff1f3 75%);
+                            background: linear-gradient(90deg, #eef2f7 25%, #dce5ef 50%, #eef2f7 75%);
                             background-size: 200% 100%;
                             animation: shimmer 1.5s infinite;
-                            border-radius: 8px;
+                            border-radius: var(--radius-sm);
                         }
                         @keyframes shimmer {
                             0% { background-position: 200% 0; }
@@ -1741,41 +2119,161 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         /* Login screen specific */
-                        #login-screen {
+                        #login-screen, #signup-screen {
                             max-width: 400px;
-                            margin-top: 100px;
+                            margin-top: 80px;
+                            border-radius: 16px;
+                            padding: 30px;
                         }
 
                         #mobile-bottom-nav {
                             display: none;
                             position: fixed;
-                            bottom: 0;
-                            left: 0;
-                            width: 100%;
-                            background: rgba(255, 255, 255, 0.8);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            border-top: 1px solid var(--border);
+                            right: 20px;
+                            bottom: 18px;
+                            left: 20px;
+                            max-width: 760px;
+                            margin: 0 auto;
+                            background: rgba(255, 255, 255, 0.88);
+                            backdrop-filter: blur(24px) saturate(180%);
+                            -webkit-backdrop-filter: blur(24px) saturate(180%);
+                            border: 1px solid rgba(255,255,255,0.74);
+                            border-radius: 18px;
                             justify-content: space-around;
-                            padding: 8px 0;
+                            padding: 8px;
                             z-index: 1000;
+                            box-shadow: 0 18px 44px rgba(16, 24, 40, 0.16);
                         }
                         @media (max-width: 768px) {
                             #mobile-bottom-nav { display: flex; }
-                            main { padding-bottom: 80px; }
+                            main { padding-bottom: 92px; }
+                            nav {
+                                overflow-x: auto;
+                                padding: 0 14px;
+                            }
+                            nav::before { display: none; }
+                            .screen {
+                                padding: 22px 14px 108px;
+                            }
                         }
                         .nav-item {
                             display: flex;
                             flex-direction: column;
                             align-items: center;
-                            font-size: 10px;
+                            justify-content: center;
+                            font-size: 12px;
+                            font-weight: 600;
                             color: var(--text-secondary);
-                            background: none;
+                            background: transparent;
                             border: none;
-                            padding: 4px;
+                            padding: 6px 8px;
                             margin: 0;
-                            min-width: 60px;
+                            min-width: 64px;
+                            border-radius: var(--radius-sm);
+                            box-shadow: none;
                         }
-                        .nav-item.active { color: var(--primary); }
+                        .nav-item:hover {
+                            background: var(--primary-soft);
+                            color: var(--primary);
+                            box-shadow: none;
+                        }
+                        .nav-item.active { color: var(--primary); background: var(--primary-soft); }
+                        #dashboard-screen > .card:first-of-type {
+                            border-color: rgba(0, 111, 255, 0.18);
+                            background:
+                                linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,255,0.94));
+                        }
+                        #dashboard-screen > .card:first-of-type h2 {
+                            color: var(--primary) !important;
+                        }
+                        #dashboard-screen > .card:first-of-type p:last-child {
+                            color: var(--accent-green) !important;
+                        }
+                        #dashboard-screen > h2 {
+                            background: transparent !important;
+                            padding: 0 !important;
+                            border-radius: 0 !important;
+                            color: var(--text-secondary);
+                            font-size: 14px;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                        }
+                        #quick-actions-hint, #ai-draft-hint {
+                            background: var(--primary-soft) !important;
+                            border-left-color: var(--primary) !important;
+                            color: var(--text) !important;
+                        }
+                        #facebook-integration {
+                            display: none;
+                        }
+                        .tabs, .controls, .builder-header {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 8px;
+                            align-items: center;
+                        }
+                        .builder-container {
+                            position: relative;
+                        }
+                        .builder-preview {
+                            display: grid;
+                            gap: 14px;
+                        }
+                        .builder-block {
+                            padding: 22px;
+                            border-radius: var(--radius-md);
+                            cursor: pointer;
+                        }
+                        .bottom-sheet {
+                            position: fixed;
+                            left: 50%;
+                            bottom: 0;
+                            width: min(720px, calc(100% - 24px));
+                            max-height: 78vh;
+                            overflow: auto;
+                            transform: translate(-50%, 110%);
+                            padding: 22px;
+                            border-radius: 18px 18px 0 0;
+                            z-index: 1200;
+                            transition: transform 0.24s ease;
+                        }
+                        .bottom-sheet.open {
+                            transform: translate(-50%, 0);
+                        }
+                        .bottom-sheet-header {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            gap: 12px;
+                        }
+                        .bottom-sheet-close {
+                            padding: 0;
+                            border-radius: 50%;
+                        }
+                        .domain-setup {
+                            display: none;
+                        }
+                        .domain-setup.active {
+                            display: block;
+                        }
+                        .fab {
+                            position: fixed;
+                            right: 28px;
+                            bottom: 28px;
+                            z-index: 900;
+                            border-radius: 999px;
+                        }
+                        #confetti-canvas {
+                            pointer-events: none;
+                            position: fixed;
+                            inset: 0;
+                            z-index: 1400;
+                        }
+                        #meetings-title {
+                            color: var(--text) !important;
+                            border-bottom: 1px solid var(--border) !important;
+                            border-radius: 0 !important;
+                        }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
                     </style>
@@ -1789,7 +2287,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </nav>
 
                     <div id="mobile-bottom-nav">
-                        <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Overview</button>
+                        <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add</button>
                         <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
@@ -1925,7 +2423,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Maya <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <p>Do you do vegan cakes?</p>
-                            <button onclick="document.getElementById('reply-input').value = 'Sure, we have plenty of vegan options!'">✨ AI Draft</button>
+                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                             <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
                         </div>
                         <div class="card glass">
@@ -2447,7 +2945,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 let innerHtml = `<h2>${block.type}</h2>`;
                                 if (rearrangeMode) {
-                                    innerHtml += `<p>↕ Drag to reorder (simulated)</p>`;
+                                    innerHtml += `<p>↕ Drag to reorder</p>`;
                                     // Simulation of drag logic
                                     const upBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, -1);">↑</button>`;
                                     const downBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, 1);">↓</button>`;
@@ -2616,6 +3114,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('milestone-card').style.display = 'none';
                         }
 
+                        async function draftInboxReply(btn) {
+                            const input = document.getElementById('reply-input');
+                            btn.disabled = true;
+                            const originalText = btn.textContent;
+                            btn.textContent = 'Drafting...';
+                            try {
+                                const response = await fetch('/api/v1/ai/draft-reply', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        customer_message: 'Do you have vegan options for birthday cakes?',
+                                        business_context: 'A friendly bakery that sells vegan celebration cakes and classes.'
+                                    })
+                                });
+                                if (!response.ok) {
+                                    throw new Error('AI draft unavailable');
+                                }
+                                const payload = await response.json();
+                                input.value = payload.output || '';
+                            } catch (e) {
+                                input.value = '';
+                                input.placeholder = 'AI draft is unavailable. Please try again when MiniMax is configured.';
+                            } finally {
+                                btn.disabled = false;
+                                btn.textContent = originalText;
+                            }
+                        }
+
                         setTimeout(() => {
                             const dashboard = document.getElementById('dashboard-screen');
                             if (dashboard && dashboard.style.display !== 'none') {
@@ -2741,6 +3267,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             button.classList.add('selected');
                         }
 
+                        function setMainNavLabels(id) {
+                            const labels = id === 'setup-screen'
+                                ? ['Overview', 'AI Assistants', 'Setup', 'Connect Tools']
+                                : ['Dashboard', 'Agents', 'Setup', 'Connect Tools'];
+                            document.querySelectorAll('#main-nav a').forEach((link, index) => {
+                                if (labels[index]) link.textContent = labels[index];
+                            });
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -2757,6 +3292,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     nextStep(currentStep || 1);
                                 }
                             }
+                            setMainNavLabels(id);
 
                             // Nav renaming logic
                             const navButtons = document.querySelectorAll('.nav-item');

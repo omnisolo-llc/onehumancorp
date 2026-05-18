@@ -1,7 +1,7 @@
 # docker-compose.e2e.yml — Lean E2E infrastructure stack.
 #
-# Starts ONLY the shared infrastructure services (postgres, redis, and the
-# ohc-core stub).  The OHC server binary is intentionally NOT run as a
+# Starts ONLY the shared infrastructure services (postgres and redis).
+# The OHC server binary is intentionally NOT run as a
 # container here: it is started directly by run-playwright.mjs from the
 # Bazel-built binary so that no Docker image rebuild is required.
 #
@@ -47,16 +47,3 @@ services:
         limits:
           cpus: "0.3"
           memory: 64M
-
-  # ─── ohc-core stub ────────────────────────────────────────────────────────
-  # The sync daemons in the Go server only run in SQLite mode
-  # (IsSQLite() == false for Postgres), so no actual requests are made.
-  # This container simply exists to satisfy any connectivity checks.
-  ohc-core:
-    image: public.ecr.aws/docker/library/busybox:latest
-    command: sleep infinity
-    deploy:
-      resources:
-        limits:
-          cpus: "0.05"
-          memory: 8M

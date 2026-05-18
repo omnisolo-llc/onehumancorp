@@ -22,6 +22,10 @@ def define_playwright_tests(specs):
             args = ["$(rootpath {})".format(spec)],
             data = [
                 spec,
+                "//src/e2e:fixtures.ts",
+                "//src/e2e:ai-judge.ts",
+                "//src/e2e:global-setup.ts",
+                "//src/e2e:e2e-seed.sql",
                 "//src/server:server",
                 "//deploy:docker-compose.e2e.yml",
                 "//:playwright.config.ts",

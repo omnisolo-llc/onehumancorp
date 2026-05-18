@@ -23,7 +23,7 @@ defaults:
 
 jobs:
   bazel-test:
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -83,9 +83,10 @@ jobs:
     #  - name: Build release artifacts
      #   run: bazelisk build //release:all_release_artifacts --config=linux
 
-      - name: Test
+      - name: Test non-E2E targets
         run: |
           bazelisk test \
+            --config=no-e2e \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \

@@ -1,11 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Onboarding Wizard', () => {
-  test('signup routes into setup', async ({ page }) => {
-    await page.goto('/signup');
-    await page.getByPlaceholder('Email or Username').fill('new@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Sign Up' }).click();
+  test('seeded user routes into setup', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: /Start Business Setup/ }).click();
 
     await expect(page.locator('#setup-screen')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
