@@ -172,21 +172,21 @@ oci.pull(
     name = "distroless_static",
     digest = "sha256:47b2d72ff90843eb8a768b5c2f89b40741843b639d065b9b937b07cd59b479c6",
     image = "gcr.io/distroless/static",
-    platforms = ["linux/amd64"],
+    platforms = ["linux/amd64", "linux/arm64/v8"],
 )
 oci.pull(
     name = "distroless_cc",
     digest = "sha256:56aaf20ab2523a346a67c8e8f8e8dabe447447d0788b82284d14ad79cd5f93cc",
     image = "gcr.io/distroless/cc",
-    platforms = ["linux/amd64"],
+    platforms = ["linux/amd64", "linux/arm64/v8"],
 )
 oci.pull(
     name = "nginx_alpine",
     digest = "sha256:3bcf852aed06467cf075c6105892e4d5a6ebbbafa0ce22d35062db9e90ddef4c",
     image = "index.docker.io/library/nginx",
-    platforms = ["linux/amd64"],
+    platforms = ["linux/amd64", "linux/arm64/v8"],
 )
-use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_static", "distroless_static_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")
+use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux_arm64_v8", "distroless_static", "distroless_static_linux_amd64", "distroless_static_linux_arm64_v8", "nginx_alpine", "nginx_alpine_linux_amd64", "nginx_alpine_linux_arm64_v8")
 
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")

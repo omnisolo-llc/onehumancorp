@@ -26,10 +26,21 @@ platform(
 )
 
 platform(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+        "@bazel_tools//tools/cpp:gcc",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+platform(
     name = "linux_aarch64",
     constraint_values = [
         "@platforms//os:linux",
-        "@platforms//cpu:aarch64",
+        "@platforms//cpu:arm64",
+        "@bazel_tools//tools/cpp:gcc",
     ],
     visibility = ["//visibility:public"],
 )

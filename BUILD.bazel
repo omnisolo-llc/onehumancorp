@@ -59,24 +59,9 @@ sh_binary(
 
 filegroup(
     name = "docs_srcs",
-    srcs = [
-        "docs/AGENTS.md",
-        "docs/ARCHITECTURE.md",
-        "docs/ROADMAP.md",
-        "docs/api_reference.md",
-        "docs/index.md",
-        "docs/mkdocs_via_bazel.sh",
-        "docs/onboarding_guide.md",
-        "docs/research/agent_benchmarks.md",
-        "docs/research/competitor_analysis.md",
-        "docs/technical/index.md",
-        "docs/technical/system-design.md",
-        "docs/_toc.yaml",
-        "docs/ui/guide_proactive_onboarding.md",
-        "docs/user_guide.md",
-        "docs/vision/market_strategy.md",
-        "docs/walkthroughs/index.md",
-        "docs/wizard_onboarding.md",
+    srcs = glob([
+        "docs/**",
+    ]) + [
         "mkdocs.yml",
     ],
     visibility = ["//visibility:public"],
