@@ -39,7 +39,7 @@ Use this section for guided narratives such as setup verification, orchestration
 - [OS-Level Sandbox Isolation Harness](./sandbox_isolation_harness.md)
 - [Shared Task List Visual Walkthrough](./shared_task_list_visual_walkthrough.md)
 - [SPIFFE Identity Onboarding Walkthrough](./spiffe_identity_onboarding.md)
-- [Sub-Agent Orchestration Walkthrough](./sub_agent_orchestration.md)
+- [Sub-Agent Orchestration Walkthrough](../../walkthroughs/sub_agent_orchestration.md)
 - [Swarm Intelligence Protocol Walkthrough](./swarm_intelligence_protocol.md)
 - [Teammate Mesh Demo Walkthrough](./teammate_mesh_demo.md)
 - [Teammate Mesh Walkthrough](./teammate_mesh.md)
