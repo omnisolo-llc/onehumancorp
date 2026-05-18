@@ -13,13 +13,13 @@ The One Human Corp (OHC) Swarm Intelligence Protocol (OHC-SIP) dictates how the 
 
 ### 2.1 Teammate Mesh Cross-Mode Handoff
 Agents often need to hand off tasks depending on the computational context and required specialty.
-- **Cloud Mode:** Relies on Redis Pub/Sub (`mesh:tasks` channel) using the high-performance `rueidis` library. This allows distributed, stateless API pods to communicate seamlessly.
+- **Cloud Mode:** Relies on Redis Pub/Sub (`mesh:tasks` channel) using the high-performance `redis` library. This allows distributed, stateless API pods to communicate seamlessly.
 - **Standalone Desktop Mode:** Fallbacks gracefully to the local SQLite `shared_tasks` table to synchronize handoffs.
 
 ### 2.2 Skeptical Memory & AutoDream
 The **AutoDream** capability consolidates architectural findings and prevents the "hallucination creep" commonly seen in autonomous agents.
 - **Durable Vector Embeddings:** Leveraging PostgreSQL (`pgvector`) in Cloud mode and falling back to a custom schema in SQLite (with `BLOB` datatypes in place of `VECTOR`) for Standalone mode.
-- **Transparent LLM Caching:** Before hitting the Minimax API to compute an embedding, the system aggressively checks the L1 (`rueidis`) and L2 (SQLite/Postgres `embedding_cache` table) caches.
+- **Transparent LLM Caching:** Before hitting the Minimax API to compute an embedding, the system aggressively checks the L1 (`redis`) and L2 (SQLite/Postgres `embedding_cache` table) caches.
 
 ### 2.3 Visual Excellence Mandate
 A key capability of OHC is aesthetic superiority. Every agent, when generating a UI artifact or documentation, enforces the **Glassmorphism** standard.

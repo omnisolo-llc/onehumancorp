@@ -14,7 +14,7 @@ This document outlines the final orchestration phases for the One Human Corp (OH
 
 ## Phase 2: Teammate Mesh APIs (The Nerves)
 - **Architecture**: Realtime Pub/Sub communication for agent coordination.
-- **Data Layer**: Redis (`rueidis`) channels for Cloud. Memory bus for Standalone.
+- **Data Layer**: Redis (`redis`) channels for Cloud. Memory bus for Standalone.
 
 ## Phase 3: AutoDream Data Pipelines (The Memory)
 - **Architecture**: Asynchronous `AutoDreamWorker` converting episodic memory into long-term embeddings.

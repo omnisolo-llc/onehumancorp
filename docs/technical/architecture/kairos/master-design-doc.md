@@ -43,7 +43,7 @@ The Teammate Mesh facilitates real-time coordination without delays.
 **Channels:** `mesh:tasks`, `mesh:coordination`, `mesh:capabilities`
 
 **Degradation Strategy:**
-- **Cloud-Native:** Uses `rueidis` (Redis Pub/Sub) and `CentrifugeNode` for broad network event distribution.
+- **Cloud-Native:** Uses `redis` (Redis Pub/Sub) and `CentrifugeNode` for broad network event distribution.
 - **Standalone:** Uses Go channels for fast, local IPC.
 
 ## 3. autoDream (The Memory)

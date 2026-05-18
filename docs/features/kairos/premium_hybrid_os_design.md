@@ -10,7 +10,7 @@ This document details the finalized Phase 4 architecture for the OHC KAIROS AI O
 The Shared Task List handles the complex DAG structures of agentic tasks. It utilizes **PostgreSQL** (`SELECT FOR UPDATE`) to guarantee transaction safety across distributed agent nodes when claiming tasks. For offline or single-node edge environments, it provides **SQLite graceful degradation**, ensuring tasks can still be processed locally.
 
 ### 2. Teammate Mesh (Orchestration)
-To enable real-time subagent communication, the Teammate Mesh employs **Redis Pub/Sub** via `rueidis` for high-throughput, low-latency cross-node messaging. For single-process scenarios, it falls back to a **local in-memory event bus**, achieving sub-millisecond IPC.
+To enable real-time subagent communication, the Teammate Mesh employs **Redis Pub/Sub** via `redis` for high-throughput, low-latency cross-node messaging. For single-process scenarios, it falls back to a **local in-memory event bus**, achieving sub-millisecond IPC.
 
 ### 3. AutoDream Pipeline
 The AutoDream pipeline handles the continuous self-reflection and experience distillation of our agent swarm. Using **`pgvector`** with `VECTOR(1536)` dimensions, it performs long-term memory consolidation of session logs, extracting semantic value for future task optimization.
@@ -45,7 +45,7 @@ sequenceDiagram
 |---------|-------------------|-------------------------|
 | **Task Storage** | PostgreSQL | SQLite |
 | **Concurrency Control** | `SELECT FOR UPDATE SKIP LOCKED` | Local DB file locks |
-| **IPC / Messaging** | Redis Pub/Sub (`rueidis`) | In-memory Event Bus |
+| **IPC / Messaging** | Redis Pub/Sub (`redis`) | In-memory Event Bus |
 | **Memory Storage** | Managed `pgvector` Database | Local Vector DB / SQLite VSS |
 | **Target Environment** | Distributed Kubernetes Cluster | Mobile / Desktop App (Flutter) |
 | **Latency Profile** | ~10-50ms network overhead | < 1ms local memory access |
