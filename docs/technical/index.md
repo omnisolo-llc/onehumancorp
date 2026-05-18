@@ -13,7 +13,7 @@ This section contains all technical documentation for the One Human Corp (OHC) p
 - [Reports](reports/index.md) - Technical reports and audits
 - [Walkthroughs](walkthroughs/index.md) - Step-by-step technical guides
 - [Templates](templates/index.md) - Document templates
-- [MCP Protocol](mcp/index.md) - Model Context Protocol documentation
+- [MCP Protocol](mcp/hybrid-mcp-playbook.md) - Model Context Protocol documentation
 
 ## Quick Links
 

@@ -33,7 +33,7 @@ graph TD
 | **Scalability** | Horizontal (Cloud) / SQLite (Standalone) | Monolithic |
 
 See also:
-- [Sub-Agent Queue](../../features/kairos/sub_agent_queue.md)
+- [Sub-Agent Queue](../../technical/architecture/kairos/sub-agent-queue-design.md)
 - [Distributed State Machine](../../features/kairos/distributed_state_machine.md)
 - [AutoDream Pipelines](../../features/kairos/autodream_pipelines.md)
 

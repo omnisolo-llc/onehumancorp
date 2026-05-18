@@ -119,19 +119,19 @@ The core power of "One Human Corp" is its ability to learn any business domain. 
 
 ### Phase 5: World-Scale Workforce (Multi-Cluster Federation)
 *Goal: Enable geo-distributed AI teams that operate with sub-50ms latency regardless of where the CEO is based.*
-- **Federated SPIRE & mTLS Mesh**: Seamless identity across global clusters. See [identity-security/federation.md](features/identity-security/federation.md).
+- **Federated SPIRE & mTLS Mesh**: Seamless identity across global clusters. See [identity-security/federation.md](../technical/features/identity-security/federation.md).
 - **Global Hub Router**: Intelligent, latency-blind task delegation.
 - **Cross-Region Snapshot Mirroring**: Instant disaster recovery for the entire organization state.
 
 ### Phase 6: Ecosystem Interop (B2B Agent Exchange)
 *Goal: Standardize the way different OHC organizations cooperate.*
-- **Inter-Org Collaboration Rooms**: Securely bridged workspaces for multi-company projects. See [b2b-collaboration/inter-org.md](features/b2b-collaboration/inter-org.md).
+- **Inter-Org Collaboration Rooms**: Securely bridged workspaces for multi-company projects. See [b2b-collaboration/inter-org.md](../technical/features/b2b-collaboration/inter-org.md).
 - **Autonomous Procurement**: Buyer agents from one org negotiating and contracting with Sales agents from another.
 - **Shared Audit Logs**: Provable, immutable logs for B2B compliance.
 
 ### Phase 7: Performance Optimization (Hardware-Aware Scheduling)
 *Goal: Maximize throughput and ROI by aligning model weights with specialized compute.*
-- **NVIDIA/TPU Resource Scheduling**: Automated placement of high-density LLM agents on GPU nodes. See [compute-optimization/hardware-scheduling.md](features/compute-optimization/hardware-scheduling.md).
+- **NVIDIA/TPU Resource Scheduling**: Automated placement of high-density LLM agents on GPU nodes. See [compute-optimization/hardware-scheduling.md](../technical/features/compute-optimization/hardware-scheduling.md).
 - **VRAM Quota Management**: Department-level GPU budgets to prevent runaway compute costs.
 
 ### Phase 8: Advanced Agentic Capabilities (The "Top 50" Mandate)
@@ -272,9 +272,9 @@ Defines how autonomous agents communicate, collaborate, and resolve conflicts.
 ### Epic 3: Modular Plugin System & Aesthetic OS Vision (Phase 9)
 *Goal:* Transition from static Skill Blueprints to a dynamic, decentralized Capability Plugin Mesh, enabling zero-downtime expansion and implementing the Next-Generation "Premium Feel" Design System.
 * **Documentation Gate:**
-  * Design Doc: `docs/features/modular-plugins/design-doc.md` [VERIFIED]
-  * CUJ: `docs/features/modular-plugins/cuj.md` [VERIFIED]
-  * Test Plan: `docs/features/modular-plugins/test-plan.md` [VERIFIED]
+  * Design Doc: `docs/technical/features/modular-plugins/design-doc.md` [VERIFIED]
+  * CUJ: `docs/technical/features/modular-plugins/cuj.md` [VERIFIED]
+  * Test Plan: `docs/technical/features/modular-plugins/test-plan.md` [VERIFIED]
 * **Task 3.1: Implement Capability Plugin Mesh (Backend)**
   * **Owner:** SWE Agent (Backend)
   * **Description:** Implement the `capability_plugins` and `swarm_memory_embeddings` tables, and dynamic MCP registration as per the new Agentic OS blueprint.
