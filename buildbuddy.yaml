@@ -50,9 +50,9 @@ actions:
           - "*"
     env:
       GOTOOLCHAIN: "auto"
-      KIND_VERSION: "v0.26.0"
-      KUBECTL_VERSION: "v1.31.4"
-      HELM_VERSION: "v3.16.4"
+      KIND_VERSION: "v0.31.0"
+      KUBECTL_VERSION: "v1.36.1"
+      HELM_VERSION: "v3.20.2"
     steps:
       - run: |
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
@@ -60,23 +60,29 @@ actions:
             build-essential pkg-config libssl-dev \
             ca-certificates curl git
 
-          curl -fsSL -o /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          case "$(uname -m)" in
+            x86_64) CI_ARCH=amd64; BAZEL_PLATFORM_CONFIG=linux ;;
+            aarch64|arm64) CI_ARCH=arm64; BAZEL_PLATFORM_CONFIG=linux_arm64 ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+
+          curl -fsSL -o /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
           chmod +x /tmp/kind
           sudo install /tmp/kind /usr/local/bin/kind
 
-          curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
           chmod +x /tmp/kubectl
           sudo install /tmp/kubectl /usr/local/bin/kubectl
 
-          curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
           tar -C /tmp -xzf /tmp/helm.tar.gz
-          sudo install /tmp/linux-amd64/helm /usr/local/bin/helm
+          sudo install "/tmp/linux-${CI_ARCH}/helm" /usr/local/bin/helm
 
           go install github.com/bazelbuild/bazelisk@latest
           export PATH=$PATH:$(go env GOPATH)/bin
 
           bazelisk test //deploy:kind_e2e_test \
-            --config=linux \
+            --config="${BAZEL_PLATFORM_CONFIG}" \
             --nocache_test_results \
             --test_output=streamed \
             --test_summary=terse \
