@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Business Manager UI', () => {
   test('should display dashboard with nav', async ({ page }) => {

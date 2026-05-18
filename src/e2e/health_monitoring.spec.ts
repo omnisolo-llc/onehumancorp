@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Health Monitoring Resilience E2E', () => {
   test('renders diagnostics health state', async ({ page }) => {

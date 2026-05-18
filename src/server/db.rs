@@ -116,8 +116,14 @@ impl DB {
             }
 
             let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
-                .create_if_missing(true)
-                .extension("sqlite_vec");
+                .create_if_missing(true);
+
+            // sqlite-vec is optional at runtime. The memory repository probes for
+            // vec_distance_cosine and falls back to in-process cosine sorting when
+            // the extension is unavailable, which keeps desktop/CI startup robust.
+            if std::env::var("OHC_SQLITE_VEC_EXTENSION").ok().as_deref() == Some("enabled") {
+                conn_opts = conn_opts.extension("sqlite_vec");
+            }
 
             // Enforce SQLCipher for Standalone mode unconditionally
             let key = if let Some(k) = database_url.split("key=").nth(1) {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Dashboard UX Friction Fix Verification', () => {
   test('should display dashboard', async ({ page }) => {

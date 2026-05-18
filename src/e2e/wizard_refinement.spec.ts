@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Wizard Refinement E2E', () => {
   test('keeps the setup flow plain-language and reversible', async ({ page }) => {

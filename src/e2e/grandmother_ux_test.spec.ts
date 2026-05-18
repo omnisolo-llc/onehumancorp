@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Grandmother UX Fixes E2E tests', () => {
   test('login screen uses plain language labels', async ({ page }) => {

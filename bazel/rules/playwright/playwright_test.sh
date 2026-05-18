@@ -118,6 +118,13 @@ if [[ -n "$spec_file" ]]; then
   cp "$ABS_SPEC_FILE" "$WORK_DIR/src/e2e/$spec_base"
   ABS_SPEC_FILE="src/e2e/$spec_base"
 fi
+for support_file in fixtures.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
+  if [[ -f "$workspace_root/src/e2e/$support_file" ]]; then
+    cp "$workspace_root/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
+  elif [[ -f "$RUNFILES_ROOT/src/e2e/$support_file" ]]; then
+    cp "$RUNFILES_ROOT/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
+  fi
+done
 ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
 
 cd "$WORK_DIR"
@@ -178,6 +185,8 @@ OHC_SERVER_PORT=$(shuf -i 15000-20000 -n 1)
 OHC_GRPC_SERVER_PORT=$(shuf -i 20001-25000 -n 1)
 export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
+export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
+export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
 export BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
@@ -188,6 +197,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_SQLITE_KEY="test_sqlite_key" \
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
+  OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
     "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 

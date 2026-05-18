@@ -1,0 +1,115 @@
+name: Kind E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/kind-e2e.yml"
+      - ".bazelrc"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "MODULE.bazel"
+      - "MODULE.bazel.lock"
+      - "deploy/**"
+      - "src/server/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/kind-e2e.yml"
+      - ".bazelrc"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "MODULE.bazel"
+      - "MODULE.bazel.lock"
+      - "deploy/**"
+      - "src/server/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  KIND_VERSION: "v0.26.0"
+  KUBECTL_VERSION: "v1.31.4"
+  HELM_VERSION: "v3.16.4"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  kind-e2e:
+    runs-on: oci-runner
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install base dependencies
+        run: |
+          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends --fix-missing \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git gzip tar unzip jq
+
+      - name: Install Kubernetes tools
+        run: |
+          curl -fsSL -o /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          chmod +x /tmp/kind
+          sudo install /tmp/kind /usr/local/bin/kind
+
+          curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x /tmp/kubectl
+          sudo install /tmp/kubectl /usr/local/bin/kubectl
+
+          curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          tar -C /tmp -xzf /tmp/helm.tar.gz
+          sudo install /tmp/linux-amd64/helm /usr/local/bin/helm
+
+          kind version
+          kubectl version --client=true
+          helm version --short
+
+      - name: Verify Docker is available
+        run: |
+          docker version
+          docker info
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: false
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          repository-cache: true
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+          bazelrc: |
+            build --build_metadata=ROLE=CI
+            test --build_metadata=ROLE=CI
+            build --color=yes
+            build --show_timestamps
+            test --sandbox_add_mount_pair=/var/run/docker.sock
+
+      - name: Run Kind smoke test
+        run: |
+          command -v kind
+          command -v kubectl
+          command -v helm
+          command -v docker
+          command -v bazelisk
+          bazelisk test //deploy:kind_e2e_test \
+            --config=linux \
+            --nocache_test_results \
+            --test_output=streamed \
+            --test_summary=terse \
+            --test_timeout=300,600,900,1800

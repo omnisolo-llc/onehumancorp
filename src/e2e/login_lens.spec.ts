@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('lens audit: verifies current login error states', async ({ page }) => {
   await page.goto('/login');

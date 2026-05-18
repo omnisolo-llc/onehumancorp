@@ -1,16 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Onboarding Guide E2E Journey', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-
-    // Sign Up Flow
-    await page.click('button:has-text("Don\'t have an account? Sign Up")');
-    await page.fill('input[placeholder="Email or Username"]', 'journey@example.com');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('button:has-text("Sign Up")');
-
-    // Wait for the Setup Wizard Welcome step
+    await page.goto('/website-builder');
     await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
   });
 
@@ -25,7 +17,7 @@ test.describe('Onboarding Guide E2E Journey', () => {
     // 3. Company Info
     await page.fill('input[placeholder="What is your business called?"]', 'Journey Shop');
     await page.click('button:has-text("Generate Description")');
-    await page.waitForLoadState("networkidle"); // Mock generation time
+    await page.waitForLoadState("networkidle");
     await page.click('button:has-text("Next →")');
 
     // 4. Selling Categories

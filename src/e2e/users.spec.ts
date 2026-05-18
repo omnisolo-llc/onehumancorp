@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('User and Team Surfaces', () => {
   test('shows team summary on dashboard', async ({ page }) => {

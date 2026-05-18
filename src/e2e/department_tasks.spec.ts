@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('dashboard order milestone is visible after marking an order ready', async ({ page }) => {
   await page.goto('/dashboard');

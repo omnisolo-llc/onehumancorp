@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('UX Friction Audit', () => {
   test('Page Load and Visual Verification', async ({ page }) => {

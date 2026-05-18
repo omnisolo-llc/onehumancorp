@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Task List Page', () => {
   test('should display dashboard', async ({ page }) => {

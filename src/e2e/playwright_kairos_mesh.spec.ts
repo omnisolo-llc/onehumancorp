@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('Broadcast KAIROS mesh message validates payload', async ({ request }) => {
     // Attempt invalid request without required action field

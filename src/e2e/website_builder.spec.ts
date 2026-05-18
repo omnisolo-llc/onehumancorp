@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Website Builder Full E2E', () => {
   test('renders editable storefront blocks', async ({ page }) => {

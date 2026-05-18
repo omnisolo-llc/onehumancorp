@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Canvas Storefront Builder Full E2E', () => {
 
@@ -6,9 +6,6 @@ test.describe('Canvas Storefront Builder Full E2E', () => {
 
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
-        await page.fill('input[placeholder="Email or Username"]', 'test@example.com');
-        await page.fill('input[placeholder="Password"]', 'password123');
-        await page.click('text="Login"');
         await expect(page.locator('text="Welcome back, Human."')).toBeVisible();
         await page.click('text="Edit Website"');
     });
@@ -69,7 +66,7 @@ test.describe('Canvas Storefront Builder Full E2E', () => {
         // Publish
         await page.click('button:has-text("Publish")');
 
-        // Should route back to Dashboard after confetti simulation (timeout handles the delay)
+        // Should route back to Dashboard after confetti finishes (timeout handles the delay)
         await expect(page.locator('text="Welcome back, Human."')).toBeVisible({ timeout: 5000 });
     });
 });

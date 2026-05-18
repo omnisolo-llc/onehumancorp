@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Dashboard Navigation UX Simplification', () => {
   test.use({ viewport: { width: 375, height: 800 } });

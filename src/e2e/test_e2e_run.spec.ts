@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('verify wizard UI state propagation to dashboard', async ({ page }) => {
   await page.goto('/website-builder');

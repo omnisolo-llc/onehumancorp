@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Business Share & Embed', () => {
   test('should display dashboard with nav links', async ({ page }) => {

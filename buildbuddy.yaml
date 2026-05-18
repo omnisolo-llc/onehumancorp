@@ -35,6 +35,53 @@ actions:
           # Screenshots are saved to test-results/screenshots/ and explicit page.screenshot() calls save to test-results/*.png
           # These are gitignored but available for review after test run
 
+  - name: "bazel test //deploy:kind_e2e_test"
+    container_image: "ubuntu-24.04"
+    resource_requests:
+      cpu: 8
+      memory: 16GB
+      disk: 100GB
+    triggers:
+      push:
+        branches:
+          - "main"
+      pull_request:
+        branches:
+          - "*"
+    env:
+      GOTOOLCHAIN: "auto"
+      KIND_VERSION: "v0.26.0"
+      KUBECTL_VERSION: "v1.31.4"
+      HELM_VERSION: "v3.16.4"
+    steps:
+      - run: |
+          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update && sudo apt-get install -y --fix-missing \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
+
+          curl -fsSL -o /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          chmod +x /tmp/kind
+          sudo install /tmp/kind /usr/local/bin/kind
+
+          curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x /tmp/kubectl
+          sudo install /tmp/kubectl /usr/local/bin/kubectl
+
+          curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          tar -C /tmp -xzf /tmp/helm.tar.gz
+          sudo install /tmp/linux-amd64/helm /usr/local/bin/helm
+
+          go install github.com/bazelbuild/bazelisk@latest
+          export PATH=$PATH:$(go env GOPATH)/bin
+
+          bazelisk test //deploy:kind_e2e_test \
+            --config=linux \
+            --nocache_test_results \
+            --test_output=streamed \
+            --test_summary=terse \
+            --test_timeout=300,600,900,1800
+
   - name: "bazel test //..."
     container_image: "ubuntu-24.04"
     resource_requests:
@@ -63,8 +110,9 @@ actions:
           export PATH=$PATH:$(go env GOPATH)/bin
           # Build release artifacts first (needed by verification_tests)
           bazelisk build //release:all_release_artifacts --config=linux
-          # Run all tests on Linux
+          # Run fast non-E2E tests on Linux. Slow E2E targets have their own actions.
           bazelisk test \
+            --config=no-e2e \
             --config=linux \
             --test_output=errors \
             --test_summary=terse \
