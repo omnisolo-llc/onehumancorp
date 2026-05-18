@@ -136,9 +136,10 @@ impl DB {
                 panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
             }
 
-            conn_opts = conn_opts.pragma("key", key);
+            let pragma_key = format!("'{}'", key.replace('\'', "''"));
+            conn_opts = conn_opts.pragma("key", pragma_key);
             // Force full encryption of the database
-            conn_opts = conn_opts.pragma("cipher", "sqlcipher");
+            conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
 
             let sqlite_pool = SqlitePoolOptions::new()
                 .after_connect(|conn, _meta| {
