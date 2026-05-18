@@ -6,7 +6,7 @@ startup --output_user_root=~/.cache/bazel/bazel-output-ohc
 
 build --color=yes
 build --config=remote
-build --config=nativelink
+build:remote --config=nativelink
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=8
