@@ -22,7 +22,6 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
 validation:
     nav:
         omitted_files: ignore
@@ -47,17 +46,15 @@ nav:
       - System Design: technical/architecture/system-design.md
       - API Reference: technical/api/api-reference.md
       - KAIROS Master API Guide: technical/api/kairos-master-api-guide.md
-  - Developer:
-      - Developer Guide: developer/index.md
-  - Operations:
-      - Operations: technical/operations/index.md
-  - Business:
-      - Roadmap: business/roadmap.md
-      - Execution Plan: business/execution-plan.md
   - Walkthroughs:
       - Sub-Agent Orchestration: walkthroughs/sub_agent_orchestration.md
       - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
       - AutoDream CLI: walkthroughs/autodream_cli_guide.md
       - Teammate Mesh: walkthroughs/teammate_mesh_walkthrough.md
+  - Operations:
+      - Operations: technical/operations/index.md
+  - Business:
+      - Roadmap: business/roadmap.md
+      - Execution Plan: business/execution-plan.md
   - Research:
-      - Research Index: technical/research/index.md
+      - Research: technical/research/index.md
