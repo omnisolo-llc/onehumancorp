@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Prompt Tuning Flow', () => {
   test('should display dashboard', async ({ page }) => {

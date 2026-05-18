@@ -1,5 +1,5 @@
 // run-playwright.mjs - Orchestrates E2E tests
-import { spawn, execSync } from 'child_process';
+import { spawn } from 'child_process';
 import { setTimeout } from 'timers/promises';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -28,10 +28,10 @@ async function waitForPort(port, maxAttempts = 30) {
 
 async function main() {
   console.log('[run-playwright] Starting infrastructure...');
+  if (process.env.E2E_SKIP_DOCKER !== 'true') {
+    await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'up', '-d']);
+  }
 
-  // Skipping infrastructure start due to sandbox limitations
-
-  // Build and start server
   console.log('[run-playwright] Server already built in outer execution');
 
   const serverBin = path.join(ROOT, 'bazel-bin/src/server/server');
@@ -39,22 +39,49 @@ async function main() {
   const server = spawn(serverBin, [], {
     cwd: ROOT,
     stdio: 'inherit',
-    env: { ...process.env, DATABASE_URL: 'postgres://ohc:ohc@localhost:5432/ohc' },
+    env: {
+      ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://ohc:ohc@localhost:5432/ohc',
+      REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
+      OHC_DEFAULT_TENANT_ID: process.env.OHC_DEFAULT_TENANT_ID ?? 'e2e-tenant',
+    },
   });
 
-  await setTimeout(2000); // Give server time to start
+  const appReady = await waitForPort(Number(process.env.OHC_PORT ?? 18789), 60);
+  if (!appReady) {
+    server.kill();
+    throw new Error('App server did not become ready.');
+  }
 
-  // Run Playwright tests
-  console.log('[run-playwright] Skipping actual playwright tests due to sandbox issues...');
   try {
-    // Skipping to prevent failure in restricted environment
-    console.log('[run-playwright] Playwright tests simulated successful locally.');
+    await runCommand('npx', ['playwright', 'test']);
   } finally {
     server.kill();
-
+    if (process.env.E2E_SKIP_DOCKER !== 'true') {
+      await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'down']);
+    }
   }
 
   console.log('[run-playwright] Done');
+}
+
+async function runCommand(command, args) {
+  await new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      env: process.env,
+      shell: false,
+    });
+    child.on('error', reject);
+    child.on('exit', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${command} ${args.join(' ')} exited with ${code}`));
+      }
+    });
+  });
 }
 
 main().catch((e) => {

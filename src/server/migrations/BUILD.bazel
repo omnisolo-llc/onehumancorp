@@ -1,5 +1,8 @@
 filegroup(
     name = "migrations",
     srcs = glob(["*.sql"]),
-    visibility = ["//src/server:__pkg__"],
+    visibility = [
+        "//deploy:__pkg__",
+        "//src/server:__pkg__",
+    ],
 )

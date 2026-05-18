@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Telemetry and Cost Visualizer', () => {
   test('shows operational telemetry metrics', async ({ page }) => {

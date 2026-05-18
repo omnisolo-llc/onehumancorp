@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Pricing Page', () => {
   test('displays current pricing plans and limits', async ({ page }) => {

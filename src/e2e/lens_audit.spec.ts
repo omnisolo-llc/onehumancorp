@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Lens Audit E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('Lens Audit E2E Flow', () => {
     await page.getByRole('button', { name: /Next/ }).click();
 
     await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
-    await expect(page.locator('.mock-data-stub')).toHaveCount(0);
+    await expect(page.locator('.placeholder-data-fixture')).toHaveCount(0);
   });
 
   test('verify responsive navigation compliance', async ({ page }) => {
