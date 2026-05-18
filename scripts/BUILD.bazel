@@ -1,3 +1,4 @@
 exports_files([
+    "cargo_from_toolchain.sh",
     "run-playwright.mjs",
 ])

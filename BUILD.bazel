@@ -47,6 +47,20 @@ config_setting(
 
 
 sh_binary(
+    name = "cargo",
+    srcs = ["//scripts:cargo_from_toolchain.sh"],
+    args = [
+        "$(rootpath @rules_rust//rust/toolchain:current_cargo_files)",
+        "$(rootpath @rules_rust//rust/toolchain:current_rustc_files)",
+    ],
+    data = [
+        "@rules_rust//rust/toolchain:current_cargo_files",
+        "@rules_rust//rust/toolchain:current_rust_toolchain",
+        "@rules_rust//rust/toolchain:current_rustc_files",
+    ],
+)
+
+sh_binary(
     name = "deploy_dev",
     srcs = ["//deploy:deploy_dev.sh"],
     data = [
