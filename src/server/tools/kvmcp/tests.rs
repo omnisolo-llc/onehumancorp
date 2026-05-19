@@ -1,6 +1,6 @@
 use super::server::KvMcpServer;
 use crate::db::{DB, DbStore};
-use crate::orchestration::McpInvokeRequest;
+use crate::ohc::orchestration::McpInvokeRequest;
 use std::sync::Arc;
 use temp_env::with_var;
 
@@ -118,3 +118,8 @@ async fn test_redis_unconfigured() {
         assert!(result.is_err());
     }).await;
 }
+
+// Since real redis integration tests require a running redis instance,
+// and `cargo test` is heavily multithreaded without mocks out of the box,
+// we ensure the logic is fully covered except for the direct redis connection
+// which is mocked by the option fallback.

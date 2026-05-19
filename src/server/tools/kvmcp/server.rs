@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use ::server_ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
+use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use crate::db::{DB, DbStore};
 use redis::AsyncCommands;
 use tracing::Instrument;
@@ -67,7 +67,7 @@ impl KvMcpServer {
     }
 
     pub fn get_tenant_id(&self, spiffe_id_str: &str) -> Result<String, tonic::Status> {
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str)
+        let parsed = crate::auth::parse_spiffe_id(spiffe_id_str)
             .map_err(|_| tonic::Status::unauthenticated("invalid SPIFFE ID"))?;
         let tenant_id = parsed.0;
         if tenant_id.is_empty() {
