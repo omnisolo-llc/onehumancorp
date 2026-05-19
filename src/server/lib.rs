@@ -2962,6 +2962,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 el.innerHTML = innerHtml;
                                 container.appendChild(el);
                             });
+
+                            const footer = document.createElement('div');
+                            footer.style.textAlign = 'center';
+                            footer.style.padding = '20px';
+                            footer.style.opacity = '0.7';
+                            footer.style.fontSize = '12px';
+                            footer.style.marginTop = '10px';
+                            footer.innerHTML = '<a href="/referrals" style="color: var(--primary); text-decoration: none;">Built with OHC — Start your free business →</a>';
+                            container.appendChild(footer);
                         }
 
                         function toggleRearrangeMode() {
