@@ -107,11 +107,7 @@ impl Provider for LocalProvider {
     }
 
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
-        let path = self.get_local_path(key)?;
-        if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
-        }
-
+        let mut key_str = key.to_string();
         let mut final_data = data.to_vec();
 
         // Auto-optimization for images: Resize and convert to WebP
@@ -125,11 +121,18 @@ impl Provider for LocalProvider {
                 let mut cursor = std::io::Cursor::new(&mut webp_data);
                 if resized.write_to(&mut cursor, image::ImageFormat::WebP).is_ok() {
                     final_data = webp_data;
-                    // Note: We currently keep the original extension for compatibility with existing links
-                    // but we should ideally update the key to .webp in a future iteration.
+
+                    if key.ends_with(".png") {
+                        key_str = key.replace(".png", ".webp");
+                    } else if key.ends_with(".jpg") {
+                        key_str = key.replace(".jpg", ".webp");
+                    } else if key.ends_with(".jpeg") {
+                        key_str = key.replace(".jpeg", ".webp");
+                    }
+
                     let compressed_size = final_data.len();
                     tracing::info!(
-                        key = %key,
+                        key = %key_str,
                         original = original_size,
                         actual_compressed = compressed_size,
                         saved = original_size - compressed_size,
@@ -146,9 +149,14 @@ impl Provider for LocalProvider {
             data.len()
         };
 
+        let path = self.get_local_path(&key_str)?;
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
         // Quota Enforcement
-        let t_id = key.split('/').next().unwrap_or("default");
-        let agent_id = key.split('/').nth(1);
+        let t_id = key_str.split('/').next().unwrap_or("default");
+        let agent_id = key_str.split('/').nth(1);
         if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
             if status.soft_limit_reached {
                 if let Some(msg) = status.user_message {
@@ -157,13 +165,13 @@ impl Provider for LocalProvider {
             }
         }
 
-        let res = tokio::fs::write(path, &final_data).await;
+        let res = tokio::fs::write(&path, final_data).await;
         if res.is_ok() {
             let _ = ::server_telemetry::record_storage_rw_cost(
                 &crate::db::get_pool(),
                 t_id,
                 "write",
-                final_data.len() as i64
+                reported_size as i64
             ).await;
         }
         res
