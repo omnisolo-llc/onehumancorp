@@ -101,7 +101,7 @@ Chart.lock
 
 # Golang is not allowed in this project
 *.go
-
+!/srcs/**/*.go
 
 # Rust build artifacts
 /target/
@@ -118,7 +118,7 @@ site/
 playwright-report/
 debian-binary
 /*.diff
-/srcs/
+!/srcs/
 /scratch/
 *.db
 
