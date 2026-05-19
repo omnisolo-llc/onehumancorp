@@ -4644,12 +4644,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_langgraph_four_tier_errors() {
-        struct LanggraphFourTierErrorToolExecutor {
+        struct TestLanggraphFourTierErrorToolExecutor {
             name: String,
             call_count: tokio::sync::Mutex<usize>,
         }
         #[async_trait::async_trait]
-        impl ToolExecutor for LanggraphFourTierErrorToolExecutor {
+        impl ToolExecutor for TestLanggraphFourTierErrorToolExecutor {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
@@ -4700,7 +4700,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         let agent1 = Agent::new(client1, vec![tool_recoverable]);
@@ -4737,7 +4737,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "fatal_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "fatal_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         // Test Transient
@@ -4774,7 +4774,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "transient_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "transient_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         let agent3 = Agent::new(client3, vec![tool_transient.clone()]);
@@ -4819,7 +4819,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "user_fixable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "user_fixable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);
