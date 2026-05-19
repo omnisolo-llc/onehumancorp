@@ -218,6 +218,43 @@ struct DraftReplyResponse {
     output: String,
 }
 
+
+#[derive(serde::Deserialize)]
+struct HttpSalesRequest {
+    tenant_id: String,
+}
+
+#[derive(serde::Serialize)]
+struct HttpSalesResponse {
+    total_sales: f64,
+}
+
+async fn http_sales_handler(
+    db: std::sync::Arc<db::DB>,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<HttpSalesRequest>,
+) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    if headers.get("authorization").is_none() {
+        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
+    }
+
+    let tenant_id = payload.tenant_id;
+    let sales: f64 = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0.0);
+
+    (
+        StatusCode::OK,
+        axum::Json(HttpSalesResponse { total_sales: sales }),
+    )
+        .into_response()
+}
+
 async fn http_login_handler(
     db: std::sync::Arc<db::DB>,
     payload: HttpLoginRequest,
@@ -1694,6 +1731,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+    let db_for_sales = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
@@ -1770,6 +1808,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             "/api/v1/ai/draft-reply",
             axum::routing::post(|axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
                 draft_reply_handler(payload).await
+            }),
+        )
+
+        .route(
+            "/api/v1/dashboard/sales",
+            axum::routing::post({
+                let db = db_for_sales.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
@@ -2400,7 +2446,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
-                            <h2 style="font-size: 48px; margin: 0; color: var(--primary);">$1,284.50</h2>
+                            <h2 id="todays-sales" style="font-size: 48px; margin: 0; color: var(--primary);">$0.00</h2>
                             <p style="color: #28a745; font-size: 14px; margin-top: 8px;">↑ 12% from yesterday</p>
                         </div>
 
@@ -2452,7 +2498,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
-                            <button onclick="alert('How to use this app')">How to use this app</button>
+                            <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
@@ -3533,6 +3579,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     body: JSON.stringify({ username: email, password: password })
                                 });
                                 if (response.ok) {
+                                    const data = await response.clone().json();
+                                    localStorage.setItem('tenant_id', data.user.organization_id);
+                                    localStorage.setItem('token', data.token);
                                     showScreen('dashboard-screen');
                                 } else {
                                     document.getElementById('login-error').style.display = 'block';
@@ -3844,6 +3893,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (pathMap[id] && window.location.protocol !== 'file:') {
                                 window.history.pushState({}, '', pathMap[id]);
+                            }
+
+                            if (id === 'dashboard-screen') {
+                                const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                                fetch('/api/v1/dashboard/sales', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                    body: JSON.stringify({ tenant_id: tenant })
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    const salesEl = document.getElementById('todays-sales');
+                                    if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
+                                })
+                                .catch(err => console.error('Error fetching sales:', err));
                             }
 
                             if (id === 'my-plan-screen') {
