@@ -328,13 +328,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        println!("DEBUG: db_url = {}", db_url);
-        if db_url == "dummy" {
-            println!("DEBUG: skipping because db_url is dummy");
-            return;
-        }
-        println!("RUNNING BENCHMARK DASHBOARD SNAPSHOT");
         bench_dashboard_snapshot().await;
     }
 
