@@ -2036,6 +2036,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: var(--shadow-md);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border-radius: 16px;
+                        }
+                        body.dark-theme .glass {
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2334,40 +2341,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
 
         /* Premium Standard Overrides for Wizard */
-        #setup-screen {
-            max-width: 600px;
-            margin: 40px auto;
-            border-radius: 16px;
-            overflow: hidden;
-        }
-        #setup-screen > div {
-            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #setup-screen button {
-            border-radius: 8px;
-            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #setup-screen input {
-            border-radius: 8px;
-        }
-
-        @media (max-width: 375px) {
-            #setup-screen {
-                margin: 10px;
-                padding: 16px;
-            }
-            #setup-screen h1 {
-                font-size: 24px;
-            }
-            #setup-screen button, #setup-screen input {
-                width: 100%;
-                margin-bottom: 8px;
-                box-sizing: border-box;
-            }
-        }
-
-
-        /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
@@ -2408,7 +2381,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
-
                     </style>
                 </head>
                 <body>
@@ -2475,7 +2447,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" id="approval-inbox">
                             <h3>Approval Inbox</h3>
                             <div id="approval-item-1" class="card glass" style="background: rgba(255, 255, 255, 0.4); margin-top: 12px; border-radius: 8px;">
-                                <h4 style="margin: 0 0 8px 0; color: var(--primary);">The Ambassador (Customer Success)</h4>
+                                <h4 style="margin: 0 0 8px 0; color: var(--primary);">Marketing Pro</h4>
                                 <p style="margin: 0 0 12px 0; font-size: 14px;">Drafted a reply to Maya's Instagram DM:</p>
                                 <p style="font-style: italic; color: #333; margin: 0 0 16px 0; padding: 8px; background: rgba(255,255,255,0.6); border-radius: 4px;">"Hi Maya! Yes, we absolutely offer a 10% discount for returning customers. Should I send over the promo code?"</p>
                                 <div style="display: flex; gap: 8px;">
@@ -2513,7 +2485,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);">
                                     <div style="font-size: 20px;">📦</div>
                                     <div>
-                                        <p style="margin: 0; font-weight: 500;">The Manager (Operations)</p>
+                                        <p style="margin: 0; font-weight: 500;">Ops Helper</p>
                                         <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Updated inventory for 3 vegan cakes.</p>
                                         <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-tertiary);">2 mins ago</p>
                                     </div>
@@ -2521,7 +2493,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);">
                                     <div style="font-size: 20px;">🗓️</div>
                                     <div>
-                                        <p style="margin: 0; font-weight: 500;">The Manager (Operations)</p>
+                                        <p style="margin: 0; font-weight: 500;">Ops Helper</p>
                                         <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Approved booking for Carlos at 2:00 PM.</p>
                                         <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-tertiary);">15 mins ago</p>
                                     </div>
@@ -2658,7 +2630,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="departments-container">
                             <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
-                                <h3 class="outfit">The Ambassador (Customer Success)</h3>
+                                <h3 class="outfit">Marketing Pro</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
                                 <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
@@ -2671,7 +2643,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <div class="card glass" onclick="toggleDepartment('manager')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">The Manager (Operations)</h3>
+                                <h3 class="outfit">Ops Helper</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
                                 <div id="manager-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
@@ -2684,7 +2656,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <div class="card glass" onclick="toggleDepartment('salesperson')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">The Salesperson (Sales)</h3>
+                                <h3 class="outfit">Sales Agent</h3>
                                 <p style="color: var(--accent-orange);">Status: Needs Approval (1)</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Generated quote for custom cake.</p>
                                 <button style="margin-top: 15px; width: 100%;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
@@ -3701,6 +3673,57 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
+                        let debounceTimer;
+                        document.addEventListener('input', (e) => {
+                            if (e.target.tagName === 'INPUT') {
+                                clearTimeout(debounceTimer);
+                                debounceTimer = setTimeout(() => {
+                                    try {
+                                        const stateData = { step: currentStep };
+                                        document.querySelectorAll('input').forEach(input => {
+                                            if (input.placeholder && input.value) {
+                                                stateData[input.placeholder] = input.value;
+                                            }
+                                        });
+                                        const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                        const userId = localStorage.getItem('user_id') || 'test-user';
+                                        fetch('/api/onboarding/state', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-Tenant-ID': tenantId,
+                                                'X-User-ID': userId
+                                            },
+                                            body: JSON.stringify(stateData)
+                                        }).catch(console.error);
+                                    } catch (err) {}
+                                }, 500);
+                            }
+                        });
+
+                        function validateInputs(stepId) {
+                            if (stepId === 4 && currentStep === 3) {
+                                const inputs = document.querySelectorAll('#step-3 input[type="text"]');
+                                let valid = false;
+                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                if (!valid) {
+                                    alert('Please enter a business name');
+                                    return false;
+                                }
+                            }
+                            if (stepId === 6 && currentStep === 5) {
+                                const inputs = document.querySelectorAll('#step-5 input[type="text"]');
+                                let valid = false;
+                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                if (!valid) {
+                                    alert('Please enter a product or service');
+                                    return false;
+                                }
+                            }
+                            return true;
+                        }
+
+
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
 
@@ -3726,6 +3749,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }).catch(console.error);
                                 } catch (e) {}
                             }
+                            if (!validateInputs(parseInt(stepId) || stepId)) return;
                             if (prevStep === 3 && parseInt(stepId) === 4) {
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
