@@ -185,6 +185,16 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
         combined.push_str(content);
     }
 
+    let max_bytes = 32 * 1024;
+    if combined.len() > max_bytes {
+        let mut end_idx = max_bytes;
+        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
+            end_idx -= 1;
+        }
+        combined.truncate(end_idx);
+        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
+    }
+
     combined
 }
 
@@ -2427,6 +2437,26 @@ mod tests {
         assert_eq!(parts[0], "Deep level instructions");
         assert_eq!(parts[1], "Sub level instructions");
         assert_eq!(parts[2], "Root level instructions");
+    }
+
+    #[tokio::test]
+    async fn test_load_cascading_agents_md_truncation() {
+        use tempfile::tempdir;
+        use tokio::fs;
+
+        let root_dir = tempdir().unwrap();
+        let root_path = root_dir.path();
+
+        let root_md = root_path.join("AGENTS.md");
+        // Create an AGENTS.md that is slightly over 32 KiB
+        let large_content = "A".repeat(33000);
+        fs::write(&root_md, large_content).await.unwrap();
+
+        let combined = crate::agent::load_cascading_agents_md(root_path).await;
+
+        // Verify the size is close to 32KiB + notice
+        assert!(combined.len() <= 32 * 1024 + 100); // 32768 + the length of the system notice
+        assert!(combined.ends_with("[System: AGENTS.md content truncated to 32KiB limit.]"));
     }
 
 
