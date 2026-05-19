@@ -1985,11 +1985,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text-secondary);
                         }
                         .glass {
-                            background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            background: rgba(255, 255, 255, 0.65);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border-radius: 16px;
+                        }
+                        @media (prefers-color-scheme: dark) {
+                            .glass {
+                                background: rgba(22, 22, 26, 0.7);
+                                border-color: rgba(255, 255, 255, 0.1);
+                            }
+                        }
+                        .pricing-grid, .cost-grid {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 16px;
+                            width: 100%;
+                            margin-top: 24px;
+                        }
+                        @media (min-width: 768px) {
+                            .pricing-grid {
+                                flex-direction: row;
+                                justify-content: center;
+                                flex-wrap: wrap;
+                            }
+                            .pricing-grid .card {
+                                flex: 1;
+                                min-width: 300px;
+                                max-width: 350px;
+                            }
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2556,41 +2582,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
 
-                        <div class="card glass">
-                            <h3>Free</h3>
-                            <p>$0 / month</p>
-                            <ul>
-                                <li>1 Agent Limit</li>
-                                <li>100 AI actions / month</li>
-                                <li>500MB Storage Quota</li>
-                                <li>10 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('dashboard-screen')">Current Plan</button>
-                        </div>
+                        <div class="pricing-grid">
+                            <div class="card glass">
+                                <h3>Free</h3>
+                                <p>$0 / month</p>
+                                <ul>
+                                    <li>1 Agent Limit</li>
+                                    <li>100 AI actions / month</li>
+                                    <li>500MB Storage Quota</li>
+                                    <li>10 Products Limit</li>
+                                </ul>
+                                <button onclick="showScreen('dashboard-screen')">Current Plan</button>
+                            </div>
 
-                        <div class="card glass">
-                            <h3>Starter</h3>
-                            <p>$29 / month</p>
-                            <p>Suggested for growing stores</p>
-                            <ul>
-                                <li>3 Agents Limit</li>
-                                <li>1,000 AI actions / month</li>
-                                <li>5GB Storage Quota</li>
-                                <li>100 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
-                        </div>
+                            <div class="card glass">
+                                <h3>Starter</h3>
+                                <p>$29 / month</p>
+                                <p>Suggested for growing stores</p>
+                                <ul>
+                                    <li>3 Agents Limit</li>
+                                    <li>1,000 AI actions / month</li>
+                                    <li>5GB Storage Quota</li>
+                                    <li>100 Products Limit</li>
+                                </ul>
+                                <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
+                            </div>
 
-                        <div class="card glass">
-                            <h3>Pro</h3>
-                            <p>$79 / month</p>
-                            <ul>
-                                <li>10 Agents Limit</li>
-                                <li>Unlimited AI actions</li>
-                                <li>50GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
+                            <div class="card glass">
+                                <h3>Pro</h3>
+                                <p>$79 / month</p>
+                                <ul>
+                                    <li>10 Agents Limit</li>
+                                    <li>Unlimited AI actions</li>
+                                    <li>50GB Storage Quota</li>
+                                    <li>Unlimited Products</li>
+                                </ul>
+                                <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
+                            </div>
                         </div>
 
                         <div class="card glass">
@@ -2644,10 +2672,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
                         <h1>Cost & AI Usage</h1>
-                        <p id="cost-dashboard-total">Total Costs: $0.00</p>
-                        <p id="cost-dashboard-llm">LLM Usage: $0.00</p>
-                        <p id="cost-dashboard-storage">Storage: $0.00</p>
-                        <p id="cost-dashboard-period">Period: -</p>
+                        <div class="cost-grid">
+                            <div class="card glass">
+                                <h3>Total Costs</h3>
+                                <p id="cost-dashboard-total" style="font-size: 24px; font-weight: bold; color: var(--text);">$0.00</p>
+                                <p id="cost-dashboard-period" style="font-size: 12px;">Period: -</p>
+                            </div>
+                            <div class="card glass">
+                                <h3>Cost Breakdown</h3>
+                                <p id="cost-dashboard-llm">LLM Usage: $0.00</p>
+                                <p id="cost-dashboard-storage">Storage: $0.00</p>
+                            </div>
+                        </div>
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
@@ -3332,7 +3368,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetch('/api/billing/cost-dashboard')
                                     .then(res => res.json())
                                     .then(data => {
-                                        document.getElementById('cost-dashboard-total').textContent = 'Total Costs: $' + (data.total_costs / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total_costs / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-llm').textContent = 'LLM Usage: $' + (data.llm_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-storage').textContent = 'Storage: $' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
