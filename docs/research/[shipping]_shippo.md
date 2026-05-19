@@ -1,18 +1,16 @@
-## [Shipping] Shippo Integration
-**Title**: Integrate Shippo for Automated Label Generation
-**Problem Statement**: Priya (Boutique Owner) spends hours copying and pasting addresses into carrier websites to print shipping labels. She needs to click one button in OHC to buy and print a label.
-**Research Report**:
-- **Tool**: Shippo
-- **Target Persona**: Priya (Boutique Owner), Maya (Home Baker)
-- **Advantages**: Aggregates rates from USPS, UPS, FedEx, DHL. Simple API. No monthly fee for pay-as-you-go.
-- **Risks**: International shipping requires complex customs declarations which might be hard to automate fully for non-technical users.
-- **Pricing**: Free tier (pay per label + postage).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
-**Design Doc**:
-- When an order is placed, OHC sends the dimensions/weight to Shippo to get rates.
-- The Operations agent shows the cheapest shipping option.
-- The user clicks "Buy Label", and OHC downloads the PDF label for printing.
-- OHC automatically emails the customer the tracking number.
-**Implementation Prompt**: Connect the Shippo API to fetch shipping rates based on order weight/dimensions. Allow the user to purchase a label and automatically email the tracking link to the customer.
-**Priority**: P1
-**Estimated Scope**: Large
+## 4. Shipping & Logistics: Shippo
+**Problem Statement:** E-commerce or craft business owners waste significant time manually calculating shipping rates, writing labels, and waiting in line at the post office.
+**Research Report:**
+- **Tool:** Shippo
+- **Persona Benefit:** Streamlines the entire shipping process, from rate calculation to label printing and tracking, saving time and money.
+- **Key Advantages:** Connects with dozens of carriers (USPS, UPS, FedEx, DHL), offers discounted rates, and has a simple pay-as-you-go or low-cost monthly tier.
+- **Risks:** Hardware integration (label printers) can sometimes be tricky for non-technical users.
+- **Pricing:** Starter plan is free (pay only postage + 5¢ per label if using own accounts, or free if using Shippo's discounted rates). Pro plan starts at $17/month.
+- **Environment:** Cloud.
+**Design Doc:**
+- **Trigger:** A customer places a physical order requiring shipping.
+- **Action:** Automatically fetches the best shipping rates based on package dimensions/weight and generates a printable label.
+- **User View:** The business owner sees a "Fulfill Order" button that presents shipping options, allows them to print a label, and automatically emails the tracking number to the customer.
+**Implementation Prompt:** Integrate Shippo to provide shipping rate calculation and label generation. The owner should be able to input package details, select a carrier rate, and print the shipping label from their order management dashboard.
+**Priority:** P2
+**Estimated Scope:** Medium

@@ -1,17 +1,16 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Order Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
-**Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
-**Design Doc**:
-- User goes to Settings and toggles "Send me SMS for new orders".
-- When an order is paid, the Operations agent triggers a Twilio API call to send an SMS: "New order! 2x Falafel for John. Pickup in 15m."
-- (Future: Customers can also receive SMS receipts).
-**Implementation Prompt**: Integrate the Twilio SDK to send outbound SMS notifications. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
-**Priority**: P2
-**Estimated Scope**: Medium
+## 2. SMS & Notifications: Twilio
+**Problem Statement:** Many small businesses (especially service-oriented ones like hair salons or repair shops) serve clients who prefer text messages over emails. Relying on personal phone numbers is unscalable and unprofessional, and missing an appointment reminder costs money.
+**Research Report:**
+- **Tool:** Twilio
+- **Persona Benefit:** Enables automated, reliable text reminders and notifications to customers' phones, ensuring higher appointment attendance and better communication.
+- **Key Advantages:** Industry standard, highly reliable, global reach, and pay-as-you-go pricing.
+- **Risks:** Requires careful handling of opt-out compliance (A2P 10DLC regulations in the US) which can be confusing for small business owners.
+- **Pricing:** Pay-as-you-go (approx. $0.0079 per SMS in the US).
+- **Environment:** Cloud (API based).
+**Design Doc:**
+- **Trigger:** An appointment is booked, or an order is ready for pickup.
+- **Action:** An automated SMS is dispatched to the customer's provided phone number.
+- **User View:** The business owner sees a log of sent messages and delivery statuses in their customer's timeline.
+**Implementation Prompt:** Integrate Twilio API to allow the platform to send automated SMS notifications for key events (e.g., appointment reminders). The business owner should be able to toggle these notifications on or off in their settings.
+**Priority:** P0
+**Estimated Scope:** Large

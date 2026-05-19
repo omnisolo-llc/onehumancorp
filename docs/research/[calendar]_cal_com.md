@@ -1,17 +1,16 @@
-# Scout: Tool Integration Research Q2
-
-## 2. Calendar & Scheduling
-**Title**: Integrate Cal.com for Zero-Config Booking & Calendar Sync
-**Problem Statement**: Leo the Music Tutor and Carlos the Handyman lose customers due to back-and-forth scheduling via text. They need a public booking link that syncs with their personal Google Calendar seamlessly.
-**Research Report**:
-- Cal.com is an open-source scheduling infrastructure. It handles timezone math, calendar conflict resolution, and booking pages out-of-the-box.
-- It is highly embeddable and supports a self-hosted option, making it perfectly compatible with both Cloud (SaaS) and Standalone OHC modes.
-- Free tier available for individuals; great for our free tier users.
-- Alternative is building from scratch, which is error-prone.
-**Design Doc**:
-- "The Manager" AI sets up the booking link dynamically based on the user's defined business hours.
-- Users connect their Google/Outlook calendar via a one-click OAuth button in the "Operations" tab.
-- When a customer books a slot on the OHC public page, Cal.com manages the calendar event and conflict resolution transparently.
-**Implementation Prompt**: Embed Cal.com's infrastructure so users can sync their personal calendars and provide a public booking widget on their storefront that prevents double-booking.
-**Priority**: P0
-**Estimated Scope**: Medium
+## 1. Calendar & Scheduling: Cal.com
+**Problem Statement:** Small business owners (like consultants, therapists, or tutors) spend hours coordinating meeting times via email, leading to lost bookings and frustration. They need a simple, professional way for clients to book time that automatically respects their personal calendar.
+**Research Report:**
+- **Tool:** Cal.com
+- **Persona Benefit:** Non-technical owners can share a link and clients can pick available slots.
+- **Key Advantages:** Open-source, highly customizable, supports white-labeling, and works well for both cloud and standalone instances. It has a generous free tier for individuals and a solid $12/user/month tier for teams.
+- **Risks:** Might be overwhelming if configured with too many advanced workflows for very basic users.
+- **Pricing:** Free for individuals; $12/user/month for Teams.
+- **Environment:** Works in both Cloud (multi-tenant) and Standalone (self-hosted).
+**Design Doc:**
+- **Trigger:** A "Book Consultation" button on the business's public profile or shared via SMS/Email.
+- **Action:** Opens a clean, branded booking page showing available slots synchronized with the owner's Google/Outlook calendar.
+- **User View:** The business owner sees upcoming appointments in their unified dashboard; the client receives an automated calendar invite.
+**Implementation Prompt:** Integrate Cal.com so business owners can generate personal booking links directly from their dashboard. The UI should display their upcoming bookings and allow them to copy their booking link to share with customers.
+**Priority:** P1
+**Estimated Scope:** Medium
