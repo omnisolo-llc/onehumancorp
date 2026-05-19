@@ -302,7 +302,52 @@ async fn generate_storefront(
 ) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
     let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    // Mock Agent generation based on description keywords
+    let prompt = format!(
+        "Act as 'The Promoter', an expert marketing and advertising agent.         Generate a fully structured website for the following business: '{}'.         You must return ONLY a JSON object representing a `SiteDraft` and nothing else.         The `SiteDraft` object should have the following structure:         {{ "domain": null, "pages": [             {{ "path": "/", "title": "Home", "seo_metadata": {{ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Business Name" }},               "blocks": [                   {{ "block_type": "HeroBlock", "content": {{"headline": "...", "subtitle": "..."}}, "sort_order": 0 }},                   {{ "block_type": "ProductGridBlock", "content": {{"items": ["..."]}}, "sort_order": 1 }}               ]             }}         ] }}.         The allowed block types are: HeroBlock, ProductGridBlock, ContactFormBlock, BookingCalendarBlock, ServiceBookingBlock, TestimonialBlock.         Ensure the copy is engaging and tailored to the business description.",
+        payload.description
+    );
+
+    let mut parsed_draft: Option<SiteDraft> = None;
+
+    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(
+        std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())
+    ).await {
+        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+            prompt,
+            from_agent_id: "The Promoter".to_string(),
+        };
+
+        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+            let content = res.into_inner().content;
+
+            // Try parsing directly first
+            if let Ok(draft) = serde_json::from_str::<SiteDraft>(&content) {
+                parsed_draft = Some(draft);
+            } else {
+                // Try stripping markdown blocks
+                let mut stripped = content.trim().to_string();
+                if stripped.starts_with("```json") {
+                    stripped = stripped.trim_start_matches("```json").to_string();
+                } else if stripped.starts_with("```") {
+                    stripped = stripped.trim_start_matches("```").to_string();
+                }
+
+                if stripped.ends_with("```") {
+                    stripped = stripped.trim_end_matches("```").to_string();
+                }
+
+                if let Ok(draft) = serde_json::from_str::<SiteDraft>(stripped.trim()) {
+                    parsed_draft = Some(draft);
+                }
+            }
+        }
+    }
+
+    if let Some(draft) = parsed_draft {
+        return Ok(Json(draft));
+    }
+
+    // Mock Agent generation based on description keywords (Fallback)
     let desc = payload.description.to_lowercase();
     let mut pages = Vec::new();
 
