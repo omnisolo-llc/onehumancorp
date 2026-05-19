@@ -510,7 +510,7 @@ impl DB {
                         version INTEGER DEFAULT 1,
                         topic TEXT DEFAULT ''
                     );
-                    CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                                        CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL DEFAULT 'system',
                         entity_id TEXT NOT NULL,
@@ -525,6 +525,7 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE INDEX IF NOT EXISTS idx_sm_entity ON state_machine_transitions(entity_id, entity_type);
                     CREATE TABLE IF NOT EXISTS pages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
