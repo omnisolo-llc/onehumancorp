@@ -807,19 +807,15 @@ impl SqliteTaskQueue {
 impl TaskQueue for SqliteTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        for job in jobs {
-            sqlx::query("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) VALUES (?, ?, ?, ?, ?)")
-                .bind(job.id.clone())
-                .bind(job.tenant_id.clone())
-                .bind(job.parent_task_id.clone())
-                .bind(job.agent_role.clone())
-                .bind(job.payload.as_bytes())
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-        }
-        tx.commit().await.map_err(|e| e.to_string())?;
+        let mut builder = sqlx::QueryBuilder::new("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) ");
+        builder.push_values(jobs.into_iter(), |mut b, job| {
+            b.push_bind(job.id)
+             .push_bind(job.tenant_id)
+             .push_bind(job.parent_task_id)
+             .push_bind(job.agent_role)
+             .push_bind(job.payload.into_bytes());
+        });
+        builder.build().execute(&self.pool).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
