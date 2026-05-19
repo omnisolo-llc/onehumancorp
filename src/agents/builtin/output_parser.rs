@@ -17,7 +17,7 @@ pub trait LlmClientForParser: Send + Sync {
 pub async fn parse_structured_output<T: DeserializeOwned>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
-    _max_retries: usize, // No longer used in parser, orchestrator loops
+    max_retries: usize,
 ) -> Result<T, ToolError> {
     let mut current_req = req.clone();
 
@@ -41,77 +41,95 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         current_req.tools.push(schema_tool);
     }
 
-    let resp = match llm.chat(current_req).await {
-        Ok(r) => r,
-        Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
-    };
+    let mut attempt = 0;
+    loop {
+        let resp = match llm.chat(current_req.clone()).await {
+            Ok(r) => r,
+            Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
+        };
 
-    let msg = &resp.message;
+        let msg = &resp.message;
+        let completion = msg.content.clone();
+        let mut parse_error_msg = None;
 
-    // Output Parsing: Primary mechanic is extracting from native tool_calls
-    if !msg.tool_calls.is_empty() {
-        if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
-            if let Some(data) = call.arguments.get("data") {
-                match serde_json::from_value::<T>(data.clone()) {
-                    Ok(parsed) => return Ok(parsed),
-                    Err(e) => {
-                        return Err(ToolError::LlmRecoverable(format!(
-                            "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
-                        )));
+        // Output Parsing: Primary mechanic is extracting from native tool_calls
+        if !msg.tool_calls.is_empty() {
+            if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+                if let Some(data) = call.arguments.get("data") {
+                    match serde_json::from_value::<T>(data.clone()) {
+                        Ok(parsed) => return Ok(parsed),
+                        Err(e) => {
+                            parse_error_msg = Some(format!(
+                                "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+                            ));
+                        }
                     }
+                } else {
+                    parse_error_msg = Some(
+                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                    );
                 }
-            } else {
-                return Err(ToolError::LlmRecoverable(
-                    "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
-                ));
             }
         }
-    }
 
-    // Fallback mechanic: Legacy RetryWithErrorOutputParser
-    // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
-    let completion = msg.content.clone();
+        if parse_error_msg.is_none() {
+            // Fallback mechanic: Legacy RetryWithErrorOutputParser
+            // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
+            let mut json_str = completion.trim();
+            let obj_start = json_str.find('{');
+            let arr_start = json_str.find('[');
 
-    let mut json_str = completion.trim();
-    let obj_start = json_str.find('{');
-    let arr_start = json_str.find('[');
+            let start_idx = match (obj_start, arr_start) {
+                (Some(o), Some(a)) => std::cmp::min(o, a),
+                (Some(o), None) => o,
+                (None, Some(a)) => a,
+                (None, None) => 0,
+            };
 
-    let start_idx = match (obj_start, arr_start) {
-        (Some(o), Some(a)) => std::cmp::min(o, a),
-        (Some(o), None) => o,
-        (None, Some(a)) => a,
-        (None, None) => 0,
-    };
+            if start_idx > 0 {
+                json_str = &json_str[start_idx..];
+            }
 
-    if start_idx > 0 {
-        json_str = &json_str[start_idx..];
-    }
+            let obj_end = json_str.rfind('}');
+            let arr_end = json_str.rfind(']');
 
-    let obj_end = json_str.rfind('}');
-    let arr_end = json_str.rfind(']');
+            let end_idx = match (obj_end, arr_end) {
+                (Some(o), Some(a)) => std::cmp::max(o, a),
+                (Some(o), None) => o,
+                (None, Some(a)) => a,
+                (None, None) => json_str.len().saturating_sub(1),
+            };
 
-    let end_idx = match (obj_end, arr_end) {
-        (Some(o), Some(a)) => std::cmp::max(o, a),
-        (Some(o), None) => o,
-        (None, Some(a)) => a,
-        (None, None) => json_str.len().saturating_sub(1),
-    };
+            if end_idx < json_str.len() {
+                json_str = &json_str[..=end_idx];
+            }
 
-    if end_idx < json_str.len() {
-        json_str = &json_str[..=end_idx];
-    }
+            if json_str.is_empty() {
+                json_str = "null"; // If empty, fall back to null to trigger serde error
+            }
 
-    if json_str.is_empty() {
-        json_str = "null"; // If empty, fall back to null to trigger serde error
-    }
-
-    match serde_json::from_str::<T>(json_str) {
-        Ok(parsed) => Ok(parsed),
-        Err(e) => {
-            Err(ToolError::LlmRecoverable(format!(
-                "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
-            )))
+            match serde_json::from_str::<T>(json_str) {
+                Ok(parsed) => return Ok(parsed),
+                Err(e) => {
+                    parse_error_msg = Some(format!(
+                        "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
+                    ));
+                }
+            }
         }
+
+        if attempt >= max_retries {
+            return Err(ToolError::Fatal(format!(
+                "Output parsing failed after {} retries. Last error: {}",
+                max_retries,
+                parse_error_msg.unwrap_or_default()
+            )));
+        }
+
+        // Feed the original prompt, the failed completion, and the parsing error back to the model
+        current_req.messages.push(msg.clone());
+        current_req.messages.push(Message::user(parse_error_msg.unwrap()));
+        attempt += 1;
     }
 }
 
