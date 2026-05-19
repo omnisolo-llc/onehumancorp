@@ -2500,12 +2500,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
-                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
+                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'; document.getElementById('instagram-integration').style.display='block'; document.getElementById('whatsapp-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="facebook-integration" class="card glass">
+                        <div id="facebook-integration" class="card glass" style="display: none;">
                             <h3>📘 Facebook</h3>
                             <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
+                        </div>
+                        <div id="instagram-integration" class="card glass" style="display: none;">
+                            <h3>📸 Instagram</h3>
+                            <button onclick="alert('Configure Instagram'); showScreen('inbox-screen')">Configure</button>
+                        </div>
+                        <div id="whatsapp-integration" class="card glass" style="display: none;">
+                            <h3>💬 WhatsApp</h3>
+                            <button onclick="alert('Configure WhatsApp'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <div class="card glass">
                             <h3>Agent Activity</h3>
@@ -2592,6 +2600,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Facebook User</h3>
                             <p>Hello from Facebook!</p>
                             <button onclick="alert('Configure Facebook')">Configure</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>Instagram User</h3>
+                            <p>Hello from Instagram!</p>
+                            <button onclick="alert('Configure Instagram')">Configure</button>
+                        </div>
+                        <div class="card glass">
+                            <h3>WhatsApp User</h3>
+                            <p>Hello from WhatsApp!</p>
+                            <button onclick="alert('Configure WhatsApp')">Configure</button>
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
