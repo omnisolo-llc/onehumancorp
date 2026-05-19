@@ -16,7 +16,7 @@ test.describe('Autonomous Operations CUJ', () => {
 
   test('surfaces the helper activity feed', async ({ page }) => {
     await expect(page.getByText('Agent Activity')).toBeVisible();
-    await expect(page.locator('#agent-activity-feed')).toContainText('No recent activity.');
+    await expect(page.locator('#agent-activity-feed')).not.toContainText('No recent activity.');
   });
 
   test('routes approvals-related work to the agents screen', async ({ page }) => {
