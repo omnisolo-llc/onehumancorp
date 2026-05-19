@@ -1,124 +1,116 @@
-# Cross-platform release packaging.
+# Cross-platform release packaging for the OHC application binaries.
 #
-# Binary archives (ohc server):
-#   bazelisk build //release:ohc-x86_64-unknown-linux-gnu
-#   bazelisk build //release:all_ohc_archives
-#
-# Flutter mobile / desktop apps (require Flutter SDK on PATH):
-#   bazelisk run  //release:flutter-build-android-apk
-#   bazelisk run  //release:flutter-build-android-aab
-#   bazelisk run  //release:flutter-build-ios          # macOS only
-#   bazelisk run  //release:flutter-build-macos        # macOS only
-#   bazelisk run  //release:flutter-build-windows      # Windows only
-#   bazelisk run  //release:flutter-build-linux
-#   bazelisk run  //release:flutter-build-web
-#
-# All Flutter targets at once:
-#   bazelisk run  //release:flutter-build-all
-#
-# The GitHub Actions release workflow (`.github/workflows/release.yml`) uses
-# these targets to produce artifacts that are uploaded to GitHub Releases.
+# CI builds this package once per platform config, then renames the generic
+# archive to include the resolved target triple before uploading it.
 
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_pkg//pkg:zip.bzl", "pkg_zip")
 load("@rules_pkg//pkg:deb.bzl", "pkg_deb")
 load("@rules_pkg//pkg:rpm.bzl", "pkg_rpm")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_pkg//pkg:zip.bzl", "pkg_zip")
 
-# ── Universal App Files ───────────────────────────────────────────────────────
+package(default_visibility = ["//visibility:public"])
 
 pkg_files(
-    name = "app_files",
-    srcs = ["//src/ui/tauri:app"],
-    renames = {"//src/ui/tauri:app": "ohc-app"},
+    name = "ohc_unix_files",
+    srcs = [
+        "//src/agents/builtin:ohc-builtin-agent",
+        "//src/server:server",
+    ],
+    renames = {
+        "//src/agents/builtin:ohc-builtin-agent": "bin/ohc-builtin-agent",
+        "//src/server:server": "bin/ohc-server",
+    },
     strip_prefix = strip_prefix.from_pkg(),
+    target_compatible_with = select({
+        "//:linux": [],
+        "//:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
-# ── Linux Packages ────────────────────────────────────────────────────────────
+pkg_files(
+    name = "ohc_windows_files",
+    srcs = [
+        "//src/agents/builtin:ohc-builtin-agent",
+        "//src/server:server",
+    ],
+    renames = {
+        "//src/agents/builtin:ohc-builtin-agent": "ohc-builtin-agent.exe",
+        "//src/server:server": "ohc-server.exe",
+    },
+    strip_prefix = strip_prefix.from_pkg(),
+    target_compatible_with = select({
+        "//:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
 
 pkg_tar(
-    name = "app_tar",
-    srcs = [":app_files"],
+    name = "ohc_unix_archive",
+    srcs = [":ohc_unix_files"],
     extension = "tar.gz",
-    visibility = ["//visibility:public"],
+    package_file_name = "ohc-application.tar.gz",
+    target_compatible_with = select({
+        "//:linux": [],
+        "//:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+pkg_zip(
+    name = "ohc_windows_archive",
+    srcs = [":ohc_windows_files"],
+    package_file_name = "ohc-application.zip",
+    target_compatible_with = select({
+        "//:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 pkg_deb(
-    name = "app_deb",
+    name = "ohc_deb",
     architecture = "amd64",
+    data = ":ohc_unix_archive",
+    description = "One Human Corp application bundle",
     maintainer = "One Human Corp <support@onehumancorp.com>",
-    package = "ohc-app",
-    version = "0.4.42+1",
-    description = "One Human Corp Desktop Application",
-    section = "utils",
+    package = "ohc",
     priority = "optional",
-    data = ":app_tar",
+    section = "utils",
     target_compatible_with = select({
-        "@platforms//os:linux": [],
+        "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    version = "0.4.42",
 )
 
 pkg_rpm(
-    name = "app_rpm",
-    package_name = "ohc-app",
-    version = "0.4.42+1",
+    name = "ohc_rpm",
+    description = "One Human Corp application bundle",
     license = "Apache-2.0",
-    summary = "One Human Corp Desktop Application",
-    description = "One Human Corp Desktop Application",
-    srcs = [":app_files"],
+    package_name = "ohc",
+    srcs = [":ohc_unix_files"],
+    summary = "One Human Corp application bundle",
     target_compatible_with = select({
-        "@platforms//os:linux": [],
+        "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    version = "0.4.42",
 )
-
-# ── Windows Packages ──────────────────────────────────────────────────────────
-
-pkg_zip(
-    name = "app_windows_zip",
-    srcs = [":app_files"],
-    package_file_name = "ohc-app-windows-0.4.42+1.zip",
-    visibility = ["//visibility:public"],
-)
-
-# ── OCI Docker Image ──────────────────────────────────────────────────────────
-
-oci_image(
-    name = "app_image",
-    base = "@distroless_cc",
-    entrypoint = ["/ohc-app"],
-    tars = [":app_tar"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    visibility = ["//visibility:public"],
-)
-
-oci_load(
-    name = "app_image_tarball",
-    image = ":app_image",
-    repo_tags = ["ohc-app:latest"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    visibility = ["//visibility:public"],
-)
-
-# ── Convenience Groups ───────────────────────────────────────────────────────
 
 filegroup(
     name = "all_release_artifacts",
-    srcs = [
-        # Tauri app excluded - cannot build with Bazel due to compile-time codegen incompatibility
-        # ":app_tar",
-        # ":app_deb",
-        # ":app_windows_zip",
-        # ":app_image_tarball",
-    ],
-    visibility = ["//visibility:public"],
+    srcs = select({
+        "//:linux": [
+            ":ohc_deb",
+            ":ohc_unix_archive",
+        ],
+        "//:macos": [
+            ":ohc_unix_archive",
+        ],
+        "//:windows": [
+            ":ohc_windows_archive",
+        ],
+        "//conditions:default": [],
+    }),
 )
