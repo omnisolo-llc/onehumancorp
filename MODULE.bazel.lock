@@ -673,7 +673,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
         "bzlTransitiveDigest": "yEZVxv7vZRafxjfcsnAXXLLUTd6kAL7/4QnInr7y+bk=",
-        "usagesDigest": "2z5OjNn6qL/xhTuij9uITB+5P9ZMJrKXhaKncmgRSCw=",
+        "usagesDigest": "yanaeVeD1d79wkjf3LyLTeossI5Z0PTJ3NRm/qloydY=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "flutter_macos": {
@@ -752,7 +752,7 @@
     "@@rules_nodejs+//nodejs:extensions.bzl%node": {
       "general": {
         "bzlTransitiveDigest": "oZFClfRhTTwsYzpxVPkOpOt/r0+OzEfEV37au0jFZ0s=",
-        "usagesDigest": "4ekzeCX7LGlNe852W80cQ7pMMp2wOhKuCgS2EA9ecXQ=",
+        "usagesDigest": "m5XlbLuSITD3Gj6JYUUUypz04Pam4rM39rxaq+VIYAE=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "nodejs_linux_amd64": {
@@ -946,7 +946,7 @@
     "@@rules_pkg+//toolchains/rpm:rpmbuild_configure.bzl%find_system_rpmbuild_bzlmod": {
       "general": {
         "bzlTransitiveDigest": "GRI4sIxHeBPRn+6AWpn8sfcSnU14cOcXwKE5j+yVfJk=",
-        "usagesDigest": "5k2wdwazgWd2N6i8h7gC594jmrw1sIdonmLo01UyuHM=",
+        "usagesDigest": "edBdxwKgeVUt2WYzXpl6kStlHensXVOhr4fXeZ+wsXo=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "rules_pkg_rpmbuild": {
@@ -959,7 +959,7 @@
     "@@rules_playwright+//playwright:extensions.bzl%playwright": {
       "general": {
         "bzlTransitiveDigest": "5HYM8ikjse7rLzy0tDYni/Y/C9b2t5ZxXtF5TnVugwM=",
-        "usagesDigest": "eUgjF9yzpjGLQv1CxNpvaQDCLozDi4R2VHbeVhBdaiE=",
+        "usagesDigest": "D0N8vW3bv3dyGbXKQN/vWn0rIr/I6Icv6LbPRhiWitQ=",
         "recordedInputs": [
           "REPO_MAPPING:rules_playwright+,bazel_tools bazel_tools",
           "FILE:@@rules_playwright+//tools/release/artifacts/cli-arm64-apple-darwin 67731b424ce41adff3be0b4f612c60be0bddb53454eab0a5c415815d9c97f9cc",
@@ -3201,7 +3201,7 @@
     "@@rules_rust+//crate_universe:extensions.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "3PwaY69dmw68DCo0U8+7+k6SeFK8bkqrUdZIcpkWWOM=",
-        "usagesDigest": "qb1qTy5fKqskrNjxH7/OKpogcx7lZL02mFtzcMa4kIs=",
+        "usagesDigest": "nb2zM2UhyzG98BqLKO4AXjwpkyFOJNwwZjOvFU8B7vQ=",
         "recordedInputs": [
           "ENV:CARGO_BAZEL_DEBUG \\0",
           "ENV:CARGO_BAZEL_GENERATOR_SHA256 \\0",
@@ -3224,7 +3224,7 @@
           "REPO_MAPPING:rules_rust+,bazel_tools bazel_tools",
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
-          "FILE:@@//Cargo.lock c3d5fc79f3e0123f599878d2387106155b677c0cf33bd6be7cf36129bf883a72",
+          "FILE:@@//Cargo.lock 884b205c639d4d2cf38be0071f713d5d9b78eeb17b447e0e7e1a0ce4d5b00c5c",
           "FILE:@@//Cargo.toml ce92b4d3481ec21fe3c6c9811dddd3fff02a2db13271d67d12fe3c8463334163",
           "FILE:@@//src/ui/tauri/Cargo.toml 1f23c55a26d02f1036bbd8253c32e15ee47f578936b6bb71e0c3dd979114e8ba"
         ],
@@ -17592,7 +17592,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "qSbJhSNDmnGQklMqP3D1hccsM6oemR4OBe6pkARMdfo=",
+        "usagesDigest": "eSo4QgS9U7wVuEIB26BnTHeqhHM2pANYWlbJhHZshgU=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "buildbuddy_toolchain": {
