@@ -68,6 +68,70 @@ pub fn minify_json_prompt(data: &str) -> String {
     data.to_string()
 }
 
+pub fn smart_truncate_messages(messages: &mut Vec<serde_json::Value>, max_total_words: usize) {
+    if messages.is_empty() {
+        return;
+    }
+
+    // Identify system message (usually index 0)
+    let system_message = if messages[0]["role"] == "system" {
+        Some(messages.remove(0))
+    } else {
+        None
+    };
+
+    let mut current_words = 0;
+    if let Some(ref sys) = system_message {
+        current_words += sys["content"].as_str().unwrap_or("").split_whitespace().count();
+    }
+
+    // Keep adding messages from the end (most recent) until we hit the limit
+    let mut kept_recent = Vec::new();
+    for msg in messages.iter().rev() {
+        let content = msg["content"].as_str().unwrap_or("");
+        let msg_words = content.split_whitespace().count();
+
+        if current_words + msg_words <= max_total_words || kept_recent.is_empty() {
+            kept_recent.push(msg.clone());
+            current_words += msg_words;
+        } else {
+            // If the message itself is too long, we could truncate it, but for now we just stop.
+            break;
+        }
+    }
+
+    kept_recent.reverse();
+
+    // Reconstruct the message list
+    messages.clear();
+    if let Some(sys) = system_message {
+        messages.push(sys);
+    }
+    messages.extend(kept_recent);
+}
+
+pub fn optimize_image(image_data: &[u8], max_width: u32, max_height: u32) -> Result<Vec<u8>, String> {
+    use image::GenericImageView;
+    use std::io::Cursor;
+
+    let img = image::load_from_memory(image_data).map_err(|e| e.to_string())?;
+    let (width, height) = img.dimensions();
+
+    let resized = if width > max_width || height > max_height {
+        img.thumbnail(max_width, max_height)
+    } else {
+        img
+    };
+
+    let mut result = Vec::new();
+    let mut cursor = Cursor::new(&mut result);
+
+    // Encode as WebP for maximum compression
+    resized.write_to(&mut cursor, image::ImageFormat::WebP).map_err(|e| e.to_string())?;
+
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,6 +172,29 @@ mod tests {
         assert_eq!(truncate_by_word_count(input, 5), "One two three four five");
         assert_eq!(truncate_by_word_count(input, 15), input); // More words than input
         assert_eq!(truncate_by_word_count(input, 0), "");
+    }
+
+    #[test]
+    fn test_smart_truncate_messages() {
+        let mut messages = vec![
+            serde_json::json!({"role": "system", "content": "You are a helpful assistant."}),
+            serde_json::json!({"role": "user", "content": "Hello, how are you?"}),
+            serde_json::json!({"role": "assistant", "content": "I am fine, thank you!"}),
+            serde_json::json!({"role": "user", "content": "What is the weather today?"}),
+            serde_json::json!({"role": "assistant", "content": "It is sunny today."}),
+        ];
+
+        // Total words: 5 (sys) + 4 (u1) + 5 (a1) + 5 (u2) + 4 (a2) = 23
+        // Limit to 15 words. Should keep system, and the last two messages (9 words).
+        // 5 + 9 = 14 words.
+        smart_truncate_messages(&mut messages, 15);
+
+        assert_eq!(messages.len(), 3);
+        assert_eq!(messages[0]["role"], "system");
+        assert_eq!(messages[1]["role"], "user");
+        assert_eq!(messages[1]["content"], "What is the weather today?");
+        assert_eq!(messages[2]["role"], "assistant");
+        assert_eq!(messages[2]["content"], "It is sunny today.");
     }
 
     #[test]

@@ -40,6 +40,18 @@ impl PaymentRouter {
             0.0
         }
     }
+
+    /// Calculates the estimated fee for a given amount in USD.
+    pub fn calculate_fee(amount_usd: f64) -> f64 {
+        let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
+        let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
+
+        if ach_fee < card_fee && amount_usd >= Self::ACH_MIN_AMOUNT {
+            ach_fee
+        } else {
+            card_fee
+        }
+    }
 }
 
 #[cfg(test)]

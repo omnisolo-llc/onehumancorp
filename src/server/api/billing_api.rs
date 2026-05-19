@@ -20,6 +20,7 @@ pub struct CostDashboardResponse {
     pub llm_cost: i64,
     pub storage_cost: i64,
     pub payment_fees: i64,
+    pub total_savings: i64,
     pub period_start: String,
     pub period_end: String,
 }
@@ -92,7 +93,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, total_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
     };
 
     let now = chrono::Utc::now();
@@ -109,8 +110,12 @@ pub async fn cost_dashboard_handler(
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-    let payment_fees_f64 = total_revenue_f64 * 0.029;
+    let payment_fees_f64 = crate::integrations::stripe::routing::PaymentRouter::calculate_fee(total_revenue_f64);
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
+
+    let llm_savings = auditor.get_total_savings();
+    let storage_savings = auditor.get_total_storage_savings();
+    let total_savings_f64 = llm_savings + storage_savings;
 
     Json(CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0) as i64,
@@ -118,6 +123,7 @@ pub async fn cost_dashboard_handler(
         llm_cost: (llm_cost_f64 * 100.0) as i64,
         storage_cost: (storage_cost_f64 * 100.0) as i64,
         payment_fees: (payment_fees_f64 * 100.0) as i64,
+        total_savings: (total_savings_f64 * 100.0) as i64,
         period_start,
         period_end,
     })

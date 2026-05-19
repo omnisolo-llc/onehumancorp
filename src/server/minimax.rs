@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use ::server_pricing::prompt_caching::PromptCache;
-use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count, smart_truncate_messages};
 use tokio_stream::Stream;
 use std::pin::Pin;
 
@@ -102,6 +102,10 @@ impl MinimaxClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        self.reason_with_history(prompt, vec![]).await
+    }
+
+    pub async fn reason_with_history(&self, prompt: &str, history: Vec<serde_json::Value>) -> Result<String, String> {
         // 1. Check Cache
         if let Some(cached) = self.cache.get(prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
@@ -113,21 +117,38 @@ impl MinimaxClient {
             return Err("circuit breaker open".to_string());
         }
 
-        // 2. Optimize Prompt
-        let optimized_prompt = if prompt.starts_with('{') {
-            minify_json_prompt(prompt)
-        } else {
-            truncate_by_word_count(prompt, 2000) // Safety truncation
-        };
+        // 2. Optimize Prompt & History
+        let mut messages = history;
+        messages.push(serde_json::json!({
+            "role": "user",
+            "content": prompt
+        }));
+
+        // Apply smart truncation (e.g., limit to 4000 words total across history)
+        smart_truncate_messages(&mut messages, 4000);
+
+        let minimax_messages: Vec<MinimaxMessage> = messages.into_iter().map(|m| {
+            let role = m["role"].as_str().unwrap_or("user").to_string();
+            let content = m["content"].as_str().unwrap_or("").to_string();
+
+            // Further optimization for individual messages
+            let optimized_content = if content.starts_with('{') {
+                minify_json_prompt(&content)
+            } else {
+                content
+            };
+
+            MinimaxMessage {
+                role,
+                content: optimized_content,
+            }
+        }).collect();
 
         let client = reqwest::Client::new();
 
         let request_body = MinimaxRequest {
             model: "MiniMax-M2.7".to_string(),
-            messages: vec![MinimaxMessage {
-                role: "user".to_string(),
-                content: optimized_prompt,
-            }],
+            messages: minimax_messages,
             stream: Some(false),
         };
 
