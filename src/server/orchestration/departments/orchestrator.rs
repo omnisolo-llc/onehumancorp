@@ -410,6 +410,35 @@ impl DepartmentOrchestrator {
     pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
+
+    pub async fn write_department_event(
+        &self,
+        tenant_id: &str,
+        department: DepartmentType,
+        event_type: &str,
+        content: &str,
+        embedding: Vec<f32>,
+    ) -> Result<(), String> {
+        let enhanced_content = format!("[{}] {}: {}", department, event_type, content);
+        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            agent_id: department.to_string(),
+            content: enhanced_content,
+            embedding,
+            source_type: "department_orchestrator".to_string(),
+            metadata: Some(serde_json::json!({
+                "department": department.to_string(),
+                "event_type": event_type,
+            }).to_string()),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 0,
+            reliability_score: 100,
+            owner_override: false,
+        };
+        self.write_long_term_memory(record).await
+    }
 }
 
 #[cfg(test)]
