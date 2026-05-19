@@ -46,18 +46,25 @@ impl ToolExecutor for GlobExecutor {
             })
             .collect();
 
+        // Just-in-Time (JIT) Retrieval Mechanic:
         if matches.is_empty() {
             return Ok("No files found.".to_string());
         }
 
-        Ok(matches.join("\n"))
+        let mut output_matches = matches;
+        if output_matches.len() > 100 {
+            output_matches.truncate(100);
+            output_matches.push("... (truncated)".to_string());
+        }
+
+        Ok(output_matches.join("\n"))
     }
 }
 
 pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Glob".to_string(),
-        description: "Find files matching a glob pattern. Returns newline-separated paths.".to_string(),
+        description: "Find files matching a glob pattern. Returns newline-separated paths. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
