@@ -89,6 +89,7 @@ pkg_rpm(
     description = "One Human Corp application bundle",
     license = "Apache-2.0",
     package_name = "ohc",
+    release = "1",
     srcs = [":ohc_unix_files"],
     summary = "One Human Corp application bundle",
     target_compatible_with = select({
