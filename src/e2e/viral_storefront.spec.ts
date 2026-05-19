@@ -15,4 +15,11 @@ test.describe('Viral Storefront E2E', () => {
     await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
     await expect(page.getByPlaceholder('mybusiness')).toBeVisible();
   });
+
+  test('displays Powered by OHC virality loop on published storefront builder preview', async ({ page }) => {
+    await page.goto('/storefront-builder');
+    const poweredByLink = page.getByRole('link', { name: /Powered by OHC/i });
+    await expect(poweredByLink).toBeVisible();
+    await expect(poweredByLink).toHaveAttribute('href', '/referrals?ref=storefront');
+  });
 });

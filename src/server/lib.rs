@@ -2962,6 +2962,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 el.innerHTML = innerHtml;
                                 container.appendChild(el);
                             });
+
+                            const footer = document.createElement('div');
+                            footer.style.textAlign = 'center';
+                            footer.style.padding = '16px';
+                            footer.style.marginTop = '24px';
+                            footer.style.borderRadius = '12px';
+                            footer.style.background = 'rgba(255, 255, 255, 0.65)';
+                            footer.innerHTML = `<a href="/referrals?ref=storefront" style="color: var(--primary-blue, #0066FF); text-decoration: none; font-weight: bold; font-family: 'Outfit', sans-serif;">⚡ Powered by OHC</a>`;
+                            container.appendChild(footer);
                         }
 
                         function toggleRearrangeMode() {
