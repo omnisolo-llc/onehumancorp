@@ -73,7 +73,7 @@ fn get_telemetry_chan() -> &'static mpsc::Sender<Box<dyn FnOnce() + Send>> {
     TELEMETRY_CHAN.get_or_init(|| {
         let (tx, rx) = mpsc::channel::<Box<dyn FnOnce() + Send>>(10000);
         let rx = std::sync::Arc::new(tokio::sync::Mutex::new(rx));
-        
+
         for _ in 0..16 {
             let rx = rx.clone();
             tokio::spawn(async move {
@@ -82,7 +82,7 @@ fn get_telemetry_chan() -> &'static mpsc::Sender<Box<dyn FnOnce() + Send>> {
                         let mut rx = rx.lock().await;
                         rx.recv().await
                     };
-                    
+
                     if let Some(job) = job {
                         job();
                     } else {
@@ -629,7 +629,7 @@ impl HubService for MyHubService {
     ) -> Result<tonic::Response<VerifyEnvironmentResponse>, tonic::Status> {
         let req = request.into_inner();
         let env_vars = req.env_vars;
-        
+
         match services::onboarding::env_verifier::verify_environment(&env_vars) {
             Ok(config) => {
                 Ok(tonic::Response::new(VerifyEnvironmentResponse {
@@ -703,7 +703,7 @@ impl HubService for MyHubService {
         let user_id = auth_info.spiffe_id.clone();
 
         let req = request.into_inner();
-        
+
         let mut state = req.state;
         state.remove("admin_password");
         let current_step = state.get("step").and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
@@ -822,7 +822,7 @@ impl HubService for MyHubService {
         request: tonic::Request<ProvisionRequest>,
     ) -> Result<tonic::Response<ProvisionResponse>, tonic::Status> {
         let _req = request.into_inner();
-        
+
         Ok(tonic::Response::new(ProvisionResponse {
             status: "provisioned".to_string(),
             message: "State persisted successfully".to_string(),
@@ -885,9 +885,9 @@ impl HubService for MyHubService {
         _request: tonic::Request<DiagnosticsRequest>,
     ) -> Result<tonic::Response<DiagnosticsResponse>, tonic::Status> {
         let env_vars = std::env::vars().collect::<std::collections::HashMap<String, String>>();
-        
+
         let config_res = services::onboarding::env_verifier::verify_environment(&env_vars);
-        
+
         let state = std::collections::HashMap::new();
 
         match config_res {
@@ -969,7 +969,7 @@ impl HubService for MyHubService {
             req.description,
             req.priority,
         ).map_err(|e| Status::internal(e))?;
-        
+
         Ok(Response::new(SharedTask {
             id: task.id,
             organization_id: task.organization_id,
@@ -995,14 +995,14 @@ impl HubService for MyHubService {
     }
 
     type PollTasksStream = Pin<Box<dyn Stream<Item = Result<SharedTask, Status>> + Send>>;
-    
+
     async fn poll_tasks(
         &self,
         request: Request<PollTasksRequest>,
     ) -> Result<Response<Self::PollTasksStream>, Status> {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
-        
+
         let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
             Ok(SharedTask {
                 id: task.id,
@@ -1027,7 +1027,7 @@ impl HubService for MyHubService {
                 proposed_content: task.proposed_content.unwrap_or_default(),
             })
         }).collect();
-        
+
         let stream = tokio_stream::iter(mapped_tasks);
         Ok(Response::new(Box::pin(stream) as Self::PollTasksStream))
     }
@@ -1037,7 +1037,7 @@ impl HubService for MyHubService {
         request: Request<UpdateTaskStatusRequest>,
     ) -> Result<Response<UpdateTaskStatusResponse>, Status> {
         let req = request.into_inner();
-        
+
         match req.status.as_str() {
             "REVIEW" => {
                 self.hub.task_manager().review_task(&req.task_id, &req.agent_id)
@@ -1052,7 +1052,7 @@ impl HubService for MyHubService {
                     .map_err(|e| Status::internal(e))?;
             }
         }
-        
+
         Ok(Response::new(UpdateTaskStatusResponse { success: true }))
     }
 
@@ -1151,7 +1151,7 @@ impl HubService for MyHubService {
         request: Request<DecomposeTaskRequest>,
     ) -> Result<Response<DecomposeTaskResponse>, Status> {
         let req = request.into_inner();
-        
+
         for st in req.sub_tasks {
             let mut filtered_deps = Vec::new();
             for dep in st.dependencies {
@@ -1159,7 +1159,7 @@ impl HubService for MyHubService {
                     filtered_deps.push(dep);
                 }
             }
-            
+
             self.hub.task_manager().create_task_with_plan(
                 req.organization_id.clone(),
                 String::new(),
@@ -1170,7 +1170,7 @@ impl HubService for MyHubService {
                 st.priority,
             ).map_err(|e| Status::internal(e))?;
         }
-        
+
         Ok(Response::new(DecomposeTaskResponse { success: true }))
     }
 
@@ -1182,20 +1182,20 @@ impl HubService for MyHubService {
     ) -> Result<Response<Self::StreamMessagesStream>, Status> {
         let req = request.into_inner();
         let agent_id = req.agent_id.clone();
-        
+
         let rx = self.hub.subscribe(agent_id.clone());
         let drained = self.hub.get_inbox(&agent_id);
-        
+
         let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(msg) => Ok(msg),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         let full_stream = drained_stream.chain(rx_stream);
-        
+
         Ok(Response::new(Box::pin(full_stream) as Self::StreamMessagesStream))
     }
 
@@ -1208,7 +1208,7 @@ impl HubService for MyHubService {
         if api_key.is_empty() {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
-        
+
         let client = minimax::MinimaxClient::new(api_key);
         match client.reason(&req.prompt).await {
             Ok(content) => Ok(Response::new(ReasonResponse { content })),
@@ -1221,11 +1221,11 @@ impl HubService for MyHubService {
         request: Request<SubTask>,
     ) -> Result<Response<DelegateTaskResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.task_id.is_empty() || req.target_role.is_empty() {
             return Err(Status::invalid_argument("task_id and target_role are required"));
         }
-        
+
         if self.hub.get_agent(&req.from_agent_id).is_none() {
             return Err(Status::invalid_argument("sender agent is not registered"));
         }
@@ -1234,10 +1234,10 @@ impl HubService for MyHubService {
         if self.hub.get_agents_count() >= 10 {
             return Err(Status::resource_exhausted("VRAM quota limit exceeded, cannot spawn sub-agent"));
         }
-        
+
         let now_nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         let sub_agent_id = format!("sub-agent-{}-{}", req.target_role, now_nano);
-        
+
         let sub_agent = Agent {
             id: sub_agent_id.clone(),
             name: format!("Specialized {} Agent", req.target_role),
@@ -1246,9 +1246,9 @@ impl HubService for MyHubService {
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         };
-        
+
         self.hub.register_agent(sub_agent);
-        
+
         // Prompt injection checks
         if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
             return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
@@ -1256,7 +1256,7 @@ impl HubService for MyHubService {
         if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
             return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
         }
-        
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -1275,7 +1275,7 @@ impl HubService for MyHubService {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
-        
+
         match self.hub.clone().publish(msg) {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
@@ -1290,7 +1290,7 @@ impl HubService for MyHubService {
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agent_id is required"));
         }
-        
+
         match self.hub.advertise_capabilities(req) {
             Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
@@ -1304,13 +1304,13 @@ impl HubService for MyHubService {
         _request: Request<Query>,
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(caps) => Ok(caps),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::DiscoverAgentsStream))
     }
 
@@ -1341,17 +1341,17 @@ impl HubService for MyHubService {
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
         }
-        
+
         self.stream_counter.add(1, &[opentelemetry::KeyValue::new("topic", req.topic.clone())]);
 
         let rx = self.hub.subscribe_mesh_events(req.topic);
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(event) => Ok(event),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
 
@@ -1383,15 +1383,15 @@ impl HubService for MyHubService {
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
         }
-        
+
         let rx = self.hub.subscribe_teammate_mesh(req.topic);
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(event) => Ok(event),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamTeammateMeshStream))
     }
 
@@ -1400,7 +1400,7 @@ impl HubService for MyHubService {
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing required fields"));
         }
@@ -1418,7 +1418,7 @@ impl HubService for MyHubService {
         request: Request<AcceptInviteRequest>,
     ) -> Result<Response<AcceptInviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing invitee_id"));
         }
@@ -1473,7 +1473,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
-    
+
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
@@ -1815,7 +1815,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(::server_auth::Store::new());
-    
+
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
@@ -1958,8 +1958,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background:
                                 radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.08), transparent 28%),
                                 linear-gradient(180deg, rgba(255,255,255,0.72), rgba(238,241,245,0.96));
-                            color: var(--text); 
-                            margin: 0; 
+                            color: var(--text);
+                            margin: 0;
                             line-height: 1.45;
                             -webkit-font-smoothing: antialiased;
                         }
@@ -1991,15 +1991,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             backdrop-filter: blur(22px) saturate(180%);
                             -webkit-backdrop-filter: blur(22px) saturate(180%);
                         }
-                        nav { 
-                            padding: 0 28px; 
-                            display: flex; 
-                            gap: 8px; 
-                            border-bottom: 1px solid var(--border); 
-                            background: var(--sidebar-bg); 
-                            position: sticky; 
-                            top: 0; 
-                            z-index: 100; 
+                        nav {
+                            padding: 0 28px;
+                            display: flex;
+                            gap: 8px;
+                            border-bottom: 1px solid var(--border);
+                            background: var(--sidebar-bg);
+                            position: sticky;
+                            top: 0;
+                            z-index: 100;
                             height: 58px;
                             align-items: center;
                             backdrop-filter: blur(24px) saturate(180%);
@@ -2013,11 +2013,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-size: 15px;
                             margin-right: 18px;
                         }
-                        nav a { 
-                            color: var(--text-secondary); 
-                            text-decoration: none; 
-                            font-weight: 600; 
-                            cursor: pointer; 
+                        nav a {
+                            color: var(--text-secondary);
+                            text-decoration: none;
+                            font-weight: 600;
+                            cursor: pointer;
                             font-size: 14px;
                             min-height: 36px;
                             display: inline-flex;
@@ -2040,23 +2040,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         #dashboard-screen {
                             max-width: 1180px;
                         }
-                        .card { 
-                            background: var(--surface-strong); 
-                            padding: 24px; 
-                            border-radius: var(--radius-md); 
-                            margin-bottom: 18px; 
+                        .card {
+                            background: var(--surface-strong);
+                            padding: 24px;
+                            border-radius: var(--radius-md);
+                            margin-bottom: 18px;
                             border: 1px solid var(--border);
                             box-shadow: var(--shadow-sm);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
-                        input, textarea, select { 
-                            width: 100%; 
-                            padding: 11px 13px; 
-                            margin-bottom: 16px; 
-                            background: rgba(255,255,255,0.94); 
-                            border: 1px solid var(--border); 
-                            border-radius: var(--radius-sm); 
-                            color: var(--text); 
+                        input, textarea, select {
+                            width: 100%;
+                            padding: 11px 13px;
+                            margin-bottom: 16px;
+                            background: rgba(255,255,255,0.94);
+                            border: 1px solid var(--border);
+                            border-radius: var(--radius-sm);
+                            color: var(--text);
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
@@ -2068,18 +2068,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: #ffffff;
                             box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
-                        button { 
+                        button {
                             min-height: 44px;
                             min-width: 44px;
                             padding: 10px 18px;
-                            background: var(--primary); 
-                            border: 1px solid transparent; 
+                            background: var(--primary);
+                            border: 1px solid transparent;
                             border-radius: var(--radius-sm);
-                            color: white; 
-                            font-weight: 600; 
-                            cursor: pointer; 
-                            margin-right: 8px; 
-                            margin-bottom: 8px; 
+                            color: white;
+                            font-weight: 600;
+                            cursor: pointer;
+                            margin-right: 8px;
+                            margin-bottom: 8px;
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
@@ -2091,10 +2091,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             transform: translateY(-1px);
                         }
                         button:active { transform: translateY(0); }
-                        button.secondary { 
-                            background: rgba(255,255,255,0.78); 
-                            border: 1px solid var(--border); 
-                            color: var(--text); 
+                        button.secondary {
+                            background: rgba(255,255,255,0.78);
+                            border: 1px solid var(--border);
+                            color: var(--text);
                         }
                         button.secondary:hover {
                             background: #ffffff;
@@ -2106,7 +2106,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: #dc2626;
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
-                        
+
                         .shimmer {
                             background: linear-gradient(90deg, #eef2f7 25%, #dce5ef 50%, #eef2f7 75%);
                             background-size: 200% 100%;
@@ -2320,6 +2320,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p style="color: var(--text-secondary); font-size: 16px;">You have 3 cake orders due this weekend.</p>
                         </div>
 
+
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
                             <h2 style="font-size: 48px; margin: 0; color: var(--primary);">$1,284.50</h2>
@@ -2450,7 +2451,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Meetings Screen -->
                     <div id="meetings-screen" class="screen glass">
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;" 
+                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;"
                                 onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
                             Meetings Schedule New Meeting
                         </button>
@@ -2754,44 +2755,117 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
-                        <h1>OneHuman Business Setup</h1>
+                        <h1>OneHuman</h1>
                         <div id="step-1">
-                            <h1>What kind of business are you building?</h1>
-                            <button class="secondary" onclick="document.getElementById('business-type').value='Home Baker'; nextStep(2)">🍰 <span>Home Baker</span></button>
-                            <button class="secondary" onclick="document.getElementById('business-type').value='Handyman'; nextStep(2)">🛠️ <span>Handyman / Services</span></button>
-                            <button class="secondary" onclick="document.getElementById('business-type').value='Boutique'; nextStep(2)">👗 <span>Boutique</span></button>
-                            <button class="secondary" onclick="document.getElementById('business-type').value='Tutor'; nextStep(2)">📚 <span>Tutor</span></button>
-                            <button class="secondary" onclick="document.getElementById('business-type').value='Food Cart'; nextStep(2)">🍕 <span>Food Cart</span></button>
-                            <button class="secondary" onclick="document.getElementById('business-type').value='Digital Creator'; nextStep(2)">💻 <span>Digital Creator</span></button>
-                            <input type="hidden" id="business-type" value="Home Baker" />
+                            <h1>Your business, live in minutes.</h1>
+                            <p>Zero tech skills needed. We do the heavy lifting.</p>
+                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" style="display: none;">
-                            <h1>Tell us more</h1>
-                            <div id="baker-inputs">
-                                <p>What do you sell?</p>
-                                <input type="text" placeholder="e.g. Custom Cakes" />
-                                <button class="secondary" onclick="alert('File chooser opened')">📷 Upload 1 photo</button>
-                            </div>
-                            <div id="service-inputs" style="display:none;">
-                                <p>Enter your hourly service rate</p>
-                                <input type="number" placeholder="$50" />
-                            </div>
+                            <h1>What kind of business are you building?</h1>
+                            <input type="text" placeholder="Business type" />
                             <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="nextStep(3)">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
+                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
-                            <h1>Connect Bank Account</h1>
-                            <button onclick="alert('Bank Connected via Stripe!'); nextStep('launch-ai')">🔗 Connect Bank</button>
+                            <h1>Give your business a name</h1>
+                            <input type="text" placeholder="What is your business called?" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <button onclick="nextStep('generating')">Generate Description</button>
+                            <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
-                        <div id="step-launch-ai" style="display: none;">
+                        <div id="step-4" style="display: none;">
+                            <h1>What do you sell?</h1>
+                            <label><input type="checkbox"> Physical Products</label>
+                            <label><input type="checkbox"> 📦 Physical products</label>
+                            <label><input type="checkbox"> Digital Products</label>
+                            <label><input type="checkbox"> Services / Appointments</label>
+                            <label><input type="checkbox"> Subscriptions</label>
+                            <br/><button onclick="nextStep(5)">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                        </div>
+                        <div id="step-5" style="display: none;">
+                            <h1>Add your first product or service</h1>
+                            <input type="text" placeholder="What is the name of this product?" />
+                            <input type="text" placeholder="0.00" />
+                            <button onclick="nextStep('generating')">Generate AI Description</button>
+                            <button onclick="nextStep(6)">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                        </div>
+                        <div id="step-6" style="display: none;">
+                            <h1>How do you want to receive payments?</h1>
+                            <button class="secondary" onclick="nextStep(7)">Online</button>
+                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                        </div>
+                        <div id="step-7" style="display: none;">
+                            <h1>Create your account</h1>
+                            <input type="text" placeholder="e.g. Maya Smith" />
+                            <input type="email" placeholder="you@email.com" />
+                            <input type="password" placeholder="Password" />
+                            <button onclick="nextStep(8)">Next →</button>
+                        </div>
+                        <div id="step-8" style="display: none;">
+                            <h1>Select a Template</h1>
+                            <button class="secondary" onclick="selectWizardOption(this)">Modern</button>
+                            <button class="secondary" onclick="selectWizardOption(this)">Bold</button>
+                            <button onclick="nextStep(9)">Next →</button>
+                        </div>
+                        <div id="step-9" style="display: none;">
+                            <h1>Choose your domain</h1>
+                            <button class="secondary" onclick="selectWizardOption(this)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="selectWizardOption(this)">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)">Next →</button>
+                        </div>
+                        <div id="step-10" style="display: none;">
+                            <h1>Ready to launch!</h1>
+                            <button onclick="nextStep(100)"><span>Publish my business</span> <span>→</span></button>
+                        </div>
+                        <div id="step-100" style="display: none;">
+                            <h1>🎉 Success! Your business is live! 🎉</h1>
+                            <p>Your business is now live!</p>
+                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                        </div>
+
+                        <div id="checklist-screen" class="screen">
+                            <h1>Welcome Checklist</h1>
+                            <h1>You're set up! Here's what to do next:</h1>
+                            <p>✅ Business live</p>
+                            <p>⬜ Add 3 more products</p>
+                            <p>⬜ Connect Instagram</p>
+                            <p>⬜ Share your link with a friend</p>
+                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                        </div>
+
+                        <div id="step-ai" style="display: none;">
+                            <h1>Describe your business in a sentence</h1>
+                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
+                            <button onclick="generateAI()">Generate Storefront →</button>
+                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                        </div>
+                        <div id="step-generating" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
-                                <h1 class="outfit">Storefront Live (< 10 min)</h1>
-                                <p>Your business is now live!</p>
-                                <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                                <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
+                                <h1 class="outfit">Designing your storefront...</h1>
+                                <p>Our AI is crafting a custom experience for your brand.</p>
+                                <div class="shimmer" style="height: 200px; width: 100%; margin-top: 32px;"></div>
+                                <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
+                        <div id="step-launch-ai" style="display: none;">
+                            <h1>Your live storefront!</h1>
+                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                        </div>
                     </div>
+
 
                     <!-- Storefront Builder Screen -->
                     <div id="storefront-builder-screen" class="screen glass" style="display: none;">
@@ -3028,13 +3102,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }, 3000);
                         }
 
-                        function simulateOrder() {
-                            const toast = document.getElementById('push-notification-toast');
-                            if (toast) {
-                                toast.style.display = 'block';
-                                setTimeout(() => { toast.style.display = 'none'; }, 3000);
-                            }
-                        }
                         let orderReadyCount = 0;
                         function markOrderReady() {
                             orderReadyCount += 1;
