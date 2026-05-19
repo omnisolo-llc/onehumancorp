@@ -1820,6 +1820,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
+        .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler))
+        .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
