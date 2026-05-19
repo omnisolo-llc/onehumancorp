@@ -1,5 +1,6 @@
 BEGIN;
 
+ALTER TABLE IF EXISTS agent_approvals DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox DISABLE ROW LEVEL SECURITY;
@@ -50,6 +51,13 @@ SET username = EXCLUDED.username,
     roles = EXCLUDED.roles,
     active = EXCLUDED.active,
     tenant_id = EXCLUDED.tenant_id,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+VALUES
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO agents (id, tenant_id, name, role, status, provider_type, region)
