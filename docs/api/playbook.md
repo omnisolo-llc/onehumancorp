@@ -221,8 +221,27 @@ Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS us
 }
 ```
 
+**Error Responses:**
+- `404 Not Found`: No pending tasks available for the requested role. Wait and retry.
+  ```json
+  {
+    "error_code": "NO_TASKS_AVAILABLE",
+    "message": "No pending tasks available for role: swe",
+    "resolution": "Retry after 5 seconds or wait for queue mesh events"
+  }
+  ```
+- `403 Forbidden`: Agent role is invalid or not authorized to claim this task queue.
+  ```json
+  {
+    "error_code": "INVALID_AGENT_ROLE",
+    "message": "Agent swe_007 is not authorized for role: swe",
+    "resolution": "Verify agent_id and role configuration"
+  }
+  ```
+
 #### Task Claiming Workflow
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'Outfit'}}}%%
 sequenceDiagram
     participant Agent as Worker Agent
     participant Hub as Orchestration Hub
@@ -234,6 +253,9 @@ sequenceDiagram
     DB-->>Hub: Return Task & Row Lock
     Hub-->>Agent: Task Payload + Context
     Note right of Agent: Agent begins execution
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Agent,Hub,DB premium;
 ```
 
 ### 7.3 Complete a Task
@@ -256,6 +278,52 @@ Marks a task as `COMPLETED`. This transition triggers the KAIROS DAG engine to e
   "new_status": "COMPLETED",
   "unlocked_tasks": ["task_125", "task_126"]
 }
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid transition, or missing payload fields.
+  ```json
+  {
+    "error_code": "INVALID_TASK_TRANSITION",
+    "message": "Cannot complete a task that is in state PENDING",
+    "resolution": "Claim the task first to transition it to IN_PROGRESS"
+  }
+  ```
+- `404 Not Found`: Task does not exist.
+  ```json
+  {
+    "error_code": "TASK_NOT_FOUND",
+    "message": "Task 123e4567-e89b-12d3-a456-426614174000 does not exist",
+    "resolution": "Check the task_id"
+  }
+  ```
+- `409 Conflict`: Task is already completed or assigned to a different agent.
+  ```json
+  {
+    "error_code": "TASK_CONFLICT",
+    "message": "Task is assigned to agent_swe_008, cannot complete",
+    "resolution": "Ensure agent_id matches the claimer"
+  }
+  ```
+
+#### Task Completion Workflow
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'Outfit'}}}%%
+sequenceDiagram
+    participant Agent as Worker Agent
+    participant Hub as Orchestration Hub
+    participant DB as Shared Task DB
+
+    Agent->>Hub: POST /api/v1/tasks/{task_id}/complete
+    Hub->>DB: Update Task Status to COMPLETED
+    DB-->>Hub: Confirm Update
+    Note over Hub,DB: KAIROS DAG Engine evaluates downstream dependencies
+    Hub->>DB: Unlock dependent tasks
+    DB-->>Hub: Return Unlocked Tasks List
+    Hub-->>Agent: Success Response + Unlocked Tasks
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Agent,Hub,DB premium;
 ```
 
 ## 8. Hybrid Health Probes

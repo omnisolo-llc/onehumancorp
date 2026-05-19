@@ -34,7 +34,7 @@ Use this section for guided narratives such as setup verification, orchestration
 - [KAIROS AutoDream Walkthrough](./kairos_autodream_walkthrough.md)
 - [KAIROS Central Orchestration CLI Guide](./kairos_central_orchestration_cli_guide.md)
 - [KAIROS Interactive API Playbook Walkthrough](./kairos_interactive_api_playbook.md)
-- [KAIROS Orchestration Walkthrough](./kairos_orchestration.md)
+- [KAIROS Orchestration Walkthrough](../../walkthroughs/kairos_orchestration.md)
 - [Omni Context Routing Walkthrough](./omni_context_routing.md)
 - [OS-Level Sandbox Isolation Harness](./sandbox_isolation_harness.md)
 - [Shared Task List Visual Walkthrough](./shared_task_list_visual_walkthrough.md)
