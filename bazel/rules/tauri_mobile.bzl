@@ -23,6 +23,9 @@ def _tauri_mobile_package_impl(ctx):
     cargo = ctx.files.cargo[0]
     rustc = ctx.files.rustc[0]
     tauri_cli = ctx.executable.tauri_cli
+    cargo_vendor_root = None
+    if ctx.file.cargo_vendor_root:
+        cargo_vendor_root = ctx.file.cargo_vendor_root.dirname
     android_sdk_root = None
     if ctx.file.android_sdk_root:
         android_sdk_root = ctx.file.android_sdk_root.dirname
@@ -34,7 +37,9 @@ def _tauri_mobile_package_impl(ctx):
                 break
         if not android_rustlib_dir:
             fail("android_rust_toolchain must include %s rust stdlib files" % ANDROID_RUST_TARGET)
-    inputs = ctx.files.srcs + ctx.files.cargo + ctx.files.rustc + ctx.files.android_rust_toolchain + [tauri_cli] + ctx.files.android_sdk
+    inputs = ctx.files.srcs + ctx.files.cargo + ctx.files.rustc + ctx.files.android_rust_toolchain + [tauri_cli] + ctx.files.android_sdk + ctx.files.cargo_vendor
+    if ctx.file.cargo_vendor_root:
+        inputs.append(ctx.file.cargo_vendor_root)
     gradle_distribution = None
     if is_android:
         gradle_toolchain = ctx.toolchains[_GRADLE_TOOLCHAIN_TYPE]
@@ -63,6 +68,18 @@ def _tauri_mobile_package_impl(ctx):
         "ln -sf \"$execroot/%s\" \"$tmp/bin/cargo-tauri\"" % tauri_cli.path,
         "cargo=\"$execroot/%s\"" % cargo.path,
     ])
+    if cargo_vendor_root:
+        commands.extend([
+            "cat > \"$CARGO_HOME/config.toml\" <<EOF",
+            "[source.crates-io]",
+            "replace-with = \"vendored-sources\"",
+            "[source.vendored-sources]",
+            "directory = \"$execroot/%s/vendor\"" % cargo_vendor_root,
+            "[net]",
+            "offline = true",
+            "EOF",
+            "export CARGO_NET_OFFLINE=true",
+        ])
 
     if is_android:
         if not android_sdk_root:
@@ -177,6 +194,14 @@ tauri_mobile_package = rule(
             allow_files = True,
             default = Label("@rules_rust//rust/toolchain:current_cargo_files"),
             cfg = "exec",
+        ),
+        "cargo_vendor": attr.label(
+            allow_files = True,
+            default = Label("@tauri_cargo_vendor//:vendor"),
+        ),
+        "cargo_vendor_root": attr.label(
+            allow_single_file = True,
+            default = Label("@tauri_cargo_vendor//:.vendor_root"),
         ),
         "rustc": attr.label(
             allow_files = True,
