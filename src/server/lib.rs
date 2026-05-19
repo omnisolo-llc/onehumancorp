@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2276,6 +2276,83 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+
+        /* Premium Standard Overrides for Wizard */
+        #setup-screen {
+            max-width: 600px;
+            margin: 40px auto;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        #setup-screen > div {
+            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #setup-screen button {
+            border-radius: 8px;
+            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #setup-screen input {
+            border-radius: 8px;
+        }
+
+        @media (max-width: 375px) {
+            #setup-screen {
+                margin: 10px;
+                padding: 16px;
+            }
+            #setup-screen h1 {
+                font-size: 24px;
+            }
+            #setup-screen button, #setup-screen input {
+                width: 100%;
+                margin-bottom: 8px;
+                box-sizing: border-box;
+            }
+        }
+
+
+        /* Premium Standard Overrides for Wizard */
+        #setup-screen.glass {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            max-width: 600px;
+            margin: 40px auto;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+
+        body.dark-theme #setup-screen.glass {
+            background: rgba(22, 22, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #setup-screen > div {
+            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #setup-screen button, #setup-screen input {
+            border-radius: 8px;
+            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media (max-width: 375px) {
+            #setup-screen.glass {
+                margin: 10px;
+                padding: 16px;
+            }
+            #setup-screen h1 {
+                font-size: 24px;
+            }
+            #setup-screen button, #setup-screen input {
+                width: 100%;
+                margin-bottom: 8px;
+                box-sizing: border-box;
+            }
+        }
+
                     </style>
                 </head>
                 <body>
@@ -2922,6 +2999,144 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+
+
+                        // LocalStorage State Management
+                        function saveWizardState() {
+                            const inputs = document.querySelectorAll('#setup-screen input');
+                            const state = {};
+                            inputs.forEach((input, index) => {
+                                if (input.type === 'checkbox') {
+                                    state['checkbox_' + index] = input.checked;
+                                } else {
+                                    state['input_' + index] = input.value;
+                                }
+                            });
+                            localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
+                        }
+
+                        function loadWizardState() {
+                            const saved = localStorage.getItem('ohc_wizard_state');
+                            if (saved) {
+                                try {
+                                    const state = JSON.parse(saved);
+                                    const inputs = document.querySelectorAll('#setup-screen input');
+                                    inputs.forEach((input, index) => {
+                                        if (input.type === 'checkbox') {
+                                            if (state['checkbox_' + index] !== undefined) {
+                                                input.checked = state['checkbox_' + index];
+                                            }
+                                        } else {
+                                            if (state['input_' + index] !== undefined) {
+                                                input.value = state['input_' + index];
+                                            }
+                                        }
+                                        // add listener for auto-save
+                                        input.addEventListener('change', saveWizardState);
+                                        input.addEventListener('input', saveWizardState);
+                                    });
+                                } catch (e) { console.error('Failed to parse wizard state', e); }
+                            } else {
+                                const inputs = document.querySelectorAll('#setup-screen input');
+                                inputs.forEach((input) => {
+                                    input.addEventListener('change', saveWizardState);
+                                    input.addEventListener('input', saveWizardState);
+                                });
+                            }
+                        }
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            // Run setup logic after page load
+                            setTimeout(loadWizardState, 100);
+                        });
+
+
+                        // Server-Side State Management for Cross-Device Resumes
+                        let saveWizardStateTimeout = null;
+
+                        function saveWizardState() {
+                            clearTimeout(saveWizardStateTimeout);
+                            saveWizardStateTimeout = setTimeout(async () => {
+                                const inputs = document.querySelectorAll('#setup-screen input');
+                                const state = {};
+                                inputs.forEach((input, index) => {
+                                    if (input.type === 'checkbox') {
+                                        state['checkbox_' + index] = input.checked;
+                                    } else {
+                                        state['input_' + index] = input.value;
+                                    }
+                                });
+
+                                try {
+                                    await fetch('/api/wizard/state', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ state: JSON.stringify(state) })
+                                    });
+                                } catch (e) {
+                                    console.error('Failed to save state to server', e);
+                                    // Fallback to localStorage just in case
+                                    localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
+                                }
+                            }, 500); // Debounce
+                        }
+
+                        async function loadWizardState() {
+                            const inputs = document.querySelectorAll('#setup-screen input');
+                            // add listener for auto-save
+                            inputs.forEach((input) => {
+                                input.addEventListener('change', saveWizardState);
+                                input.addEventListener('input', saveWizardState);
+                            });
+
+                            try {
+                                const res = await fetch('/api/wizard/state');
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data && data.state) {
+                                        const state = JSON.parse(data.state);
+                                        inputs.forEach((input, index) => {
+                                            if (input.type === 'checkbox') {
+                                                if (state['checkbox_' + index] !== undefined) {
+                                                    input.checked = state['checkbox_' + index];
+                                                }
+                                            } else {
+                                                if (state['input_' + index] !== undefined) {
+                                                    input.value = state['input_' + index];
+                                                }
+                                            }
+                                        });
+                                        return;
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to load state from server', e);
+                            }
+
+                            // Fallback to localStorage
+                            const saved = localStorage.getItem('ohc_wizard_state');
+                            if (saved) {
+                                try {
+                                    const state = JSON.parse(saved);
+                                    inputs.forEach((input, index) => {
+                                        if (input.type === 'checkbox') {
+                                            if (state['checkbox_' + index] !== undefined) {
+                                                input.checked = state['checkbox_' + index];
+                                            }
+                                        } else {
+                                            if (state['input_' + index] !== undefined) {
+                                                input.value = state['input_' + index];
+                                            }
+                                        }
+                                    });
+                                } catch (e) { console.error('Failed to parse wizard state', e); }
+                            }
+                        }
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            // Run setup logic after page load
+                            setTimeout(loadWizardState, 100);
+                        });
 
                         // Storefront Builder State & Logic
                         let storefrontDraftState = [
