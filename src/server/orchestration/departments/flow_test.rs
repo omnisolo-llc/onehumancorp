@@ -2,6 +2,7 @@
 mod tests {
     use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
     use crate::orchestration::departments::types::{DepartmentEvent};
+    use crate::orchestration::departments::operations_agent::OperationsAgent;
     use crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent;
     use crate::orchestration::departments::sales_agent::SalesAgent;
     use crate::orchestration::mesh::CentrifugeNode;
@@ -23,9 +24,11 @@ mod tests {
 
         let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
 
+        let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
         let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(orchestrator.clone())));
         let sales_agent = Arc::new(RwLock::new(SalesAgent::new(orchestrator.clone())));
 
+        orchestrator.register_department(ops_agent).await;
         orchestrator.register_department(cs_agent).await;
         orchestrator.register_department(sales_agent).await;
 
@@ -46,27 +49,36 @@ mod tests {
             }
         }
 
+        // Simulate new order event routing to Operations
         let event = DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
-            event_type: "tenant.message.received".to_string(),
-            payload: serde_json::json!({"message": "Do you make vegan cakes? How much?"}),
+            event_type: "tenant.quote.accepted".to_string(), // Operations agent subscribes to this
+            payload: serde_json::json!({"order_id": "12345"}),
         };
 
+        // Operations agent will automatically chain the Customer Success event
         let res = orchestrator.dispatch_event(event).await;
         assert!(res.is_ok());
 
         // Poll to allow async event handling to complete instead of sleep
-        let mut has_quote = false;
+        let mut has_ops_auto = false;
+        let mut has_cs_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let pending = orchestrator.get_pending_approvals(&tenant_id).await;
-            if pending.iter().any(|req| req.description.contains("Quote generated for review")) {
-                has_quote = true;
+            if pending.iter().any(|req| req.description.contains("Create order and booking")) {
+                has_ops_auto = true;
+            }
+            if pending.iter().any(|req| req.description.contains("Send personalized thank you")) {
+                has_cs_draft = true;
+            }
+            if has_ops_auto && has_cs_draft {
                 break;
             }
         }
 
-        assert!(has_quote, "Cross-department flow should result in a pending quote approval");
+        assert!(has_ops_auto, "Cross-department flow should result in an Operations task");
+        assert!(has_cs_draft, "Cross-department flow should result in a pending Customer Success approval");
     }
 }
