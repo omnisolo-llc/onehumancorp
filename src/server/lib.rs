@@ -3824,33 +3824,69 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const description = descInput ? descInput.value : '';
                             nextStep('generating');
                             try {
-                                const response = await fetch('/api/v1/builder/generate', {
+                                // 1. Process Intake
+                                const intakeRes = await fetch('/api/onboarding/intake', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ description })
                                 });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    currentSiteDraft = data;
+                                const intakeData = await intakeRes.json();
 
-                                    // Update storefrontDraftState
-                                    if (data.pages && data.pages.length > 0) {
-                                        storefrontDraftState = data.pages[0].blocks.map((b, i) => ({
-                                            id: 'ai-gen-' + i,
-                                            type: b.block_type,
-                                            content: b.content
-                                        }));
-                                    }
+                                // 2. Start Onboarding (Provisions tenant, catalog)
+                                const safeName = (intakeData.business_name || 'mystore').replace(/[^\w]/g, '').toLowerCase();
+                                const startRes = await fetch('/api/onboarding/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        business_type: intakeData.business_type || 'Online Store',
+                                        company_name: intakeData.business_name || 'My Store',
+                                        company_description: description,
+                                        selling_categories: intakeData.categories || [],
+                                        payment_pref: 'online',
+                                        admin_email: 'admin@' + safeName + '.com',
+                                        admin_name: 'Admin',
+                                        admin_password: 'password',
+                                        website_template: 'Modern',
+                                        first_product_name: intakeData.initial_products && intakeData.initial_products.length > 0 ? intakeData.initial_products[0].name : '',
+                                        first_product_price: intakeData.initial_products && intakeData.initial_products.length > 0 ? intakeData.initial_products[0].price : '0',
+                                        domain_choice: 'free',
+                                        price_type: 'fixed'
+                                    })
+                                });
+                                const startData = await startRes.json();
 
-                                    // Show builder screen directly
-                                    setTimeout(() => {
-                                        showScreen('storefront-builder-screen');
-                                        renderStorefrontPreview();
-                                    }, 2000); // Wait for the "generating" animation
-                                } else {
-                                    setTimeout(() => nextStep('launch-ai'), 2000);
-                                }
-                            } catch(e) {
+                                localStorage.setItem('tenant_id', startData.organization_id);
+
+                                // 3. Generate Storefront Draft
+                                const buildRes = await fetch('/api/v1/builder/generate', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ description })
+                                });
+                                const draftData = await buildRes.json();
+                                currentSiteDraft = draftData;
+
+                                // 4. Publish Draft automatically (live URL)
+                                const domainString = safeName + '.ohc.app';
+                                const publishRes = await fetch('/api/v1/builder/publish_draft', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        domain: domainString,
+                                        draft: draftData
+                                    })
+                                });
+
+                                // Show success screen directly
+                                setTimeout(() => {
+                                    nextStep('launch-ai');
+                                    showConfetti();
+                                }, 2000);
+                            } catch (e) {
                                 console.error(e);
                                 setTimeout(() => nextStep('launch-ai'), 2000);
                             }
