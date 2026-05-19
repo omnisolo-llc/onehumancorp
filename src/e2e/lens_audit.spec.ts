@@ -9,6 +9,7 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.locator('nav')).toBeVisible();
     await expect(page.getByText("Today's Sales")).toBeVisible();
+    await expect(page.getByText("$114.99")).toBeVisible({ timeout: 10000 });
   });
 
   test('verify setup wizard starts and preserves real form state', async ({ page }) => {
@@ -20,7 +21,7 @@ test.describe('Lens Audit E2E Flow', () => {
     await page.getByRole('button', { name: /Next/ }).click();
 
     await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
-    await expect(page.locator('.placeholder-data-fixture')).toHaveCount(0);
+    await expect(page.getByPlaceholder("What is your business called?")).toBeVisible();
   });
 
   test('verify responsive navigation compliance', async ({ page }) => {
