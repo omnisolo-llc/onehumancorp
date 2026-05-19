@@ -111,13 +111,13 @@ impl PubSubManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_pubsub_manager_standalone() {
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let manager = PubSubManager::new(transport, false);
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
@@ -147,7 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pubsub_manager_cloud() {
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let manager = PubSubManager::new(transport, true);
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
@@ -178,7 +178,7 @@ mod tests {
     #[tokio::test]
     async fn test_pubsub_manager_locking() {
         // Test Cloud Mode Locking
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let manager_cloud = PubSubManager::new(transport.clone(), true);
 
         // Acquire lock
@@ -201,7 +201,7 @@ mod tests {
         assert!(acquired_after_release);
 
         // Test Standalone Mode Locking
-        let transport_standalone = Arc::new(MemoryTransport::new());
+        let transport_standalone = Arc::new(InProcessTransport::new());
         let manager_standalone = PubSubManager::new(transport_standalone.clone(), false);
 
         let acquired_sa = manager_standalone.acquire_lock("tenant_x", "my_resource", "agent_1", 10).await.unwrap();
@@ -214,7 +214,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pubsub_manager_presence() {
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let manager_cloud = PubSubManager::new(transport.clone(), true);
 
         manager_cloud.register_presence("tenant_a", "agent_1", "online", 10).await.unwrap();
@@ -235,7 +235,7 @@ mod tests {
         // Because the underlying memory transport is the same, we expect it to
         // just return the cloud registered ones directly without stripping since we called from cloud manager,
         // so let's register specifically with standalone manager
-        let transport_sa = Arc::new(MemoryTransport::new());
+        let transport_sa = Arc::new(InProcessTransport::new());
         let manager_sa = PubSubManager::new(transport_sa.clone(), false);
 
         manager_sa.register_presence("tenant_x", "agent_x", "online", 10).await.unwrap();

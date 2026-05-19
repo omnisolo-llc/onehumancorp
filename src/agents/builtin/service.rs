@@ -914,13 +914,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_builtin_agent_task_assigned_subscribe() {
-        use crate::mesh::transport::MemoryTransport;
+        use crate::mesh::transport::InProcessTransport;
         use crate::mesh::transport::MeshTransport;
         use std::sync::Arc;
         use prost::Message;
         use crate::auth::AuthMode;
 
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let svc = Arc::new(AgentServiceImpl::new("test_agent", AgentConfig::default(), AuthMode::Disabled));
 
         crate::service::start_builtin_agent(transport.clone(), svc.clone()).await;
@@ -940,7 +940,7 @@ mod tests {
         let mut buf = Vec::new();
         let _ = shared_task.encode(&mut buf);
 
-        // The MemoryTransport internally executes local subscribers immediately.
+        // The InProcessTransport internally executes local subscribers immediately.
         // It's a bit tricky to assert side-effects of tokio::spawn inside without mocking the entire service,
         // but we verify the publish is correctly handled by the framework without crashing.
         let result = transport.publish("task.assigned", crate::mesh::transport::Message {
