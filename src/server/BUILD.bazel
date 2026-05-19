@@ -13,6 +13,8 @@ rust_library(
         "chaos.rs",
         "crypto.rs",
         "db.rs",
+        "db/models.rs",
+        "db/tenant_isolation_test.rs",
         "hub.rs",
         "lib.rs",
         "minimax.rs",

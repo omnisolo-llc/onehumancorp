@@ -1,3 +1,7 @@
+pub mod models;
+#[cfg(test)]
+mod tenant_isolation_test;
+
 use sqlx::PgPool;
 use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
 use sqlx::SqlitePool;
@@ -610,6 +614,80 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         mission_log TEXT
+                    );
+
+                    -- Unified Data Model Migration 005 for SQLite
+                    -- (Removing unified_ prefix to ensure parity with Postgres)
+                    CREATE TABLE IF NOT EXISTS tenants (
+                        id TEXT PRIMARY KEY,
+                        business_name TEXT NOT NULL,
+                        owner_email TEXT NOT NULL,
+                        subscription_tier TEXT NOT NULL DEFAULT 'free',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS products (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        price_cents INTEGER NOT NULL DEFAULT 0,
+                        stock_level INTEGER NOT NULL DEFAULT 0,
+                        is_active BOOLEAN NOT NULL DEFAULT 1,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        version INTEGER NOT NULL DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS customers (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        phone TEXT NOT NULL,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        version INTEGER NOT NULL DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS order_bookings (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        total_amount_cents INTEGER NOT NULL DEFAULT 0,
+                        scheduled_for TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        version INTEGER NOT NULL DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id, customer_id) REFERENCES customers(tenant_id, id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS order_items (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        order_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        quantity INTEGER NOT NULL DEFAULT 1,
+                        unit_price_cents INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id, order_id) REFERENCES order_bookings(tenant_id, id) ON DELETE CASCADE,
+                        FOREIGN KEY (tenant_id, product_id) REFERENCES products(tenant_id, id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_memories (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        department TEXT NOT NULL,
+                        context_summary TEXT NOT NULL,
+                        embedding BLOB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        version INTEGER NOT NULL DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
