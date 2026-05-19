@@ -203,7 +203,7 @@ impl McpService for MyMcpService {
                 let resp_payload = serde_json::to_string(&serde_json::json!({"status": "success"})).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
-            "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" => {
+            "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" | "fs_search_files" => {
                 match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
                     Ok(resp) => Ok(Response::new(resp)),
                     Err(e) => Err(e),
