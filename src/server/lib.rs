@@ -1735,9 +1735,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
+        .route("/website-builder", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
+        .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
@@ -1990,6 +1992,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
                             --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
                             --radius-sm: 8px;
+                            --radius-container: 16px;
                             --radius-md: 10px;
                         }
                         * {
@@ -2079,7 +2082,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             align-items: center;
                             padding: 0 13px;
                             border-radius: 8px;
-                            transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+                            transition: background 0.18s cubic-bezier(0.4, 0, 0.2, 1), color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         nav a:hover {
                             color: var(--primary);
@@ -2106,7 +2109,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 24px;
                         }
                         .card { 
-                            background: var(--surface-strong); 
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
@@ -2125,7 +2130,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
-                            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                            transition: border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         input:focus, textarea:focus, select:focus {
                             outline: none;
@@ -2148,7 +2153,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
-                            transition: transform 0.15s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+                            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -3880,10 +3885,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         first_product_name: firstProductName,
                                         first_product_price: firstProductPrice,
                                         website_template: websiteTemplate,
-                                        domain_choice: domainChoice
+                                        domain_choice: domainChoice,
+                                        admin_email: "",
+                                        admin_name: "",
+                                        admin_password: "",
+                                        price_type: "fixed",
+                                        payment_pref: "online"
                                     };
 
-                                    const res = await fetch('/api/v1/app/onboarding', {
+                                    const res = await fetch('/api/onboarding/start', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify(payload)
