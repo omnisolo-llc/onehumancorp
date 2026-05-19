@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { SmartBlock } from "./components";
+import { Tooltip, useWalkthrough } from "../../components/help";
 
 export default function BuilderPage() {
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
+  const { startWalkthrough } = useWalkthrough();
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -43,30 +45,46 @@ export default function BuilderPage() {
         <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
           <div className="p-8 flex flex-col flex-1 justify-center">
             <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
-            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+            <p className="text-gray-500 text-sm mb-4 leading-relaxed">
               Tell us about your business in a few words, and we'll magically generate your storefront in seconds.
             </p>
 
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business</label>
-            <textarea
-              className="w-full border border-gray-300 p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-gray-800"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="e.g. I run a mobile dog grooming service in Portland"
-              rows={4}
-            />
-
             <button
-              className={`w-full p-4 rounded-xl font-bold font-outfit text-lg transition-all ${
-                bio.trim().length > 5
-                  ? "bg-gray-900 text-white hover:bg-gray-800 shadow-md active:scale-[0.98]"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
-              }`}
-              onClick={handleGenerate}
-              disabled={bio.trim().length <= 5}
+              onClick={() => startWalkthrough([
+                { targetId: "bio-input", message: "Start by entering a description of your business. The more detail, the better the AI can build your store." },
+                { targetId: "generate-btn", message: "Click here when you're ready, and we will generate your store for you!" }
+              ])}
+              className="mb-8 text-blue-600 font-bold text-sm bg-blue-50 py-2 px-4 rounded-full self-start hover:bg-blue-100 transition-colors"
             >
-              Build My Storefront
+              Take a tour
             </button>
+
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business</label>
+            <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+              <textarea
+                id="bio-input"
+                className="w-full border border-gray-300 p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-gray-800"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="e.g. I run a mobile dog grooming service in Portland"
+                rows={4}
+              />
+            </Tooltip>
+
+            <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+              <button
+                id="generate-btn"
+                className={`w-full p-4 rounded-xl font-bold font-outfit text-lg transition-all ${
+                  bio.trim().length > 5
+                    ? "bg-gray-900 text-white hover:bg-gray-800 shadow-md active:scale-[0.98]"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+                onClick={handleGenerate}
+                disabled={bio.trim().length <= 5}
+              >
+                Build My Storefront
+              </button>
+            </Tooltip>
           </div>
         </div>
       </div>
