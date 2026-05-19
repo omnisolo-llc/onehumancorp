@@ -3321,6 +3321,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 el.innerHTML = innerHtml;
                                 container.appendChild(el);
                             });
+
+                            const footer = document.createElement('div');
+                            footer.className = 'builder-block powered-by-footer';
+                            footer.style.textAlign = 'center';
+                            footer.style.padding = '16px';
+                            footer.style.marginTop = '24px';
+                            footer.style.backgroundColor = 'transparent';
+                            footer.style.border = 'none';
+                            footer.style.boxShadow = 'none';
+                            footer.innerHTML = `<a href="ohc://join?ref=storefront" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
+                            container.appendChild(footer);
                         }
 
                         function toggleRearrangeMode() {
