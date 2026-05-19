@@ -85,6 +85,7 @@ pkg_deb(
 )
 
 pkg_rpm(
+    release = "1",
     name = "ohc_rpm",
     description = "One Human Corp application bundle",
     license = "Apache-2.0",
