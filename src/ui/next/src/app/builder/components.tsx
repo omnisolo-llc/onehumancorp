@@ -68,5 +68,24 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     );
   }
 
+  if (type === "FooterBranding") {
+    return (
+      <div className="p-6 bg-gray-100 font-inter text-center border-t border-gray-200">
+        <a
+          href={`https://ohc.store?ref=${props.refId || 'poweredby'}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow border border-gray-200 text-gray-700 text-sm font-medium"
+        >
+          <span className="opacity-70">Powered by</span>
+          <span className="font-bold font-outfit text-blue-600">OHC</span>
+          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </a>
+      </div>
+    );
+  }
+
   return null;
 }

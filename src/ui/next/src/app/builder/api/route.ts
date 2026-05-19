@@ -37,6 +37,12 @@ export async function POST(req: Request) {
         email: "hello@example.com",
         phone: "(555) 123-4567"
       }
+    },
+    {
+      type: "FooterBranding",
+      props: {
+        refId: "automated_builder"
+      }
     }
   ];
 
