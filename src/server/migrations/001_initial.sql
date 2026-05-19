@@ -63,6 +63,17 @@ CREATE TABLE IF NOT EXISTS agent_missions (
     synced_to_cloud BOOLEAN DEFAULT false
 );
 
+CREATE TABLE IF NOT EXISTS tool_integrations (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    api_url TEXT,
+    integration_code TEXT,
+    status TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS agent_status (
     agent_id TEXT PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
@@ -212,6 +223,9 @@ CREATE POLICY tenant_isolation_revoked_tokens ON revoked_tokens USING (tenant_id
 
 ALTER TABLE agent_missions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_agent_missions ON agent_missions USING (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE tool_integrations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_tool_integrations ON tool_integrations USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE agent_status ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_agent_status ON agent_status USING (tenant_id::text = current_setting('app.current_tenant', true));
