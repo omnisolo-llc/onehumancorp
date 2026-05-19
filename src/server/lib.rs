@@ -1985,11 +1985,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text-secondary);
                         }
                         .glass {
-                            background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            background: rgba(255, 255, 255, 0.65);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2023,7 +2023,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             display: inline-flex;
                             align-items: center;
                             padding: 0 13px;
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                             transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
                         }
                         nav a:hover {
@@ -2043,7 +2043,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         .card { 
                             background: var(--surface-strong); 
                             padding: 24px; 
-                            border-radius: var(--radius-md); 
+                            border-radius: 16px;
                             margin-bottom: 18px; 
                             border: 1px solid var(--border);
                             box-shadow: var(--shadow-sm);
@@ -2055,7 +2055,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-bottom: 16px; 
                             background: rgba(255,255,255,0.94); 
                             border: 1px solid var(--border); 
-                            border-radius: var(--radius-sm); 
+                            border-radius: 8px;
                             color: var(--text); 
                             font-size: 14px;
                             font-family: inherit;
@@ -2074,7 +2074,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 10px 18px;
                             background: var(--primary); 
                             border: 1px solid transparent; 
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                             color: white; 
                             font-weight: 600; 
                             cursor: pointer; 
@@ -2111,7 +2111,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: linear-gradient(90deg, #eef2f7 25%, #dce5ef 50%, #eef2f7 75%);
                             background-size: 200% 100%;
                             animation: shimmer 1.5s infinite;
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                         }
                         @keyframes shimmer {
                             0% { background-position: 200% 0; }
@@ -2169,7 +2169,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 6px 8px;
                             margin: 0;
                             min-width: 64px;
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                             box-shadow: none;
                         }
                         .nav-item:hover {
@@ -2221,7 +2221,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .builder-block {
                             padding: 22px;
-                            border-radius: var(--radius-md);
+                            border-radius: 16px;
                             cursor: pointer;
                         }
                         .bottom-sheet {
@@ -3299,6 +3299,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         let currentStep = 1;
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
+
+                            if (stepId !== "generating" && typeof stepId !== "undefined") {
+                                try {
+
+                                    const stateData = { step: stepId };
+                                    document.querySelectorAll('input').forEach(input => {
+                                        if (input.placeholder && input.value) {
+                                            stateData[input.placeholder] = input.value;
+                                        }
+                                    });
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const userId = localStorage.getItem('user_id') || 'test-user';
+                                    fetch('/api/onboarding/state', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-Tenant-ID': tenantId,
+                                            'X-User-ID': userId
+                                        },
+                                        body: JSON.stringify(stateData)
+                                    }).catch(console.error);
+                                } catch (e) {}
+                            }
                             if (prevStep === 3 && parseInt(stepId) === 4) {
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
@@ -3524,11 +3547,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
-                        window.onload = () => {
+                        window.onload = async () => {
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
+
+                            if (screenId === 'setup-screen') {
+                                try {
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const userId = localStorage.getItem('user_id') || 'test-user';
+                                    const res = await fetch('/api/onboarding/state', {
+                                        headers: {
+                                            'X-Tenant-ID': tenantId,
+                                            'X-User-ID': userId
+                                        }
+                                    });
+                                    if (res.ok) {
+                                        const data = await res.json();
+                                        if (data.step && data.step > 1) {
+                                            // Restore form inputs
+                                            document.querySelectorAll('input').forEach(input => {
+                                                if (input.placeholder && data[input.placeholder]) {
+                                                    input.value = data[input.placeholder];
+                                                }
+                                            });
+                                            nextStep(data.step);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to load state', e);
+                                }
+                            }
                         };
                     </script>
                 </body>
