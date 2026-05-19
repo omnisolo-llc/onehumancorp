@@ -21,7 +21,21 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Connect Custom Domain/ }).click();
     await page.getByRole('button', { name: /Next/ }).click();
+
+    const requestPromise = page.waitForRequest(request =>
+      request.url().includes('/api/v1/app/onboarding') && request.method() === 'POST'
+    );
+
     await page.getByRole('button', { name: /Publish my business/ }).click();
+
+    const request = await requestPromise;
+    const postData = JSON.parse(request.postData() || '{}');
+
+    expect(postData.business_type).not.toBe('');
+    expect(postData.company_name).toBe('Alex Art');
+    expect(postData.first_product_name).toBe('Portrait Session');
+    expect(postData.first_product_price).toBe('120');
+    expect(postData.website_template).toBe('Modern');
 
     await expect(page.getByText('Your business is now live!')).toBeVisible();
   });
