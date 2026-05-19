@@ -17,14 +17,21 @@ export default function BuilderPage() {
     setStatus("generating");
 
     try {
-      const response = await fetch('/builder/api', {
+      const response = await fetch('/api/v1/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio })
+        body: JSON.stringify({ description: bio })
       });
 
       const data = await response.json();
-      setBlocks(data.blocks);
+      const blocks = data.pages[0].blocks.map((b: any) => ({
+        type: b.block_type === 'HeroBlock' ? 'Hero' :
+              b.block_type === 'ProductGridBlock' ? 'Catalog' :
+              b.block_type === 'ServiceBookingBlock' ? 'Booking' :
+              b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
+        props: b.content
+      }));
+      setBlocks(blocks);
       setStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -32,13 +39,51 @@ export default function BuilderPage() {
     }
   };
 
-  const handleLaunch = () => {
-    // Simulate background provisioning of subdomain and SSL
-    setTimeout(() => {
-      setStatus("live");
-      const subdomain = bio.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
-      setLiveUrl(`https://${subdomain || 'myshop'}.ohc.store`);
-    }, 1500);
+  const handleLaunch = async () => {
+    try {
+      const draftBlocks = blocks.map((b, i) => ({
+        block_type: b.type === 'Hero' ? 'HeroBlock' :
+                    b.type === 'Catalog' ? 'ProductGridBlock' :
+                    b.type === 'Booking' ? 'ServiceBookingBlock' :
+                    b.type === 'Testimonials' ? 'TestimonialBlock' : b.type,
+        content: b.props,
+        sort_order: i
+      }));
+
+      // In a more complete implementation, we'd store the SiteDraft returned from generate,
+      // but for now we construct a minimal valid draft payload preserving current blocks.
+      const payload = {
+          domain: null,
+          draft: {
+              domain: null,
+              pages: [{
+                  path: '/',
+                  title: 'Home',
+                  blocks: draftBlocks,
+                  seo_metadata: {
+                    "@context": "https://schema.org",
+                    "@type": "LocalBusiness",
+                    "name": bio
+                  }
+              }]
+          }
+      };
+
+      const response = await fetch('/api/v1/builder/publish_draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStatus("live");
+        setLiveUrl(`https://${data.domain || 'myshop'}.ohc.store`);
+      } else {
+        console.error('Failed to publish');
+      }
+    } catch (error) {
+      console.error('Error publishing:', error);
+    }
   };
 
   if (status === "idle") {
