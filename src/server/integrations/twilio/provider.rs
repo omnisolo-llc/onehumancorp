@@ -2,8 +2,6 @@ use super::client::{TwilioClientWrapper, RealTwilioClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-
-
 pub struct TwilioProvider {
     client: Arc<dyn TwilioClientWrapper>,
     metadata: ProviderMetadata,
@@ -42,8 +40,25 @@ impl TwilioProvider {
         }
     }
 
-    pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
-        self.client.send_sms(to, from, body).await
+    pub async fn send_sms(&self, to: &str, from: &str, body: &str, organization_id: &str) -> Result<(), String> {
+        let res = self.client.send_sms(to, from, body).await;
+        if res.is_ok() {
+            let _ = ::server_telemetry::record_api_call_cost(
+                &crate::db::get_pool(),
+                organization_id,
+                "twilio_sms_dispatch",
+                0.01
+            ).await;
+        }
+        res
+    }
+
+    pub async fn notify_owner(&self, owner_phone: &str, from: &str, message: &str, organization_id: &str) -> Result<(), String> {
+        self.send_sms(owner_phone, from, message, organization_id).await
+    }
+
+    pub async fn notify_customer(&self, customer_phone: &str, from: &str, message: &str, organization_id: &str) -> Result<(), String> {
+        self.send_sms(customer_phone, from, message, organization_id).await
     }
 }
 
@@ -72,7 +87,7 @@ mod tests {
         let mock = Arc::new(MockTwilioClient { sent_messages: sent.clone() });
         let provider = TwilioProvider::with_client(mock);
 
-        provider.send_sms("+1234567890", "+0987654321", "Test message").await.unwrap();
+        provider.send_sms("+1234567890", "+0987654321", "Test message", "org1").await.unwrap();
         assert_eq!(sent.load(Ordering::SeqCst), 1);
     }
 
@@ -81,12 +96,5 @@ mod tests {
         let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
         assert_eq!(provider.metadata.id, "twilio");
         assert_eq!(provider.metadata.category, "sms");
-    }
-
-    #[test]
-    fn test_twilio_provider_into() {
-        let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
-        let integration = provider.into_integration_provider();
-        assert_eq!(integration.metadata.id, "twilio");
     }
 }

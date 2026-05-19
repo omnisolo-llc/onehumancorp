@@ -13,3 +13,8 @@ pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
 pub mod chromadb;
+pub mod ayrshare;
+pub mod calcom;
+pub mod listmonk;
+pub mod easypost;
+pub mod jitsi;
