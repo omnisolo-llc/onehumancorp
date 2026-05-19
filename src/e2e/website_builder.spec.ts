@@ -31,22 +31,12 @@ test.describe('Website Builder Full E2E', () => {
     const input = page.locator('#step-ai input');
     await input.fill('I am a baker');
 
-    // Setup API interception
-    await page.route('/api/v1/builder/generate', async route => {
-        const json = {
-            pages: [{
-                blocks: [
-                    { block_type: 'HeroBlock', content: { headline: 'Fresh Cakes', subtitle: 'Yum' } }
-                ]
-            }]
-        };
-        await route.fulfill({ json });
-    });
-
     await page.getByRole('button', { name: 'Generate Storefront →' }).click();
 
-    // Wait for mock backend parsing
-    await expect(page.locator('#builder-preview-container')).toContainText('Fresh Cakes', { timeout: 10000 });
+    // Wait for real backend parsing and generation
+    await expect(page.locator('#builder-preview-container')).toBeVisible({ timeout: 20000 });
+    const contentText = await page.locator('#builder-preview-container').innerText();
+    expect(contentText.length).toBeGreaterThan(0);
   });
 
   test('publishes storefront with generated payload', async ({ page }) => {
@@ -57,17 +47,15 @@ test.describe('Website Builder Full E2E', () => {
     await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
     await page.getByPlaceholder('mybusiness').fill('baked-goods');
 
-    await page.route('/api/v1/builder/publish_draft', async route => {
-        await route.fulfill({ json: { domain: 'baked-goods.ohc.app' } });
-    });
-
     const requestPromise = page.waitForRequest('/api/v1/builder/publish_draft');
     await page.getByRole('button', { name: 'Publish' }).click();
     const requestBody = (await requestPromise).postDataJSON();
 
     expect(requestBody).toBeDefined();
     expect(requestBody.domain).toBe('baked-goods');
-    expect(requestBody.draft.pages[0].blocks[0].block_type).toBe('HeroBlock');
+    // Ensure that draft contains some pages and blocks
+    expect(requestBody.draft.pages.length).toBeGreaterThan(0);
+    expect(requestBody.draft.pages[0].blocks.length).toBeGreaterThan(0);
   });
 
   test('verifies block edits update optimistic UI', async ({ page }) => {

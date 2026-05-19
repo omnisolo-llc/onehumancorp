@@ -1,3 +1,4 @@
+use crate::minimax::MinimaxClient;
 use axum::{
     extract::Extension,
     extract::{Path, State},
@@ -302,82 +303,67 @@ async fn generate_storefront(
 ) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
     let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    // Mock Agent generation based on description keywords
-    let desc = payload.description.to_lowercase();
-    let mut pages = Vec::new();
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let client = MinimaxClient::new(api_key);
 
-    if desc.contains("baker") || desc.contains("cake") {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Freshly Baked", "subtitle": "Delicious Cakes"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "ProductGridBlock".to_string(),
-                    content: serde_json::json!({"items": ["Custom Cake", "Cupcakes"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "Bakery",
-                "name": "Custom Bakery"
-            }),
-        });
-    } else if desc.contains("handyman") {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Expert Handyman", "subtitle": "Reliable Service"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "ServiceBookingBlock".to_string(),
-                    content: serde_json::json!({"services": ["Plumbing", "Electrical"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "HomeAndConstructionBusiness",
-                "name": "Handyman Services"
-            }),
-        });
-    } else {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Welcome", "subtitle": "Our Services"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "TestimonialBlock".to_string(),
-                    content: serde_json::json!({"testimonials": ["Great service!"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "LocalBusiness",
-                "name": "Local Business"
-            }),
-        });
+    let system_prompt = r#"
+You are an expert web designer AI. Your task is to generate a JSON structure for a website based on a description.
+The JSON must perfectly match this schema and be returned inside a ```json``` code block:
+{
+  "domain": null,
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "blocks": [
+        {
+          "block_type": "HeroBlock",
+          "content": {"headline": "...", "subtitle": "..."},
+          "sort_order": 0
+        },
+        {
+          "block_type": "ProductGridBlock",
+          "content": {"items": ["...", "..."]},
+          "sort_order": 1
+        }
+      ],
+      "seo_metadata": {
+        "@context": "https://schema.org",
+        "@type": "...",
+        "name": "..."
+      }
     }
+  ]
+}
+Allowed block types: "HeroBlock", "ProductGridBlock", "ContactFormBlock", "BookingCalendarBlock", "ServiceBookingBlock", "TestimonialBlock".
+Make the design specific to the user description.
+"#;
+    let prompt = format!("{}
+User Description: {}", system_prompt, payload.description);
 
-    Ok(Json(SiteDraft {
-        domain: None,
-        pages,
-    }))
+    let ai_res = client.reason(&prompt).await.map_err(|e| {
+        tracing::error!("LLM Error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Extract JSON block
+    let json_str = if let Some(start) = ai_res.find("```json") {
+        let after_start = &ai_res[start + 7..];
+        if let Some(end) = after_start.find("```") {
+            &after_start[..end]
+        } else {
+            after_start
+        }
+    } else {
+        &ai_res
+    };
+
+    let draft: SiteDraft = serde_json::from_str(json_str.trim()).map_err(|e| {
+        tracing::error!("Failed to parse LLM JSON: {}. LLM Response: {}", e, ai_res);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(draft))
 }
 
 async fn publish_draft(
