@@ -1176,7 +1176,20 @@ impl Agent {
 
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
-            // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
+                    // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
+        if final_cfg.enable_harness_thickness_optimization {
+            let mut model_is_powerful = false;
+            let powerful_models = vec!["claude-3-5-sonnet", "gpt-4o", "gemini-1.5-pro"];
+            for pm in powerful_models {
+                if final_cfg.model.contains(pm) {
+                    model_is_powerful = true;
+                    break;
+                }
+            }
+            if model_is_powerful {
+                final_messages.push(crate::types::Message::user("[Harness Thickness Optimization Active] This model is sufficiently powerful to internalize planning. Skip explicit scratchpad planning and output tool calls directly."));
+            }
+        }
             if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") {
                 final_cfg.enable_llmcompiler_plan_and_execute = false;
                 final_cfg.server_system_message = final_cfg.server_system_message.replace("You must think step by step and make a detailed plan.", "");
