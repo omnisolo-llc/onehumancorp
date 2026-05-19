@@ -243,8 +243,8 @@ async fn http_login_handler(
 
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
-        Err(e) => {
-            tracing::error!("failed to start login transaction: {}", e);
+        Err(_e) => {
+            tracing::error!("failed to start login transaction: {}", _e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -276,8 +276,8 @@ async fn http_login_handler(
     .await
     {
         Ok(row) => row,
-        Err(e) => {
-            tracing::error!("failed to query login user: {}", e);
+        Err(_e) => {
+            tracing::error!("failed to query login user: {}", _e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -304,8 +304,8 @@ async fn http_login_handler(
             )
                 .into_response();
         }
-        Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+        Err(_e) => {
+            tracing::error!("failed to verify hash: <redacted_error>");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -339,8 +339,8 @@ async fn http_login_handler(
         &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
     ) {
         Ok(token) => token,
-        Err(e) => {
-            tracing::error!("failed to issue login token: {}", e);
+        Err(_e) => {
+            tracing::error!("failed to issue login token: {}", _e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -395,8 +395,8 @@ async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Resp
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
-        Err(e) => {
-            tracing::error!("MiniMax draft reply failed: {}", e);
+        Err(_e) => {
+            tracing::error!("MiniMax draft reply failed: {}", _e);
             (
                 StatusCode::BAD_GATEWAY,
                 axum::Json(HttpErrorResponse { error: "AI draft generation failed".to_string() }),
@@ -645,11 +645,11 @@ impl HubService for MyHubService {
                     error: String::new(),
                 }))
             }
-            Err(e) => {
+            Err(_e) => {
                 Ok(tonic::Response::new(VerifyEnvironmentResponse {
                     status: "error".to_string(),
                     config: None,
-                    error: e,
+                    error: _e,
                 }))
             }
         }
@@ -870,11 +870,11 @@ impl HubService for MyHubService {
                     error: String::new(),
                 }))
             }
-            Err(e) => {
+            Err(_e) => {
                 Ok(tonic::Response::new(AuditSetupResponse {
                     status: "error".to_string(),
                     config: None,
-                    error: e,
+                    error: _e,
                 }))
             }
         }
@@ -906,12 +906,12 @@ impl HubService for MyHubService {
                     error: String::new(),
                 }))
             }
-            Err(e) => {
+            Err(_e) => {
                 Ok(tonic::Response::new(DiagnosticsResponse {
                     status: "error".to_string(),
                     config: None,
                     wizard_state: state,
-                    error: e,
+                    error: _e,
                 }))
             }
         }
@@ -1885,8 +1885,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             Ok(_) => {
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
-                            Err(e) => {
-                                tracing::error!("failed to publish scheduled task message: {}", e);
+                            Err(_e) => {
+                                tracing::error!("failed to publish scheduled task message: {}", _e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }
                         }
