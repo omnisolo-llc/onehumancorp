@@ -12,6 +12,60 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub }
     }
 
+
+    pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
+        let org_id = tenant_id.to_string(); // In OHC architecture tenant_id is typically the same as org_id here, or just binding the same
+
+        let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4, $5) \
+             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
+                 updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(tenant_id)
+        .bind(tenant_id) // using tenant_id as organization_id for simplicity as auth_utils expect it
+        .bind(user_id)
+        .bind(current_step)
+        .bind(state_json)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    pub async fn get_onboarding_state(&self, tenant_id: &str) -> Result<serde_json::Value, String> {
+        let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+        use sqlx::Row;
+        let row = sqlx::query(
+            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1"
+        )
+        .bind(tenant_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if let Some(record) = row {
+            let mut state: serde_json::Value = record.get("state_json");
+            let current_step: i32 = record.get("current_step");
+            if let Some(obj) = state.as_object_mut() {
+                obj.insert("step".to_string(), serde_json::json!(current_step));
+            }
+            Ok(state)
+        } else {
+            Ok(serde_json::json!({ "step": 0 }))
+        }
+    }
+
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
