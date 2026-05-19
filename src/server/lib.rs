@@ -2928,7 +2928,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
                             { id: 'b2', type: 'Product Grid', content: { title: 'Featured Products', count: 4 } },
                             { id: 'b3', type: 'Service List', content: { title: 'Our Services' } },
-                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } }
+                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } },
+                            { id: 'b-footer', type: 'Footer', content: { text: 'Powered by OHC' } }
                         ];
                         let rearrangeMode = false;
                         let activeBlockId = null;
@@ -2955,6 +2956,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         innerHtml += `<p><strong>${block.content.title}</strong></p><p>${block.content.subtitle}</p><button class="secondary">${block.content.cta}</button>`;
                                     } else if (block.type === 'Product Grid') {
                                         innerHtml += `<p>${block.content.title} (${block.content.count} items)</p>`;
+                                    } else if (block.type === 'Footer') {
+                                        innerHtml += `<p><a href="ohc://join?ref=DEFAULT&utm_source=storefront_footer" style="text-decoration:none; color:var(--primary); font-weight:bold;">⚡ ${block.content.text}</a></p>`;
                                     } else {
                                         innerHtml += `<p>${block.content.title || block.content.text}</p>`;
                                     }
