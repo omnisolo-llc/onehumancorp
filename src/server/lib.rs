@@ -2040,6 +2040,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         #dashboard-screen {
                             max-width: 1180px;
                         }
+
+                        .ohc-growth-card {
+                            backdrop-filter: blur(20px) saturate(200%);
+                            background: rgba(255, 255, 255, 0.05);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            font-family: 'Outfit', 'Inter', sans-serif;
+                            color: #ffffff;
+                            border-radius: 12px;
+                            padding: 24px;
+                        }
                         .card { 
                             background: var(--surface-strong); 
                             padding: 24px; 
@@ -2395,7 +2405,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
                         <h1>Referral Dashboard</h1>
-                        <div class="card glass">
+                        <div class="ohc-growth-card">
+                            <h3>Bridge to Cloud</h3>
+                            <p>Invite your team to collaborate in the Cloud while keeping your Standalone data private.</p>
                             <h3>Your Referral Link</h3>
                             <p id="referral-link">ohc://join?ref=DEFAULT</p>
                             <button onclick="alert('Copied!')">Copy</button>
