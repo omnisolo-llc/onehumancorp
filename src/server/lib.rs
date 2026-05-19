@@ -3690,6 +3690,40 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
+                        async function resumeWizardState() {
+                            const tenantId = localStorage.getItem('tenant_id');
+                            if (!tenantId) return;
+                            try {
+                                const res = await fetch('/api/onboarding/state', {
+                                    headers: {
+                                        'X-Tenant-ID': tenantId
+                                    }
+                                });
+                                if (res.ok) {
+                                    const saved = await res.json();
+                                    if (saved && saved.step && saved.step > 1 && saved.step < 100) {
+                                        // Restore inputs
+                                        document.querySelectorAll('#setup-screen input').forEach(input => {
+                                            if (input.placeholder && saved[input.placeholder]) {
+                                                input.value = saved[input.placeholder];
+                                            }
+                                        });
+
+                                        // Restore checkboxes
+                                        const cats = saved.categories || [];
+                                        document.querySelectorAll('#step-4 input[type="checkbox"]').forEach((cb, idx) => {
+                                            const text = cb.parentElement.textContent.replace(/[^\w\s]/gi, '').trim();
+                                            if (cats.includes(text)) cb.checked = true;
+                                        });
+
+                                        nextStep(saved.step);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to resume wizard state', e);
+                            }
+                        }
+
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
 
@@ -3697,11 +3731,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 try {
 
                                     const stateData = { step: stepId };
-                                    document.querySelectorAll('input').forEach(input => {
+                                    document.querySelectorAll('#setup-screen input[type="text"], #setup-screen input[type="email"], #setup-screen input[type="password"]').forEach(input => {
                                         if (input.placeholder && input.value) {
                                             stateData[input.placeholder] = input.value;
                                         }
                                     });
+                                    const cats = [];
+                                    document.querySelectorAll('#step-4 input[type="checkbox"]:checked').forEach(cb => {
+                                        cats.push(cb.parentElement.textContent.replace(/[^\w\s]/gi, '').trim());
+                                    });
+                                    stateData.categories = cats;
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
                                     const userId = localStorage.getItem('user_id') || 'test-user';
                                     fetch('/api/onboarding/state', {
@@ -3873,7 +3912,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 suppressInputSelectors(screen, false);
                                 // Auto-advance wizard if nested and needed
                                 if (id === 'setup-screen') {
-                                    nextStep(currentStep || 1);
+                                    resumeWizardState().then(() => {
+                                        if (currentStep === 1) nextStep(1);
+                                    });
                                 }
                             }
                             setMainNavLabels(id);
