@@ -31,12 +31,12 @@ jobs:
       matrix:
         include:
           - name: linux-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             bazel_config: linux
             archive_name: ohc-x86_64-unknown-linux-gnu.tar.gz
             install_linux_deps: true
           - name: windows-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             bazel_config: windows
             archive_name: ohc-x86_64-pc-windows-gnu.zip
             install_linux_deps: true
@@ -138,7 +138,7 @@ jobs:
             patterns: "*.dmg"
             install_linux_deps: false
           - name: linux-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             bundles: deb,rpm
             patterns: "*.deb *.rpm"
             install_linux_deps: true
@@ -270,7 +270,7 @@ jobs:
       matrix:
         include:
           - name: android
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             targets: "//src/ui/tauri:tauri_android_apk //src/ui/tauri:tauri_android_aab"
             patterns: "*.apk *.aab"
           - name: ios
@@ -373,7 +373,7 @@ jobs:
 
   build-server-web-image:
     name: Build server web image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -432,7 +432,7 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - build-release-artifacts
       - build-desktop-installers
@@ -484,7 +484,7 @@ jobs:
 
   push-docker:
     name: Push container images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
