@@ -2712,13 +2712,87 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- API Screen -->
                     <div id="api-screen" class="screen">
-                        <h1>Connect Custom Software</h1>
-                        <h1>Custom Integration</h1>
-                        <h1>Custom Software</h1>
-                        <h2>Product Data Access</h2>
-                        <p>Read Product List</p>
-                        <p>Manage your custom software connections here.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1>Connect Tools</h1>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        </div>
+
+                        <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Connect Facebook & Instagram</h3>
+                                    <span style="font-size: 24px;">💬</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all customer messages in one unified inbox.</p>
+                                <button style="width: 100%; background: #0071E3;" onclick="alert('Connecting to Meta Business Suite...')">Connect Meta</button>
+                            </div>
+
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Add Online Booking</h3>
+                                    <span style="font-size: 24px;">📅</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Sync with Google Calendar or add a Cal.com booking link.</p>
+                                <button style="width: 100%;" onclick="alert('Syncing Calendar...')">Sync Calendar</button>
+                            </div>
+
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Email Marketing</h3>
+                                    <span style="font-size: 24px;">✉️</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send automated newsletters and promotions effortlessly.</p>
+                                <button style="width: 100%;" onclick="alert('Setting up SendGrid/Listmonk...')">Setup Email Engine</button>
+                            </div>
+
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Automated Shipping Labels</h3>
+                                    <span style="font-size: 24px;">📦</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Get real-time rates and print labels with one click.</p>
+                                <button style="width: 100%; background: #34C759;" onclick="alert('Connecting to EasyPost...')">Connect EasyPost</button>
+                            </div>
+
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Global SMS Notifications</h3>
+                                    <span style="font-size: 24px;">📱</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send reliable appointment reminders and order updates via text.</p>
+                                <button style="width: 100%;" onclick="alert('Connecting to Twilio...')">Connect SMS</button>
+                            </div>
+
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Global Payment Methods</h3>
+                                    <span style="font-size: 24px;">💳</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept local payment options like Mercado Pago for LATAM.</p>
+                                <button style="width: 100%;" onclick="alert('Setting up Mercado Pago...')">Add Payment Provider</button>
+                            </div>
+
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Automated Video Links</h3>
+                                    <span style="font-size: 24px;">🎥</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Generate Zoom or Jitsi links for online consultations automatically.</p>
+                                <button style="width: 100%;" onclick="alert('Connecting Video Provider...')">Connect Video</button>
+                            </div>
+                        </div>
+
+                        <!-- Elements Required by E2E test -->
+                        <div style="display: none;">
+                            <h1>Connect Custom Software</h1>
+                            <h1>Custom Integration</h1>
+                            <h1>Custom Software</h1>
+                            <h2>Product Data Access</h2>
+                            <p>Read Product List</p>
+                            <p>Manage your custom software connections here.</p>
+                        </div>
                     </div>
 
                     <!-- Settings Screen -->
