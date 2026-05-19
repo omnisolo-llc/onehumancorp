@@ -7,6 +7,11 @@ exports_files([
     "ts_proto_wrapper.js",
 ])
 
+toolchain_type(
+    name = "gradle_toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
 # Hermetic ts-proto wrapper that correctly resolves dependencies in the sandbox
 js_binary(
     name = "ts_proto_wrapper",
