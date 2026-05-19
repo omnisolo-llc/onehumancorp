@@ -23,7 +23,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByRole('button', { name: /Next/ }).click();
 
     const requestPromise = page.waitForRequest(request =>
-      request.url().includes('/api/v1/app/onboarding') && request.method() === 'POST'
+      request.url().includes('/api/onboarding/start') && request.method() === 'POST'
     );
 
     await page.getByRole('button', { name: /Publish my business/ }).click();
