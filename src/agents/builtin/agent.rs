@@ -161,57 +161,52 @@ impl AgentProgress {
 // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
 // 5. Conversation History (happens at run loop)
 
-pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> String {
-    let mut current_dir = start_dir.to_path_buf();
-    let mut contents = Vec::new();
-    let mut max_depth = 50;
-
-    loop {
-        let agent_file = current_dir.join("AGENTS.md");
-        if agent_file.exists() && agent_file.is_file() {
-            if let Ok(content) = tokio::fs::read_to_string(&agent_file).await {
-                contents.push(content);
-            }
-        }
-
-        if !current_dir.pop() || max_depth == 0 {
-            break;
-        }
-        max_depth -= 1;
-    }
-
-    // Order: more deeply-nested files take precedence
-    let mut combined = String::new();
-    for (i, content) in contents.iter().enumerate() {
-        if i > 0 {
-            combined.push_str("\n\n---\n\n");
-        }
-        combined.push_str(content);
-    }
-
-    let max_bytes = 32 * 1024;
-    if combined.len() > max_bytes {
-        let mut end_idx = max_bytes;
-        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
-            end_idx -= 1;
-        }
-        combined.truncate(end_idx);
-        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
-    }
-
-    combined
-}
+// load_cascading_agents_md was made synchronous and integrated into build_hierarchical_system_prompt
 
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
+    let mut full_user_instructions = String::new();
+    let mut agents_md_content = String::new();
+    if let Some(path_str) = &cfg.workspace_path {
+        let path = std::path::Path::new(path_str);
+        let path_to_use = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        let mut paths_to_check = Vec::new();
+        let mut current = Some(path_to_use.as_path());
+
+        while let Some(p) = current {
+            paths_to_check.push(p.to_path_buf());
+            current = p.parent();
+        }
+
+        paths_to_check.reverse();
+
+        for p in paths_to_check {
+            let agents_file = p.join("AGENTS.md");
+            if let Ok(file_content) = std::fs::read_to_string(&agents_file) {
+                if !agents_md_content.is_empty() {
+                    agents_md_content.push_str("\n\n");
+                }
+                agents_md_content.push_str(&format!("--- Content from {} ---\n{}", agents_file.display(), file_content.trim()));
+            }
+        }
+    }
+
+    if !agents_md_content.is_empty() {
+        full_user_instructions.push_str(&agents_md_content);
+        if !cfg.user_instructions.is_empty() {
+            full_user_instructions.push_str("\n\n");
+        }
+    }
+    full_user_instructions.push_str(&cfg.user_instructions);
+
     let mut end_idx = 32768;
-    if cfg.user_instructions.len() > 32768 {
-        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+    if full_user_instructions.len() > 32768 {
+        while end_idx > 0 && !full_user_instructions.is_char_boundary(end_idx) {
             end_idx -= 1;
         }
     } else {
-        end_idx = cfg.user_instructions.len();
+        end_idx = full_user_instructions.len();
     }
-    let user_instr = &cfg.user_instructions[..end_idx];
+    let user_instr = &full_user_instructions[..end_idx];
 
     let mut combined_system = String::new();
 
@@ -1167,26 +1162,7 @@ impl Agent {
 
         let mut final_cfg = cfg.clone();
 
-        // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
-        if let Some(ref wp) = final_cfg.workspace_path {
-            let start_dir = std::path::Path::new(wp);
-            let cascading_md = load_cascading_agents_md(start_dir).await;
-            if !cascading_md.is_empty() {
-                if !final_cfg.user_instructions.is_empty() {
-                    final_cfg.user_instructions = format!("{}\n\n{}", cascading_md, final_cfg.user_instructions);
-                } else {
-                    final_cfg.user_instructions = cascading_md;
-                }
-            }
-        }
-
-        let mut end_idx = 32768;
-        if final_cfg.user_instructions.len() > 32768 {
-            while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            final_cfg.user_instructions.truncate(end_idx);
-        }
+        // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB) is now handled in build_hierarchical_system_prompt
 
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
@@ -2416,44 +2392,53 @@ mod tests {
         );
     }
 
+
+
     #[tokio::test]
-    async fn test_cascading_agents_md() {
+    async fn test_cascading_agents_md_prompt_builder() {
         use tempfile::tempdir;
-        use tokio::fs;
+        use std::fs;
 
         let root_dir = tempdir().unwrap();
         let sub_dir = root_dir.path().join("sub");
         let deep_dir = sub_dir.join("deep");
 
-        fs::create_dir_all(&deep_dir).await.unwrap();
+        fs::create_dir_all(&deep_dir).unwrap();
 
         let root_md = root_dir.path().join("AGENTS.md");
         let sub_md = sub_dir.join("AGENTS.md");
         let deep_md = deep_dir.join("AGENTS.md");
 
-        fs::write(&root_md, "Root level instructions").await.unwrap();
-        fs::write(&sub_md, "Sub level instructions").await.unwrap();
-        fs::write(&deep_md, "Deep level instructions").await.unwrap();
+        fs::write(&root_md, "Root level instructions").unwrap();
+        fs::write(&sub_md, "Sub level instructions").unwrap();
+        fs::write(&deep_md, "Deep level instructions").unwrap();
 
-        let combined = crate::agent::load_cascading_agents_md(&deep_dir).await;
+        let mut cfg = AgentRunConfig::default();
+        cfg.workspace_path = Some(deep_dir.to_str().unwrap().to_string());
+        cfg.user_instructions = "Final user specific request".to_string();
 
-        // Since it loops from deep to root, the deeper files are collected first.
-        // The results should be: Deep -> Sub -> Root.
-        assert!(combined.contains("Deep level instructions"));
-        assert!(combined.contains("Sub level instructions"));
-        assert!(combined.contains("Root level instructions"));
+        let prompt = crate::agent::build_hierarchical_system_prompt(&cfg, &[]);
 
-        let parts: Vec<&str> = combined.split("\n\n---\n\n").collect();
-        assert_eq!(parts.len(), 3);
-        assert_eq!(parts[0], "Deep level instructions");
-        assert_eq!(parts[1], "Sub level instructions");
-        assert_eq!(parts[2], "Root level instructions");
+        // It goes from root down to deep, so Root -> Sub -> Deep -> User request
+        assert!(prompt.contains("Root level instructions"));
+        assert!(prompt.contains("Sub level instructions"));
+        assert!(prompt.contains("Deep level instructions"));
+        assert!(prompt.contains("Final user specific request"));
+
+        let root_pos = prompt.find("Root level instructions").unwrap();
+        let sub_pos = prompt.find("Sub level instructions").unwrap();
+        let deep_pos = prompt.find("Deep level instructions").unwrap();
+        let user_pos = prompt.find("Final user specific request").unwrap();
+
+        assert!(root_pos < sub_pos);
+        assert!(sub_pos < deep_pos);
+        assert!(deep_pos < user_pos);
     }
 
     #[tokio::test]
-    async fn test_load_cascading_agents_md_truncation() {
+    async fn test_load_cascading_agents_md_truncation_prompt_builder() {
         use tempfile::tempdir;
-        use tokio::fs;
+        use std::fs;
 
         let root_dir = tempdir().unwrap();
         let root_path = root_dir.path();
@@ -2461,15 +2446,23 @@ mod tests {
         let root_md = root_path.join("AGENTS.md");
         // Create an AGENTS.md that is slightly over 32 KiB
         let large_content = "A".repeat(33000);
-        fs::write(&root_md, large_content).await.unwrap();
+        fs::write(&root_md, large_content).unwrap();
 
-        let combined = crate::agent::load_cascading_agents_md(root_path).await;
+        let mut cfg = AgentRunConfig::default();
+        cfg.workspace_path = Some(root_path.to_str().unwrap().to_string());
+        cfg.user_instructions = "Final specific user request.".to_string();
 
-        // Verify the size is close to 32KiB + notice
-        assert!(combined.len() <= 32 * 1024 + 100); // 32768 + the length of the system notice
-        assert!(combined.ends_with("[System: AGENTS.md content truncated to 32KiB limit.]"));
+        let prompt = crate::agent::build_hierarchical_system_prompt(&cfg, &[]);
+
+        let user_block = prompt.split("[User Instructions]\n").nth(1).unwrap();
+
+        // Verify the user block size is exactly 32KiB
+        assert_eq!(user_block.len(), 32 * 1024);
+
+        // Final specific user request should NOT be present because it's past the 32KiB boundary
+        // given that the AGENTS.md file alone is 33000 bytes, which comes first.
+        assert!(!prompt.contains("Final specific user request."));
     }
-
 
     #[tokio::test]
     async fn test_harness_thickness_optimization() {
