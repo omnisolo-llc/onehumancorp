@@ -12,7 +12,6 @@ test.describe('Onboarding Guide E2E Journey', () => {
 
     // 2. Business Type
     await page.click('text="Online Store"');
-    await page.click('button:has-text("Next →")');
 
     // 3. Company Info
     await page.fill('input[placeholder="What is your business called?"]', 'Journey Shop');

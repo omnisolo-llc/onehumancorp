@@ -1921,16 +1921,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <!DOCTYPE html>
             <html>
                 <head>
+                    <meta charset="utf-8">
                     <title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #006fff;
+                            --primary: #0066FF;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
-                            --accent-green: #15a46f;
-                            --accent-orange: #f59e0b;
+                            --accent-green: #34C759;
+                            --accent-red: #FF3B30;
+                            --accent-orange: #FF9500;
                             --bg: #eef1f5;
                             --surface: rgba(255, 255, 255, 0.86);
                             --surface-strong: #ffffff;
@@ -1985,11 +1987,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text-secondary);
                         }
                         .glass {
-                            background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            background: rgba(255, 255, 255, 0.65);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                        }
+                        @media (prefers-color-scheme: dark) {
+                            .glass {
+                                background: rgba(22, 22, 26, 0.7);
+                                border: 1px solid rgba(255, 255, 255, 0.1);
+                            }
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2023,7 +2031,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             display: inline-flex;
                             align-items: center;
                             padding: 0 13px;
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                             transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
                         }
                         nav a:hover {
@@ -2043,10 +2051,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         .card { 
                             background: var(--surface-strong); 
                             padding: 24px; 
-                            border-radius: var(--radius-md); 
+                            border-radius: 16px;
                             margin-bottom: 18px; 
                             border: 1px solid var(--border);
                             box-shadow: var(--shadow-sm);
+                        }
+                        .card.glass {
+                            border-radius: 16px;
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -2055,12 +2066,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-bottom: 16px; 
                             background: rgba(255,255,255,0.94); 
                             border: 1px solid var(--border); 
-                            border-radius: var(--radius-sm); 
+                            border-radius: 8px;
                             color: var(--text); 
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
-                            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                            transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         input:focus, textarea:focus, select:focus {
                             outline: none;
@@ -2074,7 +2085,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 10px 18px;
                             background: var(--primary); 
                             border: 1px solid transparent; 
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                             color: white; 
                             font-weight: 600; 
                             cursor: pointer; 
@@ -2083,7 +2094,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
-                            transition: transform 0.15s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+                            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -2111,7 +2122,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: linear-gradient(90deg, #eef2f7 25%, #dce5ef 50%, #eef2f7 75%);
                             background-size: 200% 100%;
                             animation: shimmer 1.5s infinite;
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                         }
                         @keyframes shimmer {
                             0% { background-position: 200% 0; }
@@ -2146,6 +2157,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         @media (max-width: 768px) {
                             #mobile-bottom-nav { display: flex; }
+                        @media (max-width: 375px) {
+                            .screen {
+                                padding: 16px 12px 108px;
+                            }
+                            h1 {
+                                font-size: 24px;
+                                margin-bottom: 16px;
+                            }
+                            button {
+                                width: 100%;
+                                margin-right: 0;
+                                margin-bottom: 12px;
+                            }
+                        }
                             main { padding-bottom: 92px; }
                             nav {
                                 overflow-x: auto;
@@ -2169,7 +2194,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 6px 8px;
                             margin: 0;
                             min-width: 64px;
-                            border-radius: var(--radius-sm);
+                            border-radius: 8px;
                             box-shadow: none;
                         }
                         .nav-item:hover {
@@ -2221,7 +2246,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .builder-block {
                             padding: 22px;
-                            border-radius: var(--radius-md);
+                            border-radius: 16px;
                             cursor: pointer;
                         }
                         .bottom-sheet {
@@ -2302,7 +2327,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Create an account</h1>
                         <p>Create an account to start your business</p>
                         <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
+                        <input type="password" aria-label="Password" placeholder="Password" />
                         <button onclick="handleSignup(this)">Sign Up</button>
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
@@ -2749,80 +2774,80 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            <button aria-label="Start My Business Next" onclick="nextStep(2)">🚀 Start My Business Next</button>
+                            <button aria-label="Instant Build AI" class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" />
-                            <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <input type="text" aria-label="Business type" placeholder="Business type" />
+                            <button aria-label="Next" onclick="nextStep(3)">Next →</button>
+                            <button aria-label="Online Store" class="secondary" onclick="nextStep(3)">🛒 <span>Online Store</span></button>
+                            <button aria-label="Service Business" class="secondary" onclick="nextStep(3)">🛠️ <span>Service Business</span></button>
+                            <button aria-label="Restaurant / Food" class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
+                            <button aria-label="Creative" class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
+                            <button aria-label="Local Business" class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
+                            <br/><button aria-label="Back" class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                            <input type="text" aria-label="What is your business called?" placeholder="What is your business called?" />
+                            <input type="text" aria-label="Business name example" placeholder="e.g. Maya's Cakes" />
+                            <button aria-label="Generate Description" onclick="nextStep('generating')">Generate Description</button>
+                            <button aria-label="Next" onclick="nextStep(4)">Next →</button>
+                            <button aria-label="Back" class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> 📦 Physical products</label>
-                            <label><input type="checkbox"> Digital Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
-                            <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <label><input type="checkbox" aria-label="Physical Products"> Physical Products</label>
+                            <label><input type="checkbox" aria-label="📦 Physical products"> 📦 Physical products</label>
+                            <label><input type="checkbox" aria-label="Digital Products"> Digital Products</label>
+                            <label><input type="checkbox" aria-label="Services"> Services / Appointments</label>
+                            <label><input type="checkbox" aria-label="Subscriptions"> Subscriptions</label>
+                            <br/><button aria-label="Next" onclick="nextStep(5)">Next →</button>
+                            <button aria-label="Back" class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                            <input type="text" aria-label="Product Name" placeholder="What is the name of this product?" />
+                            <input type="text" aria-label="Product Price" placeholder="0.00" />
+                            <button aria-label="Generate AI Description" onclick="nextStep('generating')">Generate AI Description</button>
+                            <button aria-label="Next" onclick="nextStep(6)">Next →</button>
+                            <button aria-label="Back" class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                            <button aria-label="Online" class="secondary" onclick="nextStep(7)">Online</button>
+                            <button aria-label="Both Online & In-person" class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <br/><button aria-label="Back" class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
+                            <input type="text" aria-label="Name" placeholder="e.g. Maya Smith" />
+                            <input type="email" aria-label="Email" placeholder="you@email.com" />
+                            <input type="password" aria-label="Password" placeholder="Password" />
+                            <button aria-label="Next" onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="selectWizardOption(this)">Modern</button>
-                            <button class="secondary" onclick="selectWizardOption(this)">Bold</button>
-                            <button onclick="nextStep(9)">Next →</button>
+                            <button aria-label="Modern" class="secondary" onclick="selectWizardOption(this)">Modern</button>
+                            <button aria-label="Bold" class="secondary" onclick="selectWizardOption(this)">Bold</button>
+                            <button aria-label="Next" onclick="nextStep(9)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="selectWizardOption(this)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="selectWizardOption(this)">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)">Next →</button>
+                            <button aria-label="Free OHC Domain" class="secondary" onclick="selectWizardOption(this)">🌐 Free OHC Domain</button>
+                            <button aria-label="Connect Custom Domain" class="secondary" onclick="selectWizardOption(this)">🔗 Connect Custom Domain</button>
+                            <button aria-label="Next" onclick="nextStep(10)">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)"><span>Publish my business</span> <span>→</span></button>
+                            <button aria-label="Publish my business" onclick="nextStep(100)"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button aria-label="View Welcome Checklist" onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
+                            <button aria-label="Launch My Business" onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
                         <div id="checklist-screen" class="screen">
@@ -2839,7 +2864,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button aria-label="Back" class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
@@ -2913,7 +2938,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="login-error" class="error">Oops! We couldn't sign you in. Please double-check your email and password, then try again.</div>
                         <input type="email" placeholder="Email or Username" />
                         <div class="password-row">
-                            <input type="password" placeholder="Password" />
+                            <input type="password" aria-label="Password" placeholder="Password" />
                             <button type="button" class="secondary" onclick="const input = this.previousElementSibling; input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? 'Show' : 'Hide';">Show</button>
                         </div>
                         <button onclick="handleLogin(this)">Login Sign In</button>
@@ -3205,11 +3230,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
                                 if (!hasCompanyName) {
+                                    let err = document.getElementById('step-3-error');
+                                    if (!err) {
+                                        err = document.createElement('div');
+                                        err.id = 'step-3-error';
+                                        err.className = 'error';
+                                        err.textContent = 'Please enter a business name.';
+                                        document.getElementById('step-3').insertBefore(err, document.getElementById('step-3').querySelector('button'));
+                                    }
+                                    err.style.display = 'block';
                                     return;
+                                } else {
+                                    const err = document.getElementById('step-3-error');
+                                    if (err) err.style.display = 'none';
                                 }
                             }
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
                                 currentStep = parseInt(stepId);
+                                localStorage.setItem('wizardStep', currentStep);
+                            } else if (stepId === 'generating') {
+                                localStorage.setItem('wizardStep', stepId);
                             }
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
@@ -3394,7 +3434,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         window.onload = () => {
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
-                            const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                            let screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            const savedStep = localStorage.getItem('wizardStep');
+                            if (savedStep && screenId === 'setup-screen') {
+                                const stepNum = parseInt(savedStep);
+                                if (!isNaN(stepNum)) {
+                                    currentStep = stepNum;
+                                } else if (savedStep === 'generating') {
+                                    currentStep = savedStep;
+                                }
+                            }
+
                             showScreen(screenId);
                         };
                     </script>
