@@ -2879,11 +2879,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" />
                             <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
@@ -2914,8 +2914,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="nextStep(7)">Online</button>
-                            <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
+                            <button class="secondary" onclick="setPaymentPref('online')">Online</button>
+                            <button class="secondary" onclick="setPaymentPref('both')">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
                         <div id="step-7" style="display: none;">
@@ -2927,19 +2927,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="selectWizardOption(this)">Modern</button>
-                            <button class="secondary" onclick="selectWizardOption(this)">Bold</button>
+                            <button class="secondary" onclick="setTemplate('Modern', this)">Modern</button>
+                            <button class="secondary" onclick="setTemplate('Bold', this)">Bold</button>
                             <button onclick="nextStep(9)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="selectWizardOption(this)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="selectWizardOption(this)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)">🔗 Connect Custom Domain</button>
                             <button onclick="nextStep(10)">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
-                            <button onclick="nextStep(100)"><span>Publish my business</span> <span>→</span></button>
+                            <button onclick="publishBusiness(this)"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
@@ -3511,7 +3511,97 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             btn.textContent = 'Sign Up';
                         }
 
+
+                        let onboardingState = {
+                            business_type: '',
+                            payment_pref: 'online',
+                            website_template: 'Modern',
+                            domain_choice: 'subdomain'
+                        };
+
+                        function setBusinessType(type) {
+                            onboardingState.business_type = type;
+                            nextStep(3);
+                        }
+
+                        function setPaymentPref(pref) {
+                            onboardingState.payment_pref = pref;
+                            nextStep(7);
+                        }
+
+                        function setTemplate(template, btn) {
+                            onboardingState.website_template = template;
+                            selectWizardOption(btn);
+                        }
+
+                        function setDomainChoice(choice, btn) {
+                            onboardingState.domain_choice = choice;
+                            selectWizardOption(btn);
+                        }
+
+                        async function publishBusiness(btn) {
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = 'Publishing...';
+                            btn.disabled = true;
+
+                            try {
+                                const companyName = document.querySelectorAll('#step-3 input[type="text"]')[0].value || '';
+                                const companyDesc = document.querySelectorAll('#step-3 input[type="text"]')[1].value || '';
+
+                                const categoryInputs = document.querySelectorAll('#step-4 input[type="checkbox"]');
+                                const sellingCategories = [];
+                                if (categoryInputs[0] && categoryInputs[0].checked) sellingCategories.push('physical');
+                                if (categoryInputs[1] && categoryInputs[1].checked) sellingCategories.push('physical');
+                                if (categoryInputs[2] && categoryInputs[2].checked) sellingCategories.push('digital');
+                                if (categoryInputs[3] && categoryInputs[3].checked) sellingCategories.push('services');
+                                if (categoryInputs[4] && categoryInputs[4].checked) sellingCategories.push('subscriptions');
+
+                                const firstProductName = document.querySelectorAll('#step-5 input[type="text"]')[0].value || '';
+                                const firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1].value || '';
+
+                                const adminName = document.querySelectorAll('#step-7 input[type="text"]')[0].value || '';
+                                const adminEmail = document.querySelectorAll('#step-7 input[type="email"]')[0].value || '';
+                                const adminPassword = document.querySelectorAll('#step-7 input[type="password"]')[0].value || '';
+
+                                const payload = {
+                                    business_type: onboardingState.business_type,
+                                    company_name: companyName,
+                                    company_description: companyDesc,
+                                    selling_categories: sellingCategories,
+                                    payment_pref: onboardingState.payment_pref,
+                                    admin_email: adminEmail,
+                                    admin_name: adminName,
+                                    admin_password: adminPassword,
+                                    website_template: onboardingState.website_template,
+                                    first_product_name: firstProductName,
+                                    first_product_price: firstProductPrice,
+                                    domain_choice: onboardingState.domain_choice,
+                                    price_type: 'fixed'
+                                };
+
+                                const res = await fetch('/api/onboarding/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+
+                                if (res.ok) {
+                                    nextStep(100);
+                                } else {
+                                    console.error('Failed to publish business');
+                                    alert('Failed to publish business. Please try again.');
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert('Error publishing business.');
+                            } finally {
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                            }
+                        }
+
                         let currentStep = 1;
+
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
 
