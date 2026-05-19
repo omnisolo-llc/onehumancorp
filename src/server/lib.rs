@@ -231,20 +231,15 @@ struct HttpSalesResponse {
 
 async fn http_sales_handler(
     db: std::sync::Arc<db::DB>,
-    req: axum::extract::Request,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
-    if auth_header.is_none() {
+    if headers.get("authorization").is_none() {
         return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
     }
-
-    let payload = match axum::extract::Json::<HttpSalesRequest>::from_request(req, &()).await {
-        Ok(json) => json.0,
-        Err(_) => return (StatusCode::BAD_REQUEST, "Invalid payload").into_response(),
-    };
 
     let tenant_id = payload.tenant_id;
     let sales: f64 = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
@@ -1736,6 +1731,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+    let db_for_sales = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
@@ -1818,8 +1814,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/api/v1/dashboard/sales",
             axum::routing::post({
-                let db = db_for_login.clone();
-                move |req| async move { http_sales_handler(db, req).await }
+                let db = db_for_sales.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
