@@ -29,16 +29,21 @@ async fn start_onboarding(
 }
 
 async fn get_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
+    State(agent): State<Arc<OnboardingAgent>>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    Ok(Json(serde_json::json!({
-        "state": "{}"
-    })))
+    match agent.get_state("temp-tenant", "temp-user").await {
+        Ok(state) => Ok(Json(state)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 async fn save_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    Ok(axum::http::StatusCode::NO_CONTENT)
+    let step = payload.get("currentStep").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+    match agent.save_state("temp-tenant", "temp-user", step, payload).await {
+        Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }

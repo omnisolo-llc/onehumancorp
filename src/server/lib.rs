@@ -1921,28 +1921,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>OneHuman Corp</title>
+                    <meta charset="UTF-8"><title>OneHuman Corp</title>
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
-                            color-scheme: light;
-                            --primary: #006fff;
+                            color-scheme: light dark;
+                            --primary: #0066FF;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
                             --accent-green: #15a46f;
                             --accent-orange: #f59e0b;
                             --bg: #eef1f5;
-                            --surface: rgba(255, 255, 255, 0.86);
+                            --surface: rgba(255, 255, 255, 0.65);
                             --surface-strong: #ffffff;
                             --sidebar-bg: rgba(248, 250, 252, 0.92);
                             --text: #111827;
                             --text-secondary: #657083;
                             --text-tertiary: #8a94a6;
-                            --border: rgba(16, 24, 40, 0.1);
+                            --border: rgba(255, 255, 255, 0.4);
                             --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
                             --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
                             --radius-sm: 8px;
-                            --radius-md: 10px;
+                            --radius-md: 16px;
                         }
                         * {
                             box-sizing: border-box;
@@ -1986,10 +1986,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            border: 1px solid var(--border);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2841,12 +2841,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="generateAI()">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
+
+
                         <div id="step-generating" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
-                                <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
                                 <p>Our AI is crafting a custom experience for your brand.</p>
-                                <div class="shimmer" style="height: 200px; width: 100%; margin-top: 32px;"></div>
+
+                                <div style="margin: 32px 0; background: rgba(0,0,0,0.05); height: 8px; border-radius: 4px; overflow: hidden;">
+                                    <div id="gen-progress" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s ease;"></div>
+                                </div>
+
+                                <div style="display: grid; gap: 12px; text-align: left; max-width: 400px; margin: 0 auto;">
+                                    <div class="shimmer" style="height: 20px; width: 100%;"></div>
+                                    <div class="shimmer" style="height: 20px; width: 90%;"></div>
+                                    <div class="shimmer" style="height: 20px; width: 95%;"></div>
+                                </div>
+
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
@@ -3198,15 +3209,56 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             btn.textContent = 'Sign Up';
                         }
 
-                        let currentStep = 1;
+                        let currentStep = 1; let onboardingData = {}; async function saveOnboardingState() { const data = { currentStep, ...onboardingData }; localStorage.setItem("ohc_onboarding_state", JSON.stringify(data)); try { await fetch("/api/onboarding/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }); } catch (e) { console.warn("Failed to sync state to server:", e); } }
+
+                        function validateStep(step) {
+                            const err = document.getElementById('setup-error');
+                            if (err) err.style.display = 'none';
+
+                            if (step === 3) {
+                                const name = onboardingData['What is your business called?'] || onboardingData['e.g. Maya's Cakes'];
+                                if (!name || name.trim().length < 2) {
+                                    if (err) {
+                                        err.textContent = "Please give your business a name (at least 2 characters) so we can start building.";
+                                        err.style.display = 'block';
+                                    } else {
+                                        alert("Please give your business a name (at least 2 characters) so we can start building.");
+                                    }
+                                    return false;
+                                }
+                            }
+                            if (step === 7) {
+                                const email = onboardingData['you@email.com'];
+                                if (!email || !email.includes('@')) {
+                                    if (err) {
+                                        err.textContent = "Please enter a valid email address to create your account.";
+                                        err.style.display = 'block';
+                                    } else {
+                                        alert("Please enter a valid email address to create your account.");
+                                    }
+                                    return false;
+                                }
+                            }
+                            return true;
+                        }
+
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
-                            if (prevStep === 3 && parseInt(stepId) === 4) {
-                                const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
-                                if (!hasCompanyName) {
-                                    return;
-                                }
+
+                            const currentDiv = document.getElementById('step-' + prevStep);
+                            if (currentDiv) {
+                                currentDiv.querySelectorAll('input, select, textarea').forEach(input => {
+                                    if (input.type === 'checkbox') {
+                                        if (!onboardingData[input.name || input.id]) onboardingData[input.name || input.id] = [];
+                                        if (input.checked) onboardingData[input.name || input.id].push(input.value || input.nextSibling?.textContent?.trim());
+                                    } else {
+                                        onboardingData[input.name || input.id || input.placeholder] = input.value;
+                                    }
+                                });
+                            }
+
+                            if (typeof stepId === 'number' && stepId > prevStep) {
+                                if (!validateStep(prevStep)) return;
                             }
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
                                 currentStep = parseInt(stepId);
@@ -3224,35 +3276,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 next.style.display = 'block';
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
-                                // Ensure nested elements are also visible for Playwright
                                 Array.from(next.children).forEach(child => {
                                     if (child.style.display === 'none') child.style.display = 'block';
                                 });
                             }
 
+                            await saveOnboardingState();
+
                             if (stepId === 'generating') {
-                                // Premium transition simulation to provide perceived value
-                                await new Promise(resolve => setTimeout(resolve, 2000));
+                                const progressBar = document.getElementById('gen-progress');
+                                let progress = 0;
+                                const interval = setInterval(() => {
+                                    progress += Math.random() * 15;
+                                    if (progress > 95) {
+                                        progress = 95;
+                                        clearInterval(interval);
+                                    }
+                                    if (progressBar) progressBar.style.width = progress + '%';
+                                }, 500);
+
+                                await new Promise(resolve => setTimeout(resolve, 3000));
+                                clearInterval(interval);
+                                if (progressBar) progressBar.style.width = '100%';
 
                                 if (prevStep === 3 || prevStep === 5) {
-                                    nextStep(prevStep);
+                                    nextStep(prevStep + 1);
                                     return;
                                 }
 
                                 try {
-                                    const res = await fetch('/api/v1/app/onboarding', {
+                                    await fetch('/api/v1/builder/generate', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({})
+                                        body: JSON.stringify({ prompt: onboardingData['Describe your business...'] || 'A new small business' })
                                     });
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
+                                    nextStep('launch-ai');
                                 } catch (e) {
-                                    console.error(e);
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
+                                    nextStep('launch-ai');
                                 }
                             }
                         }
