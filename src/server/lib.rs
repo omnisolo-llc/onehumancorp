@@ -2350,8 +2350,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 600px;
@@ -2362,6 +2362,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -2703,6 +2705,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         Require approval for quotes > $100
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
                                     </label>
+                                    <div style="margin-top: 12px;">
+                                        <p style="font-size: 14px; margin-bottom: 4px;">Tone Tuning</p>
+                                        <select id="tone-tuning-select" style="width: 100%; padding: 8px; border-radius: 8px;" onclick="event.stopPropagation()" onchange="updateToneSetting('ambassador', this.value)">
+                                            <option value="friendly">Friendly & Casual</option>
+                                            <option value="professional">Professional</option>
+                                            <option value="humorous">Humorous</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2741,6 +2751,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function updateApprovalSetting(deptId, isChecked) {
                             console.log(`Updated setting for ${deptId}: require approval = ${isChecked}`);
                             alert(`Settings updated for ${deptId}.`);
+                        }
+
+                        function updateToneSetting(deptId, tone) {
+                            console.log(`Updated tone setting for ${deptId}: tone = ${tone}`);
+                            alert(`Tone updated to ${tone} for ${deptId}.`);
                         }
                     </script>
 
@@ -3781,6 +3796,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
                                 if (!valid) {
                                     alert('Please enter a product or service');
+                                    return false;
+                                }
+                            }
+                            if (stepId === 8 && currentStep === 7) {
+                                const inputs = document.querySelectorAll('#step-7 input');
+                                let allValid = true;
+                                inputs.forEach(inp => {
+                                    if (inp.value.trim().length === 0) {
+                                        allValid = false;
+                                    }
+                                });
+                                if (!allValid) {
+                                    alert('Please fill out all account fields');
                                     return false;
                                 }
                             }
