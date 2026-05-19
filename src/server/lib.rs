@@ -2409,6 +2409,152 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             }
         }
 
+
+                        /* Tooltip & Walkthrough CSS */
+                        .ohc-tooltip-container {
+                            position: relative;
+                            display: inline-block;
+                        }
+                        .ohc-tooltip {
+                            visibility: hidden;
+                            background-color: #333;
+                            color: #fff;
+                            text-align: center;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            position: absolute;
+                            z-index: 1000;
+                            bottom: 125%; /* Position above the element */
+                            left: 50%;
+                            transform: translateX(-50%);
+                            opacity: 0;
+                            transition: opacity 0.3s;
+                            font-size: 13px;
+                            white-space: nowrap;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        }
+                        .ohc-tooltip::after {
+                            content: "";
+                            position: absolute;
+                            top: 100%;
+                            left: 50%;
+                            margin-left: -5px;
+                            border-width: 5px;
+                            border-style: solid;
+                            border-color: #333 transparent transparent transparent;
+                        }
+                        .ohc-tooltip.visible {
+                            visibility: visible;
+                            opacity: 1;
+                        }
+
+                        #walkthrough-overlay {
+                            position: fixed;
+                            top: 0; left: 0; right: 0; bottom: 0;
+                            background: rgba(0,0,0,0.5);
+                            z-index: 2000;
+                            display: none;
+                            pointer-events: none;
+                        }
+                        .walkthrough-highlight {
+                            position: absolute;
+                            box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+                            border-radius: 8px;
+                            z-index: 2001;
+                            pointer-events: none;
+                            background: transparent;
+                        }
+                        #walkthrough-bubble {
+                            position: absolute;
+                            background: white;
+                            padding: 16px;
+                            border-radius: 8px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+                            z-index: 2002;
+                            width: 250px;
+                            display: none;
+                            pointer-events: auto;
+                        }
+                        #walkthrough-bubble h3 { margin-top: 0; color: var(--primary); font-size: 16px; }
+                        #walkthrough-bubble p { font-size: 14px; margin: 8px 0 16px 0; }
+                        #walkthrough-bubble .actions { display: flex; justify-content: space-between; }
+                        #walkthrough-bubble button { padding: 6px 12px; font-size: 13px; }
+
+                        #ai-help-chat-btn {
+                            position: fixed;
+                            bottom: 24px;
+                            right: 24px;
+                            width: 56px;
+                            height: 56px;
+                            border-radius: 50%;
+                            background: var(--primary);
+                            color: white;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 24px;
+                            box-shadow: 0 4px 12px rgba(0,111,255,0.4);
+                            cursor: pointer;
+                            z-index: 900;
+                            border: none;
+                            transition: transform 0.2s;
+                        }
+                        #ai-help-chat-btn:hover {
+                            transform: scale(1.05);
+                        }
+                        #ai-help-chat-window {
+                            position: fixed;
+                            bottom: 90px;
+                            right: 24px;
+                            width: 320px;
+                            height: 400px;
+                            background: white;
+                            border-radius: 12px;
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+                            z-index: 900;
+                            display: none;
+                            flex-direction: column;
+                            overflow: hidden;
+                        }
+                        #ai-help-chat-window .header {
+                            background: var(--primary);
+                            color: white;
+                            padding: 16px;
+                            font-weight: 600;
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        #ai-help-chat-window .header button {
+                            background: transparent;
+                            border: none;
+                            color: white;
+                            cursor: pointer;
+                            font-size: 16px;
+                            padding: 0;
+                        }
+                        #ai-help-chat-window .messages {
+                            flex: 1;
+                            padding: 16px;
+                            overflow-y: auto;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 12px;
+                        }
+                        .chat-message { padding: 10px 12px; border-radius: 8px; font-size: 14px; max-width: 85%; }
+                        .chat-message.ai { background: var(--bg); align-self: flex-start; }
+                        .chat-message.user { background: var(--primary-soft); color: var(--primary); align-self: flex-end; }
+                        .chat-message a { color: var(--primary); text-decoration: none; font-weight: 500; display: block; margin-top: 6px; }
+                        #ai-help-chat-window .input-area {
+                            padding: 12px;
+                            border-top: 1px solid var(--border);
+                            display: flex;
+                            gap: 8px;
+                        }
+                        #ai-help-chat-window input {
+                            flex: 1;
+                            margin: 0;
+                        }
+
                     </style>
                 </head>
                 <body>
@@ -2495,11 +2641,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button onclick="alert('Help Center')">Help Center</button>
+                            <button onclick="showScreen('help-center-screen')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
-                            <button onclick="alert('Tutorial started')">Video Tutorials</button>
+                            <button onclick="showScreen('video-tutorials-screen')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
-                            <button onclick="alert(&quot;What's New&quot;)">What's New</button>
+                            <button onclick="showScreen('whats-new-screen')">What's New</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -2694,7 +2840,279 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" style="margin-top: 20px;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+
+                    <!-- Help Center Screen -->
+                    <div id="help-center-screen" class="screen">
+                        <h1>Help Center</h1>
+                        <input type="text" placeholder="Search for help..." style="margin-bottom: 20px;" />
+                        <div class="card glass">
+                            <h2>Getting Started</h2>
+                            <a href='#' onclick="alert('Article: How to set up your store'); return false;">How to set up your store</a><br><br>
+                            <a href='#' onclick="alert('Article: Understanding the Dashboard'); return false;">Understanding the Dashboard</a>
+                        </div>
+                        <div class="card glass">
+                            <h2>My Store</h2>
+                            <a href='#' onclick="alert('Article: Adding products'); return false;">Adding products</a><br><br>
+                            <a href='#' onclick="alert('Article: Managing inventory'); return false;">Managing inventory</a>
+                        </div>
+                        <div class="card glass">
+                            <h2>Payments</h2>
+                            <a href='#' onclick="alert('Article: Accepting your first payment'); return false;">Accepting your first payment</a><br><br>
+                            <a href='#' onclick="alert('Article: Payouts explained'); return false;">Payouts explained</a>
+                        </div>
+                        <div class="card glass">
+                            <h2>AI Agents</h2>
+                            <a href='#' onclick="alert('Article: Activating your AI Support Agent'); return false;">Activating your AI Support Agent</a><br><br>
+                            <a href='#' onclick="alert('Article: What can AI agents do?'); return false;">What can AI agents do?</a>
+                        </div>
+                        <div class="card glass">
+                            <h2>Marketing & Account</h2>
+                            <a href='#' onclick="alert('Article: Marketing basics'); return false;">Marketing basics</a><br><br>
+                            <a href='#' onclick="alert('Article: Account & Billing settings'); return false;">Account & Billing settings</a>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Video Tutorials Screen -->
+                    <div id="video-tutorials-screen" class="screen">
+                        <h1>Video Tutorials</h1>
+                        <p>Short (&lt; 90 second) tutorial videos for common tasks.</p>
+                        <div class="card glass" style="margin-bottom: 20px;">
+                            <div style="background: #ccc; height: 200px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <span>▶️ How to add a product (1:15)</span>
+                            </div>
+                        </div>
+                        <div class="card glass" style="margin-bottom: 20px;">
+                            <div style="background: #ccc; height: 200px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <span>▶️ Setting up payments (1:20)</span>
+                            </div>
+                        </div>
+                        <div class="card glass" style="margin-bottom: 20px;">
+                            <div style="background: #ccc; height: 200px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <span>▶️ Configuring AI agents (0:55)</span>
+                            </div>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- What's New Screen -->
+                    <div id="whats-new-screen" class="screen">
+                        <h1>What's New</h1>
+                        <p>Recent OHC updates in plain language.</p>
+                        <div class="card glass">
+                            <h2>New AI Capabilities</h2>
+                            <p>Your AI agents can now help you draft better emails and social media posts automatically.</p>
+                            <div style="background: #eee; height: 100px; border-radius: 8px; margin-top: 10px;">Screenshot placeholder</div>
+                        </div>
+                        <div class="card glass">
+                            <h2>Improved Dashboard</h2>
+                            <p>We've updated the dashboard to make it easier to see your daily sales and quick actions.</p>
+                            <div style="background: #eee; height: 100px; border-radius: 8px; margin-top: 10px;">Screenshot placeholder</div>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- API Documentation Screen -->
+                    <div id="api-docs-screen" class="screen">
+                        <h1>API Reference</h1>
+                        <p>Advanced documentation for connecting custom checkout flows and tools.</p>
+                        <div class="card glass" style="background: #282c34; color: #abb2bf; font-family: monospace; overflow-x: auto;">
+                            <pre>
+GET /api/v1/products
+Authorization: Bearer YOUR_TOKEN
+
+Response:
+[
+  {
+    "id": "prod_123",
+    "name": "Widget",
+    "price": 19.99
+  }
+]
+                            </pre>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+
+                    <!-- Walkthrough Elements -->
+                    <div id="walkthrough-overlay">
+                        <div id="walkthrough-highlight-box" class="walkthrough-highlight"></div>
+                    </div>
+                    <div id="walkthrough-bubble">
+                        <h3 id="walkthrough-title">Step Title</h3>
+                        <p id="walkthrough-text">Step description.</p>
+                        <div class="actions">
+                            <button class="secondary" onclick="endWalkthrough()">Skip</button>
+                            <button onclick="nextWalkthroughStep()">Next →</button>
+                        </div>
+                    </div>
+
+                    <!-- AI Help Chat -->
+                    <button id="ai-help-chat-btn" onclick="toggleAiHelpChat()">?</button>
+                    <div id="ai-help-chat-window">
+                        <div class="header">
+                            <span>OHC Help Agent</span>
+                            <button onclick="toggleAiHelpChat()">×</button>
+                        </div>
+                        <div class="messages" id="ai-help-messages">
+                            <div class="chat-message ai">Hi! I'm your OHC Help Agent. How can I help you run your business today?</div>
+                        </div>
+                        <div class="input-area">
+                            <input type="text" id="ai-help-input" placeholder="Ask a question..." onkeypress="if(event.key === 'Enter') sendAiHelpMessage()" />
+                            <button onclick="sendAiHelpMessage()">Send</button>
+                        </div>
+                    </div>
+
                     <script>
+
+                        // Tooltip Registry and Logic
+                        const tooltipRegistry = [
+                            { selector: '#todays-sales', text: 'Total revenue collected today across all channels.' },
+                            { selector: 'button[onclick*="inbox-screen"]', text: 'Check messages from customers and AI agents.' },
+                            { selector: 'button[onclick*="agents-screen"]', text: 'Manage and hire AI assistants for your store.' },
+                            { selector: 'button[onclick*="setup-screen"]', text: 'Customize your storefront appearance.' }
+                        ];
+
+                        let activeTooltip = null;
+
+                        function initTooltips() {
+                            tooltipRegistry.forEach(item => {
+                                const els = document.querySelectorAll(item.selector);
+                                els.forEach(el => {
+                                    if(el.dataset.tooltipInit) return;
+                                    el.dataset.tooltipInit = "true";
+
+                                    el.addEventListener('mouseenter', (e) => showTooltip(e.target, item.text));
+                                    el.addEventListener('mouseleave', () => hideTooltip());
+
+                                    // For mobile long-press
+                                    let pressTimer;
+                                    el.addEventListener('touchstart', (e) => {
+                                        pressTimer = setTimeout(() => showTooltip(e.target, item.text), 500);
+                                    }, {passive: true});
+                                    el.addEventListener('touchend', () => {
+                                        clearTimeout(pressTimer);
+                                        hideTooltip();
+                                    });
+                                });
+                            });
+                        }
+
+                        function showTooltip(target, text) {
+                            if (!activeTooltip) {
+                                activeTooltip = document.createElement('div');
+                                activeTooltip.className = 'ohc-tooltip';
+                                document.body.appendChild(activeTooltip);
+                            }
+                            activeTooltip.innerText = text;
+                            activeTooltip.classList.add('visible');
+
+                            const rect = target.getBoundingClientRect();
+                            const top = rect.top + window.scrollY - activeTooltip.offsetHeight - 8;
+                            const left = rect.left + window.scrollX + (rect.width / 2);
+
+                            activeTooltip.style.top = top + 'px';
+                            activeTooltip.style.left = left + 'px';
+                        }
+
+                        function hideTooltip() {
+                            if (activeTooltip) {
+                                activeTooltip.classList.remove('visible');
+                            }
+                        }
+
+                        // Walkthrough Logic
+                        const walkthroughs = {
+                            'setup-store': [
+                                { selector: 'button[onclick*="setup-screen"]', title: 'Step 1: Launch your site', text: 'Click here to start building your storefront.' }
+                            ],
+                            'ai-agent': [
+                                { selector: 'button[onclick*="agents-screen"]', title: 'Step 1: AI Agents', text: 'Click here to view your AI team.' }
+                            ]
+                        };
+
+                        let currentWalkthrough = null;
+                        let currentStepIdx = 0;
+
+                        window.startWalkthrough = function(id) {
+                            if (!walkthroughs[id]) return;
+                            currentWalkthrough = walkthroughs[id];
+                            currentStepIdx = 0;
+                            document.getElementById('walkthrough-overlay').style.display = 'block';
+                            document.getElementById('walkthrough-bubble').style.display = 'block';
+                            renderWalkthroughStep();
+                        }
+
+                        window.endWalkthrough = function() {
+                            currentWalkthrough = null;
+                            document.getElementById('walkthrough-overlay').style.display = 'none';
+                            document.getElementById('walkthrough-bubble').style.display = 'none';
+                        }
+
+                        window.nextWalkthroughStep = function() {
+                            currentStepIdx++;
+                            if (currentStepIdx >= currentWalkthrough.length) {
+                                endWalkthrough();
+                            } else {
+                                renderWalkthroughStep();
+                            }
+                        }
+
+                        function renderWalkthroughStep() {
+                            const step = currentWalkthrough[currentStepIdx];
+                            const el = document.querySelector(step.selector);
+                            if (!el) {
+                                endWalkthrough();
+                                return;
+                            }
+
+                            document.getElementById('walkthrough-title').innerText = step.title;
+                            document.getElementById('walkthrough-text').innerText = step.text;
+
+                            const rect = el.getBoundingClientRect();
+                            const hl = document.getElementById('walkthrough-highlight-box');
+                            hl.style.top = (rect.top + window.scrollY) + 'px';
+                            hl.style.left = (rect.left + window.scrollX) + 'px';
+                            hl.style.width = rect.width + 'px';
+                            hl.style.height = rect.height + 'px';
+
+                            const bubble = document.getElementById('walkthrough-bubble');
+                            bubble.style.top = (rect.bottom + window.scrollY + 12) + 'px';
+                            bubble.style.left = (rect.left + window.scrollX) + 'px';
+                        }
+
+                        // AI Help Chat Logic
+                        window.toggleAiHelpChat = function() {
+                            const w = document.getElementById('ai-help-chat-window');
+                            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+                        }
+
+                        window.sendAiHelpMessage = function() {
+                            const input = document.getElementById('ai-help-input');
+                            const val = input.value.trim();
+                            if (!val) return;
+
+                            const msgs = document.getElementById('ai-help-messages');
+                            msgs.innerHTML += `<div class="chat-message user">${val}</div>`;
+                            input.value = '';
+
+                            setTimeout(() => {
+                                let reply = 'I can help with that. Check out our help center for more details.';
+                                let link = '';
+                                if (val.toLowerCase().includes('payment')) {
+                                    reply = 'To accept payments, you need to connect your Stripe account. Want to read the full guide?';
+                                    link = `<a href='#' onclick="showScreen('help-center-screen'); return false;">Read the full article →</a>`;
+                                } else if (val.toLowerCase().includes('product')) {
+                                    reply = 'You can add products from the builder screen. Need step-by-step help?';
+                                    link = `<a href='#' onclick="showScreen('help-center-screen'); return false;">Read the full article →</a>`;
+                                }
+                                msgs.innerHTML += `<div class="chat-message ai">${reply}${link}</div>`;
+                                msgs.scrollTop = msgs.scrollHeight;
+                            }, 600);
+                        }
+
+
                         function toggleDepartment(deptId) {
                             const settingsDiv = document.getElementById(deptId + '-settings');
                             if (settingsDiv) {
@@ -3548,6 +3966,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }, 5000);
 
                         const pathMap = {
+                            'help-center-screen': '/help',
+                            'video-tutorials-screen': '/tutorials',
+                            'whats-new-screen': '/whats-new',
+                            'api-docs-screen': '/api-docs',
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
@@ -3948,6 +4370,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             normalizeHiddenControls();
+                            setTimeout(initTooltips, 100);
                         }
 
                         function normalizeHiddenControls() {
