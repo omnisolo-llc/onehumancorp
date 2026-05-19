@@ -2339,6 +2339,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button onclick="dismissMilestone()">Dismiss</button>
                             </div>
                         </div>
+                        <div class="card glass" id="approval-inbox">
+                            <h3>Approval Inbox</h3>
+                            <div id="approval-item-1" class="card glass" style="background: rgba(255, 255, 255, 0.4); margin-top: 12px; border-radius: 8px;">
+                                <h4 style="margin: 0 0 8px 0; color: var(--primary);">The Ambassador (Customer Success)</h4>
+                                <p style="margin: 0 0 12px 0; font-size: 14px;">Drafted a reply to Maya's Instagram DM:</p>
+                                <p style="font-style: italic; color: #333; margin: 0 0 16px 0; padding: 8px; background: rgba(255,255,255,0.6); border-radius: 4px;">"Hi Maya! Yes, we absolutely offer a 10% discount for returning customers. Should I send over the promo code?"</p>
+                                <div style="display: flex; gap: 8px;">
+                                    <button onclick="document.getElementById('approval-item-1').style.display='none';" class="primary" style="flex: 1;">Approve</button>
+                                    <button class="secondary" style="flex: 1;">Edit</button>
+                                </div>
+                            </div>
+                        </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
@@ -2365,7 +2377,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Agent Activity</h3>
                             <div id="agent-activity-feed">
-                                <p>No recent activity.</p>
+                                <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                                    <div style="font-size: 20px;">📦</div>
+                                    <div>
+                                        <p style="margin: 0; font-weight: 500;">The Manager (Operations)</p>
+                                        <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Updated inventory for 3 vegan cakes.</p>
+                                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-tertiary);">2 mins ago</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                                    <div style="font-size: 20px;">🗓️</div>
+                                    <div>
+                                        <p style="margin: 0; font-weight: 500;">The Manager (Operations)</p>
+                                        <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Approved booking for Carlos at 2:00 PM.</p>
+                                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-tertiary);">15 mins ago</p>
+                                    </div>
+                                </div>
                             </div>
                             <button onclick="simulateOrder()">Simulate Order</button>
                         </div>
