@@ -347,38 +347,58 @@ impl DepartmentOrchestrator {
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
 
+        let mut opt_department: Option<String> = None;
+
         match &self.db.store {
             DbStore::Postgres => {
-                let update_res = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
+                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
                     .bind(tenant_id)
-                    .execute(&self.db.pool)
+                    .fetch_optional(&self.db.pool)
                     .await;
-                match update_res {
-                    Ok(result) => {
-                        if result.rows_affected() > 0 { Ok(()) } else { Err("Unauthorized".to_string()) }
+                match row {
+                    Ok(Some(r)) => {
+                        use sqlx::Row;
+                        opt_department = Some(r.get("department"));
                     }
-                    Err(e) => Err(e.to_string()),
+                    Ok(None) => return Err("Unauthorized".to_string()),
+                    Err(e) => return Err(e.to_string()),
                 }
             }
             DbStore::Sqlite(pool) => {
-                let update_res = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ?")
+                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
                     .bind(tenant_id)
-                    .execute(pool)
+                    .fetch_optional(pool)
                     .await;
-                match update_res {
-                    Ok(result) => {
-                        if result.rows_affected() > 0 { Ok(()) } else { Err("Unauthorized".to_string()) }
+                match row {
+                    Ok(Some(r)) => {
+                        use sqlx::Row;
+                        opt_department = Some(r.get("department"));
                     }
-                    Err(e) => Err(e.to_string()),
+                    Ok(None) => return Err("Unauthorized".to_string()),
+                    Err(e) => return Err(e.to_string()),
                 }
             }
         }
+
+        if approved {
+            if let Some(dep) = opt_department {
+                let payload = serde_json::json!({
+                    "request_id": request_id,
+                    "tenant_id": tenant_id
+                });
+                let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
+                let topic = format!("agent:{}:approved", dep);
+                let _ = self.mesh.publish(&topic, payload_bytes).await;
+            }
+        }
+
+        Ok(())
     }
 
 
