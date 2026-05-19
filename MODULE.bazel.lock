@@ -672,7 +672,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
         "bzlTransitiveDigest": "yEZVxv7vZRafxjfcsnAXXLLUTd6kAL7/4QnInr7y+bk=",
-        "usagesDigest": "LPKtHZwnate/Ur6AVfgt34RMa7Xsx1XSXrUIBA0sOaQ=",
+        "usagesDigest": "2z5OjNn6qL/xhTuij9uITB+5P9ZMJrKXhaKncmgRSCw=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "flutter_macos": {
@@ -751,7 +751,7 @@
     "@@rules_nodejs+//nodejs:extensions.bzl%node": {
       "general": {
         "bzlTransitiveDigest": "oZFClfRhTTwsYzpxVPkOpOt/r0+OzEfEV37au0jFZ0s=",
-        "usagesDigest": "OCOXaDMR6IqnUMDUY8SnR2FroYG/hVt0rQjHJMDygFA=",
+        "usagesDigest": "4ekzeCX7LGlNe852W80cQ7pMMp2wOhKuCgS2EA9ecXQ=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "nodejs_linux_amd64": {
@@ -945,7 +945,7 @@
     "@@rules_pkg+//toolchains/rpm:rpmbuild_configure.bzl%find_system_rpmbuild_bzlmod": {
       "general": {
         "bzlTransitiveDigest": "GRI4sIxHeBPRn+6AWpn8sfcSnU14cOcXwKE5j+yVfJk=",
-        "usagesDigest": "KbEEPVIV1jK7lwK2Kxuyjl5YoE3AhLOyFeaTwyB+P4w=",
+        "usagesDigest": "5k2wdwazgWd2N6i8h7gC594jmrw1sIdonmLo01UyuHM=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "rules_pkg_rpmbuild": {
@@ -958,7 +958,7 @@
     "@@rules_playwright+//playwright:extensions.bzl%playwright": {
       "general": {
         "bzlTransitiveDigest": "5HYM8ikjse7rLzy0tDYni/Y/C9b2t5ZxXtF5TnVugwM=",
-        "usagesDigest": "jIa/1HJG2BR5LbkwzRwoTS7UbnnJwWigViVX/RGoVa0=",
+        "usagesDigest": "eUgjF9yzpjGLQv1CxNpvaQDCLozDi4R2VHbeVhBdaiE=",
         "recordedInputs": [
           "REPO_MAPPING:rules_playwright+,bazel_tools bazel_tools",
           "FILE:@@rules_playwright+//tools/release/artifacts/cli-arm64-apple-darwin 67731b424ce41adff3be0b4f612c60be0bddb53454eab0a5c415815d9c97f9cc",
@@ -3200,7 +3200,7 @@
     "@@rules_rust+//crate_universe:extensions.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "3PwaY69dmw68DCo0U8+7+k6SeFK8bkqrUdZIcpkWWOM=",
-        "usagesDigest": "qLJJUedkhZ5nzays2/EV8CnuuOoHh1HfHeMLybb3D4E=",
+        "usagesDigest": "rR0BteBdemN9czgX9O5UpbcGwmND5/hercmTXIaOqjo=",
         "recordedInputs": [
           "ENV:CARGO_BAZEL_DEBUG \\0",
           "ENV:CARGO_BAZEL_GENERATOR_SHA256 \\0",
@@ -12768,7 +12768,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "SUuuds60a5QiU3Q58ZMzXu+nystJLFfYDeBMNXa+TlA=",
+        "usagesDigest": "qSbJhSNDmnGQklMqP3D1hccsM6oemR4OBe6pkARMdfo=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "buildbuddy_toolchain": {
