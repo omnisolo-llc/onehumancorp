@@ -1689,6 +1689,84 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .with_state(webhook_state);
 
+    let meta_graph_webhook_state = crate::api::meta_graph_webhook::MetaGraphWebhookState {
+        db: db.clone(),
+    };
+
+    let meta_graph_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_graph_webhook::meta_graph_webhook_handler))
+        .with_state(meta_graph_webhook_state);
+
+    // OAUTH ROUTERS
+    let meta_graph_oauth_state = crate::api::meta_graph_oauth::MetaGraphOAuthState {
+        db: db.clone(),
+        app_id: std::env::var("META_APP_ID").unwrap_or_default(),
+        app_secret: std::env::var("META_APP_SECRET").unwrap_or_default(),
+        redirect_uri: std::env::var("META_REDIRECT_URI").unwrap_or_default(),
+    };
+    let meta_graph_oauth_router = axum::Router::new()
+        .route("/api/v1/auth/meta_graph/connect", axum::routing::get(api::meta_graph_oauth::connect_handler))
+        .route("/api/v1/auth/meta_graph/callback", axum::routing::get(api::meta_graph_oauth::callback_handler))
+        .with_state(meta_graph_oauth_state);
+
+    let google_calendar_oauth_state = crate::api::google_calendar_oauth::GoogleCalendarOAuthState {
+        db: db.clone(),
+        client_id: std::env::var("GOOGLE_CLIENT_ID").unwrap_or_default(),
+        client_secret: std::env::var("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
+        redirect_uri: std::env::var("GOOGLE_REDIRECT_URI").unwrap_or_default(),
+    };
+    let google_calendar_oauth_router = axum::Router::new()
+        .route("/api/v1/auth/google_calendar/connect", axum::routing::get(api::google_calendar_oauth::connect_handler))
+        .route("/api/v1/auth/google_calendar/callback", axum::routing::get(api::google_calendar_oauth::callback_handler))
+        .with_state(google_calendar_oauth_state);
+
+    let zoom_oauth_state = crate::api::zoom_oauth::ZoomOAuthState {
+        db: db.clone(),
+        client_id: std::env::var("ZOOM_CLIENT_ID").unwrap_or_default(),
+        client_secret: std::env::var("ZOOM_CLIENT_SECRET").unwrap_or_default(),
+        redirect_uri: std::env::var("ZOOM_REDIRECT_URI").unwrap_or_default(),
+    };
+    let zoom_oauth_router = axum::Router::new()
+        .route("/api/v1/auth/zoom/connect", axum::routing::get(api::zoom_oauth::connect_handler))
+        .route("/api/v1/auth/zoom/callback", axum::routing::get(api::zoom_oauth::callback_handler))
+        .with_state(zoom_oauth_state);
+
+    // FEATURE ROUTERS
+    let calendar_booking_state = crate::api::calendar_booking::CalendarBookingState {
+        db: db.clone(),
+    };
+    let calendar_booking_router = axum::Router::new()
+        .route("/api/v1/calendar/book", axum::routing::post(api::calendar_booking::book_service_handler))
+        .with_state(calendar_booking_state);
+
+    let marketing_campaign_state = crate::api::marketing_campaigns::MarketingCampaignState {
+        db: db.clone(),
+    };
+    let marketing_campaign_router = axum::Router::new()
+        .route("/api/v1/marketing/campaigns", axum::routing::post(api::marketing_campaigns::create_campaign_handler))
+        .with_state(marketing_campaign_state);
+
+    let shipping_rates_state = crate::api::shipping_rates::ShippingRatesState {
+        db: db.clone(),
+    };
+    let shipping_rates_router = axum::Router::new()
+        .route("/api/v1/shipping/rates", axum::routing::post(api::shipping_rates::get_rates_handler))
+        .with_state(shipping_rates_state);
+
+    let twilio_settings_state = crate::api::twilio_settings::TwilioSettingsState {
+        db: db.clone(),
+    };
+    let twilio_settings_router = axum::Router::new()
+        .route("/api/v1/settings/sms_notifications", axum::routing::post(api::twilio_settings::update_twilio_settings_handler))
+        .with_state(twilio_settings_state);
+
+    let mercadopago_checkout_state = crate::api::mercadopago_checkout::MercadoPagoCheckoutState {
+        db: db.clone(),
+    };
+    let mercadopago_checkout_router = axum::Router::new()
+        .route("/api/v1/payments/mercadopago/checkout", axum::routing::post(api::mercadopago_checkout::create_checkout_handler))
+        .with_state(mercadopago_checkout_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -1787,6 +1865,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .with_state(mesh_transport)
         .merge(webhook_router)
+        .merge(meta_graph_webhook_router)
+        .merge(meta_graph_oauth_router)
+        .merge(google_calendar_oauth_router)
+        .merge(zoom_oauth_router)
+        .merge(calendar_booking_router)
+        .merge(marketing_campaign_router)
+        .merge(shipping_rates_router)
+        .merge(twilio_settings_router)
+        .merge(mercadopago_checkout_router)
         .merge(health_router)
         .fallback(ui_handler);
 

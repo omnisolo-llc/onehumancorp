@@ -36,7 +36,7 @@ pub async fn my_plan_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<MyPlanResponse> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request.extensions().get::<crate::auth::AuthInfo>() {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()
@@ -84,7 +84,7 @@ pub async fn cost_dashboard_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<CostDashboardResponse> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request.extensions().get::<crate::auth::AuthInfo>() {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()

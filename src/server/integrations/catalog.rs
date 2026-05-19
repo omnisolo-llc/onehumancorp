@@ -42,5 +42,20 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
+    let meta_graph_provider = crate::integrations::meta_graph::provider::MetaGraphProvider::new();
+    catalog.push(meta_graph_provider.to_integration_provider());
+
+    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new();
+    catalog.push(google_calendar_provider.to_integration_provider());
+
+    let sendgrid_provider = crate::integrations::sendgrid::provider::SendGridProvider::new();
+    catalog.push(sendgrid_provider.to_integration_provider());
+
+    let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new();
+    catalog.push(shippo_provider.to_integration_provider());
+
+    let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new();
+    catalog.push(zoom_provider.to_integration_provider());
+
     catalog
 }
