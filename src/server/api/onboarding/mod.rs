@@ -10,12 +10,28 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
+        .route("/intake", post(process_intake_handler))
         .route("/state", get(get_state))
         .route("/state", post(save_state))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)
+}
+
+#[derive(serde::Deserialize)]
+pub struct IntakeRequest {
+    pub description: String,
+}
+
+async fn process_intake_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<IntakeRequest>,
+) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
+    match agent.process_intake(&payload.description).await {
+        Ok(data) => Ok(Json(data)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 async fn start_onboarding(
