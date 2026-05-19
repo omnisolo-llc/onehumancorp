@@ -218,3 +218,5 @@ CREATE POLICY tenant_isolation_agent_status ON agent_status USING (tenant_id::te
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_order_items ON order_items USING (tenant_id::text = current_setting('app.current_tenant', true));
+ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_task_dependencies ON task_dependencies USING (task_id IN (SELECT id FROM tasks WHERE tenant_id::text = current_setting('app.current_tenant', true)));
