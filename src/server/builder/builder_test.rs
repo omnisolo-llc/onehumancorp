@@ -3,12 +3,12 @@ use uuid::Uuid;
 use super::db;
 use std::time::Duration;
 
-async fn setup_db() -> Option<(PgPool, Uuid)> {
+async fn setup_db() -> Option<(PgPool, String)> {
     if std::env::var("DATABASE_URL").is_err() {
         return None; // If no DB is available, tests will simply return/pass without error.
     }
     let database_url = std::env::var("DATABASE_URL").unwrap();
-    let tenant_id = Uuid::new_v4();
+    let tenant_id = Uuid::new_v4().to_string();
     let tenant_id_clone = tenant_id.clone();
 
     let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -36,41 +36,41 @@ async fn test_builder_db_crud() {
     };
 
     // 1. Create Site
-    let site = match db::create_site(&pool, tenant_id, Some("test.com".to_string())).await {
+    let site = match db::create_site(&pool, &tenant_id, Some("test.com".to_string())).await {
         Ok(s) => s,
         Err(_) => return, // Unmigrated test db
     };
     assert_eq!(site.domain.as_deref(), Some("test.com"));
 
-    let sites = db::list_sites(&pool, tenant_id).await.expect("Failed to list sites");
+    let sites = db::list_sites(&pool, &tenant_id).await.expect("Failed to list sites");
     assert_eq!(sites.len(), 1);
     assert_eq!(sites[0].id, site.id);
 
     // 2. Create Page
-    let page = db::create_page(&pool, tenant_id, site.id, "/home".to_string(), "Home".to_string()).await.expect("Failed to create page");
+    let page = db::create_page(&pool, &tenant_id, site.id, "/home".to_string(), "Home".to_string()).await.expect("Failed to create page");
     assert_eq!(page.path, "/home");
     assert_eq!(page.title, "Home");
 
-    let pages = db::list_pages(&pool, tenant_id, site.id).await.expect("Failed to list pages");
+    let pages = db::list_pages(&pool, &tenant_id, site.id).await.expect("Failed to list pages");
     assert_eq!(pages.len(), 1);
     assert_eq!(pages[0].id, page.id);
 
     // 3. Create Blocks
-    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"text": "Hello"}), 0).await.expect("Failed to create block 1");
-    let block2 = db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({"items": []}), 1).await.expect("Failed to create block 2");
+    let block1 = db::create_block(&pool, &tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"text": "Hello"}), 0).await.expect("Failed to create block 1");
+    let block2 = db::create_block(&pool, &tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({"items": []}), 1).await.expect("Failed to create block 2");
 
-    let blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
+    let blocks = db::list_blocks(&pool, &tenant_id, page.id).await.expect("Failed to list blocks");
     assert_eq!(blocks.len(), 2);
     assert_eq!(blocks[0].id, block1.id);
     assert_eq!(blocks[1].id, block2.id);
 
     // 4. Update Block
-    let updated_block1 = db::update_block(&pool, tenant_id, block1.id, serde_json::json!({"text": "Updated Hello"})).await.expect("Failed to update block");
+    let updated_block1 = db::update_block(&pool, &tenant_id, block1.id, serde_json::json!({"text": "Updated Hello"})).await.expect("Failed to update block");
     assert_eq!(updated_block1.content["text"], "Updated Hello");
 
     // 5. Reorder Blocks
-    db::reorder_blocks(&pool, tenant_id, page.id, vec![block2.id, block1.id]).await.expect("Failed to reorder blocks");
-    let reordered_blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
+    db::reorder_blocks(&pool, &tenant_id, page.id, vec![block2.id, block1.id]).await.expect("Failed to reorder blocks");
+    let reordered_blocks = db::list_blocks(&pool, &tenant_id, page.id).await.expect("Failed to list blocks");
     assert_eq!(reordered_blocks[0].id, block2.id); // block2 should now be first
     assert_eq!(reordered_blocks[1].id, block1.id);
 
@@ -85,17 +85,18 @@ async fn test_builder_jobs() {
         None => return,
     };
 
-    let site = match db::create_site(&pool, tenant_id, Some("job-test.com".to_string())).await {
+    let site = match db::create_site(&pool, &tenant_id, Some("job-test.com".to_string())).await {
         Ok(s) => s,
         Err(_) => return, // Unmigrated db handling
     };
 
-    super::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id).await.expect("Failed to enqueue job");
+    let tenant_id_uuid = Uuid::parse_str(&tenant_id).unwrap();
+    super::jobs::enqueue_publish_site_job(&pool, tenant_id_uuid, site.id).await.expect("Failed to enqueue job");
 
     // Allow spawned task some time to complete
     tokio::time::sleep(Duration::from_millis(200)).await;
 
-    let _sites = db::list_sites(&pool, tenant_id).await.expect("Failed to list sites");
+    let _sites = db::list_sites(&pool, &tenant_id).await.expect("Failed to list sites");
     // Ensure cleanup
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }
@@ -196,9 +197,6 @@ async fn test_builder_api() {
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }
 
-
-
-
 #[tokio::test]
 async fn test_builder_generate_and_publish_draft() {
     let (pool, tenant_id) = match setup_db().await {
@@ -249,8 +247,6 @@ async fn test_builder_generate_and_publish_draft() {
             Ok(r) => r,
             Err(_) => return,
         };
-
-
 
     assert_eq!(res.status(), 200);
     let draft: super::api::SiteDraft = res.json().await.unwrap();

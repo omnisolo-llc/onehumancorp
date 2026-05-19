@@ -49,7 +49,6 @@ pub struct PublishDraftRequest {
     pub draft: SiteDraft,
 }
 
-
 use super::db;
 use super::jobs;
 
@@ -85,8 +84,8 @@ async fn list_sites(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<SiteResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let sites = db::list_sites(&pool, tenant_id)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let sites = db::list_sites(&pool, &tenant_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(
@@ -105,8 +104,8 @@ async fn create_site(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateSiteRequest>,
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let site = db::create_site(&pool, tenant_id, payload.domain)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let site = db::create_site(&pool, &tenant_id, payload.domain)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(SiteResponse {
@@ -122,6 +121,7 @@ pub struct PageResponse {
     pub path: String,
     pub title: String,
     pub seo_metadata: Value,
+    pub is_published: bool,
 }
 
 #[derive(Deserialize)]
@@ -135,8 +135,8 @@ async fn list_pages(
     Path(site_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<PageResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let pages = db::list_pages(&pool, tenant_id, site_id)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let pages = db::list_pages(&pool, &tenant_id, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(
@@ -147,6 +147,7 @@ async fn list_pages(
                 path: p.path,
                 title: p.title,
                 seo_metadata: p.seo_metadata,
+                is_published: p.is_published,
             })
             .collect(),
     ))
@@ -158,8 +159,8 @@ async fn create_page(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreatePageRequest>,
 ) -> Result<Json<PageResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let page = db::create_page(&pool, tenant_id, site_id, payload.path, payload.title)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let page = db::create_page(&pool, &tenant_id, site_id, payload.path, payload.title)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(PageResponse {
@@ -167,6 +168,7 @@ async fn create_page(
         path: page.path,
         title: page.title,
         seo_metadata: page.seo_metadata,
+        is_published: page.is_published,
     }))
 }
 
@@ -177,6 +179,7 @@ pub struct BlockResponse {
     pub block_type: String,
     pub content: Value,
     pub sort_order: i32,
+    pub is_published: bool,
 }
 
 #[derive(Deserialize)]
@@ -191,8 +194,8 @@ async fn list_blocks(
     Path(page_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<BlockResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let blocks = db::list_blocks(&pool, tenant_id, page_id)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let blocks = db::list_blocks(&pool, &tenant_id, page_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(
@@ -203,6 +206,7 @@ async fn list_blocks(
                 block_type: b.block_type,
                 content: b.content,
                 sort_order: b.sort_order,
+                is_published: b.is_published,
             })
             .collect(),
     ))
@@ -215,10 +219,10 @@ async fn create_block(
     Json(payload): Json<CreateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
     if payload.block_type != "HeroBlock" && payload.block_type != "ProductGridBlock" && payload.block_type != "ContactFormBlock" && payload.block_type != "BookingCalendarBlock" && payload.block_type != "ServiceBookingBlock" && payload.block_type != "TestimonialBlock" { return Err(axum::http::StatusCode::BAD_REQUEST); }
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
     let block = db::create_block(
         &pool,
-        tenant_id,
+        &tenant_id,
         page_id,
         payload.block_type,
         payload.content,
@@ -231,6 +235,7 @@ async fn create_block(
         block_type: block.block_type,
         content: block.content,
         sort_order: block.sort_order,
+        is_published: block.is_published,
     }))
 }
 
@@ -245,8 +250,8 @@ async fn update_block(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<UpdateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let block = db::update_block(&pool, tenant_id, block_id, payload.content)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let block = db::update_block(&pool, &tenant_id, block_id, payload.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(BlockResponse {
@@ -254,6 +259,7 @@ async fn update_block(
         block_type: block.block_type,
         content: block.content,
         sort_order: block.sort_order,
+        is_published: block.is_published,
     }))
 }
 
@@ -268,8 +274,8 @@ async fn reorder_blocks(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ReorderBlocksRequest>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    db::reorder_blocks(&pool, tenant_id, page_id, payload.block_ids)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    db::reorder_blocks(&pool, &tenant_id, page_id, payload.block_ids)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::OK)
@@ -280,27 +286,19 @@ async fn publish_site(
     Path(site_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    jobs::enqueue_publish_site_job(&pool, tenant_id, site_id)
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id_uuid = Uuid::parse_str(&tenant_id).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    jobs::enqueue_publish_site_job(&pool, tenant_id_uuid, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::ACCEPTED)
 }
 
-
-
-
-
-
-
-
-
-
 async fn generate_storefront(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<GenerateStorefrontRequest>,
 ) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
-    let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let _tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
 
     // Mock Agent generation based on description keywords
     let desc = payload.description.to_lowercase();
@@ -385,21 +383,22 @@ async fn publish_draft(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<PublishDraftRequest>,
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = claims.organization_id.ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id_uuid = Uuid::parse_str(&tenant_id).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
     // 1. Create Site
-    let site = db::create_site(&pool, tenant_id, payload.domain)
+    let site = db::create_site(&pool, &tenant_id, payload.domain)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // 2. Iterate pages and blocks
     for draft_page in payload.draft.pages {
-        let page = db::create_page(&pool, tenant_id, site.id, draft_page.path, draft_page.title)
+        let page = db::create_page(&pool, &tenant_id, site.id, draft_page.path, draft_page.title)
             .await
             .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        // Update SEO metadata
-        sqlx::query("UPDATE builder_pages SET seo_metadata = $1 WHERE id = $2")
+        // Update SEO metadata and set published true
+        sqlx::query("UPDATE builder_pages SET seo_metadata = $1, is_published = TRUE WHERE id = $2")
             .bind(&draft_page.seo_metadata)
             .bind(page.id)
             .execute(&pool)
@@ -407,14 +406,20 @@ async fn publish_draft(
             .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
         for draft_block in draft_page.blocks {
-            db::create_block(&pool, tenant_id, page.id, draft_block.block_type, draft_block.content, draft_block.sort_order)
+            let block = db::create_block(&pool, &tenant_id, page.id, draft_block.block_type, draft_block.content, draft_block.sort_order)
+                .await
+                .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            sqlx::query("UPDATE builder_blocks SET is_published = TRUE WHERE id = $1")
+                .bind(block.id)
+                .execute(&pool)
                 .await
                 .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
         }
     }
 
     // 3. Enqueue Job
-    jobs::enqueue_publish_site_job(&pool, tenant_id, site.id)
+    jobs::enqueue_publish_site_job(&pool, tenant_id_uuid, site.id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 

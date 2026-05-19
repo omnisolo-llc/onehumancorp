@@ -2284,6 +2284,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
+                        <a onclick="showScreen('storefront-builder-screen')">Builder</a>
                     </nav>
 
                     <div id="mobile-bottom-nav">
