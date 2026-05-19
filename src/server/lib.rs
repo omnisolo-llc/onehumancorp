@@ -1921,28 +1921,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <!DOCTYPE html>
             <html>
                 <head>
+                    <meta charset="utf-8">
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #006fff;
+                            --primary: #0066FF;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
-                            --accent-green: #15a46f;
-                            --accent-orange: #f59e0b;
-                            --bg: #eef1f5;
-                            --surface: rgba(255, 255, 255, 0.86);
+                            --accent-green: #34C759;
+                            --accent-orange: #FF9500;
+                            --bg: #F5F5F7;
+                            --surface: rgba(255, 255, 255, 0.65);
                             --surface-strong: #ffffff;
-                            --sidebar-bg: rgba(248, 250, 252, 0.92);
-                            --text: #111827;
-                            --text-secondary: #657083;
-                            --text-tertiary: #8a94a6;
-                            --border: rgba(16, 24, 40, 0.1);
-                            --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-                            --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
+                            --sidebar-bg: rgba(255, 255, 255, 0.65);
+                            --text: #1D1D1F;
+                            --text-secondary: #6E6E73;
+                            --text-tertiary: #86868B;
+                            --border: rgba(255, 255, 255, 0.4);
+                            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+                            --shadow-md: 0 16px 42px rgba(0, 0, 0, 0.08);
                             --radius-sm: 8px;
-                            --radius-md: 10px;
+                            --radius-md: 16px;
+                        }
+                        body.dark-theme {
+                            color-scheme: dark;
+                            --bg: #16161A;
+                            --surface: rgba(22, 22, 26, 0.7);
+                            --surface-strong: #1c1c21;
+                            --sidebar-bg: rgba(22, 22, 26, 0.7);
+                            --text: #F5F5F7;
+                            --text-secondary: #86868B;
+                            --text-tertiary: #6E6E73;
+                            --border: rgba(255, 255, 255, 0.1);
+                            --primary-soft: rgba(0, 102, 255, 0.15);
+                            --shadow-md: 0 16px 42px rgba(0, 0, 0, 0.4);
                         }
                         * {
                             box-sizing: border-box;
@@ -1954,7 +1968,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         body {
                             min-height: 100vh;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
                             background:
                                 radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.08), transparent 28%),
                                 linear-gradient(180deg, rgba(255,255,255,0.72), rgba(238,241,245,0.96));
@@ -1962,10 +1976,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin: 0; 
                             line-height: 1.45;
                             -webkit-font-smoothing: antialiased;
+                            transition: background 0.3s ease, color 0.3s ease;
+                        }
+                        body.dark-theme {
+                            background:
+                                radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.15), transparent 28%),
+                                linear-gradient(180deg, #16161A, #1c1c21);
                         }
                         h1, h2, h3, h4, .outfit {
-                            font-family: inherit;
-                            letter-spacing: 0;
+                            font-family: 'Outfit', sans-serif;
+                            letter-spacing: -0.02em;
                         }
                         h1 {
                             font-size: clamp(28px, 4vw, 42px);
@@ -1986,10 +2006,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            border: 1px solid var(--border);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2108,9 +2128,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
                         .shimmer {
-                            background: linear-gradient(90deg, #eef2f7 25%, #dce5ef 50%, #eef2f7 75%);
+                            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
                             background-size: 200% 100%;
-                            animation: shimmer 1.5s infinite;
+                            animation: shimmer 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
                             border-radius: var(--radius-sm);
                         }
                         @keyframes shimmer {
@@ -2287,13 +2307,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </nav>
 
                     <div id="mobile-bottom-nav">
-                        <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
-                        <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                        <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add</button>
-                        <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
-                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
-                        <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
-                        <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
+                        <button class="nav-item" onclick="showScreen('dashboard-screen')" data-screen="dashboard-screen">🏠<br>Home</button>
+                        <button class="nav-item" onclick="showScreen('inbox-screen')" data-screen="inbox-screen">💬<br>Messages</button>
+                        <button class="nav-item" onclick="nextStep(2); showScreen('setup-screen')">➕<br>Add</button>
+                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')" data-screen="referral-dashboard-screen">🔗<br>Share</button>
+                        <button class="nav-item" onclick="showScreen('settings-screen')" data-screen="settings-screen">⚙️<br>Settings</button>
                     </div>
 
 
@@ -2309,22 +2327,71 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
+                        <h1 class="outfit">Overview</h1>
 
-                        <div class="card glass" style="text-align: center; padding: 40px 20px;">
-                            <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
-                            <h2 style="font-size: 48px; margin: 0; color: var(--primary);">$1,284.50</h2>
-                            <p style="color: #28a745; font-size: 14px; margin-top: 8px;">↑ 12% from yesterday</p>
+                        <!-- Action Banner -->
+                        <div id="action-banner" class="card glass" style="background: rgba(0, 102, 255, 0.1); border: 1px solid rgba(0, 102, 255, 0.2); display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; margin-bottom: 24px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="font-size: 24px;">⚠️</span>
+                                <div>
+                                    <div style="font-weight: 700; color: var(--primary);">Action Required</div>
+                                    <div style="font-size: 14px; color: var(--text-secondary);">Complete Stripe setup to accept payments.</div>
+                                </div>
+                            </div>
+                            <button style="margin: 0; padding: 8px 16px; font-size: 13px;" onclick="nextStep('stripe'); showScreen('setup-screen');">Finish Setup</button>
                         </div>
 
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>Your AI assistants are working on your behalf.</p>
-                            <p>My Business: <strong>Active</strong></p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
-                            <button onclick="showScreen('agents-screen')">My AI Assistants</button>
+                        <!-- Metrics Grid -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                            <div class="card glass" style="margin: 0; padding: 20px;">
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Revenue Today</div>
+                                <div style="font-size: 24px; font-weight: 700; color: var(--primary);">$1,284.50</div>
+                                <div style="font-size: 12px; color: var(--accent-green); margin-top: 4px;">↑ 12%</div>
+                            </div>
+                            <div class="card glass" style="margin: 0; padding: 20px;">
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">New Orders</div>
+                                <div style="font-size: 24px; font-weight: 700; color: var(--text);">14</div>
+                                <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px;">Ready to ship</div>
+                            </div>
+                        </div>
+
+                        <h2 class="outfit" style="font-size: 18px; margin-bottom: 16px; letter-spacing: 0;">AI Assistant Activity</h2>
+                        <div class="card glass" style="padding: 0; overflow: hidden;">
+                            <div id="agent-activity-feed" style="max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; gap: 12px;">
+                                    <div style="width: 32px; height: 32px; background: var(--primary-soft); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">📈</div>
+                                    <div>
+                                        <div style="font-size: 14px; font-weight: 600;">The Promoter</div>
+                                        <div style="font-size: 13px; color: var(--text-secondary);">Designed your initial storefront and catalog.</div>
+                                        <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 2px;">Just now</div>
+                                    </div>
+                                </div>
+                                <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; gap: 12px;">
+                                    <div style="width: 32px; height: 32px; background: #E8F5E9; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🏷️</div>
+                                    <div>
+                                        <div style="font-size: 14px; font-weight: 600;">The Manager</div>
+                                        <div style="font-size: 13px; color: var(--text-secondary);">Pre-filled 3 sample products for your bakery.</div>
+                                        <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 2px;">2 minutes ago</div>
+                                    </div>
+                                </div>
+                                <div style="padding: 16px; display: flex; gap: 12px;">
+                                    <div style="width: 32px; height: 32px; background: #FFF3E0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">💬</div>
+                                    <div>
+                                        <div style="font-size: 14px; font-weight: 600;">The Salesperson</div>
+                                        <div style="font-size: 13px; color: var(--text-secondary);">Drafted 3 quotes for potential customers.</div>
+                                        <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 2px;">5 minutes ago</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h2 class="outfit" style="font-size: 16px; margin-bottom: 12px;">Quick Actions</h2>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="secondary" style="margin: 0;" onclick="showScreen('inbox-screen')">Messages</button>
+                                <button class="secondary" style="margin: 0;" onclick="showScreen('agents-screen')">Assistants</button>
+                                <button class="secondary" style="margin: 0;" onclick="showScreen('settings-screen')">Settings</button>
+                            </div>
                         </div>
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
@@ -2351,7 +2418,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button onclick="alert('Help Center')">Help Center</button>
-                            <button onclick="alert('Connect Apps')">Connect Apps</button>
+                            <button class="dev-only" onclick="alert('Connect Apps')">Connect Apps</button>
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="alert('How to use this app')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
@@ -2370,7 +2437,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="simulateOrder()">Simulate Order</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
+                            <button class="dev-only" onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
                                 <button onclick="alert('Tutorial started')">Tutorial Library</button>
@@ -2548,6 +2615,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="password" placeholder="New Password">
                         <input type="password" placeholder="Confirm Password">
                         <button onclick="alert('Password changed!')">Change</button>
+
+                        <hr/>
+                        <h2>Advanced Settings</h2>
+                        <div class="card glass" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">Developer Mode</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Show technical tools like gRPC Diagnostics and API connections.</div>
+                            </div>
+                            <button class="secondary" onclick="toggleDeveloperMode()" id="dev-mode-status" style="margin: 0; min-width: 100px;">Disabled</button>
+                        </div>
+                        <div class="dev-only" style="margin-top: 16px; gap: 8px;">
+                            <button class="secondary" onclick="showScreen('diagnostics-screen')">System Diagnostics</button>
+                            <button class="secondary" onclick="showScreen('api-screen')">API Management</button>
+                        </div>
                     </div>
 
                     <!-- Pricing Page -->
@@ -2744,32 +2825,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
-                        <h1>OneHuman</h1>
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                    <div id="setup-screen" class="screen">
+                        <div id="step-1" class="card glass" style="max-width: 500px; margin: 40px auto; text-align: center; padding: 40px;">
+                            <h1 class="outfit" style="font-size: 32px;">Your business, live in 3 minutes.</h1>
+                            <p style="font-size: 18px; margin-bottom: 32px;">Radically simple. Invisible AI handles the rest.</p>
+                            <button style="width: 100%; margin-bottom: 12px;" onclick="nextStep(2)">Start My Business</button>
                         </div>
-                        <div id="step-2" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" />
-                            <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                        <div id="step-2" class="card glass" style="max-width: 500px; margin: 40px auto; display: none; padding: 40px;">
+                            <h1 class="outfit">What do you sell?</h1>
+                            <p>This helps "The Promoter" AI design your store.</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                                <button class="secondary" style="margin: 0;" onclick="nextStep(3)">🛒 Products</button>
+                                <button class="secondary" style="margin: 0;" onclick="nextStep(3)">🛠️ Services</button>
+                                <button class="secondary" style="margin: 0;" onclick="nextStep(3)">🍕 Food</button>
+                                <button class="secondary" style="margin: 0;" onclick="nextStep(3)">🎨 Creative</button>
+                            </div>
+                            <input type="text" id="business-type-input" placeholder="Or type anything else..." />
+                            <button style="width: 100%;" onclick="nextStep(3)">Next</button>
                         </div>
-                        <div id="step-3" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                        <div id="step-3" class="card glass" style="max-width: 500px; margin: 40px auto; display: none; padding: 40px;">
+                            <h1 class="outfit">What is your business name?</h1>
+                            <p>We'll use this to brand everything.</p>
+                            <input type="text" id="business-name-input" placeholder="e.g. Maya's Bakery" style="font-size: 18px; padding: 16px;" />
+                            <button style="width: 100%;" onclick="nextStep('stripe')">Next</button>
+                        </div>
+                        <div id="step-stripe" class="card glass" style="max-width: 500px; margin: 40px auto; display: none; padding: 40px; text-align: center;">
+                            <h1 class="outfit">Accept Payments</h1>
+                            <p>Connect Stripe to start selling today. You can finish full verification later.</p>
+                            <div style="background: #f8f9fb; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border);">
+                                <img src="https://stripe.com/img/v3/home/social.png" style="height: 40px; margin-bottom: 12px; display: none;" />
+                                <div style="font-weight: 700; color: #635bff; font-size: 24px;">Stripe</div>
+                            </div>
+                            <button style="width: 100%; background: #635bff;" onclick="nextStep('generating')">Connect with Stripe</button>
+                            <button class="secondary" style="width: 100%;" onclick="nextStep('generating')">Skip for now</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
@@ -2842,17 +2930,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
-                            <div class="card glass" style="padding: 60px 40px; text-align: center;">
+                            <div class="card glass" style="max-width: 500px; margin: 40px auto; padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
-                                <h1 class="outfit">Designing your storefront...</h1>
+                                <h1 class="outfit">The Promoter is designing your site...</h1>
                                 <p>Our AI is crafting a custom experience for your brand.</p>
                                 <div class="shimmer" style="height: 200px; width: 100%; margin-top: 32px;"></div>
-                                <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
+                                <div id="ai-progress-text" style="margin-top: 24px; color: var(--text-secondary); font-size: 14px; font-weight: 500;">Analyzing your business type...</div>
                             </div>
                         </div>
                         <div id="step-launch-ai" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                            <div class="card glass" style="max-width: 500px; margin: 40px auto; padding: 60px 40px; text-align: center;">
+                                <div style="font-size: 48px; margin-bottom: 24px;">✨</div>
+                                <h1 class="outfit">Your store is ready!</h1>
+                                <p style="margin-bottom: 32px;">The Promoter has finished your custom storefront. You are now ready to start selling.</p>
+                                <button id="continue-to-dashboard-btn" onclick="showScreen('dashboard-screen')" style="width: 100%; margin-right: 0;">Continue to Dashboard →</button>
+                            </div>
                         </div>
                     </div>
 
@@ -3199,9 +3291,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         let currentStep = 1;
+                        let developerMode = false;
+
+                        function toggleDeveloperMode() {
+                            developerMode = !developerMode;
+                            localStorage.setItem('developerMode', developerMode);
+                            applyDeveloperMode();
+                        }
+
+                        function applyDeveloperMode() {
+                            const devElements = document.querySelectorAll('.dev-only');
+                            devElements.forEach(el => el.style.display = developerMode ? 'flex' : 'none');
+
+                            const devNav = document.querySelector('#main-nav a[onclick*="api-screen"]');
+                            if (devNav) devNav.style.display = developerMode ? 'inline-flex' : 'none';
+
+                            const statusText = document.getElementById('dev-mode-status');
+                            if (statusText) statusText.textContent = developerMode ? 'Enabled' : 'Disabled';
+                        }
+
+                        // Initialize developer mode from storage
+                        document.addEventListener('DOMContentLoaded', () => {
+                            developerMode = localStorage.getItem('developerMode') === 'true';
+                            applyDeveloperMode();
+                        });
+
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
-                            if (prevStep === 3 && parseInt(stepId) === 4) {
+                            if (prevStep === 3 && (stepId === 'stripe' || parseInt(stepId) === 4)) {
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
                                 if (!hasCompanyName) {
@@ -3231,12 +3348,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             if (stepId === 'generating') {
-                                // Premium transition simulation to provide perceived value
-                                await new Promise(resolve => setTimeout(resolve, 2000));
+                                const progressText = document.getElementById('ai-progress-text');
+                                const messages = [
+                                    "Analyzing your business type...",
+                                    "The Promoter is designing your site...",
+                                    "The Manager is setting up your catalog...",
+                                    "Finalizing your premium storefront..."
+                                ];
 
-                                if (prevStep === 3 || prevStep === 5) {
-                                    nextStep(prevStep);
-                                    return;
+                                for (let i = 0; i < messages.length; i++) {
+                                    if (progressText) progressText.textContent = messages[i];
+                                    await new Promise(resolve => setTimeout(resolve, 800));
                                 }
 
                                 try {
@@ -3245,14 +3367,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({})
                                     });
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
+                                    nextStep('launch-ai');
                                 } catch (e) {
                                     console.error(e);
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
+                                    nextStep('launch-ai');
                                 }
                             }
                         }
@@ -3277,6 +3395,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function showScreen(id) {
+                            if (!developerMode && (id === 'api-screen' || id === 'diagnostics-screen')) {
+                                id = 'dashboard-screen';
+                            }
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
                             if (screen) {
@@ -3293,19 +3414,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             }
                             setMainNavLabels(id);
+                            applyDeveloperMode();
 
-                            // Nav renaming logic
-                            const navButtons = document.querySelectorAll('.nav-item');
-                            if (id !== 'dashboard-screen') {
-                                navButtons.forEach(btn => {
-                                    if (!btn.dataset.text) btn.dataset.text = btn.textContent;
-                                    btn.textContent = '---';
-                                });
-                            } else {
-                                navButtons.forEach(btn => {
-                                    if (btn.dataset.text) btn.textContent = btn.dataset.text;
-                                });
-                            }
+                            // Update active state for nav items
+                            document.querySelectorAll('#mobile-bottom-nav .nav-item').forEach(btn => {
+                                btn.classList.toggle('active', btn.dataset.screen === id);
+                            });
 
                             if (pathMap[id] && window.location.protocol !== 'file:') {
                                 window.history.pushState({}, '', pathMap[id]);
