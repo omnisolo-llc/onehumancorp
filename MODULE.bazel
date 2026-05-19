@@ -30,6 +30,13 @@ gradle_distribution_repository(
 
 register_toolchains("@tauri_gradle//:gradle_toolchain")
 
+cargo_vendor_repository = use_repo_rule("//bazel/rules:cargo_vendor_repository.bzl", "cargo_vendor_repository")
+
+cargo_vendor_repository(
+    name = "tauri_cargo_vendor",
+    cargo_lock = "//:Cargo.lock",
+)
+
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(
     name = "go_sdk",
