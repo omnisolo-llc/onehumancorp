@@ -509,7 +509,7 @@ impl HubService for MyHubService {
 
         let is_latam = req.plan_id.ends_with("_latam");
         let url = if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
-            mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
+            mp_client.create_checkout_preference(&req.plan_id, &tenant_id, crate::integrations::mercadopago::routing::MercadoPagoMethod::CreditCard).await
         } else {
             client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
         }

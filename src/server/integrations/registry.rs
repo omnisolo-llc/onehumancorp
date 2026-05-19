@@ -97,7 +97,7 @@ impl IntegrationsRegistry {
                          if let Some(client) = clients.get(integration_id) {
                              let client = client.clone();
                              tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                 if let Err(e) = client.send_sms(&to, &from, &text, "twilio").await {
                                      tracing::error!("Failed to send Twilio SMS: {}", e);
                                  }
                              });
