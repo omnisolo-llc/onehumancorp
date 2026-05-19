@@ -95,17 +95,17 @@ CREATE TABLE IF NOT EXISTS agent_approvals (
 );
 
 CREATE TABLE IF NOT EXISTS swarm_tasks (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mission_id TEXT NOT NULL,
     parent_plan_id TEXT,
-    dependencies JSONB DEFAULT '[]',
+    dependencies JSONB NOT NULL DEFAULT '[]',
     title TEXT NOT NULL,
     description TEXT,
     priority TEXT,
     status TEXT NOT NULL DEFAULT 'PENDING',
     assigned_agent_id TEXT,
     locked_until TIMESTAMPTZ,
-    payload TEXT,
+    payload JSONB,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     auto_dreamed BOOLEAN DEFAULT FALSE,
@@ -240,6 +240,8 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     _sync_status TEXT DEFAULT 'pending',
     version INTEGER DEFAULT 1
 );
+CREATE INDEX IF NOT EXISTS idx_sm_entity ON state_machine_transitions(entity_id, entity_type);
+
 
 CREATE TABLE IF NOT EXISTS pages (
     id TEXT PRIMARY KEY,
