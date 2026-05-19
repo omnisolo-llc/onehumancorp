@@ -40,6 +40,89 @@ impl Runner {
     }
 }
 
+// App Server (bidirectional JSON-RPC API) layer
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct JsonRpcRequest {
+    pub jsonrpc: String,
+    pub id: Option<serde_json::Value>,
+    pub method: String,
+    pub params: serde_json::Value,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct JsonRpcResponse {
+    pub jsonrpc: String,
+    pub id: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<JsonRpcError>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct JsonRpcError {
+    pub code: i32,
+    pub message: String,
+}
+
+pub struct AppServer {
+    pub runner: Arc<Runner>,
+}
+
+impl AppServer {
+    pub fn new(runner: Arc<Runner>) -> Self {
+        Self { runner }
+    }
+
+    pub async fn handle_request(&self, req_json: &str) -> String {
+        let req: JsonRpcRequest = match serde_json::from_str(req_json) {
+            Ok(r) => r,
+            Err(_) => {
+                let err_resp = JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: None,
+                    result: None,
+                    error: Some(JsonRpcError { code: -32700, message: "Parse error".to_string() }),
+                };
+                return serde_json::to_string(&err_resp).unwrap();
+            }
+        };
+
+        if req.method == "run_agent" {
+            let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let cfg = AgentRunConfig::default();
+            match self.runner.run_async(&cfg, &initial_message).await {
+                Ok(result) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: Some(serde_json::json!({ "output": result })),
+                        error: None,
+                    };
+                    serde_json::to_string(&resp).unwrap()
+                }
+                Err(e) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                    };
+                    serde_json::to_string(&resp).unwrap()
+                }
+            }
+        } else {
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: None,
+                error: Some(JsonRpcError { code: -32601, message: "Method not found".to_string() }),
+            };
+            serde_json::to_string(&resp).unwrap()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,5 +207,34 @@ mod tests {
 
         let has_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
         assert!(has_complete);
+    }
+
+    #[tokio::test]
+    async fn test_app_server_json_rpc() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("rpc success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let app_server = AppServer::new(runner);
+
+        let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello"}}"#;
+        let resp_json = app_server.handle_request(req_json).await;
+
+        let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
+        assert_eq!(resp.id.unwrap(), serde_json::json!("1"));
+        assert!(resp.error.is_none());
+        assert_eq!(resp.result.unwrap().get("output").unwrap().as_str().unwrap(), "rpc success");
+
+        // Test unknown method
+        let req_json_bad = r#"{"jsonrpc": "2.0", "id": "2", "method": "unknown", "params": {}}"#;
+        let resp_json_bad = app_server.handle_request(req_json_bad).await;
+        let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
+        assert_eq!(resp_bad.error.unwrap().code, -32601);
     }
 }
