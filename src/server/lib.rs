@@ -1786,6 +1786,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
+        .layer(axum::middleware::from_fn(::server_utils::gzip_middleware::gzip_middleware))
         .merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
