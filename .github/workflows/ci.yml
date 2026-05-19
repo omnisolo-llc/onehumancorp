@@ -67,9 +67,8 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            # build --config=buildbuddy
-            build --config=nativelink
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
@@ -128,7 +127,8 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            build --config=nativelink
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
