@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -1926,23 +1926,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #006fff;
+                            --primary: #0066FF;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
-                            --accent-green: #15a46f;
-                            --accent-orange: #f59e0b;
+                            --accent-green: #34C759;
+                            --accent-orange: #FF9500;
+                            --accent-red: #FF3B30;
                             --bg: #eef1f5;
-                            --surface: rgba(255, 255, 255, 0.86);
+                            --surface: rgba(255, 255, 255, 0.65);
                             --surface-strong: #ffffff;
                             --sidebar-bg: rgba(248, 250, 252, 0.92);
-                            --text: #111827;
+                            --text: #1D1D1F;
                             --text-secondary: #657083;
                             --text-tertiary: #8a94a6;
-                            --border: rgba(16, 24, 40, 0.1);
+                            --border: rgba(255, 255, 255, 0.4);
                             --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
                             --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
                             --radius-sm: 8px;
-                            --radius-md: 10px;
+                            --radius-md: 16px;
+                        }
+
+                        @media (prefers-color-scheme: dark) {
+                            :root {
+                                color-scheme: dark;
+                                --bg: #16161a;
+                                --surface: rgba(22, 22, 26, 0.7);
+                                --surface-strong: #1c1c1e;
+                                --sidebar-bg: rgba(22, 22, 26, 0.92);
+                                --text: #F5F5F7;
+                                --text-secondary: #a1a1a6;
+                                --text-tertiary: #6e6e73;
+                                --border: rgba(255, 255, 255, 0.1);
+                            }
                         }
                         * {
                             box-sizing: border-box;
@@ -1986,10 +2001,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            border: 1px solid var(--border);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
