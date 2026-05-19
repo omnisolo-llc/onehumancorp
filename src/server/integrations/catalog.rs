@@ -42,5 +42,11 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
+    let ayrshare_provider = crate::integrations::ayrshare::provider::AyrshareProvider::new("dummy".to_string());
+    catalog.push(ayrshare_provider.into_integration_provider());
+
+    let calcom_provider = crate::integrations::calcom::provider::CalcomProvider::new("dummy".to_string());
+    catalog.push(calcom_provider.into_integration_provider());
+
     catalog
 }
