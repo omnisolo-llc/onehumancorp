@@ -39,6 +39,26 @@ impl InviteRepository {
         Ok(())
     }
 
+    pub async fn get_team_invites(&self, team_id: &str) -> Result<Vec<TeamInvite>, String> {
+        let rows = sqlx::query("SELECT id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1")
+            .bind(team_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let invites = rows.into_iter().map(|row| TeamInvite {
+            id: row.get("id"),
+            team_id: row.get("team_id"),
+            inviter_id: row.get("inviter_id"),
+            invitee_id: row.get("invitee_id"),
+            status: row.get("status"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        }).collect();
+
+        Ok(invites)
+    }
+
     pub async fn get_team_invites_count(&self, team_id: &str) -> Result<i64, String> {
         let row = sqlx::query("SELECT COUNT(*) FROM team_invites WHERE team_id = $1")
             .bind(team_id)
@@ -106,6 +126,10 @@ impl InviteTracker {
         self.repo.create_invite(&invite).await?;
         
         Ok(())
+    }
+
+    pub async fn get_team_invites(&self, team_id: &str) -> Result<Vec<TeamInvite>, String> {
+        self.repo.get_team_invites(team_id).await
     }
 
     pub async fn get_team_invites_count(&self, team_id: &str) -> Result<i64, String> {

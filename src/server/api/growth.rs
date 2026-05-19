@@ -70,7 +70,26 @@ where
         .route("/campaign/send", post(handle_send_campaign))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateTeamInviteRequest {
+    pub team_id: String,
+    pub inviter_id: String,
+    pub invitee_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetTeamInvitesQuery {
+    pub team_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TeamInvitesResponse {
+    pub invites: Vec<crate::services::growth::invites::TeamInvite>,
 }
 
 #[derive(Clone)]
@@ -124,4 +143,95 @@ async fn handle_check_milestones(
         },
     ];
     Json(MilestonesResponse { milestones })
+}
+
+async fn handle_get_team_invites(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
+) -> Result<Json<TeamInvitesResponse>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.get_team_invites(&query.team_id).await {
+        Ok(invites) => Ok(Json(TeamInvitesResponse { invites })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_create_team_invite(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<CreateTeamInviteRequest>,
+) -> Result<Json<()>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
+        Ok(_) => Ok(Json(())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::extract::Extension;
+    use axum::Json;
+    use axum::extract::Query;
+    use serde_json::json;
+    use sqlx::PgPool;
+
+    async fn setup_db() -> PgPool {
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(1)
+            .connect_lazy(&database_url)
+            .expect("Failed to connect to DB");
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_create_and_get_team_invites() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = CreateTeamInviteRequest {
+            team_id: "team-test-direct".to_string(),
+            inviter_id: "user-xyz".to_string(),
+            invitee_id: "user-abc".to_string(),
+        };
+
+        // Call create handler directly
+        let res = handle_create_team_invite(Extension(state.clone()), Json(req)).await;
+        assert!(res.is_ok());
+
+        // Call get handler directly
+        let query = GetTeamInvitesQuery {
+            team_id: "team-test-direct".to_string(),
+        };
+        let get_res = handle_get_team_invites(Extension(state.clone()), Query(query)).await;
+        assert!(get_res.is_ok());
+
+        let get_res_json = get_res.unwrap().0;
+        assert!(!get_res_json.invites.is_empty());
+
+        let mut found = false;
+        for inv in &get_res_json.invites {
+            if inv.team_id == "team-test-direct" && inv.invitee_id == "user-abc" {
+                found = true;
+                break;
+            }
+        }
+        assert!(found);
+    }
 }
