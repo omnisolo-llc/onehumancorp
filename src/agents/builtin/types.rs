@@ -161,3 +161,12 @@ impl std::fmt::Display for ToolError {
 }
 
 impl std::error::Error for ToolError {}
+
+/// Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PermissionArchitecture {
+    /// Auto-approve all tools
+    Permissive,
+    /// Require explicit user approval for mutating tools
+    Restrictive,
+}
