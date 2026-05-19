@@ -8,19 +8,38 @@ export default function BuilderPage() {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
+  const [rearrangeMode, setRearrangeMode] = useState(false);
+
+  const [siteDraft, setSiteDraft] = useState<any>(null);
+
+  const moveBlock = (index: number, direction: number) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= blocks.length) return;
+    const newBlocks = [...blocks];
+    const temp = newBlocks[index];
+    newBlocks[index] = newBlocks[newIndex];
+    newBlocks[newIndex] = temp;
+    setBlocks(newBlocks);
+  };
 
   const handleGenerate = async () => {
     setStatus("generating");
 
     try {
-      const response = await fetch('/builder/api', {
+      const response = await fetch('/api/v1/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio })
+        body: JSON.stringify({ description: bio })
       });
 
       const data = await response.json();
-      setBlocks(data.blocks);
+      setSiteDraft(data);
+      if (data.pages && data.pages.length > 0) {
+        setBlocks(data.pages[0].blocks.map((b: any) => ({
+          type: b.block_type,
+          props: b.content
+        })));
+      }
       setStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -28,13 +47,49 @@ export default function BuilderPage() {
     }
   };
 
-  const handleLaunch = () => {
-    // Simulate background provisioning of subdomain and SSL
-    setTimeout(() => {
-      setStatus("live");
-      const subdomain = bio.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
-      setLiveUrl(`https://${subdomain || 'myshop'}.ohc.store`);
-    }, 1500);
+  const handleLaunch = async () => {
+    setStatus("generating"); // Re-using generating state for simplicity, ideally would be "publishing"
+    try {
+       const subdomain = bio.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10) || 'myshop';
+       const draftBlocks = blocks.map((b, i) => ({
+          block_type: b.type,
+          content: b.props,
+          sort_order: i
+       }));
+
+       const payload = {
+          domain: `${subdomain}.ohc.store`,
+          draft: {
+             domain: null,
+             pages: [
+                {
+                   path: "/",
+                   title: "Home",
+                   blocks: draftBlocks,
+                   seo_metadata: siteDraft && siteDraft.pages[0] ? siteDraft.pages[0].seo_metadata : {}
+                }
+             ]
+          }
+       };
+
+       const response = await fetch('/api/v1/builder/publish_draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+       });
+
+       if (response.ok) {
+          const data = await response.json();
+          setLiveUrl(data.domain ? `https://${data.domain}` : `https://${subdomain}.ohc.store`);
+          setStatus("live");
+       } else {
+          console.error("Failed to publish storefront");
+          setStatus("draft");
+       }
+    } catch (error) {
+       console.error("Error publishing storefront", error);
+       setStatus("draft");
+    }
   };
 
   if (status === "idle") {
@@ -126,14 +181,39 @@ export default function BuilderPage() {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
           {blocks.map((b, i) => (
-            <SmartBlock key={i} {...b} />
+            <div key={i} className="relative group">
+               <SmartBlock {...b} />
+               {rearrangeMode && (
+                 <div className="absolute top-2 right-2 flex flex-col gap-1 z-20">
+                    <button
+                      className="bg-white/80 p-2 rounded-full shadow-md text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                      onClick={() => moveBlock(i, -1)}
+                      disabled={i === 0}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      className="bg-white/80 p-2 rounded-full shadow-md text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                      onClick={() => moveBlock(i, 1)}
+                      disabled={i === blocks.length - 1}
+                    >
+                      ↓
+                    </button>
+                 </div>
+               )}
+            </div>
           ))}
         </div>
 
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50">
           <div className="flex gap-3 mb-2">
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg">Change Vibe</button>
+            <button
+               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${rearrangeMode ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}
+               onClick={() => setRearrangeMode(!rearrangeMode)}
+            >
+              {rearrangeMode ? 'Done Rearranging' : 'Rearrange'}
+            </button>
             <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg">Edit Text</button>
           </div>
           <button
