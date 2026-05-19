@@ -18,14 +18,14 @@ pub trait MeshTransport: Send + Sync {
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
 }
 
-pub struct MemoryTransport {
+pub struct InProcessTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
     presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
 }
 
-impl MemoryTransport {
+impl InProcessTransport {
     pub fn new() -> Self {
-        MemoryTransport {
+        InProcessTransport {
             subs: DashMap::new(),
             presence: DashMap::new(),
         }
@@ -33,7 +33,7 @@ impl MemoryTransport {
 }
 
 #[async_trait]
-impl MeshTransport for MemoryTransport {
+impl MeshTransport for InProcessTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         if let Some(tx) = self.subs.get(topic) {
             let _ = tx.send(message);
@@ -601,18 +601,18 @@ impl MeshTransport for SqliteTransport {
     }
 }
 
-pub struct RedisTransport {
+pub struct RedisPubSubTransport {
 
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
 }
 
-impl RedisTransport {
+impl RedisPubSubTransport {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
         let publish_conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
 
-        Ok(RedisTransport {
+        Ok(RedisPubSubTransport {
             client,
             publish_conn: tokio::sync::Mutex::new(publish_conn),
         })
@@ -620,7 +620,7 @@ impl RedisTransport {
 }
 
 #[async_trait]
-impl MeshTransport for RedisTransport {
+impl MeshTransport for RedisPubSubTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
@@ -860,12 +860,45 @@ impl MeshTransport for NatsTransport {
 }
 
 
+
+pub struct UniversalTransportBridge {
+    inner: Arc<dyn MeshTransport>,
+}
+
+impl UniversalTransportBridge {
+    pub fn new(inner: Arc<dyn MeshTransport>) -> Self {
+        UniversalTransportBridge { inner }
+    }
+}
+
+#[async_trait]
+impl MeshTransport for UniversalTransportBridge {
+    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        self.inner.publish(topic, message).await
+    }
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.inner.subscribe(topic, handler).await
+    }
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.inner.acquire_lock(resource, owner, ttl_seconds).await
+    }
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.inner.release_lock(resource, owner).await
+    }
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.inner.get_active_agents().await
+    }
+}
+
 pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
                 tracing::info!("Initialized NatsTransport");
-                return Ok(Arc::new(t));
+                return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
             },
             Err(e) => {
                 tracing::warn!("Failed to initialize NatsTransport: {}. Falling back to default transport.", e);
@@ -875,13 +908,13 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
 
     if is_cloud {
         if let Some(url) = redis_url {
-            match RedisTransport::new(url).await {
+            match RedisPubSubTransport::new(url).await {
                 Ok(t) => {
-                    tracing::info!("Initialized RedisTransport");
-                    return Ok(Arc::new(t));
+                    tracing::info!("Initialized RedisPubSubTransport");
+                    return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
                 },
                 Err(e) => {
-                    return Err(format!("Failed to initialize RedisTransport in cloud mode: {}", e));
+                    return Err(format!("Failed to initialize RedisPubSubTransport in cloud mode: {}", e));
                 }
             }
         } else {
@@ -899,10 +932,10 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
                             let t_clone = t.clone();
                             tokio::spawn(async move { t_clone.start_worker().await; });
                             tracing::debug!("Initialized SqliteTransport (Standalone)");
-                            return Ok(Arc::new(t));
+                            return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
                         },
                         Err(e) => {
-                            tracing::debug!("Failed to initialize SqliteTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                            tracing::debug!("Failed to initialize SqliteTransport (Standalone): {}. Falling back to InProcessTransport.", e);
                         }
                     }
                 },
@@ -914,19 +947,19 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     }
 
     if let Some(url) = redis_url {
-        match RedisTransport::new(url).await {
+        match RedisPubSubTransport::new(url).await {
             Ok(t) => {
-                tracing::info!("Initialized RedisTransport (Standalone)");
-                return Ok(Arc::new(t));
+                tracing::info!("Initialized RedisPubSubTransport (Standalone)");
+                return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
             },
             Err(e) => {
-                tracing::warn!("Failed to initialize RedisTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                tracing::warn!("Failed to initialize RedisPubSubTransport (Standalone): {}. Falling back to InProcessTransport.", e);
             }
         }
     }
 
-    tracing::info!("Initialized MemoryTransport");
-    Ok(Arc::new(MemoryTransport::new()))
+    tracing::info!("Initialized InProcessTransport");
+    Ok(Arc::new(UniversalTransportBridge::new(Arc::new(InProcessTransport::new()))))
 }
 
 #[cfg(test)]
@@ -1022,7 +1055,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
@@ -1053,7 +1086,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_transport_standalone() {
         let _transport = create_transport(None, false).await.unwrap();
-        // Since MemoryTransport isn't easily castable back without Any, we just ensure it didn't err
+        // Since InProcessTransport isn't easily castable back without Any, we just ensure it didn't err
         assert!(true);
     }
 
@@ -1183,7 +1216,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport_locking() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
 
         // Test lock acquisition
         let acquired = transport.acquire_lock("my_resource", "agent_1", 10).await.unwrap();
@@ -1212,7 +1245,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport_lock_expiration() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
 
         // Acquire lock with short TTL (1 second)
         let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
@@ -1228,7 +1261,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport_presence() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
 
         // Register presence
         transport.register_presence("agent_1", "online", 10).await.unwrap();
@@ -1254,7 +1287,7 @@ mod tests {
     #[tokio::test]
     async fn test_redis_transport() {
         // Needs running Redis instance
-        let transport = RedisTransport::new("redis://localhost:6379").await;
+        let transport = RedisPubSubTransport::new("redis://localhost:6379").await;
         if transport.is_err() {
 
             return;
