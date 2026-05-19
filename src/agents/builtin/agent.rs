@@ -1303,7 +1303,7 @@ impl Agent {
                 }
             }
 
-            // 3-Tier Memory Mechanic: Lightweight Index
+            // Anthropic Mechanic: 3-Tier Memory Store implementation. Crucial rule: Agent must treat memory as a "hint" and verify against actual state before acting.
             if let Ok(index_content) = store.get_lightweight_index().await {
                 if !index_content.trim().is_empty() {
                     combined_system.push_str("\n\n[Lightweight Memory Index]\n");
