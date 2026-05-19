@@ -815,7 +815,7 @@ pub async fn insert_autodream_memory(
                 sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN 'Blocked: Insufficient mission details provided in context.' ELSE mission_log || '\nBlocked: Insufficient mission details provided in context.' END,
                          updated_at = CURRENT_TIMESTAMP
                      WHERE id = $2"
                 )
@@ -830,7 +830,7 @@ pub async fn insert_autodream_memory(
                 sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN 'Blocked: Insufficient mission details provided in context.' ELSE mission_log || '\nBlocked: Insufficient mission details provided in context.' END,
                          updated_at = CURRENT_TIMESTAMP
                      WHERE id = $2"
                 )
