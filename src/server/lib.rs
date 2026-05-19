@@ -2946,17 +2946,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 let innerHtml = `<h2>${block.type}</h2>`;
                                 if (rearrangeMode) {
                                     innerHtml += `<p>↕ Drag to reorder</p>`;
-                                    // Simulation of drag logic
                                     const upBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, -1);">↑</button>`;
                                     const downBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, 1);">↓</button>`;
                                     innerHtml += `<div>${upBtn} ${downBtn}</div>`;
                                 } else {
+                                    // Handle old types (from E2E tests)
                                     if (block.type === 'Hero') {
                                         innerHtml += `<p><strong>${block.content.title}</strong></p><p>${block.content.subtitle}</p><button class="secondary">${block.content.cta}</button>`;
                                     } else if (block.type === 'Product Grid') {
                                         innerHtml += `<p>${block.content.title} (${block.content.count} items)</p>`;
-                                    } else {
+                                    } else if (block.type === 'Service List' || block.type === 'Testimonials') {
                                         innerHtml += `<p>${block.content.title || block.content.text}</p>`;
+                                    }
+                                    // Handle new types (from backend generation)
+                                    else if (block.type === 'HeroBlock') {
+                                        innerHtml += `<p><strong>${block.content.headline}</strong></p><p>${block.content.subtitle}</p>`;
+                                    } else if (block.type === 'ProductGridBlock') {
+                                        const items = block.content.items || [];
+                                        innerHtml += `<p>${items.length} items: ${items.join(', ')}</p>`;
+                                    } else if (block.type === 'ServiceBookingBlock') {
+                                        const services = block.content.services || [];
+                                        innerHtml += `<p>${services.length} services: ${services.join(', ')}</p>`;
+                                    } else if (block.type === 'TestimonialBlock') {
+                                        const testimonials = block.content.testimonials || [];
+                                        innerHtml += `<p>${testimonials.join(' ')}</p>`;
                                     }
                                 }
                                 el.innerHTML = innerHtml;
@@ -3028,12 +3041,51 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        function publishStorefront() {
-                            closeDomainSetup();
-                            fireConfetti();
-                            setTimeout(() => {
-                                showScreen('dashboard-screen');
-                            }, 2000);
+                        async function publishStorefront() {
+                            const domainInput = document.getElementById('free-domain-input');
+                            const domain = domainInput ? domainInput.value : '';
+
+                            // Map blocks to DraftBlock format
+                            const draftBlocks = storefrontDraftState.map((b, i) => ({
+                                block_type: b.type === 'Hero' ? 'HeroBlock' :
+                                            b.type === 'Product Grid' ? 'ProductGridBlock' :
+                                            b.type === 'Service List' ? 'ServiceBookingBlock' :
+                                            b.type === 'Testimonials' ? 'TestimonialBlock' : b.type,
+                                content: b.content,
+                                sort_order: i
+                            }));
+
+                            const payload = {
+                                domain: domain ? domain : null,
+                                draft: {
+                                    domain: null,
+                                    pages: [{
+                                        path: '/',
+                                        title: 'Home',
+                                        blocks: draftBlocks,
+                                        seo_metadata: currentSiteDraft ? currentSiteDraft.pages[0].seo_metadata : {}
+                                    }]
+                                }
+                            };
+
+                            try {
+                                const response = await fetch('/api/v1/builder/publish_draft', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+                                if (response.ok) {
+                                    closeDomainSetup();
+                                    fireConfetti();
+                                    setTimeout(() => {
+                                        showScreen('dashboard-screen');
+                                    }, 2000);
+                                } else {
+                                    console.error('Failed to publish');
+                                }
+                            } catch (e) {
+                                console.error('Error publishing:', e);
+                            }
                         }
 
                         function fireConfetti() {
@@ -3257,8 +3309,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        let currentSiteDraft = null;
+
                         async function generateAI() {
+                            const descInput = document.querySelector('#step-ai input');
+                            const description = descInput ? descInput.value : '';
                             nextStep('generating');
+                            try {
+                                const response = await fetch('/api/v1/builder/generate', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ description })
+                                });
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    currentSiteDraft = data;
+
+                                    // Update storefrontDraftState
+                                    if (data.pages && data.pages.length > 0) {
+                                        storefrontDraftState = data.pages[0].blocks.map((b, i) => ({
+                                            id: 'ai-gen-' + i,
+                                            type: b.block_type,
+                                            content: b.content
+                                        }));
+                                    }
+
+                                    // Show builder screen directly
+                                    setTimeout(() => {
+                                        showScreen('storefront-builder-screen');
+                                        renderStorefrontPreview();
+                                    }, 2000); // Wait for the "generating" animation
+                                } else {
+                                    setTimeout(() => nextStep('launch-ai'), 2000);
+                                }
+                            } catch(e) {
+                                console.error(e);
+                                setTimeout(() => nextStep('launch-ai'), 2000);
+                            }
                         }
 
                         function selectWizardOption(button) {
