@@ -630,7 +630,7 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
-                            let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                            let max_retries = 2; // Enforced to exactly 2 as per Stripe mechanic // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res;
 
                             loop {
@@ -718,7 +718,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
-                        let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                        let max_retries = 2; // Enforced to exactly 2 as per Stripe mechanic // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res;
 
                         loop {
@@ -993,7 +993,7 @@ impl Agent {
             }
 
             let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
+            let max_retries = 2; // Enforced to exactly 2 as per Stripe mechanic
             let result = loop {
                 match self.execute_tool(&dummy_tc, session_tools, &[]).await {
                     Ok(res) => break res,
@@ -1717,7 +1717,7 @@ impl Agent {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let max_retries = 2; // Enforced to exactly 2 as per Stripe mechanic // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
@@ -1920,7 +1920,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = final_cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let max_retries = 2; // Enforced to exactly 2 as per Stripe mechanic // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
