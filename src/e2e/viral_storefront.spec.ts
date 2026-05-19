@@ -15,4 +15,9 @@ test.describe('Viral Storefront E2E', () => {
     await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
     await expect(page.getByPlaceholder('mybusiness')).toBeVisible();
   });
+
+  test('includes Powered by OHC viral footer in storefront builder', async ({ page }) => {
+    await page.goto('/storefront-builder');
+    await expect(page.locator('text="⚡ Powered by OHC - Get your own site"')).toBeVisible();
+  });
 });

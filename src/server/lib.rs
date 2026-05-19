@@ -3321,6 +3321,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 el.innerHTML = innerHtml;
                                 container.appendChild(el);
                             });
+
+                            const footerEl = document.createElement('div');
+                            footerEl.className = 'builder-block glass';
+                            footerEl.style.textAlign = 'center';
+                            footerEl.style.opacity = '0.8';
+                            footerEl.innerHTML = `<p><a href="ohc://join?ref=STOREFRONT" style="color: inherit; text-decoration: none;">⚡ Powered by OHC - Get your own site</a></p>`;
+                            container.appendChild(footerEl);
                         }
 
                         function toggleRearrangeMode() {
@@ -3400,6 +3407,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 content: b.content,
                                 sort_order: i
                             }));
+
+                            draftBlocks.push({
+                                block_type: 'TestimonialBlock',
+                                content: { testimonials: ["⚡ Powered by OHC - Get your own site: ohc://join?ref=STOREFRONT"] },
+                                sort_order: draftBlocks.length
+                            });
 
                             const payload = {
                                 domain: domain ? domain : null,
