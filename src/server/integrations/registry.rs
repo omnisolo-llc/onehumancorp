@@ -18,6 +18,7 @@ pub struct IntegrationsRegistry {
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
+    meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -42,6 +43,7 @@ impl IntegrationsRegistry {
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -104,6 +106,25 @@ impl IntegrationsRegistry {
                          }
                      }
                  }
+                 "meta" => {
+                     if !creds.api_token.is_empty() {
+                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let text = content.to_string();
+
+                         let clients = self.meta_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                 // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
+                                 // Otherwise we default to whatsapp
+                                 let platform = if to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
+                                 if let Err(e) = client.send_message(platform, &to, &text).await {
+                                     tracing::error!("Failed to send Meta message: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
                  _ => {}
              }
         }
@@ -155,6 +176,12 @@ impl IntegrationsRegistry {
                     clients.insert(integration_id_clone, std::sync::Arc::new(provider));
                 }
             });
+        }
+        if integration_id == "meta" {
+            let mut clients = self.meta_clients.write().unwrap();
+            clients.insert("meta".to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
+                creds.api_token.clone()
+            )));
         }
 
         Ok(inst)
