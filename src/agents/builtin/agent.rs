@@ -2229,6 +2229,7 @@ impl Agent {
                             middle_text.push_str("---\n");
                         }
 
+                        let llm_client = self.llm.clone();
                         let summary_req = ChatRequest {
                             model: final_cfg.model.clone(),
                             system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
@@ -2238,7 +2239,7 @@ impl Agent {
                             temperature: 0.0,
                         };
 
-                        match self.llm.chat(summary_req).await {
+                        match llm_client.chat(summary_req).await {
                             Ok(summary_resp) => {
                                 let summary = summary_resp.message.content;
                                 compact_messages.push(Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
