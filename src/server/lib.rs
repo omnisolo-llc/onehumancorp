@@ -1831,6 +1831,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
         ))
+        .layer(tower_http::compression::CompressionLayer::new())
         .with_state(mesh_transport)
         .merge(webhook_router)
         .merge(health_router)

@@ -74,6 +74,7 @@ rust_library(
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:aes-gcm",
         "@crates//:axum",
+        "@crates//:tower-http",
         "@crates//:async-nats",
         "@crates//:base64",
         "@crates//:bcrypt",

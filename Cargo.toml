@@ -54,6 +54,7 @@ opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
 tracing-opentelemetry = "0.28"
 tonic-build = "0.12"
 axum = { version = "0.8.1", features = ["ws"] }
+tower-http = { version = "0.6.1", features = ["compression-gzip"] }
 tokio-tungstenite = "0.29.0"
 dashmap = "5"
 async-nats = "0.47.0"

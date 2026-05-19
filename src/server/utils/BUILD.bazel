@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_utils",
@@ -6,9 +6,9 @@ rust_library(
         "payload_validator.rs",
         "sip_protocol.rs",
         "cache.rs",
+        "compression_test.rs",
         "dialect.rs",
         "fs.rs",
-        "gzip_middleware.rs",
         "json_minify.rs",
         "mod.rs",
         "slug.rs",
@@ -22,6 +22,7 @@ rust_library(
         "//src/server/auth:server_auth",
         "//src/server/pricing:server_pricing",
         "@crates//:axum",
+        "@crates//:tower-http",
         "@crates//:base64",
         "@crates//:chrono",
         "@crates//:flate2",
@@ -33,5 +34,15 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "server_utils_test",
+    crate = ":server_utils",
+    edition = "2024",
+    deps = [
+        "@crates//:tower",
+        "@crates//:reqwest",
     ],
 )
