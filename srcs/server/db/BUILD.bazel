@@ -1,0 +1,11 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "db",
+    srcs = ["database.go"],
+    importpath = "onehumancorp/srcs/server/db",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+    ],
+)
