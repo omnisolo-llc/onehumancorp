@@ -16,6 +16,7 @@
 pub use ohc_builtin_agent_core::*;
 
 pub mod agent;
+pub mod observation_masking;
 pub mod service;
 pub mod departments;
 pub mod guardrails;
