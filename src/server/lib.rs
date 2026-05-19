@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2407,6 +2407,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
                             <p id="invite-copied" style="display: none;">Invite message copied!</p>
                         </div>
+                        <div class="card glass">
+                            <h3>Embed Your Storefront</h3>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Add this widget to your existing website to start selling instantly.</p>
+                            <textarea id="embed-code-textarea" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 8px; resize: none;"><iframe src="https://[YOUR-STORE-DOMAIN]/embed" width="100%" height="600" style="border:none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe></textarea>
+                            <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value); this.textContent='Copied!'; setTimeout(() => this.textContent='📋 Copy Embed Code', 2000);">📋 Copy Embed Code</button>
+                        </div>
+                        <script>
+                            // Dynamically update embed code with the current domain or a default subdomain when screen is loaded
+                            document.addEventListener('DOMContentLoaded', () => {
+                                const embedTextarea = document.getElementById('embed-code-textarea');
+                                if (embedTextarea) {
+                                    // In a real scenario, this would come from the server or user settings
+                                    // We use a mock placeholder that represents dynamic generation
+                                    const storeDomain = window.location.hostname === 'localhost' ? 'demo.ohc.app' : window.location.hostname;
+                                    embedTextarea.value = `<iframe src="https://${storeDomain}/embed" width="100%" height="600" style="border:none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe>`;
+                                }
+                            });
+                        </script>
                         <div class="card glass">
                             <h3>Actions</h3>
                             <button onclick="alert('History shown')">📜 View Referral Logs</button>
