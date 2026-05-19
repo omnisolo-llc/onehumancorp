@@ -1,19 +1,22 @@
 {
   "$schema": "https://v2.tauri.app/schemas/2.0.0/config.schema.json",
-  "productName": "App",
-  "version": "0.1.0",
-  "identifier": "com.app.desktop",
+  "productName": "OHC",
+  "version": "0.4.42",
+  "identifier": "com.onehumancorp.ohc",
   "build": {
     "frontendDist": "./next_out",
-    "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "cd ../next && npm run dev",
-    "beforeBuildCommand": "cd ../next && npm run build"
+    "devUrl": "http://localhost:3000"
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Business"
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "App",
+        "title": "OHC",
         "width": 1200,
         "height": 800,
         "resizable": true,

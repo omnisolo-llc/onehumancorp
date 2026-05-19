@@ -1,2 +1,9 @@
 load("@rules_rust//rust:defs.bzl", "rust_test")
-rust_test(name = "padding_test", srcs = ["padding.rs"])
+rust_test(
+    name = "padding_test",
+    srcs = ["padding.rs"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)

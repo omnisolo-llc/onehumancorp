@@ -11,4 +11,8 @@ filegroup(
 rust_test(
     name = "dummy_test",
     srcs = ["dummy.rs"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

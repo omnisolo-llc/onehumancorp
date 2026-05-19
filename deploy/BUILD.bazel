@@ -52,6 +52,30 @@ oci_load(
     visibility = ["//visibility:public"],
 )
 
+oci_load(
+    name = "server_web_image_tarball",
+    image = ":server_image",
+    repo_tags = [
+        "onehumancorp/server:latest",
+        "onehumancorp/server-web:latest",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+filegroup(
+    name = "server_web_image_tar",
+    srcs = [":server_web_image_tarball"],
+    output_group = "tarball",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
 oci_push(
     name = "server_push_ghcr",
     image = ":server_image",

@@ -28,6 +28,13 @@ bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2024",
+    extra_rustc_flags_triples = {
+        "x86_64-pc-windows-gnu": [
+            "-Clinker=/usr/bin/x86_64-w64-mingw32-gcc",
+            "-Lnative=/usr/x86_64-w64-mingw32/lib",
+            "-Lnative=/usr/lib/gcc/x86_64-w64-mingw32/13-posix",
+        ],
+    },
     extra_target_triples = [
         "x86_64-pc-windows-msvc",
         "x86_64-pc-windows-gnu",
@@ -35,6 +42,7 @@ rust.toolchain(
         "i686-pc-windows-gnu",
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
+        "x86_64-apple-darwin",
         "aarch64-apple-darwin",
         "aarch64-apple-ios",
         "aarch64-linux-android",
@@ -88,6 +96,58 @@ crate.annotation(
 crate.annotation(
     crate = "protoc-gen-tonic",
     gen_binaries = ["protoc-gen-tonic"],
+)
+
+crate.annotation_select(
+    build_script_env = {
+        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
+        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
+        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
+    },
+    crate = "libsqlite3-sys",
+    triples = [
+        "x86_64-pc-windows-gnu",
+        "x86_64-pc-windows-msvc",
+    ],
+)
+
+crate.annotation_select(
+    build_script_env = {
+        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
+        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
+        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
+    },
+    crate = "ring",
+    triples = [
+        "x86_64-pc-windows-gnu",
+        "x86_64-pc-windows-msvc",
+    ],
+)
+
+crate.annotation_select(
+    build_script_env = {
+        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
+        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
+        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
+    },
+    crate = "tree-sitter",
+    triples = [
+        "x86_64-pc-windows-gnu",
+        "x86_64-pc-windows-msvc",
+    ],
+)
+
+crate.annotation_select(
+    build_script_env = {
+        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
+        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
+        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
+    },
+    crate = "tree-sitter-bash",
+    triples = [
+        "x86_64-pc-windows-gnu",
+        "x86_64-pc-windows-msvc",
+    ],
 )
 
 # wasm-bindgen crate version must match what the toolchain provides
