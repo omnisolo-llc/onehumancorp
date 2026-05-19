@@ -2289,8 +2289,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                        <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add</button>
-                        <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
+                        <button class="nav-item" onclick="showScreen('product-onboarding-screen')">Add</button>
+                        <span class="nav-item" onclick="showScreen('product-onboarding-screen')">Add Product</span>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
                         <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
@@ -2384,7 +2384,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
+                            <span class="nav-item" onclick="showScreen('product-onboarding-screen')">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
@@ -2415,27 +2415,113 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+                    <!-- Product Onboarding Screen -->
+                    <div id="product-onboarding-screen" class="screen glass" style="display: none; padding-bottom: 80px;">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="margin-bottom: 16px;">< Back</button>
+                        <h1 style="margin-top: 0;">Add Product</h1>
+
+                        <div id="product-upload-view" class="card glass" style="text-align: center; padding: 40px 20px;">
+                            <h2 style="margin-top: 0;">Upload a Photo</h2>
+                            <p style="color: #666; margin-bottom: 24px;">Let The Operations Manager AI build your listing instantly.</p>
+
+                            <input type="file" id="product-photo-upload" style="display: none;" accept="image/*" onchange="startProductAnalysis()" />
+                            <button class="primary" style="font-size: 1.2em; padding: 16px 32px; box-shadow: 0 8px 24px rgba(0, 102, 255, 0.2);" onclick="document.getElementById('product-photo-upload').click()">
+                                📸 Upload Photo
+                            </button>
+                        </div>
+
+                        <div id="product-analyzing-view" class="card glass" style="display: none; text-align: center; padding: 40px 20px;">
+                            <div class="shimmer" style="height: 120px; width: 100px; margin: 0 auto 24px auto; border-radius: 8px;"></div>
+                            <h3 style="color: var(--primary);">✨ The Operations Manager is analyzing your photo...</h3>
+                        </div>
+
+                        <div id="product-review-view" class="card glass" style="display: none;">
+                            <h3 style="margin-top: 0; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px;">Review Generated Listing</h3>
+
+                            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                                <div style="width: 80px; height: 80px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2em;">🍰</div>
+                                <div style="flex: 1;">
+                                    <label style="font-size: 12px; color: #666;">Suggested Title</label>
+                                    <input id="prod-title" type="text" value="Vegan Chocolate Celebration Cake" style="width: 100%; font-weight: bold;" />
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 16px;">
+                                <label style="font-size: 12px; color: #666;">Suggested Price <span style="background: rgba(0, 102, 255, 0.1); color: var(--primary); padding: 2px 6px; border-radius: 8px; font-size: 10px;" title="Based on local competitors">Why this price?</span></label>
+                                <input id="prod-price" type="text" value="$45.00" style="width: 100%; font-size: 1.2em;" />
+                            </div>
+
+                            <div style="margin-bottom: 16px;">
+                                <label style="font-size: 12px; color: #666;">Generated Description</label>
+                                <textarea id="prod-desc" style="width: 100%; min-height: 80px; font-family: inherit;">Rich, moist vegan chocolate cake perfect for birthdays and celebrations. Made with premium organic cocoa.</textarea>
+                            </div>
+
+                            <div style="margin-bottom: 24px;">
+                                <label style="font-size: 12px; color: #666;">Categories</label>
+                                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                    <span style="background: #eef2ff; color: var(--primary); padding: 4px 12px; border-radius: 16px; font-size: 14px;">Vegan</span>
+                                    <span style="background: #eef2ff; color: var(--primary); padding: 4px 12px; border-radius: 16px; font-size: 14px;">Cakes</span>
+                                    <span style="background: #eef2ff; color: var(--primary); padding: 4px 12px; border-radius: 16px; font-size: 14px;">Birthday</span>
+                                </div>
+                            </div>
+
+                            <button class="primary" style="width: 100%; font-size: 1.1em; padding: 12px;" onclick="publishProduct()">Publish Product</button>
+                        </div>
+                    </div>
                     <!-- Inbox Screen -->
                     <div id="inbox-screen" class="screen glass">
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
-                        <h1>Customer Inbox</h1>
-                        <div class="card glass" onclick="this.classList.toggle('active')">
-                            <h3>Maya <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
-                            <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
-                            <p>Do you do vegan cakes?</p>
-                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="margin-bottom: 16px;">< Back</button>
+                        <h1 style="margin-top: 0;">Customer Inbox</h1>
+
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <div class="card glass" style="cursor: pointer;" onclick="document.getElementById('chat-window-maya').style.display = 'block'; document.getElementById('messages-list').innerHTML = '';">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                            <span style="font-size: 1.2em;">📸</span> Maya (Instagram)
+                                            <span style="background: var(--primary); color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px;">New</span>
+                                        </h3>
+                                        <p style="margin: 4px 0 0 0; color: #666;">Do you have vegan options for birthday cakes?</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card glass" style="cursor: pointer; opacity: 0.7;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                            <span style="font-size: 1.2em;">💬</span> Carlos (SMS)
+                                        </h3>
+                                        <p style="margin: 4px 0 0 0; color: #666;">Thanks for fixing the sink!</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card glass">
-                            <h3>Facebook User</h3>
-                            <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
-                        </div>
-                        <div id="chat-window" class="card glass">
-                            <p>Select a conversation</p>
-                            <div id="messages-list"></div>
-                            <input id="reply-input" type="text" placeholder="Type a message...">
-                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
+
+                        <div id="chat-window-maya" class="card glass" style="display: none; margin-top: 24px; border: 1px solid rgba(0, 102, 255, 0.4); box-shadow: 0 8px 24px rgba(0, 102, 255, 0.15);">
+                            <h3 style="margin-top: 0; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px;">Conversation with Maya</h3>
+                            <div id="messages-list" style="min-height: 100px; max-height: 300px; overflow-y: auto; margin-bottom: 16px; padding-right: 8px; display: flex; flex-direction: column; gap: 12px;">
+                                <div style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 12px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 80%;">
+                                    <p style="margin: 0;">Do you have vegan options for birthday cakes?</p>
+                                </div>
+                            </div>
+
+                            <div id="ai-draft-panel" class="glass" style="display: none; margin-bottom: 16px; padding: 16px; border-radius: 12px; background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.2);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="color: var(--primary); font-weight: bold; font-size: 14px;">✨ The Ambassador (AI Draft)</span>
+                                </div>
+                                <textarea id="reply-input" style="width: 100%; min-height: 80px; margin-bottom: 12px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit;" placeholder="Type a message..."></textarea>
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button class="secondary" style="margin: 0; padding: 8px 16px;" onclick="document.getElementById('ai-draft-panel').style.display = 'none'; document.getElementById('draft-btn').style.display = 'block';">Cancel</button>
+                                    <button class="primary" style="margin: 0; padding: 8px 16px;" onclick="sendReply()">Send Draft</button>
+                                </div>
+                            </div>
+
+                            <div id="draft-loading" class="shimmer" style="display: none; height: 100px; border-radius: 12px; margin-bottom: 16px;"></div>
+
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <button id="draft-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #0066FF, #0052cc); color: white; border: none; box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);" onclick="draftInboxReply(this)">✨ AI Draft Reply</button>
+                            </div>
                         </div>
                     </div>
 
@@ -3114,11 +3200,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('milestone-card').style.display = 'none';
                         }
 
+                        function sendReply() {
+                            const input = document.getElementById('reply-input');
+                            const m = input.value;
+                            if(m) {
+                                const list = document.getElementById('messages-list');
+                                const div = document.createElement('div');
+                                div.style.cssText = 'background: var(--primary); color: white; padding: 12px; border-radius: 12px; border-bottom-right-radius: 2px; align-self: flex-end; max-width: 80%;';
+                                const p = document.createElement('p');
+                                p.style.margin = '0';
+                                p.textContent = m;
+                                div.appendChild(p);
+                                list.appendChild(div);
+                                input.value = '';
+                                document.getElementById('ai-draft-panel').style.display = 'none';
+                                document.getElementById('draft-btn').style.display = 'block';
+                            }
+                        }
+
                         async function draftInboxReply(btn) {
                             const input = document.getElementById('reply-input');
-                            btn.disabled = true;
-                            const originalText = btn.textContent;
-                            btn.textContent = 'Drafting...';
+                            const panel = document.getElementById('ai-draft-panel');
+                            const loading = document.getElementById('draft-loading');
+
+                            if (btn && btn.style) btn.style.display = 'none';
+                            if (loading) loading.style.display = 'block';
+                            if (panel) panel.style.display = 'none';
+
                             try {
                                 const response = await fetch('/api/v1/ai/draft-reply', {
                                     method: 'POST',
@@ -3136,9 +3244,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } catch (e) {
                                 input.value = '';
                                 input.placeholder = 'AI draft is unavailable. Please try again when MiniMax is configured.';
+                                console.error('Error drafting reply:', e);
                             } finally {
-                                btn.disabled = false;
-                                btn.textContent = originalText;
+                                if (loading) loading.style.display = 'none';
+                                if (panel) panel.style.display = 'block';
                             }
                         }
 
@@ -3151,6 +3260,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
+                            'product-onboarding-screen': '/product-onboarding',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
@@ -3276,6 +3386,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
+                        function startProductAnalysis() {
+                            document.getElementById('product-upload-view').style.display = 'none';
+                            document.getElementById('product-analyzing-view').style.display = 'block';
+
+                            setTimeout(() => {
+                                document.getElementById('product-analyzing-view').style.display = 'none';
+                                document.getElementById('product-review-view').style.display = 'block';
+                            }, 2000); // Simulate API latency
+                        }
+
+                        function publishProduct() {
+                            alert("Product live! The Promoter is drafting an Instagram post...");
+                            showScreen('dashboard-screen');
+                            // Reset state for next time
+                            setTimeout(() => {
+                                document.getElementById('product-upload-view').style.display = 'block';
+                                document.getElementById('product-review-view').style.display = 'none';
+                            }, 500);
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -3294,18 +3424,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                             setMainNavLabels(id);
 
-                            // Nav renaming logic
-                            const navButtons = document.querySelectorAll('.nav-item');
-                            if (id !== 'dashboard-screen') {
-                                navButtons.forEach(btn => {
-                                    if (!btn.dataset.text) btn.dataset.text = btn.textContent;
-                                    btn.textContent = '---';
-                                });
-                            } else {
-                                navButtons.forEach(btn => {
-                                    if (btn.dataset.text) btn.textContent = btn.dataset.text;
-                                });
-                            }
+
 
                             if (pathMap[id] && window.location.protocol !== 'file:') {
                                 window.history.pushState({}, '', pathMap[id]);
@@ -3340,9 +3459,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
-                                document.getElementById('main-nav').style.display = 'flex';
-                                document.getElementById('mobile-bottom-nav').style.display = 'flex';
+                            if (id === 'dashboard-screen' || id === 'product-onboarding-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                                document.getElementById('main-nav').style.display = '';
+                                document.getElementById('mobile-bottom-nav').style.display = '';
                             } else {
                                 document.getElementById('main-nav').style.display = 'none';
                                 document.getElementById('mobile-bottom-nav').style.display = 'none';
