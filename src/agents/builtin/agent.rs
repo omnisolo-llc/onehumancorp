@@ -1106,12 +1106,37 @@ impl Agent {
 
         let mut structured_tools = self.tools.clone();
 
-        // We define a dummy executor because the tool is intercepted before execution
-        struct DummyExecutor;
+        // We use a real executor that parses the structured output correctly
+        // and stores it. If it fails, it returns LlmRecoverable to hook into the main retry loop.
+        let result_store: std::sync::Arc<tokio::sync::Mutex<Option<T>>> = std::sync::Arc::new(tokio::sync::Mutex::new(None));
+        let result_store_clone = result_store.clone();
+
+        struct StructuredOutputExecutor<T> {
+            store: std::sync::Arc<tokio::sync::Mutex<Option<T>>>,
+        }
+
         #[async_trait::async_trait]
-        impl crate::tools::ToolExecutor for DummyExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Ok("Dummy".to_string())
+        impl<T: serde::de::DeserializeOwned + Send + Sync + 'static> crate::tools::ToolExecutor for StructuredOutputExecutor<T> {
+            async fn execute(&self, args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                // Try extracting from a nested 'data' parameter if it exists
+                let target = if let Some(data) = args.get("data") {
+                    data.clone()
+                } else {
+                    args.clone()
+                };
+
+                match serde_json::from_value::<T>(target) {
+                    Ok(parsed) => {
+                        let mut store = self.store.lock().await;
+                        *store = Some(parsed);
+                        Ok("Successfully recorded structured output. You may now end your turn.".to_string())
+                    }
+                    Err(e) => {
+                        Err(crate::types::ToolError::LlmRecoverable(format!(
+                            "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+                        )))
+                    }
+                }
             }
         }
 
@@ -1120,7 +1145,7 @@ impl Agent {
             description: "Returns the final output matching the required JSON schema.".to_string(),
             is_read_only: false,
             parameters: output_schema,
-            execute: std::sync::Arc::new(DummyExecutor),
+            execute: std::sync::Arc::new(StructuredOutputExecutor { store: result_store }),
         });
 
         let temp_agent = Agent {
@@ -1132,13 +1157,21 @@ impl Agent {
             observation_store: self.observation_store.clone(),
         };
 
-        // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
-        let raw_json_str = temp_agent.run(&final_cfg, initial_message, on_event).await?;
+        let final_text = temp_agent.run(&final_cfg, initial_message, on_event).await?;
 
-        let parsed: T = serde_json::from_str(&raw_json_str)
-            .map_err(|e| format!("Failed to parse JSON into struct: {}. Raw: {}", e, raw_json_str))?;
-        Ok(parsed)
+        // After the agent finishes, check if we successfully captured the structured output.
+        // If not, we attempt to parse the final raw text as a fallback (Legacy Output Parser mechanism).
+        let mut store = result_store_clone.lock().await;
+        if let Some(parsed) = store.take() {
+            Ok(parsed)
+        } else {
+            // Fallback mechanic: Legacy RetryWithErrorOutputParser style extraction
+            let msg = crate::types::Message::assistant(final_text);
+            crate::output_parser::parse_structured_output::<T>(&msg)
+                .map_err(|e| format!("Failed to parse JSON into struct after agent finished: {:?}", e).into())
+        }
     }
+
 
     pub async fn run<F>(
         &self,
@@ -1664,20 +1697,7 @@ impl Agent {
             // For now, we will collect events and results from the concurrent execution, then emit them sequentially.
             // We will execute the read-only calls concurrently using `futures::future::join_all`.
 
-            // Output Parsing mechanic: Schema-Constrained Responses
-            // Intercept special output formatting tool natively
-            if let Some(tc) = mutating_calls.iter().chain(read_only_calls.iter()).find(|t| t.name == "return_structured_output") {
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: "Returning structured output".to_string(),
-                    iteration,
-                });
 
-                // When the model calls the structured output tool,
-                // we terminate the orchestrator immediately with the raw JSON arguments as the task completion.
-                return Ok(tc.arguments.to_string());
-            }
 
             let mut read_only_futures = Vec::new();
             for tc in &read_only_calls {
