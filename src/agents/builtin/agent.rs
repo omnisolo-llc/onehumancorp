@@ -1149,6 +1149,25 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
+        let timeout_duration = std::time::Duration::from_secs(60);
+
+        let result = tokio::time::timeout(timeout_duration, self.run_internal(cfg, initial_message, on_event)).await;
+        match result {
+            Ok(res) => res,
+            Err(_) => Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule."))),
+        }
+    }
+
+    async fn run_internal<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
