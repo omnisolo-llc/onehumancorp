@@ -27,7 +27,7 @@ pub use ::server_utils as utils;
 pub mod orchestration;
 pub mod storage;
 pub mod interop;
-#[cfg(test)]
+
 pub mod benchmarks;
 
 pub use ::server_config as config;
@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
