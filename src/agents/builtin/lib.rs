@@ -38,4 +38,5 @@ pub mod checkpointer;
 pub mod harness;
 pub mod langgraph;
 pub mod codex_runner;
+pub mod json_rpc_server;
 pub mod consolidation_worker;
