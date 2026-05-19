@@ -14,11 +14,27 @@ pub trait LlmClientForParser: Send + Sync {
 /// Implements the Output Parsing mechanic from the Master Catalog:
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
 /// the failed completion, and the parsing error back to the model)."
-pub async fn parse_structured_output<T: DeserializeOwned>(
-    llm: &Arc<dyn LlmClientForParser>,
-    req: ChatRequest,
-    max_retries: usize,
-) -> Result<T, ToolError> {
+#[async_trait]
+pub trait OutputParser<T: DeserializeOwned>: Send + Sync {
+    async fn parse(&self, req: ChatRequest) -> Result<T, ToolError>;
+}
+
+pub struct RetryWithErrorOutputParser {
+    pub llm: Arc<dyn LlmClientForParser>,
+    pub max_retries: usize,
+}
+
+impl RetryWithErrorOutputParser {
+    pub fn new(llm: Arc<dyn LlmClientForParser>, max_retries: usize) -> Self {
+        Self { llm, max_retries }
+    }
+}
+
+#[async_trait]
+impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for RetryWithErrorOutputParser {
+    async fn parse(&self, req: ChatRequest) -> Result<T, ToolError> {
+        let llm = &self.llm;
+        let max_retries = self.max_retries;
     let mut current_req = req.clone();
 
     // Inject the schema as a tool definition to encourage the model to use tool_calls API
@@ -165,6 +181,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         }
     }
 }
+}
 
 #[cfg(test)]
 mod tests {
@@ -248,7 +265,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput = RetryWithErrorOutputParser::new(client as Arc<dyn LlmClientForParser>, 3).parse(req).await.unwrap();
         assert_eq!(result.result, "success_markdown");
     }
 
@@ -259,7 +276,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput = RetryWithErrorOutputParser::new(client as Arc<dyn LlmClientForParser>, 3).parse(req).await.unwrap();
         assert_eq!(result.result, "success");
     }
 
@@ -273,7 +290,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput = RetryWithErrorOutputParser::new(client as Arc<dyn LlmClientForParser>, 3).parse(req).await.unwrap();
         assert_eq!(result.result, "success after retry");
     }
 
@@ -287,7 +304,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let result: Result<TestOutput, _> = RetryWithErrorOutputParser::new(client as Arc<dyn LlmClientForParser>, 2).parse(req).await;
         assert!(result.is_err());
         if let Err(ToolError::Fatal(msg)) = result {
             assert!(msg.contains("Output parsing failed after 2 retries"));
@@ -305,7 +322,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput = RetryWithErrorOutputParser::new(client as Arc<dyn LlmClientForParser>, 3).parse(req).await.unwrap();
         assert_eq!(result.result, "success_tool_call");
     }
 
@@ -319,7 +336,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let result: TestOutput = RetryWithErrorOutputParser::new(client as Arc<dyn LlmClientForParser>, 3).parse(req).await.unwrap();
         assert_eq!(result.result, "success_tool_call_retry");
     }
 
@@ -333,7 +350,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let result: Result<TestOutput, _> = RetryWithErrorOutputParser::new(client as Arc<dyn LlmClientForParser>, 2).parse(req).await;
         assert!(result.is_err());
         if let Err(ToolError::Fatal(msg)) = result {
             assert!(msg.contains("Output parsing failed after 2 retries"));
