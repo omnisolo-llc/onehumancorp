@@ -27,6 +27,16 @@ message Order {
   int64 amount_cents = 4;
   string status = 5;
   int64 created_at_unix = 6;
+  int64 deposit_paid = 7;
+}
+
+message Booking {
+  string id = 1;
+  string order_id = 2;
+  string product_id = 3;
+  int64 start_time_unix = 4;
+  int64 end_time_unix = 5;
+  string meeting_link = 6;
 }
 
 message DashboardSnapshot {

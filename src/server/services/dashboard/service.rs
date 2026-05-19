@@ -87,7 +87,7 @@ impl DashboardService for MyDashboardService {
                     return Ok::<_, String>(products);
                 }
 
-                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
+                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata, COALESCE(type, '') as type, COALESCE(is_sold_out, false) as is_sold_out FROM products WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
@@ -105,6 +105,8 @@ impl DashboardService for MyDashboardService {
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                                     metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    r#type: r.try_get("type").unwrap_or_default(),
+                                    is_sold_out: r.try_get("is_sold_out").unwrap_or_default(),
                                 };
                                 results.push(p);
                             }
@@ -124,6 +126,8 @@ impl DashboardService for MyDashboardService {
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                                     metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    r#type: r.try_get("type").unwrap_or_default(),
+                                    is_sold_out: r.try_get("is_sold_out").unwrap_or_default(),
                                 };
                                 results.push(p);
                             }
@@ -143,7 +147,7 @@ impl DashboardService for MyDashboardService {
                     return Ok::<_, String>(orders);
                 }
 
-                let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
+                let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status, COALESCE(deposit_paid, 0) as deposit_paid FROM orders WHERE tenant_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db2.store {
@@ -151,6 +155,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
+                                let deposit_real: f64 = r.try_get("deposit_paid").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
@@ -158,6 +163,7 @@ impl DashboardService for MyDashboardService {
                                     amount_cents: (amount_real * 100.0) as i64,
                                     status: r.try_get("status").unwrap_or_default(),
                                     created_at_unix: 0,
+                                    deposit_paid: (deposit_real * 100.0) as i64,
                                 };
                                 results.push(o);
                             }
@@ -167,6 +173,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
+                                let deposit_real: f64 = r.try_get("deposit_paid").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
@@ -174,6 +181,7 @@ impl DashboardService for MyDashboardService {
                                     amount_cents: (amount_real * 100.0) as i64,
                                     status: r.try_get("status").unwrap_or_default(),
                                     created_at_unix: 0,
+                                    deposit_paid: (deposit_real * 100.0) as i64,
                                 };
                                 results.push(o);
                             }
@@ -258,6 +266,8 @@ impl DashboardService for MyDashboardService {
                     metadata_json: String::new(),
                     fulfillment_strategy: String::new(),
                     currency: String::new(),
+                    r#type: String::new(),
+                    is_sold_out: false,
                     ..p
                 })
                 .collect()

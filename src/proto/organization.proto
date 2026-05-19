@@ -47,6 +47,16 @@ message Product {
   string currency = 6;
   string fulfillment_strategy = 7;
   string metadata_json = 8;
+  string type = 9;
+  bool is_sold_out = 10;
+}
+
+message ProductVariant {
+  string id = 1;
+  string product_id = 2;
+  string name = 3;
+  int32 stock_level = 4;
+  int64 price_override = 5;
 }
 
 message OnboardingRequest {
