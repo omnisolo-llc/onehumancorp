@@ -1,17 +1,6 @@
-# docker-compose.e2e.yml — Lean E2E infrastructure stack.
-#
-# Starts ONLY the shared infrastructure services (postgres and redis).
-# The OHC server binary is intentionally NOT run as a
-# container here: it is started directly by run-playwright.mjs from the
-# Bazel-built binary so that no Docker image rebuild is required.
-#
-# Usage (managed automatically by run-playwright.mjs):
-#   docker compose -f deploy/docker-compose.e2e.yml up -d
-
 services:
-  # ─── Infrastructure ───────────────────────────────────────────────────────
   postgres:
-    image: public.ecr.aws/docker/library/postgres:16-alpine
+    image: postgres:16-alpine
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_USER: ohc
@@ -34,7 +23,7 @@ services:
           memory: 256M
 
   redis:
-    image: public.ecr.aws/docker/library/redis:7-alpine
+    image: redis:7-alpine
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
