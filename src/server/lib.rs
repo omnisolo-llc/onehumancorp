@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify credentials hash: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2962,6 +2962,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 el.innerHTML = innerHtml;
                                 container.appendChild(el);
                             });
+
+                            const footer = document.createElement('div');
+                            footer.style.textAlign = 'center';
+                            footer.style.padding = '20px';
+                            footer.style.marginTop = '20px';
+                            footer.style.borderTop = '1px solid var(--border)';
+                            footer.style.fontSize = '12px';
+                            footer.style.color = 'var(--text-secondary)';
+                            footer.innerHTML = "Powered by <a href='https://onehumancorp.com' style='color: var(--primary); text-decoration: none; font-weight: 500;' target='_blank'>OHC</a>";
+                            container.appendChild(footer);
                         }
 
                         function toggleRearrangeMode() {
