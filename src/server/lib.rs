@@ -3576,10 +3576,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
 
                                 try {
+                                    let businessType = '';
+                                    document.querySelectorAll('#step-2 button.secondary').forEach(b => {
+                                        if (b.classList.contains('selected') || document.activeElement === b) {
+                                            businessType = b.textContent.replace(/[^\w\s]/gi, '').trim();
+                                        }
+                                    });
+                                    let companyName = document.querySelector('#step-3 input[type="text"]')?.value || '';
+                                    let companyDesc = document.querySelectorAll('#step-3 input[type="text"]')[1]?.value || '';
+                                    let firstProductName = document.querySelector('#step-5 input[type="text"]')?.value || '';
+                                    let firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1]?.value || '';
+                                    let websiteTemplate = document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
+                                    let domainChoice = document.querySelector('#step-9 button.selected')?.innerText || '';
+
+                                    if (domainChoice.includes('Free')) {
+                                        domainChoice = 'free';
+                                    } else if (domainChoice.includes('Custom')) {
+                                        domainChoice = 'custom';
+                                    }
+
+                                    let sellingCategories = [];
+                                    document.querySelectorAll('#step-4 input[type="checkbox"]:checked').forEach(cb => {
+                                        sellingCategories.push(cb.parentElement.textContent.replace(/[^\w\s]/gi, '').trim());
+                                    });
+
+                                    const payload = {
+                                        business_type: businessType,
+                                        company_name: companyName,
+                                        company_description: companyDesc,
+                                        selling_categories: sellingCategories,
+                                        first_product_name: firstProductName,
+                                        first_product_price: firstProductPrice,
+                                        website_template: websiteTemplate,
+                                        domain_choice: domainChoice
+                                    };
+
                                     const res = await fetch('/api/v1/app/onboarding', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({})
+                                        body: JSON.stringify(payload)
                                     });
                                     if (prevStep === 3) nextStep(4);
                                     else if (prevStep === 5) nextStep(6);
