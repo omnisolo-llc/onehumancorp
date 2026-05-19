@@ -58,3 +58,7 @@ nav:
       - Execution Plan: business/execution-plan.md
   - Research:
       - Research: technical/research/index.md
+  - Reports:
+      - Market Research Report: reports/ohc_market_research_report.md
+      - Tool Integration Research Report: reports/tool_integration_research_report.md
+      - Third-Party Integration Research Report (Q3): reports/third_party_integration_research_report_q3.md
