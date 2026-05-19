@@ -15,4 +15,11 @@ test.describe('Viral Storefront E2E', () => {
     await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
     await expect(page.getByPlaceholder('mybusiness')).toBeVisible();
   });
+
+  test('displays Powered by OHC footer in storefront preview', async ({ page }) => {
+    await page.goto('/storefront-builder');
+    await expect(page.locator('.powered-by-footer')).toBeVisible();
+    await expect(page.locator('.powered-by-footer')).toContainText('⚡ Powered by OHC');
+    await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'ohc://join?ref=storefront');
+  });
 });
