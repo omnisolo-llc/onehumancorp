@@ -19,11 +19,11 @@ impl TaskQueue for SQLiteTaskQueue {
         if jobs.is_empty() { return Ok(()); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
+        let mut query_str = String::from("INSERT INTO sub_agent_queue (id, parent_task_id, payload, status, run_after, organization_id) VALUES ");
         let mut values = Vec::new();
 
         for _ in 0..jobs.len() {
-            values.push("(?, ?, ?, ?, 'QUEUED', ?, ?)");
+            values.push("(?, ?, ?, 'QUEUED', ?, ?)");
         }
         query_str.push_str(&values.join(", "));
 
@@ -33,10 +33,9 @@ impl TaskQueue for SQLiteTaskQueue {
             query = query
                 .bind(job.id)
                 .bind(job.parent_task_id)
-                .bind(job.agent_role)
                 .bind(job.payload)
                 .bind(job.run_after)
-                .bind(job.tenant_id);
+                .bind(job.organization_id);
         }
 
         query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
@@ -46,15 +45,14 @@ impl TaskQueue for SQLiteTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         sqlx::query(
-            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
-             VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)"
+            "INSERT INTO sub_agent_queue (id, parent_task_id, payload, status, run_after, organization_id)
+             VALUES (?, ?, ?, 'QUEUED', ?, ?)"
         )
         .bind(&job.id)
         .bind(&job.parent_task_id)
-        .bind(&job.agent_role)
         .bind(&job.payload)
         .bind(job.run_after)
-        .bind(&job.tenant_id)
+        .bind(&job.organization_id)
         .execute(&*self.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -71,9 +69,10 @@ impl TaskQueue for SQLiteTaskQueue {
 
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
-             FROM sub_agent_jobs
-             WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
+            "SELECT id, parent_task_id, payload, status, worker_id, attempts, max_attempts, run_after, created_at, updated_at, organization_id
+             FROM sub_agent_queue
+             WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP
+             AND json_extract(payload, '$.agent_role') IN ({})
              ORDER BY run_after ASC, created_at ASC
              LIMIT 1",
             role_placeholders
@@ -89,20 +88,21 @@ impl TaskQueue for SQLiteTaskQueue {
         if let Some(row) = job_opt {
             let job = Job {
                 id: row.get("id"),
+                organization_id: row.try_get("organization_id").unwrap_or_default(),
                 parent_task_id: row.get("parent_task_id"),
-                agent_role: row.get("agent_role"),
+                agent_role: "".to_string(),
                 payload: row.get("payload"),
                 status: row.get("status"),
-                attempts: row.get("attempts"),
-                max_attempts: row.get("max_attempts"),
+                worker_id: row.try_get("worker_id").unwrap_or(None),
+                attempts: row.try_get("attempts").unwrap_or(0),
+                max_attempts: row.try_get("max_attempts").unwrap_or(3),
                 run_after: row.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now()),
-                locked_until: row.try_get("locked_until").unwrap_or(None),
+                locked_until: None,
                 created_at: row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
                 updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
-                tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };
 
-            sqlx::query("UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+            sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                 .bind(&job.id)
                 .execute(&mut *tx)
                 .await
@@ -117,7 +117,7 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
             .bind(job_id)
             .execute(&*self.pool)
             .await
@@ -128,7 +128,7 @@ impl TaskQueue for SQLiteTaskQueue {
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT attempts, max_attempts FROM sub_agent_jobs WHERE id = ?")
+        let row = sqlx::query("SELECT attempts, max_attempts FROM sub_agent_queue WHERE id = ?")
             .bind(job_id)
             .fetch_optional(&mut *tx)
             .await
@@ -141,7 +141,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
             if next_attempt >= max_attempts {
                 // Poison pill
-                sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED', attempts = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', attempts = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
                     .bind(job_id)
                     .execute(&mut *tx)
@@ -150,7 +150,7 @@ impl TaskQueue for SQLiteTaskQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                sqlx::query("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = ?, run_after = datetime(CURRENT_TIMESTAMP, '+' || ? || ' seconds'), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', attempts = ?, run_after = datetime(CURRENT_TIMESTAMP, '+' || ? || ' seconds'), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
                     .bind(backoff_seconds)
                     .bind(job_id)
