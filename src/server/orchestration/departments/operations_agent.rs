@@ -40,7 +40,16 @@ impl Department for OperationsAgent {
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
-        ).await.map(|_| ())
+        ).await?;
+
+        // Dispatch event for customer success agent
+        let cs_event = DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: event.tenant_id.clone(),
+            event_type: "tenant.order.fulfillment_ready".to_string(),
+            payload: event.payload.clone(),
+        };
+        self.orchestrator.dispatch_event(cs_event).await
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
