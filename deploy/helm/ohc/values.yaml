@@ -11,16 +11,16 @@ backend:
   autoscaling:
     enabled: true
     minReplicas: 3
-    maxReplicas: 200
+    maxReplicas: 300
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "1000m"
+      memory: "1Gi"
     limits:
-      cpu: "2000m"
-      memory: "4Gi"
+      cpu: "4000m"
+      memory: "8Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
