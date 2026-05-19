@@ -30,7 +30,7 @@ impl ToolExecutor for SubagentExecutor {
             let worktree_path = format!(".agent-worktrees/{}", task_id);
 
             // Create worktree
-            let _ = self.runner.run("git", &["branch", &branch_name], None, vec![]).await;
+
 
             let wt_output = self.runner.run("git", &["worktree", "add", &worktree_path, &branch_name], None, vec![]).await;
 
