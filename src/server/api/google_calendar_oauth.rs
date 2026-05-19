@@ -57,7 +57,7 @@ pub async fn connect_handler(
     request: Request,
 ) -> impl IntoResponse {
     let tenant_id = match request.extensions().get::<crate::auth::AuthInfo>() {
-        Some(auth) => auth.tenant_id.clone(),
+        Some(auth) => auth.org_id.clone(),
         None => return Redirect::temporary("/login"),
     };
 
@@ -135,7 +135,7 @@ pub async fn callback_handler(
                 .bind(refresh_token)
                 .bind(&tenant_id)
                 .execute(pool)
-                .await
+                .await.map(|_| ())
         }
         crate::db::DbStore::Postgres => {
             sqlx::query("UPDATE tenants SET google_calendar_token = $1, google_calendar_refresh = $2 WHERE tenant_id = $3")
@@ -143,7 +143,7 @@ pub async fn callback_handler(
                 .bind(refresh_token)
                 .bind(&tenant_id)
                 .execute(&state.db.pool)
-                .await
+                .await.map(|_| ())
         }
     };
 

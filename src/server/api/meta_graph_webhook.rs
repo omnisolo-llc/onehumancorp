@@ -60,7 +60,7 @@ pub async fn meta_graph_webhook_handler(
                         sqlx::query("SELECT tenant_id FROM tenants WHERE meta_graph_page_id = ? LIMIT 1")
                             .bind(&entry.id)
                             .fetch_optional(pool)
-                            .await
+                            .await.map(|_| ())
                             .ok()
                             .flatten()
                             .map(|r| sqlx::Row::get(&r, "tenant_id"))
@@ -69,7 +69,7 @@ pub async fn meta_graph_webhook_handler(
                         sqlx::query("SELECT tenant_id FROM tenants WHERE meta_graph_page_id = $1 LIMIT 1")
                             .bind(&entry.id)
                             .fetch_optional(&state.db.pool)
-                            .await
+                            .await.map(|_| ())
                             .ok()
                             .flatten()
                             .map(|r| sqlx::Row::get(&r, "tenant_id"))
@@ -99,7 +99,7 @@ pub async fn meta_graph_webhook_handler(
                             .bind(&text)
                             .bind(false)
                             .execute(pool)
-                            .await
+                            .await.map(|_| ())
                     }
                     crate::db::DbStore::Postgres => {
                         sqlx::query("INSERT INTO unified_inbox_messages (id, tenant_id, source, external_sender_id, text, is_read) VALUES ($1, $2, $3, $4, $5, $6)")
@@ -110,7 +110,7 @@ pub async fn meta_graph_webhook_handler(
                             .bind(&text)
                             .bind(false)
                             .execute(&state.db.pool)
-                            .await
+                            .await.map(|_| ())
                     }
                 };
 

@@ -29,7 +29,7 @@ pub async fn get_rates_handler(
     request: axum::extract::Request,
 ) -> impl IntoResponse {
     let tenant_id = match request.extensions().get::<crate::auth::AuthInfo>() {
-        Some(auth) => auth.tenant_id.clone(),
+        Some(auth) => auth.org_id.clone(),
         None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
     };
 

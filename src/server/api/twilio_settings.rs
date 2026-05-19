@@ -23,7 +23,7 @@ pub async fn update_twilio_settings_handler(
     request: axum::extract::Request,
 ) -> impl IntoResponse {
     let tenant_id = match request.extensions().get::<crate::auth::AuthInfo>() {
-        Some(auth) => auth.tenant_id.clone(),
+        Some(auth) => auth.org_id.clone(),
         None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
     };
 
@@ -40,7 +40,7 @@ pub async fn update_twilio_settings_handler(
                 .bind(payload.phone_number)
                 .bind(&tenant_id)
                 .execute(pool)
-                .await
+                .await.map(|_| ())
         }
         crate::db::DbStore::Postgres => {
             sqlx::query("UPDATE tenants SET sms_reminders_enabled = $1, sms_phone = $2 WHERE tenant_id = $3")
@@ -48,7 +48,7 @@ pub async fn update_twilio_settings_handler(
                 .bind(payload.phone_number)
                 .bind(&tenant_id)
                 .execute(&state.db.pool)
-                .await
+                .await.map(|_| ())
         }
     };
 

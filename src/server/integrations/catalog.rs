@@ -42,19 +42,19 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
-    let meta_graph_provider = crate::integrations::meta_graph::provider::MetaGraphProvider::new();
+    let meta_graph_provider = crate::integrations::meta_graph::provider::MetaGraphProvider::new("".to_string());
     catalog.push(meta_graph_provider.to_integration_provider());
 
-    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new();
+    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("".to_string());
     catalog.push(google_calendar_provider.to_integration_provider());
 
-    let sendgrid_provider = crate::integrations::sendgrid::provider::SendGridProvider::new();
+    let sendgrid_provider = crate::integrations::sendgrid::provider::SendGridProvider::new("".to_string());
     catalog.push(sendgrid_provider.to_integration_provider());
 
-    let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new();
+    let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new("".to_string());
     catalog.push(shippo_provider.to_integration_provider());
 
-    let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new();
+    let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new("".to_string());
     catalog.push(zoom_provider.to_integration_provider());
 
     catalog
