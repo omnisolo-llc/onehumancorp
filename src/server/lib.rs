@@ -3321,6 +3321,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 el.innerHTML = innerHtml;
                                 container.appendChild(el);
                             });
+
+                            // Viral Loop: "Powered by OHC" footer badge
+                            const footer = document.createElement('div');
+                            footer.style.textAlign = 'center';
+                            footer.style.padding = '24px 16px';
+                            footer.style.marginTop = '24px';
+                            footer.style.fontSize = '14px';
+                            footer.style.color = 'var(--text-secondary)';
+                            footer.style.borderTop = '1px solid rgba(0,0,0,0.05)';
+                            footer.innerHTML = `⚡ Powered by <a href="ohc://join?ref=STOREFRONT" style="color: var(--primary); text-decoration: none; font-weight: 600;">OneHumanCorp</a> &mdash; <a href="ohc://join?ref=STOREFRONT" style="color: inherit; text-decoration: underline;">Launch your own business today</a>`;
+                            container.appendChild(footer);
                         }
 
                         function toggleRearrangeMode() {
