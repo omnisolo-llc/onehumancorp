@@ -211,13 +211,16 @@ export default function BuilderPage() {
               </button>
             )}
           </div>
-          <button
-            className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
-            onClick={handleLaunch}
-          >
-            <span>1-Tap Launch</span>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-          </button>
+          <Tooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+            <button
+              id="launch-btn"
+              className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              onClick={handleLaunch}
+            >
+              <span>1-Tap Launch</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            </button>
+          </Tooltip>
         </div>
 
         {/* Upgrade Modal */}
