@@ -9,6 +9,10 @@ export default function BuilderPage() {
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
 
+  // Growth Loop: Soft Paywall State
+  const [isPremium, setIsPremium] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   const handleGenerate = async () => {
     setStatus("generating");
 
@@ -128,13 +132,21 @@ export default function BuilderPage() {
           {blocks.map((b, i) => (
             <SmartBlock key={i} {...b} />
           ))}
+          {!isPremium && <SmartBlock type="PoweredBy" props={{}} />}
         </div>
 
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50">
           <div className="flex gap-3 mb-2">
             <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg">Change Vibe</button>
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg">Edit Text</button>
+            {!isPremium && (
+              <button
+                className="flex-1 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg border border-blue-100"
+                onClick={() => setShowUpgradeModal(true)}
+              >
+                Remove Branding ✨
+              </button>
+            )}
           </div>
           <button
             className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
@@ -144,6 +156,55 @@ export default function BuilderPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
           </button>
         </div>
+
+        {/* Upgrade Modal */}
+        {showUpgradeModal && (
+          <div className="absolute inset-0 bg-black/60 z-[60] flex flex-col justify-end">
+            <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl animate-slide-up pb-10">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center text-2xl shadow-inner">
+                  👑
+                </div>
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Upgrade to Premium</h2>
+              <p className="text-gray-500 mb-6 font-inter text-sm leading-relaxed">
+                Unlock white-labeling, custom domains, and advanced analytics to grow your business faster.
+              </p>
+
+              <div className="space-y-3 mb-6 font-inter text-sm">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span className="text-gray-700">Remove "Powered by OHC" footer</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span className="text-gray-700">Connect a custom domain</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span className="text-gray-700">Priority AI scheduling</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsPremium(true);
+                  setShowUpgradeModal(false);
+                }}
+                className="w-full bg-gradient-to-r from-gray-900 to-black text-white font-bold p-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex justify-between items-center"
+              >
+                <span>Upgrade Now</span>
+                <span className="font-normal opacity-80">$15 / mo</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
