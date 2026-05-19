@@ -28,3 +28,13 @@ test('verify website builder publish sheet', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Publish Site' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Free OHC Subdomain/ })).toBeVisible();
 });
+
+test('verify state persistence', async ({ page }) => {
+  await page.goto('/website-builder');
+  await page.getByRole('button', { name: /Start My Business Next/ }).click();
+  await page.getByRole('button', { name: /Online Store/ }).click();
+
+  // Reload the page and verify we're still on the company name step
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
+});
