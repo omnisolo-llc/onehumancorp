@@ -2036,6 +2036,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: var(--shadow-md);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border-radius: 16px;
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2368,7 +2369,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
         /* Premium Standard Overrides for Wizard */
-        #setup-screen.glass {
+        #setup-screen.glass, .card.glass, .screen.glass {
             background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -2380,16 +2381,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
         }
 
-        body.dark-theme #setup-screen.glass {
+        body.dark-theme #setup-screen.glass, body.dark-theme .card.glass, body.dark-theme .screen.glass {
             background: rgba(22, 22, 26, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
         }
 
         #setup-screen > div {
             transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #setup-screen button, #setup-screen input {
+        #setup-screen button, #setup-screen input, button, input, textarea, select {
             border-radius: 8px;
             transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -2653,7 +2656,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page (My Staff) -->
                     <div id="agents-screen" class="screen">
-                        <h1 class="outfit">My Staff</h1>
+                        <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
@@ -2663,9 +2666,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
                                 <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
                                     <h4 style="margin-top: 0;">Settings</h4>
-                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer; margin-bottom: 8px;">
                                         Require approval for quotes > $100
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
+                                    </label>
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
+                                        Reply to customer messages
+                                        <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador_reply', this.checked)">
                                     </label>
                                 </div>
                             </div>
@@ -2688,6 +2695,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="color: var(--accent-orange);">Status: Needs Approval (1)</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Generated quote for custom cake.</p>
                                 <button style="margin-top: 15px; width: 100%;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
+                            </div>
+
+                            <div class="card glass" onclick="toggleDepartment('marketing_pro')" style="margin-top: 15px; cursor: pointer;">
+                                <h3 class="outfit">Marketing Pro</h3>
+                                <p style="color: var(--accent-green);">Status: Active</p>
+                                <p style="font-size: 14px; margin-top: 8px;">Recent: Scheduled 3 promotional emails.</p>
+                                <div id="marketing_pro-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                    <h4 style="margin-top: 0;">Settings</h4>
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer; margin-bottom: 8px;">
+                                        Send promotional emails
+                                        <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('marketing_emails', this.checked)">
+                                    </label>
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
+                                        Analyze campaign data
+                                        <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('marketing_analytics', this.checked)">
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
