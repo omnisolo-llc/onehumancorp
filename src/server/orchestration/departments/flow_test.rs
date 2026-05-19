@@ -6,7 +6,7 @@ mod tests {
     use crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent;
     use crate::orchestration::departments::sales_agent::SalesAgent;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use tokio::sync::RwLock;
     use uuid::Uuid;
@@ -19,7 +19,7 @@ mod tests {
         }
 
         let db = Arc::new(crate::db::DB::new().await.unwrap());
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
 
         let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));

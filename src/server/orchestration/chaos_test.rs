@@ -59,13 +59,13 @@ impl TeammateMesh for CorruptedMockMesh {
 }
 
 struct RacingLockMesh {
-    transport: ohc_builtin_agent::mesh::transport::MemoryTransport,
+    transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
 }
 
 impl RacingLockMesh {
     fn new() -> Self {
         Self {
-            transport: ohc_builtin_agent::mesh::transport::MemoryTransport::new(),
+            transport: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
     }
 }
@@ -97,14 +97,14 @@ impl TeammateMesh for RacingLockMesh {
 
 // A mock transport that occasionally drops messages to test Pub/Sub message loss resilience
 struct DroppingMockTransport {
-    transport: ohc_builtin_agent::mesh::transport::MemoryTransport,
+    transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
     drop_rate: std::sync::atomic::AtomicUsize,
 }
 
 impl DroppingMockTransport {
     fn new(drop_rate: usize) -> Self {
         Self {
-            transport: ohc_builtin_agent::mesh::transport::MemoryTransport::new(),
+            transport: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
             drop_rate: std::sync::atomic::AtomicUsize::new(drop_rate),
         }
     }
