@@ -1,0 +1,10 @@
+--- src/server/BUILD.bazel
++++ src/server/BUILD.bazel
+@@ -333,6 +333,7 @@
+         "powersync",
+         "scheduler",
+         "settings",
++        "orchestration",
+         "tasks",
+         "ultraplan",
+     ]
