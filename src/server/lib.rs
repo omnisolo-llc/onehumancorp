@@ -1942,7 +1942,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
                             --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
                             --radius-sm: 8px;
-                            --radius-md: 10px;
+                            --radius-md: 16px;
                         }
                         * {
                             box-sizing: border-box;
@@ -1985,12 +1985,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text-secondary);
                         }
                         .glass {
-                            background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            background: rgba(255, 255, 255, 0.65);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
+                        @media (prefers-color-scheme: dark) {
+                            :root {
+                                color-scheme: dark;
+                                --bg: #111116;
+                                --surface: rgba(22, 22, 26, 0.7);
+                                --surface-strong: #1a1a20;
+                                --text: #f5f5f7;
+                                --text-secondary: #a1a1aa;
+                                --border: rgba(255, 255, 255, 0.1);
+                            }
+                            body {
+                                background: linear-gradient(180deg, #111116 0%, #0d0d12 100%);
+                            }
+                            .glass {
+                                background: rgba(22, 22, 26, 0.7);
+                                border: 1px solid rgba(255, 255, 255, 0.1);
+                                backdrop-filter: blur(30px) saturate(210%);
+                                -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            }
+                            nav {
+                                backdrop-filter: blur(30px) saturate(210%);
+                                -webkit-backdrop-filter: blur(30px) saturate(210%);
+                                box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+                            }
+                        }
+
                         nav { 
                             padding: 0 28px; 
                             display: flex; 
@@ -2490,13 +2516,48 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Agents Page -->
-                    <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                    <div id="agents-screen" class="screen glass">
+                        <h1>Manage AI Assistants</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 24px;">Your AI team works behind the scenes. Tune their tone and capabilities below.</p>
+
+                        <div class="card glass" style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div>
+                                    <h2 style="margin:0; display:flex; align-items:center; gap:8px;">📣 Marketing Pro <span style="background: var(--accent-green); width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span></h2>
+                                    <p style="margin:4px 0 0; color: var(--text-secondary);">Handles social media posts and promotional emails.</p>
+                                </div>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" checked style="width: 20px; height: 20px; accent-color: var(--accent-green);"> Active
+                                </label>
+                            </div>
+
+                            <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                                <strong>Brand Tone:</strong>
+                                <select style="width: 100%; margin-top: 8px; padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+                                    <option>Friendly & Approachable</option>
+                                    <option>Professional & Formal</option>
+                                    <option>Bold & Energetic</option>
+                                </select>
+                            </div>
+
+                            <strong>Capabilities:</strong>
+                            <div style="display: grid; gap: 8px; margin-top: 8px;">
+                                <label><input type="checkbox" checked> Draft Instagram captions automatically</label>
+                                <label><input type="checkbox" checked> Suggest seasonal discount campaigns</label>
+                            </div>
                         </div>
+
+                        <div class="card glass" style="margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div>
+                                    <h2 style="margin:0; display:flex; align-items:center; gap:8px;">💬 Support Assistant <span style="background: var(--border); width: 8px; height: 8px; border-radius: 50%; display: inline-block;"></span></h2>
+                                    <p style="margin:4px 0 0; color: var(--text-secondary);">Answers common customer questions 24/7.</p>
+                                </div>
+                                <button class="secondary" style="padding: 4px 12px; font-size: 14px;">Hire Agent</button>
+                            </div>
+                        </div>
+
+                        <button onclick="showScreen('dashboard-screen')">Save Preferences</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
@@ -2761,7 +2822,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
                             <button class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
                             <button class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <br/><button class="secondary" onclick="nextStep('back')">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
@@ -2769,7 +2830,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <input type="text" placeholder="e.g. Maya's Cakes" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                            <button class="secondary" onclick="nextStep('back')">Back</button>
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
@@ -2779,7 +2840,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <label><input type="checkbox"> Services / Appointments</label>
                             <label><input type="checkbox"> Subscriptions</label>
                             <br/><button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <button class="secondary" onclick="nextStep('back')">Back</button>
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>Add your first product or service</h1>
@@ -2787,13 +2848,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <input type="text" placeholder="0.00" />
                             <button onclick="nextStep('generating')">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                            <button class="secondary" onclick="nextStep('back')">Back</button>
                         </div>
                         <div id="step-6" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="nextStep(7)">Online</button>
                             <button class="secondary" onclick="nextStep(7)">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                            <br/><button class="secondary" onclick="nextStep('back')">Back</button>
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
@@ -2839,7 +2900,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <button class="secondary" onclick="nextStep('back')">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
@@ -3199,8 +3260,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         let currentStep = 1;
+                        let stepHistory = [1];
+
+                        // Async load of state
+                        fetch('/api/onboarding/state', {
+                            headers: { 'x-tenant-id': localStorage.getItem('tenant_id') || 'default' }
+                        }).then(r => r.json()).then(data => {
+                            if (data && data.state && data.state !== '{}') {
+                                try {
+                                    let s = JSON.parse(data.state);
+                                    if (s.currentStep && typeof s.currentStep === 'number') {
+                                        currentStep = s.currentStep;
+                                    }
+                                    if (s.stepHistory) {
+                                        stepHistory = s.stepHistory;
+                                    }
+
+                                    // Update DOM to reflect loaded state
+                                    document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                        if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
+                                            d.style.display = 'none';
+                                            suppressButtonText(d, true);
+                                            suppressInputSelectors(d, true);
+                                        }
+                                    });
+                                    const next = document.getElementById('step-' + currentStep);
+                                    if (next) {
+                                        next.style.display = 'block';
+                                        suppressButtonText(next, false);
+                                        suppressInputSelectors(next, false);
+                                    }
+                                } catch (e) {}
+                            }
+                        }).catch(() => {});
+
                         async function nextStep(stepId) {
-                            const prevStep = currentStep;
+                            const prevStep = parseInt(currentStep) || 1;
                             if (prevStep === 3 && parseInt(stepId) === 4) {
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
@@ -3208,9 +3303,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     return;
                                 }
                             }
-                            if (typeof stepId === 'number' || !isNaN(stepId)) {
-                                currentStep = parseInt(stepId);
+                            if (stepId === 'back') {
+                                if (stepHistory.length > 1) {
+                                    stepHistory.pop();
+                                    stepId = stepHistory[stepHistory.length - 1];
+                                } else {
+                                    return;
+                                }
+                            } else {
+                                if (stepId !== 'generating' && stepHistory[stepHistory.length - 1] !== stepId) {
+                                    stepHistory.push(stepId);
+                                }
                             }
+
+                            currentStep = stepId;
+
+                            // Cross-device resume state saving
+                            try {
+                                fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'x-tenant-id': localStorage.getItem('tenant_id') || 'default'
+                                    },
+                                    body: JSON.stringify({ currentStep, stepHistory })
+                                }).catch(() => {});
+                            } catch (e) {}
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {

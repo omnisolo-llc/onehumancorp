@@ -7,6 +7,11 @@ use std::sync::Arc;
 use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
+// State per tenant. Note: in production this uses Redis/PostgreSQL
+lazy_static::lazy_static! {
+    static ref WIZARD_STATE: std::sync::Mutex<std::collections::HashMap<String, String>> = std::sync::Mutex::new(std::collections::HashMap::new());
+}
+
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
@@ -14,7 +19,6 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", post(save_state))
         .with_state(agent);
 
-    // Convert to accept MeshTransport state
     Router::new().merge(r)
 }
 
@@ -29,16 +33,24 @@ async fn start_onboarding(
 }
 
 async fn get_state(
+    headers: axum::http::HeaderMap,
     State(_agent): State<Arc<OnboardingAgent>>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant_id = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("default");
+    let map = WIZARD_STATE.lock().unwrap();
+    let state = map.get(tenant_id).cloned().unwrap_or_else(|| "{}".to_string());
     Ok(Json(serde_json::json!({
-        "state": "{}"
+        "state": state
     })))
 }
 
 async fn save_state(
+    headers: axum::http::HeaderMap,
     State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let tenant_id = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("default");
+    let mut map = WIZARD_STATE.lock().unwrap();
+    map.insert(tenant_id.to_string(), payload.to_string());
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
