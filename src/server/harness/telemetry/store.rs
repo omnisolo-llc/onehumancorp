@@ -11,6 +11,8 @@ pub struct ViolationStore {
     pub token_usage_counter: Counter<u64>,
     pub llm_cost_counter: Counter<u64>,
     pub storage_bytes_counter: Counter<u64>,
+    pub rate_limit_checks_total: Counter<u64>,
+    pub rate_limit_exceeded_total: Counter<u64>,
 }
 
 impl ViolationStore {
@@ -20,6 +22,8 @@ impl ViolationStore {
         let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
         let llm_cost_counter = meter.u64_counter("ohc_tenant_llm_cost_cents").build();
         let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
+        let rate_limit_checks_total = meter.u64_counter("ohc_rate_limit_checks_total").build();
+        let rate_limit_exceeded_total = meter.u64_counter("ohc_rate_limit_exceeded_total").build();
 
         Self {
             pool,
@@ -27,6 +31,8 @@ impl ViolationStore {
             token_usage_counter,
             llm_cost_counter,
             storage_bytes_counter,
+            rate_limit_checks_total,
+            rate_limit_exceeded_total,
         }
     }
 
