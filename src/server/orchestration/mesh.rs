@@ -2,6 +2,7 @@ use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use ::server_ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
+#[allow(unused_imports)]
 use opentelemetry::trace::{Tracer, TraceContextExt};
 use std::sync::Arc;
 use async_trait::async_trait;

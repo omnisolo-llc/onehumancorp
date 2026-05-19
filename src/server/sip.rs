@@ -1,4 +1,5 @@
 use sqlx::PgPool;
+#[allow(unused_imports)]
 use sqlx::Row;
 use chrono::Utc;
 use std::sync::OnceLock;

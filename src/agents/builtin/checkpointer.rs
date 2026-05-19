@@ -20,7 +20,7 @@ pub trait CheckpointSaver: Send + Sync {
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
-    #[allow(unused_variables)]
+    #[allow(unused)]
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> { Ok(()) }
 }
 

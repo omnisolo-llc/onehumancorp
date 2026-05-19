@@ -1,4 +1,5 @@
 use axum::{
+#[allow(unused_imports)]
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,

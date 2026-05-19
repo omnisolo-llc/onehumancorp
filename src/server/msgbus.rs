@@ -758,6 +758,7 @@ mod tests {
             if msg.topic == "system:health_ping" {
                 received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
 
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
                     let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
@@ -793,6 +794,7 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 if let Ok(handoff) = crate::interop::protocol::proto::StateHandoff::decode(&msg.payload[..]) {
                     if handoff.mission_id == "m1" && handoff.tenant_id == "t1" && handoff.state_snapshot == vec![1, 2, 3, 4] {
@@ -825,6 +827,7 @@ mod tests {
         let bus_clone = bus.clone();
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
                     let ack_topic = format!("system:health_ack:{}", ping.source_node_id);

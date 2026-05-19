@@ -61,6 +61,7 @@ impl PubSubManager {
         let formatted_topic = self.format_topic(tenant_id, topic);
 
         let wrapped_handler = Box::new(move |msg: TeammateMeshEvent| {
+            #[allow(unused_imports)]
             use prost::Message as ProstMessage;
             if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
                 let mut new_msg = msg.clone();

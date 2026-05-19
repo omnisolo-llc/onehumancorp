@@ -1,4 +1,5 @@
 use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
+#[allow(unused_imports)]
 use std::sync::Arc;
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ use crate::tasks::SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
+#[allow(unused_imports)]
 use opentelemetry::trace::{Tracer, TraceContextExt};
 
 pub struct TaskDecompositionService {
@@ -777,6 +778,7 @@ mod tests {
 #[cfg(test)]
 mod chaos_tests {
     use super::*;
+#[allow(unused_imports)]
     use std::sync::Arc;
     use tokio::time::Duration;
 

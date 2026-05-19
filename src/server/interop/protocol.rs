@@ -1,4 +1,6 @@
+#[allow(unused_imports)]
 use std::sync::atomic::Ordering;
+#[allow(unused_imports)]
 use crate::msgbus::MemoryBus;
 use crate::msgbus::{Bus, DistributedLock, Message};
 use std::sync::Arc;
@@ -113,6 +115,7 @@ impl InteropProtocol {
     pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
                     handler(decoded);
@@ -361,6 +364,7 @@ impl InteropProtocol {
     pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
@@ -423,6 +427,7 @@ impl InteropProtocol {
     pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(proto::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:queue_job_sync:") {
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 if let Ok(decoded) = proto::QueueJob::decode(&msg.payload[..]) {
                     handler(decoded);
@@ -452,6 +457,7 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
@@ -513,6 +519,7 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
+                #[allow(unused_imports)]
                 use prost::Message as ProstMessage;
                 let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
@@ -1007,6 +1014,7 @@ mod tests {
         let rx = received.clone();
 
         let _cancel_ack = bus.subscribe("system:health_ack:sender_node".to_string(), Box::new(move |msg| {
+            #[allow(unused_imports)]
             use prost::Message as ProstMessage;
             if let Ok(ack) = proto::HealthAck::decode(&msg.payload[..]) {
                 if ack.source_node_id == "node1" && ack.target_node_id == "sender_node" {
@@ -1045,6 +1053,7 @@ mod tests {
         let rx = received.clone();
 
         let _cancel_ack = bus.subscribe("system:job_ack:job1".to_string(), Box::new(move |msg| {
+            #[allow(unused_imports)]
             use prost::Message as ProstMessage;
             if let Ok(ack) = proto::JobAck::decode(&msg.payload[..]) {
                 if ack.job_id == "job1" && ack.node_id == "node1" {
