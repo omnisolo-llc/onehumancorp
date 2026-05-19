@@ -1,98 +1,78 @@
-# OHC AI Agent Department Architecture
+# AI Agent Department Architecture
 
-## 1. Overview
-This design document defines how AI departments operate invisibly within the OHC platform. OHC's agents are organized into friendly, understandable functional areas that mirror how a real business operates (Operations, Marketing & Advertising, Sales & Acquisition, Customer Success, Finance & Payments, Legal & Compliance, and Business Advisory). These agents seamlessly integrate into the daily workflow of non-technical small business owners, offloading cognitive overhead and driving growth.
+## Title
+AI Agent Department Architecture
 
-## 2. Goals & Non-Goals
-### 2.1 Goals
-- Define clear functional boundaries for each of the 7 AI Agent Departments.
-- Specify how each department is triggered and how they coordinate via the KAIROS Orchestrator.
-- Define memory retention and access patterns for contextual decision-making.
-- Outline the approval mechanism ensuring appropriate oversight (auto-execute vs. draft-for-review).
-- Establish usage limits and budgeting based on tenant tiers.
+## Problem Statement
+Small business owners—from bakers to handymen—are overwhelmed by the complexity of managing operations, marketing, sales, customer success, finance, and legal compliance. They lack the time, expertise, and budget to hire specialists for each of these functions. OneHumanCorp (OHC) needs to invisibly handle this complexity by organizing AI agents into intuitive "Departments" that mirror a real business structure, allowing non-technical users to delegate tasks easily and operate as a one-person enterprise without feeling overwhelmed.
 
-### 2.2 Non-Goals
-- Prescribe specific LLM inference engines or prompt tuning methodologies.
-- Define explicit SQL DDL schemas for the database.
-- Specify exact queueing mechanisms or worker node provisioning.
+## Research Report
+Competitive analysis of Shopify, Wix, Squarespace, and GoDaddy reveals that while they offer some AI-assisted features (like text generation or basic SEO), none provide a holistic, autonomous "departmental" AI structure. Users still have to manually orchestrate tools.
+- **Shopify:** Requires installing multiple disjointed apps for operations, marketing, and customer success, leading to fragmented context.
+- **Wix/Squarespace:** Basic AI website generation, but lacks ongoing autonomous operations (e.g., AI actively responding to Instagram DMs or sending follow-up quotes).
+Our approach organizes AI into human-understandable roles: "The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", and "The Advisor". This reduces cognitive load and aligns with how owners intuitively think about their business.
 
-## 3. Detailed Design
+## Design Doc
 
-### 3.1 Architecture Diagram
+### Architecture Diagram
 ```mermaid
-sequenceDiagram
-    participant O as KAIROS Orchestrator
-    participant Hub as Teammate Mesh (Hub)
-    participant Op as Operations Agent
-    participant CS as Customer Success Agent
-    participant Fin as Finance Agent
-    participant DB as OHC-SIP DB (Memory)
+flowchart TD
+    User([Business Owner - Mobile App]) --> CentralHub(Central OHC Hub)
+    CentralHub --> |Delegates Task| EventBus[Event & Message Bus]
 
-    O->>Hub: New Order Event
-    Hub->>Op: Trigger: Process Order
-    Op->>DB: Fetch Inventory State
-    DB-->>Op: Inventory Valid
-    Op->>Hub: Order Processed
-    Hub->>Fin: Trigger: Track Payment
-    Fin->>DB: Record Deposit
-    Hub->>CS: Trigger: Send Confirmation
-    CS->>DB: Fetch Customer Profile
-    DB-->>CS: Profile (Preferences)
-    CS->>Hub: Draft Email for Review
+    EventBus --> |New Order| Ops[Operations: 'The Manager']
+    EventBus --> |New Campaign| Marketing[Marketing: 'The Promoter']
+    EventBus --> |Inquiry/Lead| Sales[Sales: 'The Salesperson']
+    EventBus --> |Support Msg| Success[Customer Success: 'The Ambassador']
+    EventBus --> |Payment| Finance[Finance: 'The Accountant']
+    EventBus --> |Compliance Check| Legal[Legal: 'The Protector']
+    EventBus --> |Weekly Review| Advisory[Advisory: 'The Advisor']
 
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class O,Hub,Op,CS,Fin,DB premium;
+    Ops <--> Memory[Shared Business Context & Memory]
+    Marketing <--> Memory
+    Sales <--> Memory
+    Success <--> Memory
+    Finance <--> Memory
+    Legal <--> Memory
+    Advisory <--> Memory
+
+    Memory --> |State Sync| EventBus
 ```
 
-### 3.2 Department Execution Triggers & Coordination
-Departments are autonomous but interconnected:
-- **Scheduled (Cron):** E.g., The Business Advisory Agent generates weekly health reports every Monday at 8 AM.
-- **Event-Driven:** Triggered by system events. E.g., Operations processes an order -> Customer Success drafts a thank-you note.
-- **On-Demand:** Direct user prompts via the dashboard UI.
+### UI Wireframes or screen flow description (375px first)
+- **375px Mobile First Design:**
+  - **Home Screen Dashboard:** Uses a Light Mode Translucent Glass aesthetic (`background: rgba(255, 255, 255, 0.65)`, `backdrop-filter: blur(30px) saturate(210%)`, 16px rounded corners).
+  - **Action Cards:** Each department appears as an employee card (e.g., "The Manager: 3 pending orders", "The Promoter: 1 draft campaign").
+  - **Advanced Settings:** Technical configurations are hidden stickily behind an "Advanced Settings" switch.
 
-Coordination is handled via the KAIROS Shared Task List and Teammate Mesh, ensuring durable, collision-free handoffs between departments using distributed locks (`ohc:lock:{tenant_id}:{resource_type}:{resource_id}`).
+### Mobile UX flow
+1. **Launch:** Owner opens the app and sees the Central Hub with a summary from "The Advisor".
+2. **Review:** Owner taps on "The Ambassador" card showing an alert.
+3. **Approve:** A chat interface opens displaying a drafted reply to a customer review. Owner taps the "Approve" button (8px rounded corners).
+4. **Execute:** The system sends the reply, updates Shared Memory, and returns the user to the Hub.
 
-#### Critical 1-Tap Handoff Triggers
-To ensure the "1-Tap Approval" experience, the following coordination patterns are strictly enforced:
-1.  **Ops -> Success (The Fulfillment Flow)**: When "The Manager" marks an order as `SHIPPED` or `READY_FOR_PICKUP`, a `tenant.order.fulfillment_ready` event is emitted. "The Ambassador" immediately drafts a personalized notification for the customer.
-2.  **Sales -> Ops (The Quote flow)**: When a customer accepts a quote, "The Salesperson" emits `tenant.quote.accepted`. "The Manager" automatically creates an `ORDER` and a `BOOKING` in the shared task list, pending the owner's confirmation.
-3.  **Advisor -> Promoter (The Growth Flow)**: When "The Advisor" identifies a high-velocity product (e.g., Maya's vegan cake), it emits `tenant.insight.trending`. "The Promoter" then drafts a social media campaign or a website banner to capitalize on the trend.
+### AI agent integration points
+- **Triggering:** Departments are triggered via scheduled cron jobs, platform events, or on-demand via user delegation.
+- **Coordination:** A central event bus allows departments to coordinate.
+- **Approval Mechanism:** Actions are categorized by risk. Low-risk auto-execute. High-risk default to "draft-for-review".
+- **Budgeting/Throttling:** AI usage is tracked per tenant according to their SaaS tier limits.
 
-### 3.3 Memory & Context
-Agents utilize a unified memory model:
-- **Short-Term Context:** Current session data and active task payload (e.g., the specific order details).
-- **Long-Term Memory:** Embedded into `autodream_memories` using `pgvector`. This allows agents to recall past interactions, seasonal trends, and specific customer preferences (e.g., "Customer X always asks for vegan options").
+### Key design decisions and why
+- **Humanized Naming Conventions:** Using roles like "The Manager" ensures the system passes the grandmother test, matching the user's mental model.
+- **Shared Memory Architecture:** All departments read from and write to a shared vector memory and context store to prevent fragmented context.
+- **Draft-for-Review Default:** Ensures the business owner feels in control initially, building trust.
 
-### 3.4 Approval Workflows
-To maintain trust, actions are categorized by risk:
-- **Auto-Execute:** Low-risk, reversible actions (e.g., updating internal inventory tags, parsing analytics).
-- **Draft-for-Review:** High-risk, external actions (e.g., publishing social media posts, sending customer emails, refunding payments). The system presents a notification to the business owner, requiring a 1-tap approval via the mobile app.
+## Implementation Prompt
+**Task for Implementer Agent:**
+Implement the user-facing AI Department Hub for the mobile app (375px baseline).
+- Build the UI to display the 7 AI Departments (Operations, Marketing, Sales, Customer Success, Finance, Legal, Advisory) using the mandated Translucent Glass aesthetic (light/dark mode blur 30px, saturate 210%, 16px container corners, 8px control corners, Outfit/Inter typography).
+- Create the interaction flow where a business owner can tap a department to view pending "draft-for-review" actions and approve them.
+- Ensure the interface passes the grandmother test (usable in 30s by a novice) by hiding technical complexity behind an "Advanced Settings" toggle.
+- Provide a clear, non-technical empty state or upgrade CTA if a department hits its monthly action limit based on the user's tier.
+- Ensure 100% mobile parity.
 
-### 3.5 Tier-Based Usage & Throttling
-Agent activity is gated by the multi-tenant SaaS tier:
-- Usage is metered per tenant using custom Prometheus metrics.
-- Hard limits on monthly AI actions (e.g., Free: 100, Starter: 1,000, Pro: Unlimited).
-- Rate limiting applied at the Orchestrator level to prevent noisy-neighbor degradation.
+## Priority
+P0
 
-## 4. Cross-cutting Concerns
-### 4.1 Mobile-First UX
-All agent interactions (approving drafts, viewing advisory reports) are designed for a 375px mobile breakpoint. Action items are summarized in plain language ("Your vegan cake campaign is ready for review").
-
-### 4.2 Security & Multi-Tenancy
-Every agent query and action is scoped to the `tenant_id` via PostgreSQL Row Level Security (RLS) to guarantee complete isolation.
-
-## 5. Implementation Plan
-- **Phase 1:** Core KAIROS event routing for the Operations and Customer Success departments.
-- **Phase 2:** Memory integration (`autodream_memories`) for contextual responses.
-- **Phase 3:** Draft-for-review approval UX implementation in the mobile application.
-
-```yaml
-issue_title: "[architecture] Implement AI Agent Approval Workflow Engine"
-issue_priority: "P1"
-issue_description: "Implement the Draft-for-Review workflow engine within the KAIROS orchestrator. Agents must be able to submit high-risk actions (e.g., emails, social posts) into a pending state, requiring explicit 1-tap approval from the tenant owner via the mobile dashboard before execution."
-issue_todo_list:
-  - [ ] Define ActionRisk level in agent mission payload.
-  - [ ] Create pending approval queue in OHC-SIP DB.
-  - [ ] Implement approval/rejection callback endpoints.
-issue_label: ["architecture", "high-impact", "core-feature"]
-```
+## Estimated Scope
+Large
