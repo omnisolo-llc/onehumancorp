@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Tenant {
-    pub id: Uuid,
+    pub id: String,
     pub business_name: String,
     pub owner_email: String,
     pub subscription_tier: String,
@@ -13,8 +12,8 @@ pub struct Tenant {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Product {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub id: String,
+    pub tenant_id: String,
     pub r#type: String, // "physical", "digital", "service"
     pub title: String,
     pub price_cents: i64,
@@ -26,8 +25,8 @@ pub struct Product {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Customer {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub id: String,
+    pub tenant_id: String,
     pub name: String,
     pub email: String,
     pub phone: String,
@@ -37,9 +36,9 @@ pub struct Customer {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct OrderBooking {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub customer_id: Uuid,
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
     pub status: String, // "pending", "paid", "completed", "cancelled"
     pub total_amount_cents: i64,
     pub scheduled_for: Option<DateTime<Utc>>,
@@ -49,18 +48,18 @@ pub struct OrderBooking {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct OrderItem {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub order_id: Uuid,
-    pub product_id: Uuid,
+    pub id: String,
+    pub tenant_id: String,
+    pub order_id: String,
+    pub product_id: String,
     pub quantity: i32,
     pub unit_price_cents: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct AgentMemory {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub id: String,
+    pub tenant_id: String,
     pub department: String, // "operations", "marketing", "finance"...
     pub context_summary: String,
     // embedding is handled separately depending on the DB (pgvector vs blob)

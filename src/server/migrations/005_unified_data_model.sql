@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 1. Tenants Table
 CREATE TABLE IF NOT EXISTS tenants (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     business_name TEXT NOT NULL,
     owner_email TEXT NOT NULL,
     subscription_tier TEXT NOT NULL DEFAULT 'free',
@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 -- 2. Products Table
 CREATE TABLE IF NOT EXISTS products (
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    id UUID NOT NULL DEFAULT gen_random_uuid(),
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    id TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     type TEXT NOT NULL, -- physical, digital, service
     title TEXT NOT NULL,
     price_cents BIGINT NOT NULL DEFAULT 0,
@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS products (
 
 -- 3. Customers Table
 CREATE TABLE IF NOT EXISTS customers (
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    id UUID NOT NULL DEFAULT gen_random_uuid(),
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    id TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     phone TEXT NOT NULL,
@@ -41,9 +41,9 @@ CREATE TABLE IF NOT EXISTS customers (
 
 -- 4. Order Bookings Table
 CREATE TABLE IF NOT EXISTS order_bookings (
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    id UUID NOT NULL DEFAULT gen_random_uuid(),
-    customer_id UUID NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    id TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+    customer_id TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending', -- pending, paid, completed, cancelled
     total_amount_cents BIGINT NOT NULL DEFAULT 0,
     scheduled_for TIMESTAMPTZ, -- Null for instant orders
@@ -54,10 +54,10 @@ CREATE TABLE IF NOT EXISTS order_bookings (
 
 -- 5. Order Items Table
 CREATE TABLE IF NOT EXISTS order_items (
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    id UUID NOT NULL DEFAULT gen_random_uuid(),
-    order_id UUID NOT NULL,
-    product_id UUID NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    id TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+    order_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price_cents BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (tenant_id, id)
@@ -65,8 +65,8 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 -- 6. AI Agent Memory Table
 CREATE TABLE IF NOT EXISTS agent_memories (
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    id UUID NOT NULL DEFAULT gen_random_uuid(),
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    id TEXT NOT NULL DEFAULT gen_random_uuid()::text,
     department TEXT NOT NULL, -- operations, marketing, finance...
     context_summary TEXT NOT NULL,
     embedding VECTOR(1536),

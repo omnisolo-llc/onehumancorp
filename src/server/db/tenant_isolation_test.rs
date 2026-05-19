@@ -14,12 +14,12 @@ mod tenant_isolation_tests {
             return;
         }
 
-        let tenant_a = Uuid::new_v4();
-        let tenant_b = Uuid::new_v4();
+        let tenant_a = Uuid::new_v4().to_string();
+        let tenant_b = Uuid::new_v4().to_string();
 
         // 1. Setup tenants
         sqlx::query("INSERT INTO tenants (id, business_name, owner_email) VALUES ($1, $2, $3)")
-            .bind(tenant_a)
+            .bind(&tenant_a)
             .bind("Tenant A")
             .bind("a@example.com")
             .execute(&db.pool)
@@ -27,7 +27,7 @@ mod tenant_isolation_tests {
             .unwrap();
 
         sqlx::query("INSERT INTO tenants (id, business_name, owner_email) VALUES ($1, $2, $3)")
-            .bind(tenant_b)
+            .bind(&tenant_b)
             .bind("Tenant B")
             .bind("b@example.com")
             .execute(&db.pool)
@@ -42,7 +42,7 @@ mod tenant_isolation_tests {
             .unwrap();
 
         sqlx::query("INSERT INTO products (tenant_id, title, type, price_cents) VALUES ($1, $2, $3, $4)")
-            .bind(tenant_a)
+            .bind(&tenant_a)
             .bind("Product A")
             .bind("physical")
             .bind(1000)
