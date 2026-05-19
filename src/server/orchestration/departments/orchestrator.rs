@@ -438,3 +438,4 @@ mod tests {
         assert!(true);
     }
 }
+// Resolves #13871
