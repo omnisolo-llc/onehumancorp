@@ -8,16 +8,16 @@ use sqlx::sqlite::SqlitePoolOptions;
 
 
 use crate::orchestration::mesh::TeammateMesh;
-use ohc_builtin_agent::mesh::transport::{Message, MemoryTransport, MeshTransport};
+use ohc_builtin_agent::mesh::transport::{Message, InProcessTransport, MeshTransport};
 use async_trait::async_trait;
 
 struct MockMesh {
-    transport: MemoryTransport,
+    transport: InProcessTransport,
 }
 
 impl MockMesh {
     fn new() -> Self {
-        Self { transport: MemoryTransport::new() }
+        Self { transport: InProcessTransport::new() }
     }
 }
 

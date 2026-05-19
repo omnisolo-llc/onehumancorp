@@ -93,7 +93,7 @@ pub async fn run_health_monitor(
 mod tests {
     use super::*;
 
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {
@@ -139,7 +139,7 @@ mod tests {
         assert!(hub.get_agent("agent_busy").is_some());
 
         // We simulate a transport with NO active agents
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
 
         let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();

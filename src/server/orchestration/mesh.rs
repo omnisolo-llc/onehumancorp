@@ -220,13 +220,13 @@ impl TeammateMesh for CentrifugeNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
 
     #[tokio::test]
     async fn test_centrifuge_node_pubsub() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let node = CentrifugeNode::new(transport);
 
         let received = Arc::new(AtomicBool::new(false));
@@ -247,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_acquire_lock() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let node = CentrifugeNode::new(transport);
 
         let acquired = node.acquire_lock("test_resource", "agent_1", 10).await.unwrap();
@@ -264,7 +264,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_register_presence() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let node = CentrifugeNode::new(transport);
 
         node.register_presence("agent_1", "online", 10).await.unwrap();
@@ -280,7 +280,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_ping_pong() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let node = CentrifugeNode::new(transport);
 
         let _cancel_responder = node.start_health_responder().await.unwrap();
@@ -294,7 +294,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_state_handoff() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let node = CentrifugeNode::new(transport);
 
         let received = Arc::new(AtomicBool::new(false));
@@ -358,8 +358,8 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
     match db_store {
         crate::db::DbStore::Postgres => {
             let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-            let transport = ohc_builtin_agent::mesh::transport::RedisTransport::new(&redis_url).await
-                .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
+            let transport = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(&redis_url).await
+                .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
@@ -386,8 +386,8 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
                 Err(e) => {
-                    tracing::error!("Failed to initialize SqliteTransport: {}. Falling back to MemoryTransport.", e);
-                    let transport = ohc_builtin_agent::mesh::transport::MemoryTransport::new();
+                    tracing::error!("Failed to initialize SqliteTransport: {}. Falling back to InProcessTransport.", e);
+                    let transport = ohc_builtin_agent::mesh::transport::InProcessTransport::new();
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
             }

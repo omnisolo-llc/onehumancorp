@@ -11,9 +11,9 @@ mod tests {
     #[tokio::test]
     async fn test_simulate_sql_sync_lag() {
         // Here we simulate lock contention that would arise from SQL sync lag.
-        use ohc_builtin_agent::mesh::transport::{MemoryTransport, MeshTransport};
+        use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
 
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let resource = format!(
             "system_lock_{}_{}",
             std::process::id(),
@@ -43,11 +43,11 @@ mod tests {
         // Simulating packet loss/retry loop for TeammateMesh events
         // Using Mock Mesh behavior
         use crate::orchestration::mesh::TeammateMesh;
-        use ohc_builtin_agent::mesh::transport::{Message, MemoryTransport, MeshTransport};
+        use ohc_builtin_agent::mesh::transport::{Message, InProcessTransport, MeshTransport};
         use async_trait::async_trait;
 
         struct FaultyMesh {
-            transport: MemoryTransport,
+            transport: InProcessTransport,
             fail_count: std::sync::atomic::AtomicUsize,
         }
 
@@ -95,7 +95,7 @@ mod tests {
         }
 
         let faulty_mesh = FaultyMesh {
-            transport: MemoryTransport::new(),
+            transport: InProcessTransport::new(),
             fail_count: std::sync::atomic::AtomicUsize::new(0),
         };
 
