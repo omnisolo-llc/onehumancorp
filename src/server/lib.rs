@@ -2339,16 +2339,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             margin: 40px auto;
             border-radius: 16px;
             overflow: hidden;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
         }
+
+        body.dark-theme #setup-screen {
+            background: rgba(22, 22, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
         #setup-screen > div {
             transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #setup-screen button {
+
+        #setup-screen button, #setup-screen input {
             border-radius: 8px;
             transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #setup-screen input {
-            border-radius: 8px;
         }
 
         @media (max-width: 375px) {
@@ -2364,25 +2373,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 margin-bottom: 8px;
                 box-sizing: border-box;
             }
-        }
-
-
-        /* Premium Standard Overrides for Wizard */
-        #setup-screen.glass {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
-            max-width: 600px;
-            margin: 40px auto;
-            overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-        }
-
-        body.dark-theme #setup-screen.glass {
-            background: rgba(22, 22, 26, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         #setup-screen > div {
@@ -3132,56 +3122,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <script>
 
 
-                        // LocalStorage State Management
-                        function saveWizardState() {
-                            const inputs = document.querySelectorAll('#setup-screen input');
-                            const state = {};
-                            inputs.forEach((input, index) => {
-                                if (input.type === 'checkbox') {
-                                    state['checkbox_' + index] = input.checked;
-                                } else {
-                                    state['input_' + index] = input.value;
-                                }
-                            });
-                            localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
-                        }
-
-                        function loadWizardState() {
-                            const saved = localStorage.getItem('ohc_wizard_state');
-                            if (saved) {
-                                try {
-                                    const state = JSON.parse(saved);
-                                    const inputs = document.querySelectorAll('#setup-screen input');
-                                    inputs.forEach((input, index) => {
-                                        if (input.type === 'checkbox') {
-                                            if (state['checkbox_' + index] !== undefined) {
-                                                input.checked = state['checkbox_' + index];
-                                            }
-                                        } else {
-                                            if (state['input_' + index] !== undefined) {
-                                                input.value = state['input_' + index];
-                                            }
-                                        }
-                                        // add listener for auto-save
-                                        input.addEventListener('change', saveWizardState);
-                                        input.addEventListener('input', saveWizardState);
-                                    });
-                                } catch (e) { console.error('Failed to parse wizard state', e); }
-                            } else {
-                                const inputs = document.querySelectorAll('#setup-screen input');
-                                inputs.forEach((input) => {
-                                    input.addEventListener('change', saveWizardState);
-                                    input.addEventListener('input', saveWizardState);
-                                });
-                            }
-                        }
-
-                        document.addEventListener('DOMContentLoaded', () => {
-                            // Run setup logic after page load
-                            setTimeout(loadWizardState, 100);
-                        });
-
-
                         // Server-Side State Management for Cross-Device Resumes
                         let saveWizardStateTimeout = null;
 
@@ -3720,6 +3660,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
                                 if (!hasCompanyName) {
                                     return;
+                                }
+                            }
+
+                            // Universal empty input validator for required fields across all steps
+                            if (typeof stepId === 'number' && stepId > prevStep) {
+                                const currentStepDiv = document.getElementById('step-' + prevStep);
+                                if (currentStepDiv) {
+                                    const inputs = currentStepDiv.querySelectorAll('input:not([type="hidden"])');
+                                    let hasEmptyRequired = false;
+                                    let firstEmptyInput = null;
+
+                                    inputs.forEach(input => {
+                                        if (input.type !== 'checkbox' && input.type !== 'radio') {
+                                            if (!input.value || input.value.trim().length === 0) {
+                                                if (prevStep === 7) {
+                                                    hasEmptyRequired = true;
+                                                    firstEmptyInput = firstEmptyInput || input;
+                                                }
+                                                else if (prevStep === 5 && inputs[0].value.trim().length === 0) {
+                                                    hasEmptyRequired = true;
+                                                    firstEmptyInput = firstEmptyInput || inputs[0];
+                                                }
+                                                else if (prevStep === 3 && inputs[0].value.trim().length === 0) {
+                                                    hasEmptyRequired = true;
+                                                    firstEmptyInput = firstEmptyInput || inputs[0];
+                                                }
+                                            }
+                                        }
+                                    });
+
+                                    if (hasEmptyRequired) {
+                                        alert("Please fill in the required fields before continuing.");
+                                        if (firstEmptyInput) firstEmptyInput.focus();
+                                        return; // Block progression
+                                    }
                                 }
                             }
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
