@@ -6,7 +6,7 @@ startup --output_user_root=~/.cache/bazel/bazel-output-ohc
 
 build --color=yes
 build --config=remote
-build:remote --config=nativelink
+build:remote --config=buildbuddy
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=8
@@ -89,48 +89,27 @@ build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
-# ── nativelink official (default) ─────────────────────────────────────────────
-# Remote cache + executor at nativelink.phslc.com with BES streaming.
-# common:nativelink --bes_timeout=600s
-# build:nativelink --bes_results_url=https://nativelink.phslc.com/invocation/
-# build:nativelink --bes_backend=grpcs://nativelink-grpc.phslc.com
-# Upload BES data asynchronously so the build/test result is available sooner.
-# build:nativelink --bes_upload_mode=fully_async
-build:nativelink --verbose_failures
-common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
-# common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
-# Proxy artifact downloads through nativelink's CAS for faster blob fetches.
-common:nativelink --experimental_remote_downloader=grpcs://nativelink-grpc.phslc.com
-common:nativelink --remote_upload_local_results
-common:nativelink --remote_timeout=10m
-# common:nativelink --remote_cache_compression
-common:nativelink --remote_local_fallback
-# Fall back to direct download when CAS doesn't have the blob.
-# Prevents CacheNotFoundException from failing repository rule fetches.
-common:nativelink --experimental_remote_downloader_local_fallback
-common:nativelink --jobs=8
-
-# ── BuildBuddy self-hosted ──────────────────────────────────────
-# # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
+# ── BuildBuddy  ──────────────────────────────────────
+# Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
-# # buildbuddy-official which relies on the global sandboxed,local fallback chain.
-# common:buildbuddy --bes_timeout=600s
-# common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
-# common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-# # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_local_fallback
-# common:buildbuddy --remote_upload_local_results
-# # common:buildbuddy --remote_cache_compression
+# buildbuddy-official which relies on the global sandboxed,local fallback chain.
+common:buildbuddy --bes_timeout=600s
+common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
+common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_local_fallback
+common:buildbuddy --remote_upload_local_results
+common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
-# common:buildbuddy --experimental_remote_downloader_local_fallback
-# common:buildbuddy --jobs=200
+common:buildbuddy --experimental_remote_downloader_local_fallback
+common:buildbuddy --jobs=50
 # Read only Bazel cache
-# common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
-# common:buildbuddy --remote_timeout=10m
-# build:buildbuddy --verbose_failures
-# build:buildbuddy --bes_upload_mode=fully_async
+common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
+common:buildbuddy --remote_timeout=10m
+build:buildbuddy --verbose_failures
+build:buildbuddy --bes_upload_mode=fully_async
 
 # ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=
