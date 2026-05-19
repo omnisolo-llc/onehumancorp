@@ -2839,8 +2839,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="my-plan-ai-usage">AI Actions Used: 0 / 100</p>
                             <p id="my-plan-storage-usage">Storage Used: 0MB / 500MB</p>
                             <button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                            <button onclick="showScreen('pricing-screen')">Upgrade</button>
                         </div>
+                        <p id="my-plan-upgrade-msg" class="warning" style="display:none; color: orange;"></p>
                         <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
                         <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
                         <button class="secondary">Cancel Subscription</button>
@@ -3923,6 +3924,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         let storageUsedMB = Math.round(data.storage_used_bytes / (1024 * 1024));
                                         let storageLimitText = data.storage_limit_bytes ? Math.round(data.storage_limit_bytes / (1024 * 1024)) + 'MB' : 'Unlimited';
                                         document.getElementById('my-plan-storage-usage').textContent = 'Storage Used: ' + storageUsedMB + 'MB / ' + storageLimitText;
+
+                                        if (data.upgrade_message) {
+                                            const msgEl = document.getElementById('my-plan-upgrade-msg');
+                                            msgEl.textContent = data.upgrade_message;
+                                            msgEl.style.display = 'block';
+                                        } else {
+                                            document.getElementById('my-plan-upgrade-msg').style.display = 'none';
+                                        }
                                     })
                                     .catch(err => console.error('Error fetching plan info:', err));
                             }

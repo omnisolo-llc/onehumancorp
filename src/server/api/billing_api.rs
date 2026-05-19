@@ -11,6 +11,7 @@ pub struct MyPlanResponse {
     pub storage_used_bytes: i64,
     pub storage_limit_bytes: Option<i64>,
     pub next_bill_estimated: i32,
+    pub upgrade_message: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -44,7 +45,7 @@ pub async fn my_plan_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
+        None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0, upgrade_message: None })
     };
 
     let tracker = hub.tracker();
@@ -69,6 +70,28 @@ pub async fn my_plan_handler(
         ::server_pricing::rate_limit::PlanTier::Business => 79,
     };
 
+
+    let mut upgrade_message = None;
+    if let Ok(status) = tracker.track_storage_usage(&tenant_id, 0, None).await {
+        if let Some(msg) = status.user_message {
+            upgrade_message = Some(msg);
+        }
+    }
+    if upgrade_message.is_none() {
+        if let Ok(status) = tracker.check_product_quota(&tenant_id).await {
+            if let Some(msg) = status.user_message {
+                upgrade_message = Some(msg);
+            }
+        }
+    }
+    if upgrade_message.is_none() {
+        if let Ok(status) = tracker.check_agent_quota(&tenant_id).await {
+            if let Some(msg) = status.user_message {
+                upgrade_message = Some(msg);
+            }
+        }
+    }
+
     Json(MyPlanResponse {
         current_plan: plan_name,
         ai_actions_used: ai_used as i32,
@@ -76,7 +99,9 @@ pub async fn my_plan_handler(
         storage_used_bytes,
         storage_limit_bytes: storage_limit,
         next_bill_estimated,
+        upgrade_message,
     })
+
 }
 
 pub async fn cost_dashboard_handler(
