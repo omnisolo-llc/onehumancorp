@@ -2197,12 +2197,13 @@ impl Agent {
                             if !m.tool_results.is_empty() {
                                 middle_text.push_str("Tool Results:\n");
                                 for tr in &m.tool_results {
-                                    let mut preview = tr.content.clone();
-                                    if preview.len() > 200 {
-                                        preview.truncate(200);
-                                        preview.push_str("...");
-                                    }
-                                    middle_text.push_str(&format!("  {} (error: {})\n", preview, tr.error));
+                                    // Discard redundant/raw tool outputs, but preserve errors if any
+                                    let status = if tr.error.is_empty() {
+                                        "Success (raw output discarded during compaction)"
+                                    } else {
+                                        &tr.error
+                                    };
+                                    middle_text.push_str(&format!("  tool_call_id: {} -> {}\n", tr.tool_call_id, status));
                                 }
                             }
                             middle_text.push_str("---\n");
@@ -2210,7 +2211,7 @@ impl Agent {
 
                         let summary_req = ChatRequest {
                             model: final_cfg.model.clone(),
-                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve all architectural decisions, unresolved bugs, and the exact state of progress. Discard redundant or raw tool outputs. Be concise.".to_string(),
+                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
                             messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
                             tools: vec![],
                             max_tokens: 2000,
