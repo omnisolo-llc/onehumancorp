@@ -15,6 +15,7 @@ test.describe('Canvas Storefront Builder Full E2E', () => {
         await expect(page.locator('text="Featured Products (4 items)"')).toBeVisible();
         await expect(page.locator('text="Our Services"')).toBeVisible();
         await expect(page.locator('text="Best service ever! - Happy Customer"')).toBeVisible();
+        await expect(page.locator('text="⚡ Powered by OHC"')).toBeVisible();
     });
 
     test('Flow 2: Open Bottom Sheet via Block Click', async ({ page }) => {

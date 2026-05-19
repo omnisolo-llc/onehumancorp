@@ -3321,6 +3321,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 el.innerHTML = innerHtml;
                                 container.appendChild(el);
                             });
+
+                            const footer = document.createElement('div');
+                            footer.className = 'builder-block glass';
+                            footer.style.textAlign = 'center';
+                            footer.style.padding = '12px';
+                            footer.innerHTML = `<a href="ohc://join?ref=DEFAULT" style="color: var(--primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
+                            container.appendChild(footer);
                         }
 
                         function toggleRearrangeMode() {
