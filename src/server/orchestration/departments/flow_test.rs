@@ -69,4 +69,57 @@ mod tests {
 
         assert!(has_quote, "Cross-department flow should result in a pending quote approval");
     }
+
+    #[tokio::test]
+    async fn test_finance_agent_flow() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(MemoryTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let finance_agent = Arc::new(RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(orchestrator.clone())));
+        orchestrator.register_department(finance_agent).await;
+
+        let tenant_id = "test-tenant-finance".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.financial.end_of_month".to_string(),
+            payload: serde_json::json!({}),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_draft = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+            if pending.iter().any(|req| req.description.contains("Draft tax report for review")) {
+                has_draft = true;
+                break;
+            }
+        }
+        assert!(has_draft, "Finance agent should create a draft approval for end_of_month");
+    }
 }
