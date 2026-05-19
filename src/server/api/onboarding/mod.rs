@@ -29,16 +29,28 @@ async fn start_onboarding(
 }
 
 async fn get_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    Ok(Json(serde_json::json!({
-        "state": "{}"
-    })))
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    match agent.get_onboarding_state(tenant_id).await {
+        Ok(state) => Ok(Json(state)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 async fn save_state(
-    State(_agent): State<Arc<OnboardingAgent>>,
-    Json(_payload): Json<serde_json::Value>,
+    State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    Ok(axum::http::StatusCode::NO_CONTENT)
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+
+    let step = payload.get("step").and_then(|s| s.as_i64()).unwrap_or(0) as i32;
+
+    match agent.save_onboarding_state(tenant_id, user_id, step, &payload).await {
+        Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
