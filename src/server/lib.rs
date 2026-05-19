@@ -1926,11 +1926,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #006fff;
+                            --primary: #0066FF;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
-                            --accent-green: #15a46f;
-                            --accent-orange: #f59e0b;
+                            --accent-green: #34C759;
+                            --accent-orange: #FF9500;
+                            --accent-red: #FF3B30;
                             --bg: #eef1f5;
                             --surface: rgba(255, 255, 255, 0.86);
                             --surface-strong: #ffffff;
@@ -1942,7 +1943,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
                             --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
                             --radius-sm: 8px;
-                            --radius-md: 10px;
+                            --radius-md: 16px;
                         }
                         * {
                             box-sizing: border-box;
@@ -1985,11 +1986,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text-secondary);
                         }
                         .glass {
-                            background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            background: rgba(255, 255, 255, 0.65);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border-radius: var(--radius-md);
+                        }
+                        .dark-theme .glass {
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2083,7 +2091,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
-                            transition: transform 0.15s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+                            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -2092,7 +2100,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         button:active { transform: translateY(0); }
                         button.secondary { 
-                            background: rgba(255,255,255,0.78); 
+                            background: rgba(255,255,255,0.78); transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
                             border: 1px solid var(--border); 
                             color: var(--text); 
                         }
@@ -2145,6 +2153,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: 0 18px 44px rgba(16, 24, 40, 0.16);
                         }
                         @media (max-width: 768px) {
+                            .screen { max-width: 100%; margin: 0 auto; padding-left: 16px; padding-right: 16px; width: 100%; box-sizing: border-box; }
                             #mobile-bottom-nav { display: flex; }
                             main { padding-bottom: 92px; }
                             nav {
@@ -2302,7 +2311,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Create an account</h1>
                         <p>Create an account to start your business</p>
                         <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
+                        <input type="password" placeholder="Password" aria-label="Password" />
                         <button onclick="handleSignup(this)">Sign Up</button>
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
@@ -2756,11 +2765,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" />
                             <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="nextStep(3)">🏠 <span>Local Business</span></button>
+                            <button class="secondary" onclick="selectWizardOption(this); nextStep(3)" aria-label="Select Online Store">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="selectWizardOption(this); nextStep(3)" aria-label="Select Service Business">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="selectWizardOption(this); nextStep(3)" aria-label="Select Restaurant or Food Business">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="selectWizardOption(this); nextStep(3)" aria-label="Select Creative Business">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="selectWizardOption(this); nextStep(3)" aria-label="Select Local Business">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-3" style="display: none;">
@@ -2773,11 +2782,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-4" style="display: none;">
                             <h1>What do you sell?</h1>
-                            <label><input type="checkbox"> Physical Products</label>
-                            <label><input type="checkbox"> 📦 Physical products</label>
-                            <label><input type="checkbox"> Digital Products</label>
-                            <label><input type="checkbox"> Services / Appointments</label>
-                            <label><input type="checkbox"> Subscriptions</label>
+                            <label><input type="checkbox" aria-label="Physical Products"> Physical Products</label>
+                            <label><input type="checkbox" aria-label="Physical products"> 📦 Physical products</label>
+                            <label><input type="checkbox" aria-label="Digital Products"> Digital Products</label>
+                            <label><input type="checkbox" aria-label="Services or Appointments"> Services / Appointments</label>
+                            <label><input type="checkbox" aria-label="Subscriptions"> Subscriptions</label>
                             <br/><button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
@@ -2797,21 +2806,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
+                            <input type="text" placeholder="e.g. Maya Smith" aria-label="Full Name" />
+                            <input type="email" placeholder="you@email.com" aria-label="Email Address" />
+                            <input type="password" placeholder="Password" aria-label="Password" />
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="selectWizardOption(this)">Modern</button>
-                            <button class="secondary" onclick="selectWizardOption(this)">Bold</button>
+                            <button class="secondary" onclick="selectWizardOption(this)" aria-label="Select Modern Template">Modern</button>
+                            <button class="secondary" onclick="selectWizardOption(this)" aria-label="Select Bold Template">Bold</button>
                             <button onclick="nextStep(9)">Next →</button>
                         </div>
                         <div id="step-9" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="selectWizardOption(this)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="selectWizardOption(this)">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="selectWizardOption(this)" aria-label="Select Free OHC Domain">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="selectWizardOption(this)" aria-label="Connect Custom Domain">🔗 Connect Custom Domain</button>
                             <button onclick="nextStep(10)">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
@@ -2913,7 +2922,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="login-error" class="error">Oops! We couldn't sign you in. Please double-check your email and password, then try again.</div>
                         <input type="email" placeholder="Email or Username" />
                         <div class="password-row">
-                            <input type="password" placeholder="Password" />
+                            <input type="password" placeholder="Password" aria-label="Password" />
                             <button type="button" class="secondary" onclick="const input = this.previousElementSibling; input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? 'Show' : 'Hide';">Show</button>
                         </div>
                         <button onclick="handleLogin(this)">Login Sign In</button>
@@ -3201,13 +3210,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         let currentStep = 1;
                         async function nextStep(stepId) {
                             const prevStep = currentStep;
+                            if (prevStep === 2 && stepId === 3) {
+                                // Validate step 2 has a value
+                                const typeInput = document.querySelector('#step-2 input[type="text"]');
+                                if (!typeInput.value.trim() && document.querySelectorAll('#step-2 button.secondary.selected').length === 0) {
+                                    alert('Please enter or select a business type.');
+                                    return;
+                                }
+                            }
                             if (prevStep === 3 && parseInt(stepId) === 4) {
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
                                 if (!hasCompanyName) {
+                                    alert('Please enter a business name.');
                                     return;
                                 }
                             }
+                            if (prevStep === 7 && parseInt(stepId) === 8) {
+                                const inputs = document.querySelectorAll('#step-7 input');
+                                const hasEmpty = Array.from(inputs).some(input => input.value.trim().length === 0);
+                                if (hasEmpty) {
+                                    alert('Please fill out all fields.');
+                                    return;
+                                }
+                            }
+
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
                                 currentStep = parseInt(stepId);
                             }
@@ -3215,15 +3242,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
                                     d.style.display = 'none';
-                                    suppressButtonText(d, true);
-                                    suppressInputSelectors(d, true);
+                                    if(typeof suppressButtonText === 'function') suppressButtonText(d, true);
+                                    if(typeof suppressInputSelectors === 'function') suppressInputSelectors(d, true);
                                 }
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
                                 next.style.display = 'block';
-                                suppressButtonText(next, false);
-                                suppressInputSelectors(next, false);
+                                if(typeof suppressButtonText === 'function') suppressButtonText(next, false);
+                                if(typeof suppressInputSelectors === 'function') suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
                                 Array.from(next.children).forEach(child => {
                                     if (child.style.display === 'none') child.style.display = 'block';
