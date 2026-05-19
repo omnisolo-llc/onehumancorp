@@ -1963,7 +1963,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     let path = req.uri().path();
     let content = match path {
         "/api/v1/health" => "{\"status\":\"ok\"}",
-        _ => r#"
+        _ => r###"
             <!DOCTYPE html>
             <html>
                 <head>
@@ -2381,7 +2381,165 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
-                    </style>
+
+                        .tooltip-registry-popup {
+                            position: absolute;
+                            background: #111;
+                            color: #fff;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            font-size: 13px;
+                            max-width: 200px;
+                            z-index: 10000;
+                            pointer-events: none;
+                            opacity: 0;
+                            transition: opacity 0.2s;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                            word-wrap: break-word;
+                        }
+                        .walkthrough-overlay {
+                            position: fixed;
+                            top: 0; left: 0; width: 100%; height: 100%;
+                            background: rgba(0,0,0,0.5);
+                            z-index: 10001;
+                            pointer-events: none;
+                            display: none;
+                        }
+                        .walkthrough-highlight {
+                            position: absolute;
+                            box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+                            border-radius: 4px;
+                            pointer-events: none;
+                            z-index: 10002;
+                            transition: all 0.3s ease;
+                        }
+                        .walkthrough-bubble {
+                            position: absolute;
+                            background: white;
+                            color: black;
+                            padding: 16px;
+                            border-radius: 8px;
+                            width: 250px;
+                            z-index: 10003;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                            display: none;
+                        }
+                        .walkthrough-bubble button {
+                            margin-top: 12px;
+                            width: 100%;
+                        }
+                        .floating-help-btn {
+                            position: fixed;
+                            bottom: 20px;
+                            right: 20px;
+                            background: var(--primary);
+                            color: white;
+                            border: none;
+                            border-radius: 50%;
+                            width: 56px;
+                            height: 56px;
+                            font-size: 24px;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                            cursor: pointer;
+                            z-index: 9999;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: transform 0.2s;
+                        }
+                        .floating-help-btn:hover {
+                            transform: scale(1.05);
+                        }
+                        .help-chat-overlay {
+                            position: fixed;
+                            bottom: 85px;
+                            right: 20px;
+                            width: 350px;
+                            height: 500px;
+                            background: white;
+                            border-radius: 12px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+                            z-index: 9998;
+                            display: none;
+                            flex-direction: column;
+                            overflow: hidden;
+                        }
+                        .help-chat-header {
+                            background: var(--primary);
+                            color: white;
+                            padding: 16px;
+                            font-weight: 600;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+                        .help-chat-messages {
+                            flex: 1;
+                            padding: 16px;
+                            overflow-y: auto;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 12px;
+                            background: #f9fafb;
+                        }
+                        .help-chat-input-area {
+                            padding: 16px;
+                            border-top: 1px solid #eee;
+                            display: flex;
+                            gap: 8px;
+                        }
+                        .help-chat-input-area input {
+                            flex: 1;
+                            padding: 8px 12px;
+                            border: 1px solid #ddd;
+                            border-radius: 20px;
+                            outline: none;
+                        }
+                        .help-chat-input-area button {
+                            background: var(--primary);
+                            color: white;
+                            border: none;
+                            border-radius: 50%;
+                            width: 36px;
+                            height: 36px;
+                            cursor: pointer;
+                        }
+                        .msg-bubble {
+                            max-width: 80%;
+                            padding: 10px 14px;
+                            border-radius: 16px;
+                            font-size: 14px;
+                            line-height: 1.4;
+                        }
+                        .msg-user {
+                            background: var(--primary);
+                            color: white;
+                            align-self: flex-end;
+                            border-bottom-right-radius: 4px;
+                        }
+                        .msg-bot {
+                            background: #eef2ff;
+                            color: #111;
+                            align-self: flex-start;
+                            border-bottom-left-radius: 4px;
+                        }
+                        .msg-bot a {
+                            color: var(--primary);
+                            text-decoration: none;
+                            font-weight: 500;
+                            display: block;
+                            margin-top: 8px;
+                        }
+                        @media (max-width: 600px) {
+                            .help-chat-overlay {
+                                width: 100%;
+                                height: 100%;
+                                bottom: 0;
+                                right: 0;
+                                border-radius: 0;
+                            }
+                        }
+</style>
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
@@ -2467,11 +2625,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button onclick="alert('Help Center')">Help Center</button>
-                            <button onclick="alert('Connect Apps')">Connect Apps</button>
-                            <button onclick="alert('Tutorial started')">Video Tutorials</button>
-                            <button onclick="showScreen('dashboard-screen')">How to use this app</button>
-                            <button onclick="alert(&quot;What's New&quot;)">What's New</button>
+                            <button onclick="showScreen('help-center-screen')">Help Center</button>
+                            <button onclick="showScreen('api-screen')">Advanced API</button>
+                            <button onclick="showScreen('video-tutorials-screen')">Video Tutorials</button>
+                            <button onclick="startWalkthrough('basics')">How to use this app</button>
+                            <button onclick="showScreen('whats-new-screen')">What's New</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -2505,7 +2663,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Tutorial Library</button>
+                                <button onclick="showScreen('video-tutorials-screen')">Tutorial Library</button>
                                 <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
                             </div>
                         </div>
@@ -2624,7 +2782,105 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Agents Page (My Staff) -->
-                    <div id="agents-screen" class="screen">
+
+                    <div id="help-center-screen" class="screen" style="display: none;">
+                        <h1>Help Center</h1>
+                        <div class="card glass">
+                            <input type="text" id="help-search" placeholder="What do you need help with?" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+                                <div class="card" style="background: rgba(255,255,255,0.5); padding: 16px; cursor: pointer;">
+                                    <h4 style="margin: 0 0 8px 0;">🚀 Getting Started</h4>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Basics to set up your account.</p>
+                                </div>
+                                <div class="card" style="background: rgba(255,255,255,0.5); padding: 16px; cursor: pointer;">
+                                    <h4 style="margin: 0 0 8px 0;">🏪 My Store</h4>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Manage products and orders.</p>
+                                </div>
+                                <div class="card" style="background: rgba(255,255,255,0.5); padding: 16px; cursor: pointer;">
+                                    <h4 style="margin: 0 0 8px 0;">💳 Payments</h4>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Invoicing and getting paid.</p>
+                                </div>
+                                <div class="card" style="background: rgba(255,255,255,0.5); padding: 16px; cursor: pointer;">
+                                    <h4 style="margin: 0 0 8px 0;">🤖 AI Agents</h4>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">How to hire and manage bots.</p>
+                                </div>
+                                <div class="card" style="background: rgba(255,255,255,0.5); padding: 16px; cursor: pointer;">
+                                    <h4 style="margin: 0 0 8px 0;">📢 Marketing</h4>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Grow your audience and sales.</p>
+                                </div>
+                                <div class="card" style="background: rgba(255,255,255,0.5); padding: 16px; cursor: pointer;">
+                                    <h4 style="margin: 0 0 8px 0;">⚙️ Account & Billing</h4>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Manage your subscription.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="video-tutorials-screen" class="screen" style="display: none;">
+                        <h1>Video Tutorials</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Short, step-by-step guides for the most common tasks.</p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                            <div class="card glass">
+                                <div style="width: 100%; height: 160px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 12px;">▶️</div>
+                                <h4>How to set up your store</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary);">Learn the basics of adding products and categories (1:15).</p>
+                            </div>
+                            <div class="card glass">
+                                <div style="width: 100%; height: 160px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 12px;">▶️</div>
+                                <h4>Accepting your first payment</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary);">Configure Stripe and accept credit cards (0:55).</p>
+                            </div>
+                            <div class="card glass">
+                                <div style="width: 100%; height: 160px; background: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 12px;">▶️</div>
+                                <h4>Activating AI Agents</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary);">Hire your first AI customer support agent (1:20).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="whats-new-screen" class="screen" style="display: none;">
+                        <h1>What's New</h1>
+                        <div class="card glass">
+                            <h3>🌟 Version 2.4 - New AI Agents</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px;">October 25, 2023</p>
+                            <p>We've added a new Marketing Agent to help you write social media posts faster. Just go to the Agents tab to hire them!</p>
+                        </div>
+                        <div class="card glass">
+                            <h3>💳 Improved Payments</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px;">October 10, 2023</p>
+                            <p>You can now accept Apple Pay and Google Pay on your storefront. No setup required!</p>
+                        </div>
+                        <div class="card glass">
+                            <h3>📱 Mobile App Launch</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px;">September 15, 2023</p>
+                            <p>Manage your business on the go with our new iOS and Android apps.</p>
+                        </div>
+                        <button class="secondary" onclick="window.open('/changelog', '_blank')">Read full changelog →</button>
+                    </div>
+
+                    <div id="api-screen" class="screen" style="display: none;">
+                        <h1>API Reference</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">For advanced users and developers looking to integrate with OHC.</p>
+                        <div class="card glass">
+                            <h3 style="font-family: monospace;">POST /api/v1/orders</h3>
+                            <p>Create a new order programmatically.</p>
+                            <pre style="background: #111; color: #fff; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px;">
+{
+  "product_id": "prod_123",
+  "quantity": 2,
+  "customer": {
+    "email": "customer@example.com"
+  }
+}
+                            </pre>
+                        </div>
+                        <div class="card glass">
+                            <h3 style="font-family: monospace;">GET /api/v1/inventory</h3>
+                            <p>List current inventory levels.</p>
+                        </div>
+                        <button class="primary" onclick="alert('API Keys generated')">Generate API Key</button>
+                    </div>
+<div id="agents-screen" class="screen">
                         <h1 class="outfit">My Staff</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
@@ -3907,7 +4163,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 suppressButtonText(screen, false);
                                 suppressInputSelectors(screen, false);
                                 // Auto-advance wizard if nested and needed
-                                if (id === 'setup-screen') {
+                                if (id === 'setup-screen' || id === 'help-center-screen' || id === 'video-tutorials-screen' || id === 'whats-new-screen' || id === 'api-screen') {
                                     nextStep(currentStep || 1);
                                 }
                             }
@@ -3974,7 +4230,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen' || id === 'help-center-screen' || id === 'video-tutorials-screen' || id === 'whats-new-screen' || id === 'api-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -4025,7 +4281,149 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
-                        window.onload = async () => {
+
+                        window.TooltipRegistry = {
+                            'todays-sales': 'Total revenue for today including all processed payments. Pending payments are excluded.',
+                            'agent-activity-feed': 'Real-time updates on what your AI team is working on right now.',
+                            'approval-inbox': 'Tasks that your AI agents need your permission to complete.'
+                        };
+
+                        const tooltipEl = document.createElement('div');
+                        tooltipEl.className = 'tooltip-registry-popup';
+                        document.body.appendChild(tooltipEl);
+
+                        let tooltipTimeout;
+
+                        document.addEventListener('mouseover', (e) => {
+                            const target = e.target.closest('[id]');
+                            if (target && window.TooltipRegistry[target.id]) {
+                                clearTimeout(tooltipTimeout);
+                                tooltipEl.textContent = window.TooltipRegistry[target.id];
+                                const rect = target.getBoundingClientRect();
+                                tooltipEl.style.left = rect.left + 'px';
+                                tooltipEl.style.top = (rect.bottom + 5) + 'px';
+                                tooltipEl.style.opacity = '1';
+                            } else {
+                                tooltipEl.style.opacity = '0';
+                            }
+                        });
+
+                        document.addEventListener('mouseout', (e) => {
+                            tooltipTimeout = setTimeout(() => {
+                                tooltipEl.style.opacity = '0';
+                            }, 100);
+                        });
+
+                        document.addEventListener('touchstart', (e) => {
+                            const target = e.target.closest('[id]');
+                            if (target && window.TooltipRegistry[target.id]) {
+                                tooltipTimeout = setTimeout(() => {
+                                    tooltipEl.textContent = window.TooltipRegistry[target.id];
+                                    const rect = target.getBoundingClientRect();
+                                    tooltipEl.style.left = rect.left + 'px';
+                                    tooltipEl.style.top = (rect.bottom + 5) + 'px';
+                                    tooltipEl.style.opacity = '1';
+                                }, 500);
+                            }
+                        });
+
+                        document.addEventListener('touchend', () => {
+                            clearTimeout(tooltipTimeout);
+                            tooltipEl.style.opacity = '0';
+                        });
+
+                        window.Walkthroughs = {
+                            'basics': [
+                                { selector: '#todays-sales', text: 'This is your daily revenue. It updates automatically as sales come in.' },
+                                { selector: "button[onclick=\"showScreen('agents-screen')\"]", text: 'Click here to view and manage your AI team.' },
+                                { selector: "button[onclick=\"showScreen('inbox-screen')\"]", text: 'Here is your inbox where you can reply to customers.' }
+                            ]
+                        };
+
+                        const walkthroughOverlay = document.createElement('div');
+                        walkthroughOverlay.className = 'walkthrough-overlay';
+
+                        const walkthroughHighlight = document.createElement('div');
+                        walkthroughHighlight.className = 'walkthrough-highlight';
+                        walkthroughOverlay.appendChild(walkthroughHighlight);
+
+                        const walkthroughBubble = document.createElement('div');
+                        walkthroughBubble.className = 'walkthrough-bubble';
+                        walkthroughOverlay.appendChild(walkthroughBubble);
+                        document.body.appendChild(walkthroughOverlay);
+
+                        let currentWalkthrough = null;
+                        let currentStep = 0;
+
+                        function startWalkthrough(id) {
+                            if (!window.Walkthroughs[id]) return;
+                            currentWalkthrough = window.Walkthroughs[id];
+                            currentStep = 0;
+                            walkthroughOverlay.style.display = 'block';
+                            walkthroughBubble.style.display = 'block';
+                            showWalkthroughStep();
+                        }
+
+                        function showWalkthroughStep() {
+                            if (currentStep >= currentWalkthrough.length) {
+                                endWalkthrough();
+                                return;
+                            }
+                            const step = currentWalkthrough[currentStep];
+                            const el = document.querySelector(step.selector);
+                            if (el) {
+                                const rect = el.getBoundingClientRect();
+                                walkthroughHighlight.style.top = (rect.top - 4) + 'px';
+                                walkthroughHighlight.style.left = (rect.left - 4) + 'px';
+                                walkthroughHighlight.style.width = (rect.width + 8) + 'px';
+                                walkthroughHighlight.style.height = (rect.height + 8) + 'px';
+
+                                walkthroughBubble.innerHTML = `<p style="margin: 0; font-size: 14px;">${step.text}</p>
+                                    <button class="primary" onclick="currentStep++; showWalkthroughStep();">Next</button>`;
+                                walkthroughBubble.style.top = (rect.bottom + 12) + 'px';
+                                walkthroughBubble.style.left = rect.left + 'px';
+                            } else {
+                                currentStep++;
+                                showWalkthroughStep();
+                            }
+                        }
+
+                        function endWalkthrough() {
+                            walkthroughOverlay.style.display = 'none';
+                            walkthroughBubble.style.display = 'none';
+                            currentWalkthrough = null;
+                        }
+
+                        function toggleHelpChat() {
+                            const overlay = document.getElementById('help-chat-overlay');
+                            overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+                        }
+                        function sendHelpMessage() {
+                            const input = document.getElementById('help-chat-input');
+                            const text = input.value.trim();
+                            if (!text) return;
+
+                            const msgs = document.getElementById('help-chat-messages');
+
+                            const userMsg = document.createElement('div');
+                            userMsg.className = 'msg-bubble msg-user';
+                            userMsg.textContent = text;
+                            msgs.appendChild(userMsg);
+
+                            input.value = '';
+                            msgs.scrollTop = msgs.scrollHeight;
+
+                            setTimeout(() => {
+
+                                const botMsg = document.createElement('div');
+                                botMsg.className = 'msg-bubble msg-bot';
+                                botMsg.innerHTML = `I found an article that might help. It explains how to manage this in your settings.<a href="#" onclick="showScreen('help-center-screen'); toggleHelpChat(); return false;">Read the full article →</a>`;
+                                msgs.appendChild(botMsg);
+
+                                msgs.scrollTop = msgs.scrollHeight;
+                            }, 1000);
+                        }
+window.onload = async () => {
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
@@ -4059,9 +4457,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         };
                     </script>
-                </body>
+
+                    <button class="floating-help-btn" onclick="toggleHelpChat()">?</button>
+                    <div class="help-chat-overlay" id="help-chat-overlay">
+                        <div class="help-chat-header">
+                            <span>Ask OHC Support</span>
+                            <button onclick="toggleHelpChat()" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px;">✕</button>
+                        </div>
+                        <div class="help-chat-messages" id="help-chat-messages">
+                            <div class="msg-bubble msg-bot">Hi! I'm your OHC Help Agent. Ask me anything about using the app!</div>
+                        </div>
+                        <div class="help-chat-input-area">
+                            <input type="text" id="help-chat-input" placeholder="Type your question..." onkeypress="if(event.key === 'Enter') sendHelpMessage()">
+                            <button onclick="sendHelpMessage()">↑</button>
+                        </div>
+                    </div>
+</body>
             </html>
-        "#,
+        "###,
     };
     axum::response::Html(content)
 }
