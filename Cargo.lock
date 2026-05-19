@@ -5499,7 +5499,7 @@ dependencies = [
 
 [[package]]
 name = "ohc-mono"
-version = "0.4.43"
+version = "0.4.44"
 dependencies = [
  "aes-gcm",
  "async-nats",
