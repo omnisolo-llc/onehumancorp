@@ -36,6 +36,8 @@ async fn test_kv_get_set_list_delete_standalone() {
         let spiffe_id = "spiffe://ohc/org/test_org/agent/test_agent".to_string();
 
         let req = McpInvokeRequest {
+            action: "".to_string(),
+            agent_id: "".to_string(),
             tool_id: "kv_set".to_string(),
             params: serde_json::json!({"key": "my_key", "value": "my_value"}).to_string(),
             spiffe_id: spiffe_id.clone(),
@@ -44,6 +46,8 @@ async fn test_kv_get_set_list_delete_standalone() {
         assert!(res.payload.contains("success"));
 
         let req = McpInvokeRequest {
+            action: "".to_string(),
+            agent_id: "".to_string(),
             tool_id: "kv_get".to_string(),
             params: serde_json::json!({"key": "my_key"}).to_string(),
             spiffe_id: spiffe_id.clone(),
@@ -52,6 +56,8 @@ async fn test_kv_get_set_list_delete_standalone() {
         assert!(res.payload.contains("my_value"));
 
         let req = McpInvokeRequest {
+            action: "".to_string(),
+            agent_id: "".to_string(),
             tool_id: "kv_list".to_string(),
             params: serde_json::json!({"prefix": "my"}).to_string(),
             spiffe_id: spiffe_id.clone(),
@@ -60,6 +66,8 @@ async fn test_kv_get_set_list_delete_standalone() {
         assert!(res.payload.contains("my_key"));
 
         let req = McpInvokeRequest {
+            action: "".to_string(),
+            agent_id: "".to_string(),
             tool_id: "kv_delete".to_string(),
             params: serde_json::json!({"key": "my_key"}).to_string(),
             spiffe_id: spiffe_id.clone(),
@@ -68,6 +76,8 @@ async fn test_kv_get_set_list_delete_standalone() {
         assert!(res.payload.contains("success"));
 
         let req = McpInvokeRequest {
+            action: "".to_string(),
+            agent_id: "".to_string(),
             tool_id: "kv_get".to_string(),
             params: serde_json::json!({"key": "my_key"}).to_string(),
             spiffe_id: spiffe_id.clone(),
@@ -107,6 +117,8 @@ async fn test_redis_unconfigured() {
         let spiffe_id = "spiffe://ohc/org/test_org/agent/test_agent".to_string();
 
         let req = McpInvokeRequest {
+            action: "".to_string(),
+            agent_id: "".to_string(),
             tool_id: "kv_get".to_string(),
             params: serde_json::json!({"key": "test"}).to_string(),
             spiffe_id: spiffe_id,
