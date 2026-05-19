@@ -2326,6 +2326,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
                             <button onclick="showScreen('agents-screen')">My AI Assistants</button>
                         </div>
+
+                        <!-- Agent Activity Feed -->
+                        <h2 style="padding: 20px; margin-top: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Agent Activity Feed</h2>
+                        <div class="card glass activity-feed">
+                            <div class="feed-item" style="border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 16px; margin-bottom: 16px;">
+                                <h3 style="margin-top: 0;">💬 The Ambassador</h3>
+                                <p style="color: var(--text-secondary); margin-bottom: 12px;">Drafted a reply to a vegan cake inquiry.</p>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="primary" onclick="alert('Message sent successfully!'); this.closest('.feed-item').style.opacity = '0.5';">Approve & Send</button>
+                                    <button class="secondary" onclick="showScreen('inbox-screen')">Edit</button>
+                                </div>
+                            </div>
+                            <div class="feed-item" style="border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 16px; margin-bottom: 16px;">
+                                <h3 style="margin-top: 0;">📣 The Promoter</h3>
+                                <p style="color: var(--text-secondary); margin-bottom: 12px;">Generated a social post about your new summer collection.</p>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="primary" onclick="alert('Post scheduled successfully!'); this.closest('.feed-item').style.opacity = '0.5';">Approve</button>
+                                    <button class="secondary" onclick="alert('Edit Post Dialog opened.')">Edit</button>
+                                </div>
+                            </div>
+                            <div class="feed-item">
+                                <h3 style="margin-top: 0;">📈 The Advisor</h3>
+                                <p style="color: var(--text-secondary); margin-bottom: 12px;">Noticed high traffic on the 'Custom Orders' page. Recommended adding a FAQ section.</p>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="primary" onclick="alert('Applied FAQ recommendation!'); this.closest('.feed-item').style.opacity = '0.5';">Apply Idea</button>
+                                    <button class="secondary" onclick="alert('Dismissed recommendation.')">Dismiss</button>
+                                </div>
+                            </div>
+                        </div>
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
                             <p>Orders to Ship</p>
