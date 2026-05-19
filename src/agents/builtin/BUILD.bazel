@@ -52,6 +52,7 @@ rust_library(
         "lib.rs",
         "json_store.rs",
         "memory_store.rs",
+        "sqlite_memory.rs",
         "memory_exhaustive_tests.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
