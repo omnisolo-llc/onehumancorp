@@ -87,7 +87,7 @@ pub fn all_tools(
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
     observation_store: Arc<dashmap::DashMap<String, String>>,
 ) -> Vec<Tool> {
-    let runner = Arc::new(runner::RealCommandRunner);
+    let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let mut tools = vec![
         bash::bash_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),

@@ -1,8 +1,9 @@
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Output;
 use async_trait::async_trait;
 use tokio::process::Command;
+use std::sync::OnceLock;
 
 #[async_trait]
 pub trait CommandRunner: Send + Sync {
@@ -15,10 +16,18 @@ pub trait CommandRunner: Send + Sync {
     ) -> io::Result<Output>;
 }
 
-pub struct RealCommandRunner;
+pub struct SandboxedCommandRunner {
+    pub sandbox_dir: Option<PathBuf>,
+}
+
+impl SandboxedCommandRunner {
+    pub fn new(sandbox_dir: Option<PathBuf>) -> Self {
+        Self { sandbox_dir }
+    }
+}
 
 #[async_trait]
-impl CommandRunner for RealCommandRunner {
+impl CommandRunner for SandboxedCommandRunner {
     async fn run(
         &self,
         program: &str,
@@ -26,6 +35,56 @@ impl CommandRunner for RealCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
+        static BWRAP_AVAILABLE: OnceLock<bool> = OnceLock::new();
+        let is_bwrap_available = *BWRAP_AVAILABLE.get_or_init(|| {
+            if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+                false
+            } else {
+                std::process::Command::new("bwrap")
+                    .arg("--version")
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false)
+            }
+        });
+
+        if is_bwrap_available && self.sandbox_dir.is_some() {
+            let sandbox_dir_str = self.sandbox_dir.as_ref().unwrap().to_string_lossy().to_string();
+
+            let mut bwrap_args = vec![
+                "--unshare-pid".to_string(),
+                "--unshare-uts".to_string(),
+                "--unshare-ipc".to_string(),
+                "--unshare-cgroup".to_string(),
+                "--proc".to_string(), "/proc".to_string(),
+                "--dev".to_string(), "/dev".to_string(),
+                "--tmpfs".to_string(), "/tmp".to_string(),
+                "--ro-bind".to_string(), "/".to_string(), "/".to_string(),
+                "--bind".to_string(), sandbox_dir_str.clone(), sandbox_dir_str,
+                "--".to_string(),
+                program.to_string(),
+            ];
+
+            for arg in args {
+                bwrap_args.push(arg.to_string());
+            }
+
+            let mut bwrap_cmd = Command::new("bwrap");
+            bwrap_cmd.args(&bwrap_args);
+
+            if let Some(dir) = current_dir {
+                bwrap_cmd.current_dir(dir);
+            }
+            bwrap_cmd.env_clear();
+            bwrap_cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+            for (k, v) in envs {
+                bwrap_cmd.env(k, v);
+            }
+            return bwrap_cmd.output().await;
+        }
+
         let mut cmd = Command::new(program);
         cmd.args(args);
         if let Some(dir) = current_dir {
@@ -74,7 +133,6 @@ pub mod mock {
         ) -> io::Result<Output> {
             *self.last_command.lock().unwrap() = Some((program.to_string(), args.iter().map(|s| s.to_string()).collect()));
             self.next_responses.lock().unwrap().pop_front().unwrap_or_else(|| {
-                // Default to success
                 Ok(Output {
                     status: mock_exit_status(0),
                     stdout: Vec::new(),
