@@ -70,6 +70,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
+    pub enable_permissive_permission_architecture: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
 }
@@ -119,6 +120,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
+            enable_permissive_permission_architecture: true,
             max_rewind_attempts: 3,
             long_term_memory: None,
         }
@@ -2257,9 +2259,17 @@ impl Agent {
             }
         }
 
-        // Stage 3: Explicit user confirmation for high-risk operations
-        if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
-            return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+        // Architectural Decision 5: Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval).
+        if cfg.enable_permissive_permission_architecture {
+            // Permissive: Only high-risk tools require explicit confirmation
+            if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
+        } else {
+            // Restrictive: ALL mutating tools require explicit confirmation
+            if !is_read_only && !cfg.approved_tool_calls.contains(&tc.id) {
+                return Err(ToolError::UserFixable(format!("Restrictive Permission Architecture: Mutating tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
+            }
         }
 
         Ok(())
@@ -5247,4 +5257,71 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
+    }
+
+    #[tokio::test]
+    async fn test_architectural_decision_5_permission_architecture() {
+        use crate::types::{ToolCall, ToolError};
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true; // pass stage 1
+        cfg.enable_permissive_permission_architecture = false; // RESTRICTIVE mode
+
+        let tc = ToolCall {
+            id: "call_1".to_string(),
+            name: "regular_mutating_tool".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+
+        // Mutating tool should fail without approval
+        let res = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res.is_err());
+        if let Err(ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("Restrictive Permission Architecture: Mutating tool 'regular_mutating_tool' requires explicit user confirmation."));
+        } else {
+            panic!("Expected UserFixable error for unapproved mutating tool in restrictive mode");
+        }
+
+        // Add to approved
+        cfg.approved_tool_calls.push("call_1".to_string());
+        let res2 = Agent::check_tool_gating(&tc, false, &cfg);
+        assert!(res2.is_ok());
+
+        // Read-only tools should still pass without approval
+        let tc2 = ToolCall {
+            id: "call_2".to_string(),
+            name: "read_tool".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+        let res3 = Agent::check_tool_gating(&tc2, true, &cfg);
+        assert!(res3.is_ok());
+
+        // PERMISSIVE MODE
+        cfg.enable_permissive_permission_architecture = true;
+
+        let tc3 = ToolCall {
+            id: "call_3".to_string(),
+            name: "mutating_tool".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+
+        // Should auto-approve non-high-risk mutating tools
+        let res4 = Agent::check_tool_gating(&tc3, false, &cfg);
+        assert!(res4.is_ok());
+
+        // High-risk tools should still fail unless explicitly approved
+        cfg.high_risk_tools.push("high_risk_tool".to_string());
+        let tc4 = ToolCall {
+            id: "call_4".to_string(),
+            name: "high_risk_tool".to_string(),
+            arguments: serde_json::Value::Null,
+        };
+
+        let res5 = Agent::check_tool_gating(&tc4, false, &cfg);
+        assert!(res5.is_err());
+        if let Err(ToolError::UserFixable(msg)) = res5 {
+            assert!(msg.contains("High-risk tool 'high_risk_tool' requires explicit user confirmation."));
+        } else {
+            panic!("Expected UserFixable error for unapproved high-risk tool in permissive mode");
+        }
     }
