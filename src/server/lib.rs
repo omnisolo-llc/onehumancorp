@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2318,6 +2318,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
+                        <div id="pending-approvals-feed"></div>
+                        <div id="budget-toast" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary-soft); border-left: 4px solid var(--primary); padding: 12px 24px; border-radius: 8px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-family: 'Outfit', sans-serif;">Your agents have been busy! You are at 90% of your AI budget. <button onclick="showScreen('pricing-screen')" style="margin-left: 10px;">Upgrade</button></div>
+
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
@@ -3309,6 +3312,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (pathMap[id] && window.location.protocol !== 'file:') {
                                 window.history.pushState({}, '', pathMap[id]);
+                            }
+
+
+                            if (id === 'dashboard-screen') {
+                                fetch('/api/agents/approvals')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        const feed = document.getElementById('pending-approvals-feed');
+                                        if (feed && data.pending_approvals) {
+                                            feed.innerHTML = '';
+                                            data.pending_approvals.forEach(app => {
+                                                const card = document.createElement('div');
+                                                card.className = 'card glass';
+                                                card.style.borderRadius = '8px';
+                                                card.innerHTML = `
+                                                    <h3 style="font-family: 'Outfit', sans-serif;">${app.department} drafted an action</h3>
+                                                    <p style="font-family: 'Inter', sans-serif;">${app.description}</p>
+                                                    <button class="primary" style="border-radius: 8px; padding: 12px;" onclick="fetch('/api/agents/approvals/' + '${app.id}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({approved: true}) }).then(() => { this.parentElement.remove(); })">Approve</button>
+                                                    <button class="secondary" style="border-radius: 8px; padding: 12px;" onclick="fetch('/api/agents/approvals/' + '${app.id}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({approved: false}) }).then(() => { this.parentElement.remove(); })">Reject</button>
+                                                `;
+                                                feed.appendChild(card);
+                                            });
+                                        }
+                                    });
+                                fetch('/api/billing/my-plan')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.ai_actions_limit && data.ai_actions_limit > 0) {
+                                            if (data.ai_actions_used / data.ai_actions_limit >= 0.9) {
+                                                document.getElementById('budget-toast').style.display = 'block';
+                                            }
+                                        }
+                                    });
                             }
 
                             if (id === 'my-plan-screen') {

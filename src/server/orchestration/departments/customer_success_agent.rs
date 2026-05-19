@@ -27,6 +27,9 @@ impl Department for CustomerSuccessAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.message.received" {
+            if !self.orchestrator.check_ai_budget(&event.tenant_id, 1).await.unwrap_or(false) {
+                return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+            }
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
