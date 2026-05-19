@@ -1355,6 +1355,8 @@ impl HubService for MyHubService {
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
 
+    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<TeammateMeshEvent, Status>> + Send>>;
+
     async fn publish_teammate_mesh_event(
         &self,
         request: Request<PublishTeammateMeshEventRequest>,
@@ -1372,8 +1374,6 @@ impl HubService for MyHubService {
             Err(Status::invalid_argument("event is required"))
         }
     }
-
-    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<TeammateMeshEvent, Status>> + Send>>;
 
     async fn stream_teammate_mesh(
         &self,
@@ -2489,16 +2489,62 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Agents Page -->
+                    <!-- Agents Page (My Staff) -->
                     <div id="agents-screen" class="screen">
-                        <h1>Agents</h1>
-                        <div class="card glass">
-                            <h3>Marketing Pro</h3>
-                            <p>Status: Active</p>
-                            <button>Hire Agent</button>
+                        <h1 class="outfit">My Staff</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
+
+                        <div id="departments-container">
+                            <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
+                                <h3 class="outfit">The Ambassador (Customer Success)</h3>
+                                <p style="color: var(--accent-green);">Status: Active</p>
+                                <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
+                                <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                    <h4 style="margin-top: 0;">Settings</h4>
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
+                                        Require approval for quotes > $100
+                                        <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="card glass" onclick="toggleDepartment('manager')" style="margin-top: 15px; cursor: pointer;">
+                                <h3 class="outfit">The Manager (Operations)</h3>
+                                <p style="color: var(--accent-green);">Status: Active</p>
+                                <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
+                                <div id="manager-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                    <h4 style="margin-top: 0;">Settings</h4>
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
+                                        Require approval for order refunds
+                                        <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('manager', this.checked)">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="card glass" onclick="toggleDepartment('salesperson')" style="margin-top: 15px; cursor: pointer;">
+                                <h3 class="outfit">The Salesperson (Sales)</h3>
+                                <p style="color: var(--accent-orange);">Status: Needs Approval (1)</p>
+                                <p style="font-size: 14px; margin-top: 8px;">Recent: Generated quote for custom cake.</p>
+                                <button style="margin-top: 15px; width: 100%;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
+                            </div>
                         </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+
+                        <button class="secondary" style="margin-top: 20px;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
+
+                    <script>
+                        function toggleDepartment(deptId) {
+                            const settingsDiv = document.getElementById(deptId + '-settings');
+                            if (settingsDiv) {
+                                settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
+                            }
+                        }
+
+                        function updateApprovalSetting(deptId, isChecked) {
+                            console.log(`Updated setting for ${deptId}: require approval = ${isChecked}`);
+                            alert(`Settings updated for ${deptId}.`);
+                        }
+                    </script>
 
 
 
