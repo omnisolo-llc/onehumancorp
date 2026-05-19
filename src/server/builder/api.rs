@@ -302,82 +302,54 @@ async fn generate_storefront(
 ) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
     let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    // Mock Agent generation based on description keywords
-    let desc = payload.description.to_lowercase();
-    let mut pages = Vec::new();
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let minimax = crate::minimax::MinimaxClient::new(api_key);
 
-    if desc.contains("baker") || desc.contains("cake") {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Freshly Baked", "subtitle": "Delicious Cakes"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "ProductGridBlock".to_string(),
-                    content: serde_json::json!({"items": ["Custom Cake", "Cupcakes"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "Bakery",
-                "name": "Custom Bakery"
-            }),
-        });
-    } else if desc.contains("handyman") {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Expert Handyman", "subtitle": "Reliable Service"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "ServiceBookingBlock".to_string(),
-                    content: serde_json::json!({"services": ["Plumbing", "Electrical"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "HomeAndConstructionBusiness",
-                "name": "Handyman Services"
-            }),
-        });
-    } else {
-        pages.push(DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            blocks: vec![
-                DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Welcome", "subtitle": "Our Services"}),
-                    sort_order: 0,
-                },
-                DraftBlock {
-                    block_type: "TestimonialBlock".to_string(),
-                    content: serde_json::json!({"testimonials": ["Great service!"]}),
-                    sort_order: 1,
-                },
-            ],
-            seo_metadata: serde_json::json!({
-                "@context": "https://schema.org",
-                "@type": "LocalBusiness",
-                "name": "Local Business"
-            }),
-        });
-    }
+    let prompt = format!(
+        r#"You are an AI website builder agent. Generate a website structure in JSON format for the following business description: "{}"
 
-    Ok(Json(SiteDraft {
-        domain: None,
-        pages,
-    }))
+The JSON must exactly match this structure:
+{{
+  "domain": null,
+  "pages": [
+    {{
+      "path": "/",
+      "title": "Home",
+      "blocks": [
+        {{
+          "block_type": "HeroBlock",
+          "content": {{ "headline": "...", "subtitle": "..." }},
+          "sort_order": 0
+        }},
+        {{
+          "block_type": "ProductGridBlock",
+          "content": {{ "items": ["...", "..."] }},
+          "sort_order": 1
+        }}
+      ],
+      "seo_metadata": {{
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "..."
+      }}
+    }}
+  ]
+}}
+Only return the JSON. No markdown formatting, no explanations. Use blocks like HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock."#,
+        payload.description
+    );
+
+    let response = minimax.reason(&prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Clean up response if it contains markdown formatting
+    let cleaned_response = response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+
+    let site_draft: SiteDraft = serde_json::from_str(cleaned_response).map_err(|e| {
+        tracing::error!("Failed to parse JSON from AI: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(site_draft))
 }
 
 async fn publish_draft(
