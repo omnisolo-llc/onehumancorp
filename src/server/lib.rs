@@ -2000,7 +2000,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         body {
                             min-height: 100vh;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
                             background:
                                 radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.08), transparent 28%),
                                 linear-gradient(180deg, rgba(255,255,255,0.72), rgba(238,241,245,0.96));
@@ -2010,7 +2010,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             -webkit-font-smoothing: antialiased;
                         }
                         h1, h2, h3, h4, .outfit {
-                            font-family: inherit;
+                            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
                             letter-spacing: 0;
                         }
                         h1 {
@@ -2036,6 +2036,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: var(--shadow-md);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
+                        }
+                        body.dark-theme .glass {
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2077,11 +2081,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: var(--primary-soft);
                         }
                         main { padding: 32px; }
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(8px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
                         .screen {
                             display: none;
                             padding: 32px;
                             max-width: 1120px;
                             margin: 0 auto;
+                            animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+                        .screen.glass {
+                            border-radius: 16px;
                         }
                         #dashboard-screen {
                             max-width: 1180px;
@@ -2116,7 +2128,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
-                            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         input:focus, textarea:focus, select:focus {
                             outline: none;
@@ -2139,7 +2151,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             font-size: 14px;
                             font-family: inherit;
                             box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
-                            transition: transform 0.15s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+                            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -2345,7 +2357,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         }
         #setup-screen button {
             border-radius: 8px;
-            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
         }
         #setup-screen input {
             border-radius: 8px;
@@ -2391,7 +2403,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         #setup-screen button, #setup-screen input {
             border-radius: 8px;
-            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @media (max-width: 375px) {
@@ -3747,6 +3759,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
                                 next.style.display = 'block';
+                                next.style.animation = 'none';
+                                next.offsetHeight; /* trigger reflow */
+                                next.style.animation = 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)';
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
@@ -3880,6 +3895,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (setupScreen) setupScreen.style.display = 'block';
                                 }
                                 screen.style.display = 'block';
+                                screen.style.animation = 'none';
+                                screen.offsetHeight; /* trigger reflow */
+                                screen.style.animation = 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)';
                                 suppressButtonText(screen, false);
                                 suppressInputSelectors(screen, false);
                                 // Auto-advance wizard if nested and needed
