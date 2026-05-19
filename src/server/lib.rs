@@ -304,8 +304,8 @@ async fn http_login_handler(
             )
                 .into_response();
         }
-        Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+        Err(_e) => {
+            tracing::error!("failed to verify credential hash");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2902,6 +2902,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
+                        <!-- Upgrade Modal Bottom Sheet -->
+                        <div id="upgrade-modal-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2 style="display: flex; align-items: center; gap: 8px;">🤖 The Advisor Suggestion</h2>
+                                <button class="bottom-sheet-close" onclick="closeUpgradeModal()">×</button>
+                            </div>
+                            <div style="margin-top: 12px; margin-bottom: 20px;">
+                                <p id="upgrade-modal-message" style="font-size: 16px; line-height: 1.5; color: var(--text);"></p>
+                            </div>
+                            <button style="width: 100%; font-weight: 600;" onclick="closeUpgradeModal(); showScreen('pricing-screen')">Upgrade to Next Tier</button>
+                        </div>
+
                         <canvas id="confetti-canvas"></canvas>
                     </div>
 
@@ -2922,6 +2934,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        // Global fetch interceptor to catch rate limit warnings
+                        const originalFetch = window.fetch;
+                        window.fetch = async (...args) => {
+                            const response = await originalFetch(...args);
+                            if (response.headers.has('x-ratelimit-warning')) {
+                                const warning = response.headers.get('x-ratelimit-warning');
+                                console.log('Rate limit warning received:', warning);
+                                if (typeof openUpgradeModal === 'function') {
+                                    openUpgradeModal(warning);
+                                }
+                            }
+                            return response;
+                        };
 
                         // Storefront Builder State & Logic
                         let storefrontDraftState = [
@@ -2976,6 +3001,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             storefrontDraftState[index] = storefrontDraftState[index + dir];
                             storefrontDraftState[index + dir] = temp;
                             renderStorefrontPreview();
+                        }
+
+                        function openUpgradeModal(message) {
+                            document.getElementById('upgrade-modal-message').textContent = message;
+                            document.getElementById('upgrade-modal-sheet').classList.add('open');
+                        }
+
+                        function closeUpgradeModal() {
+                            document.getElementById('upgrade-modal-sheet').classList.remove('open');
                         }
 
                         function openBottomSheet(blockId) {
