@@ -3,6 +3,8 @@ use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// AutoGen: Architecture consists of Core, AgentChat, and Extensions. Implements 5 mechanical patterns: sequential, concurrent (fan-out/fan-in), group chat, handoff, and magentic (manager agent dynamically updating a task ledger).
+
 /// Configuration for an Agent participating in the Group Chat.
 #[derive(Clone)]
 pub struct ChatAgent {
