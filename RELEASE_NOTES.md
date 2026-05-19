@@ -6,6 +6,14 @@
 ### Privacy/Offline Improvements
 - Enhance local offline telemetry privacy rules.
 
+## v0.4.43 (Cloud) / v0.4.43+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize multi-tenant database connection pooling for staging stability.
+
+### Privacy/Offline Improvements
+- Enhance local offline telemetry privacy rules.
+
 ## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
 
 ### Cloud Scaling Improvements
