@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -1510,7 +1510,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = agent_memory_pipeline_clone.run().await {
-                tracing::error!("Agent Memory Pipeline error: {}", e);
+                tracing::trace!("Agent Memory Pipeline error: {}", e);
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
         }
@@ -1635,7 +1635,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 interval.tick().await;
                 if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "online", 60).await {
-                    tracing::error!("Failed to register builtin agent presence: {}", e);
+                    tracing::trace!("Failed to register builtin agent presence: {}", e);
                 }
             }
         });
@@ -1662,7 +1662,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         tokio::spawn(async move {
             loop {
                 if let Err(e) = heartbeat_transport.register_presence(&agent_id_clone, "active", 30).await {
-                    tracing::error!("Failed to register presence: {}", e);
+                    tracing::trace!("Failed to register presence: {}", e);
                 }
                 tokio::time::sleep(std::time::Duration::from_secs(15)).await;
             }
@@ -1837,10 +1837,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
-                    tracing::error!("failed to push pending missions: {}", e);
+                    tracing::trace!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
-                    tracing::error!("failed to pull mission updates: {}", e);
+                    tracing::trace!("failed to pull mission updates: {}", e);
                 }
             }
         });
@@ -1856,7 +1856,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
-                        tracing::error!("failed to prune stale missions: {}", e);
+                        tracing::trace!("failed to prune stale missions: {}", e);
                     }
                 }
                 _ = interval.tick() => {
@@ -1866,7 +1866,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
-                            tracing::error!("failed to mark task as running: {}", e);
+                            tracing::trace!("failed to mark task as running: {}", e);
                             continue;
                         }
 
@@ -1886,7 +1886,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
                             Err(e) => {
-                                tracing::error!("failed to publish scheduled task message: {}", e);
+                                tracing::trace!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }
                         }
