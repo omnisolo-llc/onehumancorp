@@ -5,6 +5,7 @@ use chrono::Utc;
 
 #[tokio::test]
 async fn test_shared_task_orchestrator() {
+    crate::telemetry::InitTelemetry();
     if std::env::var("DATABASE_URL").is_err() {
         return;
     }
@@ -64,6 +65,7 @@ async fn test_shared_task_orchestrator() {
 
 #[tokio::test]
 async fn test_shared_task_orchestrator_sqlite() {
+    crate::telemetry::InitTelemetry();
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .connect("sqlite::memory:")
         .await

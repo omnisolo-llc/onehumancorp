@@ -7,6 +7,7 @@ use chrono::Utc;
 
 #[tokio::test]
 async fn test_task_decomposition_service() {
+    crate::telemetry::InitTelemetry();
     // Mock db to avoid pool timeouts for isolated test
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
         .connect("sqlite::memory:")
@@ -329,6 +330,7 @@ async fn test_task_decomposition_dag_blocked() {
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
+    crate::telemetry::InitTelemetry();
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
         .connect("sqlite::memory:")
         .await

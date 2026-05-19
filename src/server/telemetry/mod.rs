@@ -106,6 +106,11 @@ pub async fn record_agent_cost(pool: &PgPool, agent_id: &str, organization_id: &
     .await
 }
 
+#[allow(non_snake_case)]
+pub fn InitTelemetry() {
+    let _meter = global::meter("ohc.heartbeat");
+}
+
 pub async fn record_api_call_cost(pool: &PgPool, organization_id: &str, entity: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(
         pool,
