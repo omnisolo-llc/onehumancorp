@@ -40,3 +40,4 @@ pub mod langgraph;
 pub mod codex_runner;
 pub mod json_rpc_server;
 pub mod consolidation_worker;
+pub mod sqlite_memory;
