@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2765,8 +2765,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" id="ob-company-name" placeholder="What is your business called?" />
+                            <input type="text" id="ob-company-desc" placeholder="e.g. Maya's Cakes" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
@@ -2783,8 +2783,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
+                            <input type="text" id="ob-product-name" placeholder="What is the name of this product?" />
+                            <input type="text" id="ob-product-price" placeholder="0.00" />
                             <button onclick="nextStep('generating')">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
@@ -2797,8 +2797,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
+                            <input type="text" id="ob-admin-name" placeholder="e.g. Maya Smith" />
+                            <input type="email" id="ob-admin-email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
@@ -3240,6 +3240,49 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
 
                                 try {
+                                    // Collect form data dynamically
+                                    let reqBody = {
+                                        business_type: document.querySelector('#step-2 input[type="text"]')?.value || "Online Store",
+                                        company_name: document.querySelectorAll('#step-3 input')[0]?.value || "Test Store",
+                                        company_description: document.querySelectorAll('#step-3 input')[1]?.value || "",
+                                        selling_categories: Array.from(document.querySelectorAll('#step-4 input[type="checkbox"]:checked')).map(cb => cb.parentElement.textContent.trim()),
+                                        payment_pref: document.querySelector('#step-6 .selected')?.textContent.trim() || "online",
+                                        admin_email: document.querySelector('#step-7 input[type="email"]')?.value || "test@test.com",
+                                        admin_name: document.querySelectorAll('#step-7 input[type="text"]')[0]?.value || "Test User",
+                                        admin_password: document.querySelector('#step-7 input[type="password"]')?.value || "password",
+                                        website_template: document.querySelector('#step-8 .selected')?.textContent.trim() || "Modern",
+                                        first_product_name: document.querySelectorAll('#step-5 input')[0]?.value || "Product",
+                                        first_product_price: document.querySelectorAll('#step-5 input')[1]?.value || "10",
+                                        domain_choice: document.querySelector('#step-9 .selected')?.textContent.includes('Free') ? "free" : "custom",
+                                        price_type: "fixed"
+                                    };
+
+                                    if (prevStep === 10) {
+                                        try {
+                                            const res = await fetch('/api/onboarding/start', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify(reqBody)
+                                            });
+                                            if (res.ok) {
+                                                const data = await res.json();
+                                                if (data.success) {
+                                                    nextStep(100);
+                                                } else {
+                                                    alert("Error during onboarding");
+                                                    nextStep(100);
+                                                }
+                                            } else {
+                                                alert("Error during onboarding");
+                                                nextStep(100);
+                                            }
+                                        } catch (e) {
+                                            console.error("Error during onboarding API call", e);
+                                            nextStep(100);
+                                        }
+                                        return;
+                                    }
+
                                     const res = await fetch('/api/v1/app/onboarding', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
