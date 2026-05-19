@@ -2555,24 +2555,63 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Referral Dashboard -->
                     <div id="referral-dashboard-screen" class="screen glass">
                         <h1>Referral Dashboard</h1>
-                        <div class="ohc-growth-card">
-                            <h3>Bridge to Cloud</h3>
-                            <p>Invite your team to collaborate in the Cloud while keeping your Standalone data private.</p>
-                            <h3>Your Referral Link</h3>
-                            <p id="referral-link">ohc://join?ref=DEFAULT</p>
-                            <button onclick="alert('Copied!')">Copy</button>
-                            <button onclick="location.reload()">Refresh</button>
+
+                        <!-- Hero Card: Give a Month, Get a Month -->
+                        <div class="card glass" style="background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%); color: white; text-align: center; padding: 40px 24px; border: none; position: relative; overflow: hidden;">
+                            <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
+                            <div style="position: absolute; bottom: -50px; left: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
+                            <h2 style="font-size: 32px; font-weight: 800; margin-bottom: 12px; color: white; position: relative; z-index: 1;">Give 1 Month, Get 1 Month Free</h2>
+                            <p style="color: rgba(255,255,255,0.9); font-size: 16px; max-width: 400px; margin: 0 auto 24px; line-height: 1.5; position: relative; z-index: 1;">Invite other small business owners to OHC. When they launch, you both get a free month of OHC Pro. There's no limit!</p>
+
+                            <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
+                                <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
+                                <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
+                            </div>
                         </div>
+
+                        <!-- Progress Section -->
                         <div class="card glass">
-                            <h3>Share Tools</h3>
-                            <button onclick="alert('Sharing to IG...')">📷 Share to Instagram</button>
-                            <button onclick="alert('Message copied!'); document.getElementById('invite-copied').style.display='block'">💬 Copy Invite Message</button>
-                            <p id="invite-copied" style="display: none;">Invite message copied!</p>
+                            <h3 style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>Your Growth Progress</span>
+                                <span style="font-size: 14px; font-weight: 500; color: var(--text-secondary); background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 99px;">0 / 5 Referrals</span>
+                            </h3>
+                            <div style="width: 100%; background: #e2e8f0; border-radius: 99px; height: 12px; overflow: hidden; margin-bottom: 12px;">
+                                <div style="width: 10%; background: var(--primary); height: 100%; border-radius: 99px; box-shadow: 0 0 10px rgba(0,111,255,0.5);"></div>
+                            </div>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">You're on your way! Invite 1 more business to unlock your first reward.</p>
                         </div>
+
+                        <!-- One-Tap Share Tools -->
                         <div class="card glass">
-                            <h3>Actions</h3>
-                            <button onclick="alert('History shown')">📜 View Referral Logs</button>
-                            <button onclick="alert('Data exported')">📤 Export Data</button>
+                            <h3 style="margin-bottom: 20px;">Share with 1-Tap</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+                                <button style="margin: 0; width: 100%; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Instagram story editor...')">
+                                    <span style="font-size: 24px;">📷</span>
+                                    <span>Share to Instagram</span>
+                                </button>
+                                <button style="margin: 0; width: 100%; background: #25D366; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening WhatsApp...')">
+                                    <span style="font-size: 24px;">💬</span>
+                                    <span>WhatsApp</span>
+                                </button>
+                                <button style="margin: 0; width: 100%; background: #0077b5; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening LinkedIn...')">
+                                    <span style="font-size: 24px;">💼</span>
+                                    <span>LinkedIn</span>
+                                </button>
+                                <button style="margin: 0; width: 100%; background: #ea4335; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Email draft...')">
+                                    <span style="font-size: 24px;">✉️</span>
+                                    <span>Email</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card glass" style="margin-top: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
+                                    <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
+                                </div>
+                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
+                            </div>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
