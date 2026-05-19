@@ -746,7 +746,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_monitor_ping() {
         let bus = std::sync::Arc::new(MemoryBus::new());
-        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new())));
         let monitor = HealthMonitor::new(bus.clone(), transport);
 
         let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -818,7 +818,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_monitor_ping_success() {
         let bus = std::sync::Arc::new(MemoryBus::new());
-        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new())));
         let monitor = HealthMonitor::new(bus.clone(), transport);
 
         // We need to listen for the ping and respond with an ack.
@@ -851,7 +851,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_monitor_ping_timeout() {
         let bus = std::sync::Arc::new(MemoryBus::new());
-        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::MemoryTransport::new())));
+        let transport = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new())));
         let monitor = HealthMonitor::new(bus.clone(), transport);
 
         // Without any handler to respond with an ack, ping should timeout.

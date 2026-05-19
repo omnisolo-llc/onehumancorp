@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 
 pub struct RedisMeshTransport {
-    inner: ohc_builtin_agent::mesh::transport::RedisTransport,
+    inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
 }
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
-        let inner = ohc_builtin_agent::mesh::transport::RedisTransport::new(url).await
-            .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
+        let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url).await
+            .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
         Ok(Self { inner })
     }
 }
@@ -41,13 +41,13 @@ impl MeshTransport for RedisMeshTransport {
 }
 
 pub struct MemoryMeshTransport {
-    inner: ohc_builtin_agent::mesh::transport::MemoryTransport,
+    inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
 }
 
 impl MemoryMeshTransport {
     pub fn new() -> Self {
         Self {
-            inner: ohc_builtin_agent::mesh::transport::MemoryTransport::new(),
+            inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
     }
 }
