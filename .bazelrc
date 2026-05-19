@@ -25,8 +25,6 @@ build --spawn_strategy=sandboxed,local
 build --sandbox_add_mount_pair=/var/run/docker.sock
 build --incompatible_strict_action_env
 build --announce_rc
-build --linkopt=-fuse-ld=bfd
-build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
 # ── Rust toolchains ─────────────────────────────────────────────────────────────
@@ -38,6 +36,8 @@ build --@rules_rust//rust/toolchain/channel=stable
 # and Windows doesn't support LRE.
 build:asan --extra_toolchains=@rust_toolchains//:all
 build:windows --extra_toolchains=@rust_toolchains//:all
+build:windows --linkopt=-fuse-ld=bfd
+build:windows --host_linkopt=-fuse-ld=bfd
 build:windows --keep_going
 
 # Nightly toolchain
@@ -132,8 +132,12 @@ build:linux_aarch64 --extra_execution_platforms=//bazel/platforms:linux_aarch64
 build:android --platforms=//bazel/platforms:android_aarch64
 build:ios --platforms=//bazel/platforms:ios_aarch64
 build:macos --platforms=//bazel/platforms:macos_aarch64
+build:macos_x86_64 --platforms=//bazel/platforms:macos_x86_64
+build:macos_aarch64 --platforms=//bazel/platforms:macos_aarch64
 build:windows_x86_64 --platforms=//bazel/platforms:windows_x86_64
 build:windows_i686 --platforms=//bazel/platforms:windows_i686
 build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
 build:linux --config=linux_x86_64
+build:linux --linkopt=-fuse-ld=bfd
+build:linux --host_linkopt=-fuse-ld=bfd

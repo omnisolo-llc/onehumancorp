@@ -83,12 +83,30 @@ jobs:
             //...
 
   bazel-build:
-    runs-on: ubuntu-latest
+    name: Bazel build (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            bazel_config: linux
+            install_linux_deps: true
+          - name: windows-x86_64
+            runner: ubuntu-latest
+            bazel_config: windows
+            install_linux_deps: true
+          - name: macos-aarch64
+            runner: macos-latest
+            bazel_config: macos
+            install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
 
       - name: Install base dependencies
+        if: matrix.install_linux_deps
         run: |
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo apt-get update -qq
@@ -122,7 +140,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
           repository-cache: true
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
@@ -135,7 +153,8 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build all artifacts
-        run: |
-          bazelisk build //... --config=linux
-          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
-          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
+        run: bazelisk build //... --config=${{ matrix.bazel_config }}
+
+      - name: Build server web image tarball
+        if: matrix.name == 'linux-x86_64'
+        run: bazelisk build //deploy:server_web_image_tar --config=linux --output_groups=+tarball

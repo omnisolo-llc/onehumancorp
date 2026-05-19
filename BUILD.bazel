@@ -58,6 +58,10 @@ sh_binary(
         "@rules_rust//rust/toolchain:current_rust_toolchain",
         "@rules_rust//rust/toolchain:current_rustc_files",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 sh_binary(
@@ -69,6 +73,10 @@ sh_binary(
         "//deploy:setup_k8s.sh",
     ],
     tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 filegroup(
@@ -87,6 +95,10 @@ sh_binary(
     args = ["build"],
     data = [":docs_srcs"],
     tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 sh_binary(
@@ -95,6 +107,10 @@ sh_binary(
     args = ["serve"],
     data = [":docs_srcs"],
     tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 sh_binary(
@@ -104,6 +120,10 @@ sh_binary(
         "MODULE.bazel",
     ],
     tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 
