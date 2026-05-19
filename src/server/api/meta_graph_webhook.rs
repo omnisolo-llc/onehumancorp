@@ -62,7 +62,7 @@ pub async fn meta_graph_webhook_handler(
                             .fetch_optional(pool)
                             .await.map(|_| ())
                             .ok()
-                            .flatten()
+                            .into_iter().flatten()
                             .map(|r| sqlx::Row::get(&r, "tenant_id"))
                     }
                     crate::db::DbStore::Postgres => {
@@ -71,7 +71,7 @@ pub async fn meta_graph_webhook_handler(
                             .fetch_optional(&state.db.pool)
                             .await.map(|_| ())
                             .ok()
-                            .flatten()
+                            .into_iter().flatten()
                             .map(|r| sqlx::Row::get(&r, "tenant_id"))
                     }
                 };

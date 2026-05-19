@@ -50,7 +50,7 @@ pub async fn book_service_handler(
                 .fetch_optional(pool)
                 .await
                 .ok()
-                .flatten()
+                .into_iter().flatten()
         }
         crate::db::DbStore::Postgres => {
             sqlx::query("SELECT google_calendar_token, zoom_token FROM tenants WHERE tenant_id = $1")
@@ -58,7 +58,7 @@ pub async fn book_service_handler(
                 .fetch_optional(&state.db.pool)
                 .await
                 .ok()
-                .flatten()
+                .into_iter().flatten()
         }
     };
 
