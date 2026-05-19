@@ -15,6 +15,7 @@ message AgentRuntimeConfig {
   float temperature = 6;
   int32 max_iterations = 7;
   int32 max_context_messages = 8;
+  bool enable_llm_judge = 9;
 }
 
 // RunTaskRequest is sent from the main server to the agent to start a task.

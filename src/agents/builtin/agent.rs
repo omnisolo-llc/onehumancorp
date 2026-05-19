@@ -1614,6 +1614,56 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
+
+// 10. Verification Loops (Quality x3): Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
+                if final_cfg.enable_llm_judge {
+                    let mut judge_prompt = String::new();
+                    judge_prompt.push_str("You are an expert Verification Sensor (LLM Judge).\n\nOriginal Task:\n");
+                    judge_prompt.push_str(initial_message);
+                    judge_prompt.push_str("\n\nAgent's Final Output:\n");
+                    judge_prompt.push_str(&last_assistant_content);
+                    judge_prompt.push_str("\n\nPlease evaluate if the agent has successfully completed the task. Return your evaluation in strict JSON format: {\"pass\": true} or {\"pass\": false, \"critique\": \"explanation of what is missing or wrong\"}");
+
+                    let judge_req = ChatRequest {
+                        model: final_cfg.model.clone(),
+                        system: "You are an objective judge evaluating task completion.".to_string(),
+                        messages: vec![Message::user(judge_prompt)],
+                        tools: vec![],
+                        max_tokens: 1000,
+                        temperature: 0.0,
+                    };
+
+                    match self.llm.chat(judge_req).await {
+                        Ok(judge_resp) => {
+                            let mut clean_json = judge_resp.message.content.trim();
+                            if clean_json.starts_with("```json") {
+                                clean_json = &clean_json[7..];
+                            } else if clean_json.starts_with("```") {
+                                clean_json = &clean_json[3..];
+                            }
+                            if clean_json.ends_with("```") {
+                                clean_json = &clean_json[..clean_json.len() - 3];
+                            }
+                            clean_json = clean_json.trim();
+
+                            if let Ok(eval) = serde_json::from_str::<serde_json::Value>(clean_json) {
+                                if let Some(pass) = eval.get("pass").and_then(|v| v.as_bool()) {
+                                    if !pass {
+                                        let critique = eval.get("critique").and_then(|v| v.as_str()).unwrap_or("No critique provided.");
+                                        let err_msg = format!("The Verification Sensor (LLM Judge) evaluated your output and found issues:\n{}\n\nPlease use tools to correct them or revise your output before completing the task.", critique);
+                                        messages.push(Message::user(err_msg));
+                                        on_event(AgentEvent::TextChunk { content: format!("[LLM Judge Critique: {}]", critique) });
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("LLM Judge failed to evaluate output: {}", e);
+                        }
+                    }
+                }
+
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
@@ -5247,4 +5297,80 @@ mod stream_tests {
         let rewind_emitted = events.iter().any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
+
+    #[tokio::test]
+    async fn test_llm_judge_sensor() {
+        use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+        struct JudgeMockLlmClient {
+            call_count: std::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for JudgeMockLlmClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().unwrap();
+                *count += 1;
+
+                if req.messages.len() == 1 && req.messages[0].content.contains("Verification Sensor") {
+                    if *count == 2 {
+                        return Ok(ChatResponse {
+                            message: Message::assistant(r#"{"pass": false, "critique": "You missed the second requirement."}"#),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: Some("mock-id".to_string()),
+                        });
+                    } else {
+                        return Ok(ChatResponse {
+                            message: Message::assistant(r#"{"pass": true}"#),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: Some("mock-id".to_string()),
+                        });
+                    }
+                }
+
+                if *count == 1 {
+                    Ok(ChatResponse {
+                        message: Message::assistant("Here is the partial solution."),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: Message::assistant("Here is the complete solution including the second requirement."),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                }
+            }
+        }
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_llm_judge = true;
+        cfg.max_iterations = 10;
+
+        let client = std::sync::Arc::new(JudgeMockLlmClient { call_count: std::sync::Mutex::new(0) });
+        let agent = Agent::new(client, vec![]);
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Write a program that prints Hello World and then goodbye.", &mut on_event).await;
+
+        assert!(result.is_ok(), "Agent run failed: {:?}", result.err());
+        let final_text = result.unwrap();
+        assert_eq!(final_text, "Here is the complete solution including the second requirement.");
+
+        let saw_critique = events.iter().any(|e| {
+            if let AgentEvent::TextChunk { content } = e {
+                content.contains("You missed the second requirement.")
+            } else {
+                false
+            }
+        });
+        assert!(saw_critique, "Agent should have received the judge's critique");
     }
+
+}
