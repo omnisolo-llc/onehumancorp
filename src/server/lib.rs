@@ -2472,17 +2472,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button onclick="dismissMilestone()">Dismiss</button>
                             </div>
                         </div>
-                        <div class="card glass" id="approval-inbox">
+                        <div class="card glass" id="approval-inbox" style="display: none;">
                             <h3>Approval Inbox</h3>
-                            <div id="approval-item-1" class="card glass" style="background: rgba(255, 255, 255, 0.4); margin-top: 12px; border-radius: 8px;">
-                                <h4 style="margin: 0 0 8px 0; color: var(--primary);">The Ambassador (Customer Success)</h4>
-                                <p style="margin: 0 0 12px 0; font-size: 14px;">Drafted a reply to Maya's Instagram DM:</p>
-                                <p style="font-style: italic; color: #333; margin: 0 0 16px 0; padding: 8px; background: rgba(255,255,255,0.6); border-radius: 4px;">"Hi Maya! Yes, we absolutely offer a 10% discount for returning customers. Should I send over the promo code?"</p>
-                                <div style="display: flex; gap: 8px;">
-                                    <button onclick="document.getElementById('approval-item-1').style.display='none';" class="primary" style="flex: 1;">Approve</button>
-                                    <button class="secondary" style="flex: 1;">Edit</button>
-                                </div>
-                            </div>
                         </div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
@@ -3908,6 +3899,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
                                 })
                                 .catch(err => console.error('Error fetching sales:', err));
+
+                                loadPendingApprovals();
                             }
 
                             if (id === 'my-plan-screen') {
@@ -3948,6 +3941,76 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             normalizeHiddenControls();
+                        }
+
+                        async function loadPendingApprovals() {
+                            try {
+                                const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                                const token = localStorage.getItem('token') || 'test-token';
+                                const res = await fetch('/api/agents/approvals', {
+                                    headers: {
+                                        'Authorization': 'Bearer ' + token,
+                                        'X-Tenant-ID': tenant
+                                    }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    const inbox = document.getElementById('approval-inbox');
+                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                        inbox.style.display = 'block';
+                                        // clear existing items but keep heading
+                                        const heading = inbox.querySelector('h3').outerHTML;
+                                        let html = heading;
+                                        data.pending_approvals.forEach(approval => {
+                                            html += `
+                                                <div id="approval-${approval.id}" class="card glass" style="background: rgba(255, 255, 255, 0.4); margin-top: 12px; border-radius: 8px;">
+                                                    <h4 style="margin: 0 0 8px 0; color: var(--primary);">${approval.department} Agent</h4>
+                                                    <p style="margin: 0 0 12px 0; font-size: 14px;">Drafted an action for your review:</p>
+                                                    <p style="font-style: italic; color: #333; margin: 0 0 16px 0; padding: 8px; background: rgba(255,255,255,0.6); border-radius: 4px;">"${approval.description}"</p>
+                                                    <div style="display: flex; gap: 8px;">
+                                                        <button onclick="approveAction('${approval.id}', true)" class="primary" style="flex: 1;">Approve</button>
+                                                        <button onclick="approveAction('${approval.id}', false)" class="secondary" style="flex: 1;">Reject/Edit</button>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        });
+                                        inbox.innerHTML = html;
+                                    } else {
+                                        inbox.style.display = 'none';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to load pending approvals:', e);
+                            }
+                        }
+
+                        async function approveAction(id, approved) {
+                            try {
+                                const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                                const token = localStorage.getItem('token') || 'test-token';
+                                const res = await fetch('/api/agents/approvals/' + id, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + token,
+                                        'X-Tenant-ID': tenant
+                                    },
+                                    body: JSON.stringify({ approved })
+                                });
+                                if (res.ok) {
+                                    const card = document.getElementById('approval-' + id);
+                                    if (card) card.style.display = 'none';
+
+                                    // check if inbox is empty
+                                    const inbox = document.getElementById('approval-inbox');
+                                    const visibleCards = inbox.querySelectorAll('.card.glass[id^="approval-"]:not([style*="display: none"])');
+                                    if (visibleCards.length === 0) {
+                                        inbox.style.display = 'none';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to submit decision:', e);
+                            }
                         }
 
                         function normalizeHiddenControls() {

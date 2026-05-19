@@ -122,6 +122,8 @@ pub struct DepartmentOrchestrator {
     memory_repo: Arc<VectorRepository>,
     mesh: Arc<dyn TeammateMesh>,
     action_counter: Counter<u64>,
+    approval_counter: Counter<u64>,
+    rejection_counter: Counter<u64>,
 }
 
 impl DepartmentOrchestrator {
@@ -132,6 +134,8 @@ impl DepartmentOrchestrator {
         };
         let meter = global::meter("ohc.orchestrator");
         let action_counter = meter.u64_counter("agent.actions.total").build();
+        let approval_counter = meter.u64_counter("agent.action.approvals.total").build();
+        let rejection_counter = meter.u64_counter("agent.action.rejections.total").build();
         Self {
             db,
             departments: RwLock::new(HashMap::new()),
@@ -140,6 +144,8 @@ impl DepartmentOrchestrator {
             memory_repo,
             mesh,
             action_counter,
+            approval_counter,
+            rejection_counter,
         }
     }
 
@@ -347,7 +353,7 @@ impl DepartmentOrchestrator {
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
 
-        match &self.db.store {
+        let res = match &self.db.store {
             DbStore::Postgres => {
                 let update_res = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
                     .bind(new_status)
@@ -378,7 +384,17 @@ impl DepartmentOrchestrator {
                     Err(e) => Err(e.to_string()),
                 }
             }
+        };
+
+        if res.is_ok() {
+            if approved {
+                self.approval_counter.add(1, &[]);
+            } else {
+                self.rejection_counter.add(1, &[]);
+            }
         }
+
+        res
     }
 
 
