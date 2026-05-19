@@ -1696,6 +1696,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let db_for_login = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
+        .route("/website-builder", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
@@ -1922,27 +1923,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #006fff;
-                            --primary-hover: #005bd3;
+                            --primary: #0071E3;
+                            --primary-hover: #0066FF;
                             --primary-soft: #e8f2ff;
-                            --accent-green: #15a46f;
-                            --accent-orange: #f59e0b;
+                            --accent-green: #34C759;
+                            --accent-orange: #FF9500;
+                            --accent-red: #FF3B30;
                             --bg: #eef1f5;
                             --surface: rgba(255, 255, 255, 0.86);
                             --surface-strong: #ffffff;
                             --sidebar-bg: rgba(248, 250, 252, 0.92);
-                            --text: #111827;
+                            --text: #1D1D1F;
                             --text-secondary: #657083;
                             --text-tertiary: #8a94a6;
                             --border: rgba(16, 24, 40, 0.1);
                             --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
                             --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
                             --radius-sm: 8px;
-                            --radius-md: 10px;
+                            --radius-md: 16px;
                         }
                         * {
                             box-sizing: border-box;
@@ -1964,7 +1966,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             -webkit-font-smoothing: antialiased;
                         }
                         h1, h2, h3, h4, .outfit {
-                            font-family: inherit;
+                            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
                             letter-spacing: 0;
                         }
                         h1 {
@@ -1985,11 +1987,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text-secondary);
                         }
                         .glass {
-                            background: var(--surface);
-                            border: 1px solid rgba(255, 255, 255, 0.72);
+                            background: rgba(255, 255, 255, 0.65);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(22px) saturate(180%);
-                            -webkit-backdrop-filter: blur(22px) saturate(180%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border-radius: var(--radius-md);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2024,7 +2027,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             align-items: center;
                             padding: 0 13px;
                             border-radius: var(--radius-sm);
-                            transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+                            transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         nav a:hover {
                             color: var(--primary);
@@ -2058,9 +2061,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-radius: var(--radius-sm); 
                             color: var(--text); 
                             font-size: 14px;
-                            font-family: inherit;
+                            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
                             box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
-                            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                            transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         input:focus, textarea:focus, select:focus {
                             outline: none;
@@ -2081,9 +2084,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-right: 8px; 
                             margin-bottom: 8px; 
                             font-size: 14px;
-                            font-family: inherit;
+                            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
                             box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
-                            transition: transform 0.15s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+                            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         button:hover {
                             background: var(--primary-hover);
@@ -2103,9 +2106,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
                         }
                         button.danger {
-                            background: #dc2626;
+                            background: var(--accent-red);
                         }
-                        .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
+                        .error { color: var(--accent-red); font-size: 13px; margin-bottom: 16px; display: none; }
                         
                         .shimmer {
                             background: linear-gradient(90deg, #eef2f7 25%, #dce5ef 50%, #eef2f7 75%);
@@ -2235,7 +2238,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 22px;
                             border-radius: 18px 18px 0 0;
                             z-index: 1200;
-                            transition: transform 0.24s ease;
+                            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         .bottom-sheet.open {
                             transform: translate(-50%, 0);
@@ -3393,7 +3396,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         window.onload = () => {
                             const path = window.location.pathname;
-                            const pathAliases = { '/business-setup': 'setup-screen' };
+                            const pathAliases = { '/business-setup': 'setup-screen', '/website-builder': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
                         };
