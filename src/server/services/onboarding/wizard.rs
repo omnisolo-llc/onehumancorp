@@ -33,9 +33,12 @@ impl InteractiveWizard {
         let mode = if is_cloud { "Cloud-native" } else { "Standalone" };
 
         format!(
-            "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\">\n\
-              <h2 style=\"margin-top: 0; color: #ffffff; font-weight: 600; font-size: 24px;\">OHC Interactive Setup ({})</h2>\n\
-              <p style=\"color: rgba(255, 255, 255, 0.7); font-size: 16px; line-height: 1.5; margin-bottom: 0;\">Please review your configuration options.</p>\n\
+            "<div style=\"backdrop-filter: blur(30px) saturate(210%); background: rgba(22, 22, 26, 0.7); font-family: 'Outfit', 'Inter', sans-serif; padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);\">\n\
+              <h2 style=\"margin-top: 0; color: #F5F5F7; font-weight: 600; font-size: 24px;\">OHC Interactive Setup ({})</h2>\n\
+              <p style=\"color: rgba(245, 245, 247, 0.7); font-size: 16px; line-height: 1.5; margin-bottom: 24px;\">Please review your configuration options.</p>\n\
+              <button style=\"background: #0066FF; color: #F5F5F7; border: none; border-radius: 8px; padding: 12px 24px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);\">\n\
+                Continue Setup\n\
+              </button>\n\
             </div>",
             mode
         )
