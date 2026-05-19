@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::orchestration::departments::operations_agent::OperationsAgent;
-
     use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
     use crate::orchestration::departments::types::{DepartmentEvent};
     use crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent;
@@ -58,7 +57,6 @@ mod tests {
         let res = orchestrator.dispatch_event(event).await;
         assert!(res.is_ok());
 
-        // Poll to allow async event handling to complete instead of sleep
         let mut has_quote = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -67,6 +65,7 @@ mod tests {
                 has_quote = true;
                 break;
             }
+        }
 
         assert!(has_quote, "Cross-department flow should result in a pending quote approval");
     }
@@ -121,5 +120,4 @@ mod tests {
         }
         assert!(has_approval, "Operations should trigger Customer Success to create pending approval");
     }
-
 }
