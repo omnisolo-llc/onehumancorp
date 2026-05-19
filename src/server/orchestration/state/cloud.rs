@@ -164,21 +164,28 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
 
+        let now = Utc::now();
         let rows_future = sqlx::query(
             r#"
-            SELECT t.*
-            FROM swarm_tasks t
-            WHERE t.status = 'PENDING'
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM jsonb_array_elements_text(t.dependencies) as dep_id
-                  JOIN swarm_tasks dep ON dep.id::text = dep_id
-                  WHERE dep.status != 'COMPLETED'
-              )
-            LIMIT $1
-            FOR UPDATE SKIP LOCKED
+            UPDATE swarm_tasks
+            SET status = 'IN_PROGRESS', updated_at = $1
+            WHERE id IN (
+                SELECT t.id
+                FROM swarm_tasks t
+                WHERE t.status = 'PENDING'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM jsonb_array_elements_text(t.dependencies) as dep_id
+                      JOIN swarm_tasks dep ON dep.id::text = dep_id
+                      WHERE dep.status != 'COMPLETED'
+                  )
+                LIMIT $2
+                FOR UPDATE SKIP LOCKED
+            )
+            RETURNING *
             "#
         )
+        .bind(now)
         .bind(limit)
         .fetch_all(&mut *tx);
 
@@ -234,15 +241,6 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         if !task_ids.is_empty() {
             let now = Utc::now();
             for (id_str, tenant_id) in task_ids {
-                sqlx::query(
-                    "UPDATE swarm_tasks SET status = 'IN_PROGRESS', updated_at = $1 WHERE id = $2::uuid"
-                )
-                .bind(now)
-                .bind(&id_str)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
