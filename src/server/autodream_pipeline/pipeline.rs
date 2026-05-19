@@ -112,22 +112,10 @@ impl AutoDreamPipeline {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        let insert_query = "
-                            INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id)
-                            VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
-                        ";
-
-                        sqlx::query(insert_query)
-                            .bind(&mem_id)
-                            .bind(&tenant_id)
-                            .bind(&agent_id)
-                            .bind(&chunk)
-                            .bind(&emb_str)
-                            .bind("TASK_SUMMARY")
-                            .bind(&task_id)
-                            .execute(&self.db.pool)
-                            .await
-                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                        let agent_id_str = agent_id.clone().unwrap_or_else(|| "system_agent".to_string());
+                        if let Err(e) = self.db.insert_autodream_memory(&mem_id, &tenant_id, &agent_id_str, &task_id, &chunk, &emb_str, "TASK_SUMMARY").await {
+                            tracing::error!("AutoDreamPipeline: Failed to insert memory for task {}: {}", task_id, e);
+                        }
                     }
                     Err(e) => {
                         tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
