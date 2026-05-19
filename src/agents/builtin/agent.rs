@@ -1187,7 +1187,7 @@ impl Agent {
                 }
             }
             if model_is_powerful {
-                final_messages.push(crate::types::Message::user("[Harness Thickness Optimization Active] This model is sufficiently powerful to internalize planning. Skip explicit scratchpad planning and output tool calls directly."));
+                final_cfg.server_system_message.push_str("\n[Harness Thickness Optimization Active] This model is sufficiently powerful to internalize planning. Skip explicit scratchpad planning and output tool calls directly.");
             }
         }
             if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") {
