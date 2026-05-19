@@ -33,14 +33,31 @@ test.describe('Social Media Autoposting Flow', () => {
   test('user can configure Facebook from dashboard integrations', async ({ page }) => {
     await page.getByRole('button', { name: 'Integrations' }).click();
     await expect(page.getByRole('heading', { name: /Facebook/ })).toBeVisible();
-    await page.getByRole('button', { name: 'Configure' }).click();
+    await page.locator('#facebook-integration').getByRole('button', { name: 'Configure' }).click();
 
+    await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
+  });
+
+  test('user can configure Instagram and WhatsApp from dashboard integrations', async ({ page }) => {
+    await page.getByRole('button', { name: 'Integrations' }).click();
+    await expect(page.getByRole('heading', { name: /Instagram/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /WhatsApp/ })).toBeVisible();
+
+    page.on('dialog', async dialog => {
+      expect(dialog.message()).toContain('Configure Instagram');
+      await dialog.accept();
+    });
+
+    await page.locator('#instagram-integration').getByRole('button', { name: 'Configure' }).click();
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
   });
 
   test('user can respond to a social inbox message', async ({ page }) => {
     await page.getByRole('button', { name: 'Check Messages' }).click();
     await expect(page.getByText('Facebook User')).toBeVisible();
+    await expect(page.getByText('Instagram User')).toBeVisible();
+    await expect(page.getByText('WhatsApp User')).toBeVisible();
+
     await page.locator('#reply-input').fill('Thanks for reaching out!');
     await page.getByRole('button', { name: 'Send' }).click();
 
