@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2353,7 +2353,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
-                            <button onclick="alert('How to use this app')">How to use this app</button>
+                            <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
@@ -2749,7 +2749,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
+                            <button onclick="nextStep(2)">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" style="display: none;">

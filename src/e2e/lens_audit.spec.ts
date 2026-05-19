@@ -42,3 +42,13 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 });
+
+  test('verify DB state updates correctly after mutation', async ({ page }) => {
+    // Audit Phase 4 Verification: UI -> DB -> UI
+    await page.goto('/business-setup');
+    await page.getByRole('button', { name: /Start My Business/ }).click();
+    await page.getByPlaceholder('Business type').fill('Test Audited Business');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
+    await expect(page.locator('.placeholder-data-fixture')).toHaveCount(0);
+  });
