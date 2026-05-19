@@ -13,3 +13,5 @@ pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
 pub mod chromadb;
+pub mod meta;
+pub mod tiktok;

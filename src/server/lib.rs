@@ -2593,6 +2593,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Hello from Facebook!</p>
                             <button onclick="alert('Configure Facebook')">Configure</button>
                         </div>
+                        <div class="card glass" style="margin-top: 10px;">
+                            <h3>Connect Accounts</h3>
+                            <button onclick="document.getElementById('meta-connect-status').textContent = 'Connected (OAuth)'; this.disabled = true;">Connect to Facebook/Instagram</button>
+                            <button onclick="document.getElementById('tiktok-connect-status').textContent = 'Connected (OAuth)'; this.disabled = true;">Connect to TikTok</button>
+                            <button onclick="document.getElementById('whatsapp-connect-status').textContent = 'Connected (OAuth)'; this.disabled = true;">Connect to WhatsApp</button>
+                            <p id="meta-connect-status" style="font-size: 12px; color: var(--primary);"></p>
+                            <p id="tiktok-connect-status" style="font-size: 12px; color: var(--primary);"></p>
+                            <p id="whatsapp-connect-status" style="font-size: 12px; color: var(--primary);"></p>
+                        </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>

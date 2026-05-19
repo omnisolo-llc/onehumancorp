@@ -18,6 +18,8 @@ pub struct IntegrationsRegistry {
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
+    meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    tiktok_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::tiktok::provider::TiktokProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -42,6 +44,8 @@ impl IntegrationsRegistry {
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            tiktok_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
