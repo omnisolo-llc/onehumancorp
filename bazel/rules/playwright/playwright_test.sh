@@ -188,17 +188,14 @@ export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
 export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
 export BASE_URL="http://localhost:$OHC_SERVER_PORT"
+export DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc"
+export REDIS_URL="redis://127.0.0.1:$VK_PORT"
+export JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long"
+export OHC_SQLITE_KEY="test_sqlite_key"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  REDIS_URL="redis://127.0.0.1:$VK_PORT" \
-  JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
-  OHC_SQLITE_KEY="test_sqlite_key" \
-  OHC_PORT="$OHC_SERVER_PORT" \
-  OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
-  OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-    "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 
   echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
