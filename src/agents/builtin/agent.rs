@@ -2097,11 +2097,14 @@ impl Agent {
             // 2. Local File Scratchpad (Claude Code)
             if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
                 if let Ok(json_state) = serde_json::to_string_pretty(&messages) {
-                    if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
-                        on_event(AgentEvent::CheckpointSaved {
-                            iteration,
-                            path: scratchpad_path.clone(),
-                        });
+                    let temp_path = format!("{}.tmp", scratchpad_path);
+                    if tokio::fs::write(&temp_path, json_state).await.is_ok() {
+                        if tokio::fs::rename(&temp_path, &scratchpad_path).await.is_ok() {
+                            on_event(AgentEvent::CheckpointSaved {
+                                iteration,
+                                path: scratchpad_path.clone(),
+                            });
+                        }
                     }
                 }
             }
