@@ -194,6 +194,14 @@ impl Tracker {
         }
     }
 
+    pub async fn create_billing_portal_session(&self, customer_id: &str) -> Result<String, String> {
+        if let Some(ref client) = self.stripe_client {
+            client.create_billing_portal_session(customer_id).await
+        } else {
+            Err("Stripe client not configured".to_string())
+        }
+    }
+
     pub fn summary(&self, _scope: &str) -> TokenSummary {
         TokenSummary::default()
     }

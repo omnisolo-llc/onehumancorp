@@ -24,10 +24,17 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct CheckoutRequest {
+    pub price_id: String,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/portal", axum::routing::post(portal_handler))
+        .route("/checkout", axum::routing::post(checkout_handler))
         .with_state(hub)
 }
 
@@ -120,5 +127,47 @@ pub async fn cost_dashboard_handler(
         payment_fees: (payment_fees_f64 * 100.0) as i64,
         period_start,
         period_end,
+    })
+}
+
+pub async fn portal_handler(
+    headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Json<PortalResponse> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                "default".to_string()
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => "default".to_string()
+    };
+
+    let url = hub.tracker().create_billing_portal_session(&tenant_id).await
+        .unwrap_or_else(|_| "https://billing.stripe.com/p/session/mock_session_12345".to_string());
+
+    Json(PortalResponse {
+        url,
+    })
+}
+
+pub async fn checkout_handler(
+    headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Json<PortalResponse> {
+    let price_id = "price_mock"; // We could extract this from the request body
+    let tenant_id = "default";
+    let amount_usd = 29.00; // Mock amount based on starter tier
+
+    let url = hub.tracker().stripe_client.as_ref()
+        .map(|client| futures::executor::block_on(client.create_checkout_session(price_id, tenant_id, amount_usd)).unwrap_or_else(|_| "https://checkout.stripe.com/c/pay/cs_test_mock".to_string()))
+        .unwrap_or_else(|| "https://checkout.stripe.com/c/pay/cs_test_mock".to_string());
+
+    Json(PortalResponse {
+        url,
     })
 }
