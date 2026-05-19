@@ -14,6 +14,7 @@ filegroup(
         "tasks.rs",
         "//src/server/orchestration/departments:srcs",        "//src/server/orchestration/queue:srcs",        "//src/server/orchestration/state:srcs",
         "//src/server/orchestration/statemachine:srcs",
+        "//src/server/orchestration/hybrid_sync:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
