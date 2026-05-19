@@ -830,7 +830,8 @@ impl LongTermMemory for PersistentMemoryStore {
     }
 }
 
-/// Anthropic 3-Tier Memory Store implementation
+/// Anthropic 3-Tier Memory Store implementation. Mechanic: Anthropic 3-Tier Memory
+/// Crucial rule: Agent must treat memory as a "hint" and verify against actual state before acting.
 /// 1) Lightweight index (~150 chars/entry, always loaded in context)
 /// 2) Detailed topic files (pulled on demand)
 /// 3) Raw transcripts (accessed via search only)
