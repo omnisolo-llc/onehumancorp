@@ -2330,7 +2330,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Business Snapshot</h3>
                             <p>Orders to Ship</p>
                             <p>Team Members</p>
-                            <p>Ongoing Tasks</p>
+                            <p style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">Ongoing Tasks</p>
                             <p>Needs Your Approval</p>
                             <button onclick="markOrderReady()">Mark Order Ready</button>
                             <div id="milestone-card" class="card glass" style="display: none;">
