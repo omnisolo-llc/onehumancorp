@@ -32,7 +32,7 @@ jobs:
         run: |
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
+
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
