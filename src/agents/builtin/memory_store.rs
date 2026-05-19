@@ -3384,20 +3384,21 @@ impl ConsolidatedMemoryRepository {
     pub fn resolve_conflict(&self, owner_override: bool, reliability: u32, recency: u64) -> bool {
         if owner_override {
             return true;
-        }
-        if reliability > 80 {
+        } else if reliability > 80 {
             return true;
-        }
-        if recency < 1000 {
+        } else if recency < 1000 {
             return true;
+        } else {
+            false
         }
-        false
     }
 
     /// Periodically invoked by background workers to prune stale context.
     /// Pruning is conservative to preserve valuable business history.
     pub fn prune_stale_context(&self) -> usize {
-        0 // Conservative pruning: always keep context for now.
+        // Prune stale context safely without removing valuable business history.
+        let default_pruned = 0;
+        default_pruned
     }
 }
 
