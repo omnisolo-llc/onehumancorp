@@ -357,19 +357,24 @@ async fn generate_storefront(
             blocks: vec![
                 DraftBlock {
                     block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({"headline": "Welcome", "subtitle": "Our Services"}),
+                    content: serde_json::json!({"headline": "Welcome", "subtitle": "Our Products & Services"}),
                     sort_order: 0,
                 },
                 DraftBlock {
-                    block_type: "TestimonialBlock".to_string(),
-                    content: serde_json::json!({"testimonials": ["Great service!"]}),
+                    block_type: "ProductGridBlock".to_string(),
+                    content: serde_json::json!({"items": ["Featured Product 1", "Featured Product 2"]}),
                     sort_order: 1,
+                },
+                DraftBlock {
+                    block_type: "ServiceBookingBlock".to_string(),
+                    content: serde_json::json!({"services": ["Consultation", "Support"]}),
+                    sort_order: 2,
                 },
             ],
             seo_metadata: serde_json::json!({
                 "@context": "https://schema.org",
                 "@type": "LocalBusiness",
-                "name": "Local Business"
+                "name": "Unified Business"
             }),
         });
     }

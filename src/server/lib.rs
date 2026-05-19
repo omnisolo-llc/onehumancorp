@@ -305,7 +305,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            tracing::error!("failed to verify password hash: {}", e);
+            tracing::debug!("failed to verify hash: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2156,6 +2156,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 padding: 22px 14px 108px;
                             }
                         }
+                        @media (max-width: 375px) {
+                            .chat-bubble {
+                                padding: 12px 16px;
+                                border-radius: 18px;
+                                margin-bottom: 12px;
+                                font-size: 15px;
+                                line-height: 1.4;
+                                max-width: 85%;
+                            }
+                            .chat-assistant {
+                                background: var(--surface-strong);
+                                border: 1px solid var(--border);
+                                color: var(--text);
+                                border-bottom-left-radius: 4px;
+                                align-self: flex-start;
+                            }
+                            .chat-user {
+                                background: var(--primary);
+                                color: white;
+                                border-bottom-right-radius: 4px;
+                                align-self: flex-end;
+                            }
+                            #step-ai {
+                                display: flex;
+                                flex-direction: column;
+                                padding: 16px;
+                                height: 100%;
+                            }
+                        }
                         .nav-item {
                             display: flex;
                             flex-direction: column;
@@ -2836,10 +2865,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <div id="step-ai" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <div class="chat-bubble chat-assistant">
+                                    <strong>AI Assistant:</strong> Hi! Let's get your business online. Tell me a bit about what you do in one or two sentences. Do you sell products, offer services, or both?
+                                </div>
+                                <div class="chat-bubble chat-user">
+                                    <input type="text" placeholder="e.g. I run a local bakery and teach baking classes..." style="background: transparent; border: none; color: white; width: 100%; outline: none;" />
+                                </div>
+                            </div>
+                            <button style="margin-top: auto;" onclick="generateAI()">Generate Storefront →</button>
+                            <button class="secondary" style="margin-top: 8px;" onclick="nextStep(1)">Back</button>
                         </div>
                         <div id="step-generating" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
