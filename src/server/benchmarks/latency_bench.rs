@@ -1,3 +1,5 @@
+use ::server_ohc::app::dashboard_service_server::DashboardService;
+
 use std::time::Instant;
 use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
@@ -85,7 +87,8 @@ pub async fn bench_api_response_time() {
             let mut request = tonic::Request::new(req);
             request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
             let start = Instant::now();
-            use ::server_ohc::app::dashboard_service_server::DashboardService;
+
+
             let _ = dashboard_service_cloud.get_dashboard(request).await;
             cloud_times.push(start.elapsed().as_micros());
         }
@@ -110,7 +113,8 @@ pub async fn bench_api_response_time() {
         let mut request = tonic::Request::new(req);
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
-        use ::server_ohc::app::dashboard_service_server::DashboardService;
+
+
         let _ = dashboard_service_standalone.get_dashboard(request).await;
         standalone_times.push(start.elapsed().as_micros());
     }
@@ -193,7 +197,7 @@ pub async fn bench_dashboard_snapshot() {
         let hub3 = hub.clone();
 
         let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-        use ::server_ohc::app::dashboard_service_server::DashboardService;
+
         let db_arc = std::sync::Arc::new(db.clone());
         let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
         let mut request = tonic::Request::new(req_desktop);
@@ -202,6 +206,7 @@ pub async fn bench_dashboard_snapshot() {
             org_id: "system".to_string(),
             agent_id: "test".to_string(),
         });
+
         let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
@@ -213,7 +218,7 @@ pub async fn bench_dashboard_snapshot() {
     let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
     let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
-    use ::server_ohc::app::dashboard_service_server::DashboardService;
+
     let db_arc = std::sync::Arc::new(db.clone());
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
@@ -229,6 +234,7 @@ pub async fn bench_dashboard_snapshot() {
         org_id: "system".to_string(),
         agent_id: "test".to_string(),
     });
+
 
     let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
     let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
