@@ -1493,11 +1493,9 @@ struct DecideApprovalRequest {
 
 async fn handle_pending_approvals(
     axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
-    req: axum::extract::Request,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
-    let org_id = req.extensions().get::<::server_common::Claims>()
-        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
-        .organization_id.as_ref()
+    let org_id = claims.organization_id.as_ref()
         .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
         .clone();
 
@@ -1521,12 +1519,10 @@ async fn handle_pending_approvals(
 
 async fn handle_decide_approval(
     axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<DecideApprovalRequest>,
-    req: axum::extract::Request,
 ) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
-    let org_id = req.extensions().get::<::server_common::Claims>()
-        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
-        .organization_id.as_ref()
+    let org_id = claims.organization_id.as_ref()
         .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
         .clone();
 
