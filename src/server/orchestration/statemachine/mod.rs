@@ -191,17 +191,18 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'RESOLVING_DEPENDENCIES', dependencies = $1, updated_at = $2
                     WHERE id = $3 AND organization_id = $4 AND status = 'DELIBERATING'
+                    RETURNING id
                     "#
                 )
                 .bind(dependencies)
                 .bind(Utc::now())
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(pool)
+                .fetch_optional(pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if res.rows_affected() == 0 {
+                if res.is_none() {
                     return Err("Invalid state transition or task not found for organization".to_string());
                 }
                 Ok(())
@@ -213,17 +214,18 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'RESOLVING_DEPENDENCIES', dependencies = ?, updated_at = ?
                     WHERE id = ? AND organization_id = ? AND status = 'DELIBERATING'
+                    RETURNING id
                     "#
                 )
                 .bind(dependencies)
                 .bind(Utc::now().to_rfc3339())
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(sqlite_pool)
+                .fetch_optional(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if res.rows_affected() == 0 {
+                if res.is_none() {
                     return Err("Invalid state transition or task not found for organization".to_string());
                 }
                 Ok(())
@@ -239,16 +241,17 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'COMPLETED', updated_at = $1
                     WHERE id = $2 AND organization_id = $3 AND status IN ('DELIBERATING', 'RESOLVING_DEPENDENCIES')
+                    RETURNING id
                     "#
                 )
                 .bind(Utc::now())
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(pool)
+                .fetch_optional(pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if res.rows_affected() == 0 {
+                if res.is_none() {
                     return Err("Invalid state transition or task not found for organization".to_string());
                 }
                 Ok(())
@@ -260,16 +263,17 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'COMPLETED', updated_at = ?
                     WHERE id = ? AND organization_id = ? AND status IN ('DELIBERATING', 'RESOLVING_DEPENDENCIES')
+                    RETURNING id
                     "#
                 )
                 .bind(Utc::now().to_rfc3339())
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(sqlite_pool)
+                .fetch_optional(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if res.rows_affected() == 0 {
+                if res.is_none() {
                     return Err("Invalid state transition or task not found for organization".to_string());
                 }
                 Ok(())
@@ -285,16 +289,17 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'FAILED', updated_at = $1
                     WHERE id = $2 AND organization_id = $3
+                    RETURNING id
                     "#
                 )
                 .bind(Utc::now())
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(pool)
+                .fetch_optional(pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if res.rows_affected() == 0 {
+                if res.is_none() {
                     return Err("Task not found for organization".to_string());
                 }
                 Ok(())
@@ -306,16 +311,17 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'FAILED', updated_at = ?
                     WHERE id = ? AND organization_id = ?
+                    RETURNING id
                     "#
                 )
                 .bind(Utc::now().to_rfc3339())
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(sqlite_pool)
+                .fetch_optional(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if res.rows_affected() == 0 {
+                if res.is_none() {
                     return Err("Task not found for organization".to_string());
                 }
                 Ok(())
