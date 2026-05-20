@@ -102,6 +102,15 @@ curl -X POST "http://localhost:8080/api/mesh/v2/broadcast" \
     "data": {}
   }'
 
+# Enqueue a new task
+curl -X POST "http://localhost:8080/api/queue/subagent" \
+  -H "Content-Type: application/json" \
+  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -d '{
+    "parent_task_id": "T-123",
+    "action": "summarize"
+  }'
+
 # Claim a PENDING task
 curl -X POST "http://localhost:8080/api/v1/tasks/claim" \
   -H "Content-Type: application/json" \
@@ -239,23 +248,35 @@ Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS us
   }
   ```
 
-#### Task Claiming Workflow
+#### Shared Task List Workflow
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'Outfit'}}}%%
 sequenceDiagram
-    participant Agent as Worker Agent
-    participant Hub as Orchestration Hub
+    participant Orchestrator as KAIROS Orchestrator
+    participant Hub as API Hub
     participant DB as Shared Task DB
+    participant Agent as Worker Agent
+
+    Orchestrator->>Hub: POST /api/queue/subagent (Enqueue)
+    Hub->>DB: INSERT PENDING Task
+    DB-->>Hub: Task Enqueued
 
     Agent->>Hub: POST /api/v1/tasks/claim
-    Note over Hub,DB: Uses FOR UPDATE SKIP LOCKED (Postgres)
+    Note over Hub,DB: Uses FOR UPDATE SKIP LOCKED (Cloud)<br/>or SQLite Mutex (Standalone)
     Hub->>DB: Query for next PENDING task
     DB-->>Hub: Return Task & Row Lock
-    Hub-->>Agent: Task Payload + Context
-    Note right of Agent: Agent begins execution
+    Hub-->>Agent: Task Payload (Status: IN_PROGRESS)
+    Note right of Agent: Agent executes task
+
+    Agent->>Hub: POST /api/v1/tasks/{task_id}/complete
+    Hub->>DB: Update Task Status to COMPLETED
+    Note over Hub,DB: KAIROS DAG Engine evaluates downstream dependencies
+    Hub->>DB: Unlock dependent tasks
+    DB-->>Hub: Return Unlocked Tasks List
+    Hub-->>Agent: Success Response + Unlocked Tasks
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Agent,Hub,DB premium;
+    class Orchestrator,Hub,DB,Agent premium;
 ```
 
 ### 7.3 Complete a Task
@@ -306,25 +327,6 @@ Marks a task as `COMPLETED`. This transition triggers the KAIROS DAG engine to e
   }
   ```
 
-#### Task Completion Workflow
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'Outfit'}}}%%
-sequenceDiagram
-    participant Agent as Worker Agent
-    participant Hub as Orchestration Hub
-    participant DB as Shared Task DB
-
-    Agent->>Hub: POST /api/v1/tasks/{task_id}/complete
-    Hub->>DB: Update Task Status to COMPLETED
-    DB-->>Hub: Confirm Update
-    Note over Hub,DB: KAIROS DAG Engine evaluates downstream dependencies
-    Hub->>DB: Unlock dependent tasks
-    DB-->>Hub: Return Unlocked Tasks List
-    Hub-->>Agent: Success Response + Unlocked Tasks
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Agent,Hub,DB premium;
-```
 
 ## 8. Hybrid Health Probes
 
