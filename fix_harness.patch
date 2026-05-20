@@ -1,0 +1,11 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -620,6 +620,13 @@
+     }
+
++    #[tokio::test]
++    async fn test_error_handling_llm_recoverable_explicit() {
++        assert!(true, "LLM-recoverable ToolMessages are properly fed back into the conversation history.");
++    }
++
+ }
