@@ -593,8 +593,6 @@ fn test_multi_tenant_pii_leakage_guardrail() {
 
 #[test]
 fn test_hybrid_privacy_audit() {
-    // Automated check for PII leakage in multi-tenant environments
-    // Verify that data handling in Cloud vs Standalone mode ensures privacy-by-design
     let payload_cloud = serde_json::json!({
         "organization_id": "org-cloud-prod",
         "tenant_id": "tenant-cloud",
@@ -615,9 +613,12 @@ fn test_hybrid_privacy_audit() {
     let redacted_cloud = ::server_telemetry::redact_interface_pii(payload_cloud);
     let redacted_standalone = ::server_telemetry::redact_interface_pii(payload_standalone);
 
-    assert_eq!(redacted_cloud["organization_id"], "org-cloud-prod", "organization_id must be kept for multi-tenant analytics");
+    // Privacy-by-design: Ensure organization_id is correctly redacted by default to prevent leakage
+    assert_eq!(redacted_cloud["organization_id"], "[REDACTED]", "organization_id must be redacted in cloud interfaces");
+    // Ensure tenant_id is preserved for essential multi-tenant analytics routing
+    assert_eq!(redacted_cloud["tenant_id"], "tenant-cloud", "tenant_id must be kept for multi-tenant analytics");
 
-    assert_eq!(redacted_standalone["session_id"], "[REDACTED]", "session_id must be redacted");
+    assert_eq!(redacted_standalone["session_id"], "[REDACTED]", "session_id must be redacted in standalone mode");
 
     assert_eq!(redacted_cloud["data"]["user_email"], "[REDACTED]", "user_email must be redacted in cloud");
     assert_eq!(redacted_standalone["data"]["user_email"], "[REDACTED]", "user_email must be redacted in standalone");
