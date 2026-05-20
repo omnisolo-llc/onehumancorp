@@ -590,3 +590,14 @@ fn test_multi_tenant_pii_leakage_guardrail() {
     assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
     assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
 }
+
+#[test]
+fn test_harness_telemetry_recording() {
+    // This test ensures the metric recording logic runs without panicking.
+    // It calls the `record_harness_init_latency` and `record_harness_db_io_latency` functions.
+    // In a real environment, opentelemetry global meter would capture these.
+
+    ::server_telemetry::record_harness_init_latency(1.23);
+    ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
+    ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
+}
