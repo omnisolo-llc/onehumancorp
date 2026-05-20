@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, ActionRisk};
-    use crate::orchestration::departments::types::DepartmentType;
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
+    use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
