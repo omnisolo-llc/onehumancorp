@@ -137,7 +137,7 @@ async fn create_site(
 async fn geo_score(
     Json(payload): Json<GeoScoreRequest>,
 ) -> Result<Json<GeoScoreResponse>, axum::http::StatusCode> {
-    use std::sync::Arc;
+
     use ohc_builtin_agent::tools::ToolExecutor;
 
     let executor = ohc_builtin_agent::tools::generative_visibility::GenerativeVisibilityExecutor;
