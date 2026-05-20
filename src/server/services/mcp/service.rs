@@ -247,7 +247,13 @@ impl McpService for MyMcpService {
 
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
-            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
+            match crate::sip::get_sqlite_limiter().try_acquire() {
+                Ok(p) => Some(p),
+                Err(_) => {
+                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "delegate_mission_with_tx").await;
+                    Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
+                }
+            }
         } else {
             None
         };

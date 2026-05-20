@@ -186,7 +186,13 @@ impl SipDB {
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let _permit = if is_standalone {
-                    Some(get_sqlite_limiter().acquire().await.unwrap())
+                    match get_sqlite_limiter().try_acquire() {
+                        Ok(p) => Some(p),
+                        Err(_) => {
+                            let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "upsert_mission").await;
+                            Some(get_sqlite_limiter().acquire().await.unwrap())
+                        }
+                    }
                 } else {
                     None
                 };
@@ -204,7 +210,13 @@ impl SipDB {
                     if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
                         attempt += 1;
                         if attempt >= max_attempts {
+                            if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                                let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, "upsert_mission").await;
+                            }
                             return Err(err);
+                        }
+                        if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                            let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, "upsert_mission").await;
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
