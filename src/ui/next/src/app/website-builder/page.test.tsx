@@ -18,7 +18,7 @@ describe('WebsiteBuilderPage', () => {
 
   test('renders initial idle state correctly', () => {
     render(<WebsiteBuilderPage />);
-    expect(screen.getByText('Welcome to OHC Smart Builder')).toBeInTheDocument();
+    expect(screen.getByText('What are you building today?')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e\.g\. I run a mobile dog grooming service in Portland/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Build My Storefront' })).toBeDisabled();
   });
@@ -48,7 +48,7 @@ describe('WebsiteBuilderPage', () => {
     const generateBtn = screen.getByRole('button', { name: 'Build My Storefront' });
     fireEvent.click(generateBtn);
 
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    expect(screen.getByText('Our AI (The Promoter) is designing your site...')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('Preview Mode')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('WebsiteBuilderPage', () => {
 
     // Return to dashboard
     fireEvent.click(screen.getByRole('button', { name: 'Go to Dashboard' }));
-    expect(screen.getByText('Welcome to OHC Smart Builder')).toBeInTheDocument();
+    expect(screen.getByText('What are you building today?')).toBeInTheDocument();
   });
 
   test('handles generation error gracefully', async () => {
@@ -113,7 +113,7 @@ describe('WebsiteBuilderPage', () => {
 
     // Should return to idle on failure
     await waitFor(() => {
-      expect(screen.getByText('Welcome to OHC Smart Builder')).toBeInTheDocument();
+      expect(screen.getByText('What are you building today?')).toBeInTheDocument();
     });
 
     consoleSpy.mockRestore();

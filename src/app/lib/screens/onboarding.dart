@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:confetti/confetti.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
@@ -12,9 +13,8 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
-  String businessName = '';
-  String? businessType;
-  OnboardingState _state = OnboardingState.welcome;
+  String bio = '';
+  OnboardingState _state = OnboardingState.input;
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
@@ -26,16 +26,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Uri.parse('http://localhost:8080/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'company_name': businessName,
-            'business_type': businessType,
+            'bio': bio,
             'selling_categories': ['food', 'physical'],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
             'admin_name': 'Admin User',
             'admin_password': 'password123',
             'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
             'domain_choice': 'subdomain',
             'price_type': 'fixed'
           }),
@@ -107,61 +104,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildWelcomeState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
-          SizedBox(height: 32),
-          Text(
-            'OneHumanCorp',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D1D1F),
-              letterSpacing: -0.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'The universal operating system for small business.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 48),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => _state = OnboardingState.input);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Start a Business',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return SizedBox.shrink();
   }
 
   Widget _buildInputState() {
@@ -174,7 +117,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Your Details',
+              'What are you building today?',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -186,7 +129,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Just a few details to get started.',
+              'Review and add any extra details to help our AI generate the perfect store.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -196,9 +139,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
+              maxLines: 6,
               decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Custom Cakes',
+                hintText: 'e.g. I run a mobile dog grooming service in Portland',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -209,33 +152,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Business Type',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              items: ['Physical', 'Digital', 'Service', 'Food']
-                  .map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  businessType = value;
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessType = value!,
+              onSaved: (value) => bio = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
@@ -276,7 +193,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           SizedBox(height: 32),
           Text(
-            'AI is building your storefront...',
+            'Our AI (The Promoter) is designing your site...',
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 24,
@@ -314,7 +231,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                'Welcome, $businessName',
+                'Welcome, $bio',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16,
@@ -496,29 +413,52 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class StoreLiveScreen extends StatelessWidget {
+class StoreLiveScreen extends StatefulWidget {
+  @override
+  _StoreLiveScreenState createState() => _StoreLiveScreenState();
+}
+
+class _StoreLiveScreenState extends State<StoreLiveScreen> {
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController.play();
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7),
-      body: Center(
-        child: Container(
-          width: 375,
-          height: 812,
-          padding: EdgeInsets.all(24),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.65),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          Center(
+            child: Container(
+              width: 375,
+              height: 812,
+              padding: EdgeInsets.all(24),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.65),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                     Container(
                       padding: EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -554,6 +494,31 @@ class StoreLiveScreen extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () {},
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.pink[500],
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          minimumSize: Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Share on Instagram',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey[100],
                           foregroundColor: Color(0xFF1D1D1F),
                           padding: EdgeInsets.symmetric(vertical: 18),
@@ -570,15 +535,23 @@ class StoreLiveScreen extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            colors: const [Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple],
+          ),
+        ],
       ),
     );
   }

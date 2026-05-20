@@ -75,7 +75,7 @@ test.describe('Website Builder Full E2E', () => {
     await page.goto('/builder');
 
     // Check initial state
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What are you building today?' })).toBeVisible();
 
     const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
 
@@ -91,7 +91,7 @@ test.describe('Website Builder Full E2E', () => {
     await page.goto('/builder');
 
     // Check initial state
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What are you building today?' })).toBeVisible();
 
     const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
     // Using a specific keyword that helps the LLM generate a known block

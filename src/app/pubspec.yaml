@@ -5,6 +5,7 @@ version: 1.0.0+1
 environment:
   sdk: '>=3.7.2 <4.0.0'
 dependencies:
+  confetti: ^0.8.0
   flutter:
     sdk: flutter
   http: ^1.2.0

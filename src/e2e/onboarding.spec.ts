@@ -8,7 +8,7 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/website-builder');
 
     // Wait for the Smart Builder welcome screen
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What are you building today?' })).toBeVisible();
 
     // Fill in the bio
     await page.locator('#bio-input').fill("I bake custom vegan cakes in Seattle. Maya's Cakes.");

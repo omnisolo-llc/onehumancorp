@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { SmartBlock } from "../builder/components";
 import { Tooltip, useWalkthrough } from "../../components/help";
+import Confetti from "react-confetti";
 
 export default function WebsiteBuilderPage() {
   const [bio, setBio] = useState("");
@@ -123,7 +124,7 @@ export default function WebsiteBuilderPage() {
 
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
+              <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What are you building today?</h1>
               <p className="text-gray-500 text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
@@ -171,7 +172,7 @@ export default function WebsiteBuilderPage() {
         <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 justify-center items-center"
              style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-500 font-medium">Agents are building your store...</p>
+            <p className="text-gray-500 font-medium">Our AI (The Promoter) is designing your site...</p>
         </div>
       </div>
     );
@@ -179,8 +180,11 @@ export default function WebsiteBuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden text-center p-8 justify-center"
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter relative overflow-hidden">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+           <Confetti width={typeof window !== 'undefined' ? window.innerWidth : 375} height={typeof window !== 'undefined' ? window.innerHeight : 812} recycle={false} numberOfPieces={200} />
+        </div>
+        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden text-center p-8 justify-center z-10"
              style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -192,6 +196,14 @@ export default function WebsiteBuilderPage() {
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
+
+          <button
+            className="w-full bg-pink-500 text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-pink-600 mb-4"
+            style={{ borderRadius: '8px' }}
+            onClick={() => {}}
+          >
+            Share on Instagram
+          </button>
 
           <button
             className="w-full bg-gray-100 text-gray-800 font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
