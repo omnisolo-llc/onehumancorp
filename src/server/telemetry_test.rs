@@ -590,3 +590,35 @@ fn test_multi_tenant_pii_leakage_guardrail() {
     assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
     assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
 }
+
+#[test]
+fn test_hybrid_privacy_audit() {
+    // Automated check for PII leakage in multi-tenant environments
+    // Verify that data handling in Cloud vs Standalone mode ensures privacy-by-design
+    let payload_cloud = serde_json::json!({
+        "organization_id": "org-cloud-prod",
+        "tenant_id": "tenant-cloud",
+        "data": {
+            "user_email": "cloud-user@example.com",
+            "query": "what is my account balance"
+        }
+    });
+
+    let payload_standalone = serde_json::json!({
+        "session_id": "local-session-123",
+        "data": {
+            "user_email": "local-user@example.com",
+            "query": "what is my account balance"
+        }
+    });
+
+    let redacted_cloud = ::server_telemetry::redact_interface_pii(payload_cloud);
+    let redacted_standalone = ::server_telemetry::redact_interface_pii(payload_standalone);
+
+    assert_eq!(redacted_cloud["organization_id"], "org-cloud-prod", "organization_id must be kept for multi-tenant analytics");
+
+    assert_eq!(redacted_standalone["session_id"], "[REDACTED]", "session_id must be redacted");
+
+    assert_eq!(redacted_cloud["data"]["user_email"], "[REDACTED]", "user_email must be redacted in cloud");
+    assert_eq!(redacted_standalone["data"]["user_email"], "[REDACTED]", "user_email must be redacted in standalone");
+}
