@@ -746,7 +746,7 @@ impl PromoterWorker {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
 
-                            let prompt = format!("Generate a catchy and engaging social media post (Instagram/X) for our new product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.", product_name);
+                            let prompt = format!("Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Ensure the drafts include emojis and ask questions to drive engagement. Be professional but exciting.", product_name);
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
@@ -761,14 +761,14 @@ impl PromoterWorker {
                             }
 
                             let task_id = Uuid::new_v4().to_string();
-                            let title = format!("Social Media Draft: {}", product_name);
+                            let title = format!("7-Day Social Calendar: {}", product_name);
 
                             match &db_social.store {
                                 crate::db::DbStore::Postgres => {
                                     let _ = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, 'The Promoter drafted a social media post for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                        VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
                                         "#
                                     )
                                     .bind(&task_id)
@@ -782,7 +782,7 @@ impl PromoterWorker {
                                     let _ = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, 'The Promoter drafted a social media post for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
+                                        VALUES (?, ?, ?, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
                                         "#
                                     )
                                     .bind(&task_id)
