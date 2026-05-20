@@ -63,14 +63,24 @@ export default function BuilderPage() {
       });
 
       const data = await response.json();
-      const blocks = data.pages[0].blocks.map((b: any) => ({
+      const newBlocks = data.pages[0].blocks.map((b: any) => ({
         type: b.block_type === 'HeroBlock' ? 'Hero' :
               b.block_type === 'ProductGridBlock' ? 'Catalog' :
               b.block_type === 'ServiceBookingBlock' ? 'Booking' :
               b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
         props: b.content
       }));
-      setBlocks(blocks);
+
+      // Inject Viral Loop: Every new store gets a Referral block by default
+      newBlocks.push({
+        type: 'Referral',
+        props: {
+          offerTitle: "Refer a Friend & Earn",
+          offerDescription: "Get 20% off your next purchase when a friend buys from us!"
+        }
+      });
+
+      setBlocks(newBlocks);
       setStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -84,7 +94,8 @@ export default function BuilderPage() {
         block_type: b.type === 'Hero' ? 'HeroBlock' :
                     b.type === 'Catalog' ? 'ProductGridBlock' :
                     b.type === 'Booking' ? 'ServiceBookingBlock' :
-                    b.type === 'Testimonials' ? 'TestimonialBlock' : b.type,
+                    b.type === 'Testimonials' ? 'TestimonialBlock' :
+                    b.type === 'Referral' ? 'ReferralBlock' : b.type,
         content: b.props,
         sort_order: i
       }));
