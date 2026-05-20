@@ -71,9 +71,22 @@ where
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
+        .route("/referrals/click", post(handle_referral_click))
+        .route("/referrals/convert", post(handle_referral_convert))
+        .route("/team-invites/accept", post(handle_team_invite_accept))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralIdRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InviteIdRequest {
+    pub id: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateTeamInviteRequest {
@@ -171,6 +184,34 @@ async fn handle_create_team_invite(
     }
 }
 
+async fn handle_referral_click(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ReferralIdRequest>,
+) -> Result<Json<()>, StatusCode> {
+    state.hub.referral_tracker().record_click(&req.id);
+    Ok(Json(()))
+}
+
+async fn handle_referral_convert(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ReferralIdRequest>,
+) -> Result<Json<()>, StatusCode> {
+    state.hub.referral_tracker().record_conversion(&req.id);
+    Ok(Json(()))
+}
+
+async fn handle_team_invite_accept(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<InviteIdRequest>,
+) -> Result<Json<()>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.accept_invite(&req.id).await {
+        Ok(_) => Ok(Json(())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
 
 
 #[cfg(test)]
@@ -226,12 +267,45 @@ mod tests {
         assert!(!get_res_json.invites.is_empty());
 
         let mut found = false;
+        let mut invite_id = String::new();
         for inv in &get_res_json.invites {
             if inv.team_id == "team-test-direct" && inv.invitee_id == "user-abc" {
                 found = true;
+                invite_id = inv.id.clone();
                 break;
             }
         }
         assert!(found);
+
+        let accept_req = InviteIdRequest {
+            id: invite_id,
+        };
+        let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
+        assert!(accept_res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_referral_click_and_convert() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let click_req = ReferralIdRequest {
+            id: "ref-code-123".to_string(),
+        };
+        let res = handle_referral_click(Extension(state.clone()), Json(click_req)).await;
+        assert!(res.is_ok());
+
+        let convert_req = ReferralIdRequest {
+            id: "ref-code-123".to_string(),
+        };
+        let res = handle_referral_convert(Extension(state.clone()), Json(convert_req)).await;
+        assert!(res.is_ok());
     }
 }
