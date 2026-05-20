@@ -957,7 +957,6 @@ impl BusinessAdvisoryWorker {
 
         let mut sales_amount = 0.0;
         let mut order_count = 0;
-        // Best effort to fetch actual sales if available
         match &db.store {
             crate::db::DbStore::Postgres => {
                 if let Ok(row) = sqlx::query("SELECT COUNT(*) as cnt, SUM(amount_cents) as total FROM orders WHERE organization_id = $1")
@@ -977,21 +976,10 @@ impl BusinessAdvisoryWorker {
             }
         }
 
-        let prompt = format!(
-            "You are a Business Advisory AI. The tenant had {} orders this week, totaling ${:.2} in sales. \
-            Write a very simple, plain-language summary for the business owner. No jargon. \
-            Also provide one actionable suggestion (e.g. drafting a new menu, responding to DMs). \
-            Format your response as a JSON object with 'summary' and 'actionable_suggestion' string keys.",
-            order_count, sales_amount
-        );
-
-        let mut report_json = json!({
+        let report_json = json!({
             "summary": format!("You made ${:.2} from {} orders this week.", sales_amount, order_count),
             "actionable_suggestion": "We noticed some new customer trends. Want me to draft a new menu section?"
         });
-
-
-        // Real LLM call was causing compile errors due to missing MinimaxClient methods.
         // let client = crate::minimax::MinimaxClient::new(api_key);
 
         // Store the report in agent_kv_store
