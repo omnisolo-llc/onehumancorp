@@ -1,0 +1,85 @@
+--- src/server/sip.rs
++++ src/server/sip.rs
+@@ -262,6 +262,70 @@
+         Ok(())
+     }
+
++    pub async fn get_pending_approvals(&self, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
++        let mut results = Vec::new();
++        match &self.store {
++            DbStore::Postgres => {
++                let rows = sqlx::query("SELECT id, status, payload, created_at, updated_at, action_risk, approval_status FROM agent_missions WHERE tenant_id = $1 AND approval_status = 'PENDING' AND action_risk = 'HIGH'")
++                    .bind(tenant_id)
++                    .fetch_all(&self.pool)
++                    .await?;
++                for row in rows {
++                    let id: String = row.get("id");
++                    let status: String = row.get("status");
++                    let payload: String = row.get("payload");
++                    let action_risk: String = row.get("action_risk");
++                    let approval_status: String = row.get("approval_status");
++
++                    let mut val = serde_json::from_str::<serde_json::Value>(&payload).unwrap_or(serde_json::json!({}));
++                    if let Some(obj) = val.as_object_mut() {
++                        obj.insert("id".to_string(), serde_json::Value::String(id));
++                        obj.insert("status".to_string(), serde_json::Value::String(status));
++                        obj.insert("action_risk".to_string(), serde_json::Value::String(action_risk));
++                        obj.insert("approval_status".to_string(), serde_json::Value::String(approval_status));
++                    }
++                    results.push(val);
++                }
++            }
++            DbStore::Sqlite(pool) => {
++                let rows = sqlx::query("SELECT id, status, payload, created_at, updated_at, action_risk, approval_status FROM agent_missions WHERE tenant_id = ? AND approval_status = 'PENDING' AND action_risk = 'HIGH'")
++                    .bind(tenant_id)
++                    .fetch_all(pool)
++                    .await?;
++                for row in rows {
++                    let id: String = row.get("id");
++                    let status: String = row.get("status");
++                    let payload: String = row.get("payload");
++                    let action_risk: String = row.get("action_risk");
++                    let approval_status: String = row.get("approval_status");
++
++                    let mut val = serde_json::from_str::<serde_json::Value>(&payload).unwrap_or(serde_json::json!({}));
++                    if let Some(obj) = val.as_object_mut() {
++                        obj.insert("id".to_string(), serde_json::Value::String(id));
++                        obj.insert("status".to_string(), serde_json::Value::String(status));
++                        obj.insert("action_risk".to_string(), serde_json::Value::String(action_risk));
++                        obj.insert("approval_status".to_string(), serde_json::Value::String(approval_status));
++                    }
++                    results.push(val);
++                }
++            }
++        }
++        Ok(results)
++    }
++
++    pub async fn decide_approval(&self, mission_id: &str, tenant_id: &str, approved: bool) -> Result<(), sqlx::Error> {
++        let new_approval_status = if approved { "APPROVED" } else { "REJECTED" };
++        let new_status = if approved { "PENDING" } else { "FAILED" };
++
++        match &self.store {
++            DbStore::Postgres => {
++                let _ = sqlx::query("UPDATE agent_missions SET approval_status = $1, status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4")
++                    .bind(new_approval_status)
++                    .bind(new_status)
++                    .bind(mission_id)
++                    .bind(tenant_id)
++                    .execute(&self.pool)
++                    .await?;
++            }
++            DbStore::Sqlite(pool) => {
++                let _ = sqlx::query("UPDATE agent_missions SET approval_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
++                    .bind(new_approval_status)
++                    .bind(new_status)
++                    .bind(mission_id)
++                    .bind(tenant_id)
++                    .execute(pool)
++                    .await?;
++            }
++        }
++        Ok(())
++    }
++
+     pub async fn prune_stale_missions(&self, timeout: chrono::Duration) -> Result<(), sqlx::Error> {
