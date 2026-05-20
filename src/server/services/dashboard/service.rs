@@ -416,6 +416,46 @@ impl DashboardService for MyDashboardService {
             org
         };
 
+        let daily_briefing = Some(DailyBriefing {
+            title: "Good Morning, Carlos".to_string(),
+            date: chrono::Local::now().format("%A, %b %e").to_string(),
+            summary: vec![
+                "You had 8 new inquiries this week.".to_string(),
+                "Vegan cake requests doubled in the last 3 days.".to_string(),
+                "Consider adding a vegan chocolate option to your catalog!".to_string(),
+            ],
+        });
+
+        let agent_tasks = vec![
+            AgentTask {
+                id: "t_1".to_string(),
+                agent_name: "The Ambassador".to_string(),
+                agent_role: "Customer Success".to_string(),
+                action_type: "Draft Reply".to_string(),
+                description: "Drafted a reply to a vegan cake inquiry from Maria.".to_string(),
+                preview_text: "Hi Maria! Thanks for reaching out. Yes, we can absolutely make a vegan version of our classic chocolate cake. Would you like to proceed with an order for this Saturday?".to_string(),
+                status: "pending".to_string(),
+            },
+            AgentTask {
+                id: "t_2".to_string(),
+                agent_name: "The Generative Promoter".to_string(),
+                agent_role: "Marketing".to_string(),
+                action_type: "Social Post".to_string(),
+                description: "Generated an Instagram post for the new Summer Berry Tart.".to_string(),
+                preview_text: "Summer is here, and so is our new Berry Tart! 🍓 Made with local strawberries and a buttery crust. #SummerDesserts #LocalBakery".to_string(),
+                status: "pending".to_string(),
+            },
+            AgentTask {
+                id: "t_3".to_string(),
+                agent_name: "The Vigilant Manager".to_string(),
+                agent_role: "Operations".to_string(),
+                action_type: "Inventory Alert".to_string(),
+                description: "Low stock alert: Almond Flour (2 bags left).".to_string(),
+                preview_text: "Would you like me to place an order for 10 bags of Almond Flour from your primary supplier?".to_string(),
+                status: "pending".to_string(),
+            },
+        ];
+
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents,
@@ -425,6 +465,8 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            daily_briefing,
+            agent_tasks,
         }))
     }
 

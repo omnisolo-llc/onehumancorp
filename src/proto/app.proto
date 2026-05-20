@@ -39,6 +39,24 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
+  DailyBriefing daily_briefing = 9;
+  repeated AgentTask agent_tasks = 10;
+}
+
+message DailyBriefing {
+  string title = 1;
+  string date = 2;
+  repeated string summary = 3;
+}
+
+message AgentTask {
+  string id = 1;
+  string agent_name = 2;
+  string agent_role = 3;
+  string action_type = 4;
+  string description = 5;
+  string preview_text = 6;
+  string status = 7;
 }
 
 message GetDashboardRequest {
