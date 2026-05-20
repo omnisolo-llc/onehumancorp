@@ -1,222 +1,78 @@
 # OHC Tool Integration Research Report Q2
 
-## Overview
-This report evaluates third-party tools across 7 key categories to expand the capabilities of Open Help Center (OHC) for small business owners. The goal is to provide seamless integrations that solve real-world pain points, making OHC an indispensable central hub for managing business operations.
+## 1. Social Media Integration: Meta Graph API (Instagram/Facebook)
+**Title:** Meta Graph API Integration for Unified Social Inbox
+**Problem Statement:** Small business owners struggle to keep up with customer messages scattered across Instagram, Facebook, and WhatsApp. It's easy to miss inquiries or sales opportunities because they have to constantly switch between apps.
+**Research Report:** Meta provides the Graph API, which allows accessing Instagram Direct Messages, Facebook Messenger, and WhatsApp Business API. Integrating this directly provides a reliable, official path for two-way communication. Competitors like ManyChat or Ayrshare exist, but direct Meta integration saves the SMB owner third-party subscription fees and gives us more control over the user experience.
+- **Pricing Estimate:** Free for basic Instagram/Messenger API limits. WhatsApp Business API is roughly $0.01 to $0.08 per conversation depending on region and message type.
+- **Cloud vs Standalone:** Fully compatible with both Cloud (via centralized OAuth application) and Standalone modes (via direct API keys or a bridge relay).
+**Design Doc:** OHC will provide a "Connect Socials" button in the dashboard. Upon clicking, the user goes through the standard Meta OAuth flow to grant OHC permission to read and reply to messages. Incoming messages from any connected Meta platform will appear in the OHC unified inbox, and replies from the OHC dashboard will be sent back to the respective platform.
+**Implementation Prompt:** Implement a unified inbox feature that allows users to connect their Instagram and Facebook accounts. Users should be able to view incoming messages from these platforms in a single feed within the OHC dashboard and reply directly. Ensure a smooth onboarding flow for connecting accounts.
+**Priority:** P0
+**Estimated Scope:** Large
 
----
+## 2. Calendar & Scheduling: Google Calendar
+**Title:** Google Calendar Sync for Seamless Booking
+**Problem Statement:** Business owners waste time playing phone tag or exchanging emails just to find a time to meet with clients. They also risk double-booking themselves if their personal calendar isn't synced with their business availability.
+**Research Report:** Google Calendar is ubiquitous. A direct integration using the Google Calendar API enables two-way sync. Other options like Calendly or Cal.com are great but require users to set up and manage another account. Direct Google Calendar integration keeps the user in the OHC ecosystem and reduces friction.
+- **Pricing Estimate:** Free (API usage falls well within generous free tier limits for individual users).
+- **Cloud vs Standalone:** Fully compatible with both Cloud (central OAuth) and Standalone modes (local OAuth credentials).
+**Design Doc:** Users can authenticate their Google account from the OHC settings. Once connected, OHC will read the user's availability from their Google Calendar to present open slots to clients on the OHC booking page. When a client books a slot, OHC will automatically create an event on the user's Google Calendar.
+**Implementation Prompt:** Build a feature allowing users to connect their Google Calendar. The system should read free/busy times to prevent double-booking and automatically add new appointments scheduled through OHC directly to the user's Google Calendar.
+**Priority:** P1
+**Estimated Scope:** Medium
 
-## 1. Social Media Integration
+## 3. Email Marketing: Resend
+**Title:** Integrated Email Campaigns via Resend
+**Problem Statement:** Sending newsletters or promotional emails to customers is complicated for small business owners. They often have to export their customer list from their main system and import it into a complex tool like Mailchimp, which is confusing and expensive.
+**Research Report:** Resend is a developer-first email API that is incredibly reliable, fast, and easy to integrate. While Mailchimp or Listmonk are powerful, Resend allows us to build a simplified, embedded email campaign tool directly within OHC. This means the business owner doesn't need to leave OHC or manage a separate subscription just to send a basic newsletter to their existing customer list.
+- **Pricing Estimate:** Free tier up to 3,000 emails/month. Then $20/month for 50,000 emails.
+- **Cloud vs Standalone:** Fully compatible with both Cloud and Standalone modes (API key based).
+**Design Doc:** A new "Campaigns" tab in the OHC dashboard will allow users to compose simple, text or image-based emails. The user selects their target audience (e.g., "All Customers", "Recent Customers") directly from their OHC contacts. Upon sending, OHC will dispatch the emails using the Resend API, handling unsubscribes and bounce tracking automatically.
+**Implementation Prompt:** Create an embedded email marketing tool where users can draft and send emails to their customer contacts. The tool should handle sending via a reliable API, provide basic open-rate tracking, and automatically manage unsubscribe requests.
+**Priority:** P1
+**Estimated Scope:** Medium
 
-### Title: Integrate Unified Social Media Inbox via ManyChat
-**Problem Statement:** Business owners spend countless hours manually replying to repetitive direct messages across Instagram, Facebook, and WhatsApp. They need a single place to see and reply to customer inquiries without jumping between apps.
+## 4. Payment Processing: Mercado Pago (LATAM Focus)
+**Title:** Mercado Pago Integration for LATAM Payments
+**Problem Statement:** Stripe is excellent, but it is not available or preferred in many Latin American countries. Small business owners in these regions need a local, trusted payment processor to accept online payments easily.
+**Research Report:** Mercado Pago is the dominant payment gateway in LATAM, offering high trust and widespread usage. It supports local payment methods (like Pix in Brazil or OXXO in Mexico). Integrating Mercado Pago ensures we can effectively serve SMBs in the LATAM market where Stripe falls short.
+- **Pricing Estimate:** No monthly fee. Roughly 3.99% to 4.99% per transaction depending on the country and settlement speed.
+- **Cloud vs Standalone:** Fully compatible with both Cloud and Standalone modes via API keys and webhooks (can use polling/pull model in Standalone if webhooks are unreachable).
+**Design Doc:** In the payment settings, users in supported regions can choose Mercado Pago as their payment provider. They will complete an OAuth flow to connect their Mercado Pago account. OHC checkout pages will then use Mercado Pago's checkout module or API to process payments, handling webhooks for payment success/failure status updates.
+**Implementation Prompt:** Integrate Mercado Pago as an alternative payment provider. Allow users to connect their account and enable customers to pay using Mercado Pago on the checkout page. The system must accurately track payment status and update order records accordingly.
+**Priority:** P2
+**Estimated Scope:** Large
 
-**Research Report:**
-* **Evaluated Tool:** ManyChat
-* **Pricing:** Free tier available (up to 1,000 contacts). Pro plans start at $15/month and scale with active contacts.
-* **Reputation:** Industry leader for visual flow builders and Meta integrations.
-* **Ease of Use:** Extremely user-friendly visual builder designed for non-technical users.
-* **Cloud/Standalone:** Works in both modes via webhook integration.
-* **Pros:** Official Instagram/WhatsApp partner; easy template system.
-* **Cons:** Costs can escalate quickly as contact lists grow.
+## 5. Shipping & Logistics: Shippo
+**Title:** Shippo Integration for Automated Shipping Labels
+**Problem Statement:** Fulfilling physical orders is a headache. Business owners manually copy customer addresses into carrier websites to buy shipping labels, which is slow and error-prone. They also struggle to provide accurate, real-time shipping costs at checkout.
+**Research Report:** Shippo provides a unified API for dozens of carriers (USPS, UPS, FedEx, DHL, etc.). It abstracts the complexity of dealing with individual carriers. EasyPost is a strong competitor, but Shippo's focus on SMBs and user-friendly dashboard (if they need to access it) gives it a slight edge.
+- **Pricing Estimate:** Free tier with standard USPS rates (pay $0.05 per label). Pro tier starts at $19/month for volume discounts.
+- **Cloud vs Standalone:** Fully compatible with both Cloud and Standalone modes.
+**Design Doc:** Upon receiving an order, the business owner can click a "Generate Shipping Label" button in the OHC order details page. OHC will call the Shippo API with the package details to get rates, allow the user to select a rate, and generate a printable PDF label. Tracking numbers will automatically be attached to the order and emailed to the customer.
+**Implementation Prompt:** Implement a shipping fulfillment flow using a unified shipping API. Users should be able to view real-time shipping rates, purchase labels directly from the order page, and have tracking information automatically sent to the customer.
+**Priority:** P2
+**Estimated Scope:** Large
 
-**Design Doc:**
-* **Trigger:** Customer sends a DM on Instagram/Facebook/WhatsApp.
-* **Action:** ManyChat routes the message to the OHC unified inbox. OHC can automatically reply using AI or allow the business owner to reply manually.
-* **User Experience:** The business owner sees a simple "Connect Facebook/Instagram" button in OHC settings. Once connected, all messages appear in a familiar chat interface within OHC. They can type replies directly in OHC, which are sent back to the customer's social app.
+## 6. SMS & Notifications: Twilio
+**Title:** Twilio SMS Notifications for Reliable Alerts
+**Problem Statement:** Many customers, especially in certain demographics or regions, do not check email frequently. Small business owners need a reliable way to send urgent updates, appointment reminders, or order confirmations directly to their customers' phones.
+**Research Report:** Twilio is the industry standard for programmatic SMS. It offers global reach and high deliverability. It handles complex telecom regulations better than most alternatives.
+- **Pricing Estimate:** Roughly $0.0079 per message sent in the US. Number rental is $1.15/month. Costs vary heavily by international destination.
+- **Cloud vs Standalone:** Fully compatible with both Cloud and Standalone modes.
+**Design Doc:** OHC will use the Twilio API to trigger SMS messages based on system events. Users can configure which events (e.g., "Appointment Reminder 24h before", "Order Shipped") trigger an SMS. The business owner will need to provision a phone number through the OHC interface (backed by Twilio).
+**Implementation Prompt:** Build an SMS notification system allowing business owners to send automated text messages for key events like appointment reminders and order updates. Include a straightforward way for the owner to manage their sending phone number and view delivery logs.
+**Priority:** P1
+**Estimated Scope:** Medium
 
-**Implementation Prompt:**
-Create a connection flow in OHC to link a ManyChat account. Build a unified inbox interface that displays incoming messages from connected channels. Allow the business owner to reply to messages directly from this interface.
-* **Priority:** P1 (High)
-* **Estimated Scope:** Large
-
----
-
-## 2. Calendar & Scheduling
-
-### Title: Automated Meeting Scheduling via Calendly
-**Problem Statement:** Scheduling consultations or meetings involves frustrating back-and-forth emails. Business owners need a simple link they can share that lets customers pick an available time automatically.
-
-**Research Report:**
-* **Evaluated Tool:** Calendly
-* **Pricing:** Free tier allows 1 event type. Standard plan starts at $10/month.
-* **Reputation:** The ubiquitous standard for scheduling. Highly reliable.
-* **Ease of Use:** Very intuitive for both the business owner and the customer.
-* **Cloud/Standalone:** Works well in Cloud mode; Standalone requires careful OAuth handling.
-* **Pros:** Deep integrations with Google/Outlook calendars, automatic timezone handling.
-* **Cons:** Advanced features (like routing or multiple event types) require a paid plan.
-
-**Design Doc:**
-* **Trigger:** Business owner needs to schedule a meeting.
-* **Action:** OHC generates a unique scheduling link or embeds the Calendly widget in the help center.
-* **User Experience:** The business owner connects their Google/Outlook calendar. OHC displays their personal scheduling link. Customers clicking "Book a Call" on the help center see a calendar view of available times in their own timezone and can book instantly.
-
-**Implementation Prompt:**
-Integrate a Calendly connection block in the OHC dashboard. Add a "Scheduling" widget to the customizable help center that embeds the business owner's Calendly booking page.
-* **Priority:** P0 (Critical)
-* **Estimated Scope:** Medium
-
----
-
-## 3. Email Marketing
-
-### Title: Customer List Sync & Campaigns via Mailchimp
-**Problem Statement:** Business owners want to email their customers about promotions or updates but struggle with exporting/importing lists and avoiding spam filters.
-
-**Research Report:**
-* **Evaluated Tool:** Mailchimp
-* **Pricing:** Free up to 500 contacts. Paid plans (Essentials) start around $13/month.
-* **Reputation:** One of the most famous and reliable email platforms.
-* **Ease of Use:** Famous for its easy drag-and-drop email builder.
-* **Cloud/Standalone:** Fully supported via API in both modes.
-* **Pros:** Great templates, solid analytics, easy to use.
-* **Cons:** Becomes expensive quickly for larger contact lists.
-
-**Design Doc:**
-* **Trigger:** A new customer signs up or purchases through OHC.
-* **Action:** OHC automatically adds the customer to a specific Mailchimp audience/list.
-* **User Experience:** The business owner links their Mailchimp account. They can then check a box in OHC to "Automatically sync customers to Mailchimp." When they want to send a newsletter, they log into Mailchimp and their list is already perfectly up-to-date.
-
-**Implementation Prompt:**
-Build a synchronization engine that connects OHC customer records to a Mailchimp audience. Ensure the sync is bidirectional (if a user unsubscribes in Mailchimp, OHC notes this). Add a simple "Connect Mailchimp" button to the marketing settings.
-* **Priority:** P1 (High)
-* **Estimated Scope:** Medium
-
----
-
-## 4. Payment Processing
-
-### Title: Localized LATAM Payments via Mercado Pago
-**Problem Statement:** While Stripe is great globally, small businesses in Latin America need to accept local payment methods (like Pix in Brazil or OXXO in Mexico) that their customers actually use.
-
-**Research Report:**
-* **Evaluated Tool:** Mercado Pago
-* **Pricing:** Pay-as-you-go per transaction (varies by country, typically 3-5%).
-* **Reputation:** The dominant and most trusted payment gateway in LATAM.
-* **Ease of Use:** Standard checkout flow, very familiar to LATAM consumers.
-* **Cloud/Standalone:** API fully supports both environments.
-* **Pros:** Supports critical local payment methods that Stripe misses.
-* **Cons:** Customer support can sometimes be slow to respond.
-
-**Design Doc:**
-* **Trigger:** Customer checks out or pays an invoice in OHC.
-* **Action:** OHC presents Mercado Pago as a payment option, handling the redirect or embedded checkout.
-* **User Experience:** The business owner in a supported country can connect Mercado Pago with one click. Their customers see familiar, local payment options at checkout, increasing conversion rates significantly.
-
-**Implementation Prompt:**
-Add Mercado Pago as an alternative payment gateway alongside Stripe. Create the checkout flow to support local payment methods based on the customer's region. Display clear transaction fee estimates to the business owner.
-* **Priority:** P2 (Medium)
-* **Estimated Scope:** Large
-
----
-
-## 5. Shipping & Logistics
-
-### Title: Automated Shipping Labels & Rates via Shippo
-**Problem Statement:** Calculating shipping costs manually and typing out shipping labels is tedious and error-prone for businesses selling physical goods.
-
-**Research Report:**
-* **Evaluated Tool:** Shippo
-* **Pricing:** Free tier available (pay only for postage). Pro features start at $19/month.
-* **Reputation:** Strong multi-carrier platform with good developer tools.
-* **Ease of Use:** Simplifies complex shipping rules into easy-to-understand options.
-* **Cloud/Standalone:** Supported in both modes via REST API.
-* **Pros:** Gives small businesses access to discounted carrier rates.
-* **Cons:** International shipping setup can still be complicated for absolute beginners.
-
-**Design Doc:**
-* **Trigger:** An order is placed that requires physical shipping.
-* **Action:** OHC calculates live shipping rates at checkout and allows the business owner to click "Print Label" from the order screen.
-* **User Experience:** The business owner sets their box sizes in OHC. At checkout, customers see accurate shipping costs. When an order comes in, the business owner clicks one button in OHC to buy and print the shipping label, and the tracking number is automatically emailed to the customer.
-
-**Implementation Prompt:**
-Integrate the Shippo API to provide real-time shipping rate calculations at checkout. Add a "Fulfill Order" interface in the OHC dashboard that allows the business owner to purchase and download shipping labels in PDF format.
-* **Priority:** P2 (Medium)
-* **Estimated Scope:** Large
-
----
-
-## 6. SMS & Notifications
-
-### Title: Reliable SMS Alerts via Twilio
-**Problem Statement:** Customers often miss email notifications. For urgent updates (like appointment reminders or order deliveries), business owners need to send text messages, especially for user bases with lower English proficiency.
-
-**Research Report:**
-* **Evaluated Tool:** Twilio
-* **Pricing:** Pay-as-you-go (e.g., ~$0.0079 per outbound SMS in the US).
-* **Reputation:** The gold standard for programmatic communications.
-* **Ease of Use:** Developer-centric; OHC must abstract all the complexity for the user.
-* **Cloud/Standalone:** Excellent support in both modes.
-* **Pros:** Highly reliable, global reach, massive scale.
-* **Cons:** Requires a technical integration layer; business owners cannot just "log in to Twilio" easily to set it up themselves.
-
-**Design Doc:**
-* **Trigger:** An important event occurs (e.g., appointment tomorrow).
-* **Action:** OHC sends a customized SMS to the customer via Twilio.
-* **User Experience:** The business owner simply toggles "Send SMS Reminders" in their OHC settings and tops up a small balance. OHC handles all the complex Twilio account provisioning and phone number purchasing behind the scenes.
-
-**Implementation Prompt:**
-Build an SMS notification engine powered by Twilio. Create a credit system or bundled pricing so the business owner doesn't have to create their own Twilio account. Allow the business owner to customize the SMS templates for key events like order confirmations and appointment reminders.
-* **Priority:** P1 (High)
-* **Estimated Scope:** Large
-
----
-
-## 7. Video Conferencing
-
-### Title: Auto-Generated Meeting Links via Zoom
-**Problem Statement:** When a business owner books an online consultation, they currently have to manually create a Zoom link and email it to the client, leading to lost links and confusion.
-
-**Research Report:**
-* **Evaluated Tool:** Zoom
-* **Pricing:** Free tier allows up to 40-minute meetings. Pro plan is $14.99/month.
-* **Reputation:** Ubiquitous, stable, and widely understood by consumers.
-* **Ease of Use:** Very familiar join experience for almost all users.
-* **Cloud/Standalone:** API fully supported, though OAuth requires careful handling.
-* **Pros:** Everyone knows how to use it; highly reliable video quality.
-* **Cons:** The 40-minute limit on the free tier can be a surprise for new business owners.
-
-**Design Doc:**
-* **Trigger:** An online consultation or meeting is scheduled via OHC.
-* **Action:** OHC automatically generates a unique Zoom link and adds it to the calendar invite.
-* **User Experience:** The business owner connects their Zoom account once. Whenever a customer books a "Virtual Consultation," OHC instantly creates the Zoom meeting, puts the link on the receipt, and emails the link to both parties. No manual copying/pasting required.
-
-**Implementation Prompt:**
-Integrate Zoom's OAuth flow to allow business owners to connect their accounts. Update the scheduling system to automatically request and attach a Zoom meeting URL to new calendar events when the location is set to "Virtual."
-* **Priority:** P1 (High)
-* **Estimated Scope:** Medium
-
----
-
-## Visual Summary
-
-### Competitive Landscape Matrix
-| Category | Tool | Starting Cost | Key Advantage | Cloud Support | Standalone Support |
-|---|---|---|---|---|---|
-| Social | ManyChat | $0 | Visual flow builder | Yes | Yes |
-| Calendar | Calendly | $0 | Industry standard | Yes | Yes |
-| Email | Mailchimp | $0 | Easy templates | Yes | Yes |
-| Payments | Mercado Pago | Pay-as-you-go | LATAM localization | Yes | Yes |
-| Shipping | Shippo | $0 | Discounted rates | Yes | Yes |
-| SMS | Twilio | Pay-as-you-go | Global reliability | Yes | Yes |
-| Video | Zoom | $0 | Familiarity | Yes | Yes |
-
-### OHC Integration Architecture Map
-
-```mermaid
-graph TD
-    User([Small Business Owner]) --> OHC[Open Help Center]
-    Customer([End Customer]) --> HelpCenter[OHC Public Page]
-
-    HelpCenter --> Calendly[Calendly Widget]
-    HelpCenter --> MP[Mercado Pago Checkout]
-
-    OHC --> MC[ManyChat Webhooks]
-    OHC --> Mailchimp[Mailchimp API]
-    OHC --> Shippo[Shippo API]
-    OHC --> Twilio[Twilio SMS]
-    OHC --> Zoom[Zoom OAuth]
-```
-
-## Recommendations
-* **OHC should prioritize Calendly (P0) immediately**, as scheduling is a universal pain point for service-based small businesses and has an incredibly high ROI for user retention.
-* **OHC should handle Twilio complexity directly.** Small business owners should not create Twilio accounts; OHC should provide "SMS Credits" as a built-in feature to abstract away the developer-centric nature of Twilio.
+## 7. Video Conferencing: Google Meet
+**Title:** Auto-Generated Google Meet Links for Virtual Appointments
+**Problem Statement:** Business owners offering virtual consultations or lessons have to manually create a video link and email it to the client for every single booking, which is tedious and easy to forget.
+**Research Report:** Google Meet is free, widely accessible, and requires no software installation for the attendee. Since we are already prioritizing Google Calendar integration, adding Google Meet is a natural extension. Zoom is also popular but often requires the attendee to download an app, adding friction.
+- **Pricing Estimate:** Free (included with Google Workspace / Gmail accounts).
+- **Cloud vs Standalone:** Fully compatible with both Cloud and Standalone modes.
+**Design Doc:** When a user configures a service in OHC as a "Virtual Appointment" and connects their Google account, OHC will request permission to create Google Meet links. When a client books this service, OHC will automatically generate a unique Google Meet link and include it in the calendar invite and confirmation emails for both parties.
+**Implementation Prompt:** Enhance the booking system to support virtual appointments. When this option is selected, the system should automatically generate a unique video conferencing link and seamlessly include it in all communication and calendar events related to the booking.
+**Priority:** P2
+**Estimated Scope:** Small
