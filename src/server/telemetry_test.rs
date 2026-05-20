@@ -590,3 +590,24 @@ fn test_multi_tenant_pii_leakage_guardrail() {
     assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
     assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
 }
+
+#[test]
+fn test_harness_init_latency() {
+    use ::server_telemetry::{track_harness_init_latency, get_harness_init_latency_histogram};
+    let _ = get_harness_init_latency_histogram();
+    track_harness_init_latency(0.42);
+}
+
+#[test]
+fn test_harness_db_io_latency() {
+    use ::server_telemetry::{track_harness_db_io_latency, get_harness_db_io_latency_histogram};
+    let _ = get_harness_db_io_latency_histogram();
+    track_harness_db_io_latency("insert", 0.015);
+}
+
+#[test]
+fn test_sub_agent_spawn_latency() {
+    use ::server_telemetry::{track_sub_agent_spawn_latency, get_sub_agent_spawn_histogram};
+    let _ = get_sub_agent_spawn_histogram();
+    track_sub_agent_spawn_latency(0.015);
+}

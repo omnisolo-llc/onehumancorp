@@ -23,18 +23,26 @@ impl LocalProxyClient {
             .await
             .unwrap();
 
+        let start = std::time::Instant::now();
+        let provider = create_blob_provider();
+        let duration = start.elapsed().as_secs_f64();
+        ::server_telemetry::track_harness_init_latency(duration);
         Self {
             client: McpReverseTunnelServiceClient::new(channel),
             spiffe_id,
-            blob_provider: create_blob_provider(),
+            blob_provider: provider,
         }
     }
 
     pub fn new_with_channel(client: McpReverseTunnelServiceClient<Channel>, spiffe_id: String) -> Self {
+        let start = std::time::Instant::now();
+        let provider = create_blob_provider();
+        let duration = start.elapsed().as_secs_f64();
+        ::server_telemetry::track_harness_init_latency(duration);
         Self {
             client,
             spiffe_id,
-            blob_provider: create_blob_provider(),
+            blob_provider: provider,
         }
     }
 

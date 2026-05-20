@@ -36,6 +36,16 @@
           "legendFormat": "{{deployment_mode}} {{operation}} Latency (p95)"
         }
       ]
+    },
+    {
+      "title": "Sub-Agent Spawning Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(sub_agent_spawn_latency_seconds_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}} Sub-Agent Spawn Latency (p95)"
+        }
+      ]
     }
   ]
 }

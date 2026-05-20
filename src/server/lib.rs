@@ -1272,6 +1272,7 @@ impl HubService for MyHubService {
             return Err(Status::resource_exhausted("VRAM quota limit exceeded, cannot spawn sub-agent"));
         }
         
+        let start = std::time::Instant::now();
         let now_nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         let sub_agent_id = format!("sub-agent-{}-{}", req.target_role, now_nano);
         
@@ -1285,6 +1286,8 @@ impl HubService for MyHubService {
         };
         
         self.hub.register_agent(sub_agent);
+        let duration = start.elapsed().as_secs_f64();
+        ::server_telemetry::track_sub_agent_spawn_latency(duration);
         
         // Prompt injection checks
         if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {

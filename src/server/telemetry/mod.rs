@@ -347,3 +347,75 @@ pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
         opentelemetry::KeyValue::new("step", step.to_string()),
     ]);
 }
+
+pub async fn record_mcp_proxy_connections_active(pool: &PgPool, spiffe_id: &str, delta: f32) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "mcp_proxy_connections_active",
+        "gauge",
+        delta,
+        serde_json::json!({
+            "spiffe_id": spiffe_id,
+            "deployment_mode": get_deployment_mode(),
+        }),
+    )
+    .await
+}
+
+static HARNESS_INIT_LATENCY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+
+pub fn get_harness_init_latency_histogram() -> &'static Histogram<f64> {
+    HARNESS_INIT_LATENCY_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter.f64_histogram("harness_init_latency_seconds")
+            .with_description("Latency of harness initialization in seconds")
+            .build()
+    })
+}
+
+pub fn track_harness_init_latency(duration_sec: f64) {
+    let deployment_mode = get_deployment_mode();
+    let histogram = get_harness_init_latency_histogram();
+    histogram.record(duration_sec, &[
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode),
+    ]);
+}
+
+static HARNESS_DB_IO_LATENCY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+
+pub fn get_harness_db_io_latency_histogram() -> &'static Histogram<f64> {
+    HARNESS_DB_IO_LATENCY_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter.f64_histogram("harness_db_io_latency_seconds")
+            .with_description("Latency of harness DB I/O operations in seconds")
+            .build()
+    })
+}
+
+pub fn track_harness_db_io_latency(operation: &str, duration_sec: f64) {
+    let deployment_mode = get_deployment_mode();
+    let histogram = get_harness_db_io_latency_histogram();
+    histogram.record(duration_sec, &[
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode),
+        opentelemetry::KeyValue::new("operation", operation.to_string()),
+    ]);
+}
+
+static SUB_AGENT_SPAWN_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+
+pub fn get_sub_agent_spawn_histogram() -> &'static Histogram<f64> {
+    SUB_AGENT_SPAWN_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter.f64_histogram("sub_agent_spawn_latency_seconds")
+            .with_description("Latency of sub-agent spawning in seconds")
+            .build()
+    })
+}
+
+pub fn track_sub_agent_spawn_latency(duration_sec: f64) {
+    let deployment_mode = get_deployment_mode();
+    let histogram = get_sub_agent_spawn_histogram();
+    histogram.record(duration_sec, &[
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode),
+    ]);
+}

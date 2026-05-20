@@ -7,8 +7,12 @@ pub struct LocalShellTask {
 
 impl LocalShellTask {
     pub fn new(pool: Option<PgPool>) -> Self {
+        let start = std::time::Instant::now();
+        let manager = SandboxManager::new(pool);
+        let duration = start.elapsed().as_secs_f64();
+        ::server_telemetry::track_harness_init_latency(duration);
         LocalShellTask {
-            manager: SandboxManager::new(pool),
+            manager,
         }
     }
 

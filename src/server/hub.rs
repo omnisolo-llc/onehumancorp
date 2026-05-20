@@ -427,6 +427,7 @@ impl Hub {
             return Err("VRAM quota limit exceeded".to_string());
         }
 
+        let start = std::time::Instant::now();
         let sub_agent_id = format!("sub-agent-{}-{}", target_role, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
         let sub_agent = Agent {
             id: sub_agent_id.clone(),
@@ -444,6 +445,8 @@ impl Hub {
         // Spawn K8s Pod via Operator
         // We simulate context isolation and result aggregation here.
         let pod_id = format!("pod-sub-agent-{}-{}", target_role, uuid::Uuid::new_v4());
+        let duration = start.elapsed().as_secs_f64();
+        ::server_telemetry::track_sub_agent_spawn_latency(duration);
 
         let k8s_result = format!(
             "Sub-agent {} completed in context {}: {}",

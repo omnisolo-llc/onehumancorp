@@ -47,7 +47,10 @@ impl ViolationStore {
         // Emit OpenTelemetry metric
         self.violation_counter.add(
             1,
-            &[KeyValue::new("type", violation_type.to_string())],
+            &[
+                KeyValue::new("type", violation_type.to_string()),
+                KeyValue::new("deployment_mode", ::server_telemetry::get_deployment_mode()),
+            ],
         );
 
         // Save to DB if pool is available
@@ -74,6 +77,7 @@ impl ViolationStore {
                 .execute(&mut *tx)
                 .await?;
 
+            let start = std::time::Instant::now();
             sqlx::query(
                 r#"
                 INSERT INTO agent_violations (id, tenant_id, agent_id, session_id, violation_type, details)
@@ -88,6 +92,8 @@ impl ViolationStore {
             .bind(json_value)
             .execute(&mut *tx)
             .await?;
+            let duration = start.elapsed().as_secs_f64();
+            ::server_telemetry::track_harness_db_io_latency("insert_violation", duration);
 
             tx.commit().await?;
         }
