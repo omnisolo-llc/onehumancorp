@@ -230,16 +230,6 @@ async fn handle_create_team_invite(
     }
 }
 
-async fn handle_referral_generate(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<ReferralGenerateRequest>,
-) -> impl IntoResponse {
-    let ref_code = uuid::Uuid::new_v4().to_string();
-    Json(ReferralGenerateResponse {
-        referral_link: format!("https://ohc.app/ref/{}", ref_code),
-    })
-}
-
 
 #[cfg(test)]
 mod tests {
