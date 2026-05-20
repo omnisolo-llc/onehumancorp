@@ -214,6 +214,25 @@ impl OnboardingAgent {
             };
             let _ = hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event);
 
+
+            // Schedule the weekly health report via the internal task queue for The Advisor
+            let scheduled_at = chrono::Utc::now() + chrono::Duration::days(7);
+            let payload = serde_json::json!({
+                "agent_role": "The Advisor",
+                "task": "weekly_health_report",
+                "tenant_id": org_id_clone3.clone()
+            });
+            if let Err(e) = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $2, NULL, $3, 'QUEUED', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&org_id_clone3)
+                .bind(serde_json::to_string(&payload).unwrap_or_default())
+                .bind(scheduled_at.naive_utc())
+                .execute(&pool)
+                .await
+            {
+                tracing::error!("Failed to schedule weekly health report: {}", e);
+            }
+
             Ok::<(), String>(())
         });
 
