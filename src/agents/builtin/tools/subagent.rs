@@ -70,7 +70,11 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        Ok(inner.result)
+                        let mut summary = inner.result;
+                        if summary.chars().count() > 8000 {
+                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
+                        }
+                        Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", task, summary))
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
@@ -106,7 +110,11 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, inner.result))
+                        let mut summary = inner.result;
+                        if summary.chars().count() > 8000 {
+                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
+                        }
+                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, summary))
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
@@ -149,13 +157,18 @@ When finished or if you need to report progress, write your final summary to {}.
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        stdout
+                        let mut summary = stdout;
+                        if summary.chars().count() > 8000 {
+                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
+                        }
+                        summary
                     } else {
                         format!("Subagent error: {}", stderr)
                     }
                 }
                 Err(e) => format!("Subagent failed: {}", e),
             };
+
 
             use tokio::io::AsyncWriteExt;
             if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
@@ -291,5 +304,25 @@ mod tests {
                 let _ = tokio::fs::remove_dir_all(parent_dir).await;
             });
         });
+    }
+
+    #[tokio::test]
+    async fn test_subagent_output_truncation() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let long_string = "a".repeat(9000);
+
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, &long_string, "")));
+
+        let executor = SubagentExecutor { runner };
+        let args = json!({
+            "task": "Test truncation",
+            "mode": "fork"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok");
+        let msg = result.unwrap();
+        assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");
+        assert!(msg.len() < 9000, "Expected output length to be less than 9000 after truncation");
     }
 }
