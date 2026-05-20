@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Text } from 'ink';
+import { Header } from './components/Header';
 import { AgentStatus } from './components/AgentStatus';
 import { ToolProgress } from './components/ToolProgress';
 import { MarkdownText } from './components/MarkdownText';
@@ -13,11 +14,8 @@ export const App = () => {
   const markdown = `# OHC Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" padding={1} width={80}>
-      <Box justifyContent="center" marginBottom={1}>
-        <Text bold color="white" backgroundColor="blue"> ONE HUMAN CORP </Text>
-        <Text> - Standalone Agent Mode </Text>
-      </Box>
+    <Box flexDirection="column" borderStyle="round" borderColor="blue" padding={2} width={100} dimColor>
+      <Header />
 
       {error ? (
         <ErrorState error={error} />
@@ -26,7 +24,7 @@ export const App = () => {
           <AgentStatus status={status} />
           <ToolProgress tools={tools} />
 
-          <Box borderStyle="single" borderColor="gray" padding={1} marginTop={1} marginBottom={1}>
+          <Box borderStyle="round" borderColor="gray" padding={1} marginTop={1} marginBottom={1} dimColor>
             <MarkdownText content={markdown} />
           </Box>
 
