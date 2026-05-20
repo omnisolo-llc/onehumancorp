@@ -1,0 +1,86 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export component ReleaseNotes inherits Window {
+    preferred-width: 600px;
+    preferred-height: 800px;
+    min-width: 375px;
+    title: "What's New";
+    background: #f8fafc;
+    in-out property <string> current_version: "v0.3.4";
+    in-out property <bool> show_latest_only: false;
+
+    HorizontalBox {
+        alignment: center;
+        VerticalBox {
+            max-width: 600px;
+            width: 100%;
+            padding: 16px;
+            spacing: 20px;
+
+            Text {
+                text: "What's New in OHC";
+                font-size: 24px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 24px;
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.3.4 (Cloud) / v0.3.4+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
+                        Rectangle {
+                            background: white; border-radius: 8px;
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "🎉 Better Team Collaboration & Offline Reliability"; font-weight: 700; font-size: 18px; color: #0f172a; }
+                                Text { text: "Your agents can now work together much faster. And if you are using the app offline on your own device, it will keep running smoothly even if you lose your internet connection."; color: #475569; wrap: word-wrap; }
+                            }
+                        }
+                    }
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.3.2 (Cloud) / v0.3.2+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
+                        Rectangle {
+                            background: white; border-radius: 8px;
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "🚀 Enhanced Privacy & New Walkthrough"; font-weight: 700; font-size: 18px; color: #0f172a; }
+                                Text { text: "We have strengthened the way we store your business data to keep it completely private. We also added your task list directly to the main dashboard and included a new guide to help you sync your website with AutoDream."; color: #475569; wrap: word-wrap; }
+                            }
+                        }
+                    }
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.3.1 (Cloud) / v0.3.1+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
+                        Rectangle {
+                            background: white; border-radius: 8px;
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "🔍 Smarter Knowledge Retrieval"; font-weight: 700; font-size: 18px; color: #0f172a; }
+                                Text { text: "Your AI agents can now search and read your business documents much faster to answer questions. This even works if you are running the app fully offline on your own device."; color: #475569; wrap: word-wrap; }
+                            }
+                        }
+                    }
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.3.0 (Cloud) / v0.3.0+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
+                        Rectangle {
+                            background: white; border-radius: 8px;
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "🔗 Faster Team Communication"; font-weight: 700; font-size: 18px; color: #0f172a; }
+                                Text { text: "We upgraded the behind-the-scenes system that lets your AI agents talk to each other in real-time. If you use the standalone app, they can now chat together seamlessly without needing an external internet server."; color: #475569; wrap: word-wrap; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
