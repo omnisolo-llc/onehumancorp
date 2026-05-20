@@ -14,3 +14,8 @@ pub mod mcp_gateway;
 pub mod mercadopago;
 pub mod chromadb;
 pub mod meta;
+pub mod google_calendar;
+pub mod cal_com;
+pub mod resend;
+pub mod shippo;
+pub mod zoom;
