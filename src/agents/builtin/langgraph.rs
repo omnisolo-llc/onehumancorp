@@ -5,26 +5,27 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 /// Reducer trait to merge state updates into the main state
-pub trait Reducer: Send + Sync {
-    fn reduce(&self, state: &mut Value, update: Value);
+pub trait Reducer<S>: Send + Sync {
+    fn reduce(&self, state: &mut S, update: S);
 }
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
-pub type NodeFn = Arc<dyn Fn(Value) -> BoxFuture<'static, Result<Value, String>> + Send + Sync>;
-pub type ConditionFn = Arc<dyn Fn(&Value) -> String + Send + Sync>;
+pub type NodeFn<S> = Arc<dyn Fn(S) -> BoxFuture<'static, Result<S, String>> + Send + Sync>;
+pub type ConditionFn<S> = Arc<dyn Fn(&S) -> String + Send + Sync>;
 
-pub struct StateGraph {
-    nodes: HashMap<String, NodeFn>,
+/// State flows as typed dictionaries with reducer functions.
+pub struct StateGraph<S> {
+    nodes: HashMap<String, NodeFn<S>>,
     edges: HashMap<String, String>,
-    conditional_edges: HashMap<String, ConditionFn>,
+    conditional_edges: HashMap<String, ConditionFn<S>>,
     entry_point: Option<String>,
-    reducer: Arc<dyn Reducer>,
+    reducer: Arc<dyn Reducer<S>>,
 }
 
 pub const END: &str = "__END__";
 
-impl StateGraph {
-    pub fn new(reducer: Arc<dyn Reducer>) -> Self {
+impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
+    pub fn new(reducer: Arc<dyn Reducer<S>>) -> Self {
         Self {
             nodes: HashMap::new(),
             edges: HashMap::new(),
@@ -36,8 +37,8 @@ impl StateGraph {
 
     pub fn add_node<F, Fut>(&mut self, name: &str, node_fn: F)
     where
-        F: Fn(Value) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<Value, String>> + Send + 'static,
+        F: Fn(S) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<S, String>> + Send + 'static,
     {
         self.nodes.insert(
             name.to_string(),
@@ -51,7 +52,7 @@ impl StateGraph {
 
     pub fn add_conditional_edges<C>(&mut self, from: &str, condition: C)
     where
-        C: Fn(&Value) -> String + Send + Sync + 'static,
+        C: Fn(&S) -> String + Send + Sync + 'static,
     {
         self.conditional_edges.insert(from.to_string(), Arc::new(condition));
     }
@@ -60,7 +61,7 @@ impl StateGraph {
         self.entry_point = Some(node.to_string());
     }
 
-    pub async fn run(&self, initial_state: Value) -> Result<Value, String> {
+    pub async fn run(&self, initial_state: S) -> Result<S, String> {
         let mut current_state = initial_state;
         let mut current_node = self.entry_point.clone().ok_or("Entry point not set")?;
 
@@ -94,7 +95,7 @@ impl StateGraph {
 /// A default reducer that merges JSON objects and appends to arrays
 pub struct DefaultReducer;
 
-impl Reducer for DefaultReducer {
+impl Reducer<Value> for DefaultReducer {
     fn reduce(&self, state: &mut Value, update: Value) {
         if let (Value::Object(state_map), Value::Object(update_map)) = (state, update) {
             for (k, v) in update_map {
@@ -122,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_langgraph_mechanic() {
-        let mut graph = StateGraph::new(Arc::new(DefaultReducer));
+        let mut graph = StateGraph::<Value>::new(Arc::new(DefaultReducer));
 
         // The llm_call node generates a response and possibly a tool call
         graph.add_node("llm_call", |state| async move {
