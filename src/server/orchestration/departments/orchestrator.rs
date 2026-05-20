@@ -181,14 +181,19 @@ impl DepartmentOrchestrator {
                         let mut success = false;
                         let mut last_err = String::new();
                         for _ in 0..3 {
-                            let res = dep.read().await.handle_event(&event).await;
+                            let fut = dep.read().await;
+                            let res = tokio::time::timeout(std::time::Duration::from_secs(60), fut.handle_event(&event)).await;
                             match res {
-                                Ok(_) => {
+                                Ok(Ok(_)) => {
                                     success = true;
                                     break;
                                 }
-                                Err(e) => {
+                                Ok(Err(e)) => {
                                     last_err = e.to_string();
+                                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                }
+                                Err(_) => {
+                                    last_err = "AI timeout: Event handling exceeded 60 seconds".to_string();
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
                             }
