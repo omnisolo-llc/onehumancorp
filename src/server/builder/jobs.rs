@@ -35,17 +35,36 @@ async fn execute_publish_site_job(
     info!("Starting publish process for site {}", site_id);
 
     // 1. Fetch site and pages
-    let _pages = super::db::list_pages(pool, tenant_id, site_id).await?;
+    let pages = super::db::list_pages(pool, tenant_id, site_id).await?;
 
-    // 2. Mock Site Compilation
+    // 2. Site Compilation (Placeholder for real build step)
     info!("Compiling site {} to static PWA/SSR...", site_id);
 
-    // 3. Mock SEO Metadata Generation (via Marketing AI Agent)
-    info!("Generating SEO metadata (JSON-LD) for site {}...", site_id);
+    // 3. Dynamic SEO Metadata Generation (via Marketing AI Agent)
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let client = crate::minimax::MinimaxClient::new(api_key);
+
+    for page in pages {
+        if page.seo_metadata.is_null() || page.seo_metadata == serde_json::json!({}) {
+            info!("Generating SEO metadata (JSON-LD) for page {}...", page.id);
+            let prompt = format!(
+                "Generate JSON-LD SEO metadata for a web page titled '{}'. \
+                Output ONLY valid JSON.", page.title
+            );
+            if let Ok(response) = client.reason(&prompt).await {
+                if let Ok(json_ld) = serde_json::from_str::<serde_json::Value>(&response) {
+                    sqlx::query("UPDATE builder_pages SET seo_metadata = $1 WHERE id = $2")
+                        .bind(&json_ld)
+                        .bind(page.id)
+                        .execute(pool)
+                        .await?;
+                }
+            }
+        }
+    }
 
     // 4. Update published_at timestamp
     sqlx::query(
-
         "UPDATE builder_sites SET published_at = NOW(), updated_at = NOW() WHERE tenant_id = $1 AND id = $2",
     )
     .bind(tenant_id)
@@ -53,8 +72,7 @@ async fn execute_publish_site_job(
     .execute(pool)
     .await?;
 
-    // 5. Mock SSL Provisioning (if custom domain)
-    // We would use query_as, but for simplicity we can just query the site.
+    // 5. SSL Provisioning (Placeholder for real provision step)
     let site = super::db::list_sites(pool, tenant_id).await?.into_iter().find(|s| s.id == site_id);
 
     if let Some(s) = site {

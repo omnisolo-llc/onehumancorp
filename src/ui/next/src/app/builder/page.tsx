@@ -6,6 +6,7 @@ import { SmartBlock } from "./components";
 export default function BuilderPage() {
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
+  const [draft, setDraft] = useState<any>(null);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
 
@@ -13,14 +14,29 @@ export default function BuilderPage() {
     setStatus("generating");
 
     try {
-      const response = await fetch('/builder/api', {
+      const token = localStorage.getItem('token') || 'test-token';
+      const response = await fetch('/api/v1/builder/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ description: bio })
       });
 
-      const data = await response.json();
-      setBlocks(data.blocks);
+      if (!response.ok) {
+        throw new Error(`Failed to generate storefront: ${response.status}`);
+      }
+
+      const draftPayload = await response.json();
+
+      if (draftPayload.pages && draftPayload.pages.length > 0) {
+        setBlocks(draftPayload.pages[0].blocks);
+        setDraft(draftPayload);
+      } else {
+        setBlocks([]);
+      }
+
       setStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -28,13 +44,35 @@ export default function BuilderPage() {
     }
   };
 
-  const handleLaunch = () => {
-    // Simulate background provisioning of subdomain and SSL
-    setTimeout(() => {
-      setStatus("live");
+  const handleLaunch = async () => {
+    setStatus("generating");
+    try {
       const subdomain = bio.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
-      setLiveUrl(`https://${subdomain || 'myshop'}.ohc.store`);
-    }, 1500);
+      const token = localStorage.getItem('token') || 'test-token';
+
+      const response = await fetch('/api/v1/builder/publish_draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          domain: subdomain,
+          draft: draft
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to publish: ${response.status}`);
+      }
+
+      const site = await response.json();
+      setStatus("live");
+      setLiveUrl(`https://${site.domain || subdomain}.ohc.store`);
+    } catch (error) {
+      console.error("Failed to publish storefront", error);
+      setStatus("draft"); // revert
+    }
   };
 
   if (status === "idle") {

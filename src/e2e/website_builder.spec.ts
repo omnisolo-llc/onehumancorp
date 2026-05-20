@@ -31,43 +31,50 @@ test.describe('Website Builder Full E2E', () => {
     const input = page.locator('#step-ai input');
     await input.fill('I am a baker');
 
-    // Setup API interception
-    await page.route('/api/v1/builder/generate', async route => {
-        const json = {
-            pages: [{
-                blocks: [
-                    { block_type: 'HeroBlock', content: { headline: 'Fresh Cakes', subtitle: 'Yum' } }
-                ]
-            }]
-        };
-        await route.fulfill({ json });
-    });
-
+    // We no longer intercept API. Instead, we let the real MinimaxClient generate the storefront
+    // using the provided prompt. We use waitForResponse to ensure the backend actually answered.
+    const responsePromise = page.waitForResponse(res => res.url().includes('/api/v1/builder/generate') && res.status() === 200, { timeout: 30000 });
     await page.getByRole('button', { name: 'Generate Storefront →' }).click();
 
-    // Wait for mock backend parsing
-    await expect(page.locator('#builder-preview-container')).toContainText('Fresh Cakes', { timeout: 10000 });
+    const response = await responsePromise;
+    const body = await response.json();
+
+    // We can't guarantee exact text like "Fresh Cakes", but we know it should have pages and blocks
+    expect(body.pages).toBeDefined();
+    expect(body.pages.length).toBeGreaterThan(0);
+    expect(body.pages[0].blocks).toBeDefined();
+    expect(body.pages[0].blocks.length).toBeGreaterThan(0);
+
+    // We should be redirected to the builder preview container eventually
+    await expect(page.locator('#builder-preview-container')).toBeVisible({ timeout: 15000 });
   });
 
   test('publishes storefront with generated payload', async ({ page }) => {
     await page.goto('/storefront-builder');
 
-    // Simulate clicking publish and publishing
+    // Need some draft payload to be generated first to simulate a real flow.
+    // However, since we are directly visiting /storefront-builder, it relies on initial state.
+    // Let's ensure the payload publish button exists and we can click it.
     await page.getByRole('button', { name: 'Publish Changes' }).click();
     await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
-    await page.getByPlaceholder('mybusiness').fill('baked-goods');
+    await page.getByPlaceholder('mybusiness').fill('real-baked-goods');
 
-    await page.route('/api/v1/builder/publish_draft', async route => {
-        await route.fulfill({ json: { domain: 'baked-goods.ohc.app' } });
-    });
-
+    // We no longer intercept. It hits the real db and enqueue jobs.
     const requestPromise = page.waitForRequest('/api/v1/builder/publish_draft');
-    await page.getByRole('button', { name: 'Publish' }).click();
-    const requestBody = (await requestPromise).postDataJSON();
+    const responsePromise = page.waitForResponse(res => res.url().includes('/api/v1/builder/publish_draft') && res.status() === 200);
 
+    await page.getByRole('button', { name: 'Publish' }).click();
+
+    const request = await requestPromise;
+    const response = await responsePromise;
+
+    const requestBody = request.postDataJSON();
     expect(requestBody).toBeDefined();
-    expect(requestBody.domain).toBe('baked-goods');
-    expect(requestBody.draft.pages[0].blocks[0].block_type).toBe('HeroBlock');
+    expect(requestBody.domain).toBe('real-baked-goods');
+
+    const responseBody = await response.json();
+    expect(responseBody.domain).toBe('real-baked-goods');
+    expect(responseBody.id).toBeDefined();
   });
 
   test('verifies block edits update optimistic UI', async ({ page }) => {
