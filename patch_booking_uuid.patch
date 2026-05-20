@@ -1,0 +1,100 @@
+<<<<<<< SEARCH
+    // Prevents double booking for a given time slot by acquiring a distributed lock and querying the DB
+    pub async fn prevent_double_booking(
+        &self,
+        tenant_id: &str,
+        service_id: &str,
+        new_slot: &BookingTimeSlot,
+    ) -> Result<(), String> {
+        let resource = format!("booking_lock:{}", service_id);
+        if !self.lock.acquire_lock(&resource, &self.node_id, 30).await.unwrap_or(false) {
+            return Err("Failed to acquire lock for booking".to_string());
+        }
+
+        let start_str = new_slot.start_time.to_rfc3339();
+        let end_str = new_slot.end_time.to_rfc3339();
+
+        // Check for overlaps
+        let overlap = sqlx::query(
+            r#"
+            SELECT id FROM bookings
+            WHERE tenant_id = $1 AND service_id = $2
+            AND (
+                (start_time < $4 AND end_time > $3)
+            )
+            LIMIT 1
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(service_id)
+        .bind(start_str.clone())
+        .bind(end_str.clone())
+        .fetch_optional(&self.pool)
+        .await;
+
+        let res = match overlap {
+            Ok(Some(_)) => Err("Time slot overlaps with an existing booking".to_string()),
+            Ok(None) => {
+                let id = Uuid::new_v4().to_string();
+                let insert = sqlx::query(
+                    r#"
+                    INSERT INTO bookings (id, tenant_id, service_id, start_time, end_time, status)
+                    VALUES ($1, $2, $3, $4, $5, 'confirmed')
+                    "#,
+                )
+                .bind(id)
+                .bind(tenant_id)
+                .bind(service_id)
+                .bind(start_str)
+                .bind(end_str)
+                .execute(&self.pool)
+                .await;
+=======
+    // Prevents double booking for a given time slot by acquiring a distributed lock and querying the DB
+    pub async fn prevent_double_booking(
+        &self,
+        tenant_id: Uuid,
+        service_id: Uuid,
+        new_slot: &BookingTimeSlot,
+    ) -> Result<(), String> {
+        let resource = format!("booking_lock:{}", service_id);
+        if !self.lock.acquire_lock(&resource, &self.node_id, 30).await.unwrap_or(false) {
+            return Err("Failed to acquire lock for booking".to_string());
+        }
+
+        // Check for overlaps
+        let overlap = sqlx::query(
+            r#"
+            SELECT id FROM bookings
+            WHERE tenant_id = $1 AND service_id = $2
+            AND (
+                (start_time < $4 AND end_time > $3)
+            )
+            LIMIT 1
+            "#,
+        )
+        .bind(tenant_id.to_string())
+        .bind(service_id.to_string())
+        .bind(new_slot.start_time.to_rfc3339())
+        .bind(new_slot.end_time.to_rfc3339())
+        .fetch_optional(&self.pool)
+        .await;
+
+        let res = match overlap {
+            Ok(Some(_)) => Err("Time slot overlaps with an existing booking".to_string()),
+            Ok(None) => {
+                let id = Uuid::new_v4().to_string();
+                let insert = sqlx::query(
+                    r#"
+                    INSERT INTO bookings (id, tenant_id, service_id, start_time, end_time, status)
+                    VALUES ($1, $2, $3, $4, $5, 'confirmed')
+                    "#,
+                )
+                .bind(id)
+                .bind(tenant_id.to_string())
+                .bind(service_id.to_string())
+                .bind(new_slot.start_time.to_rfc3339())
+                .bind(new_slot.end_time.to_rfc3339())
+                .execute(&self.pool)
+                .await;
+>>>>>>> REPLACE
