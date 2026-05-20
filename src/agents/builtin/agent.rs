@@ -405,9 +405,15 @@ impl Agent {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.to_vec();
                 let messages_clone = messages.clone();
+                let cfg_clone = cfg.clone();
                 read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                        Ok(res) => res,
+                    // Anthropic Mechanic: 3-Stage Tool Gating
+                    let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
+                    let r = match gating_res {
+                        Ok(_) => match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                            Ok(res) => res,
+                            Err(e) => format!("Error: {:?}", e),
+                        },
                         Err(e) => format!("Error: {:?}", e),
                     };
                     (tc_clone, r)
@@ -435,8 +441,13 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
+                // Anthropic Mechanic: 3-Stage Tool Gating
+                let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
+                let r = match gating_res {
+                    Ok(_) => match self.execute_tool(tc, session_tools, &messages).await {
+                        Ok(res) => res,
+                        Err(e) => format!("Error: {:?}", e),
+                    },
                     Err(e) => format!("Error: {:?}", e),
                 };
 
