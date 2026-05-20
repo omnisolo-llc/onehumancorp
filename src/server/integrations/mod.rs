@@ -13,3 +13,9 @@ pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
 pub mod chromadb;
+
+pub mod brevo;
+pub mod cal;
+pub mod mailchimp;
+pub mod shippo;
+pub mod daily;

@@ -141,6 +141,22 @@ impl IntegrationsRegistry {
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
         });
+
+        if integration_id == "brevo" {
+            // Brevo stub connect
+        }
+        if integration_id == "cal" {
+            // Cal stub connect
+        }
+        if integration_id == "mailchimp" {
+            // Mailchimp stub connect
+        }
+        if integration_id == "shippo" {
+            // Shippo stub connect
+        }
+        if integration_id == "daily" {
+            // Daily stub connect
+        }
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));

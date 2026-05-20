@@ -2710,7 +2710,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
 
-                    <!-- API Screen -->
+                                        <!-- API Screen -->
                     <div id="api-screen" class="screen">
                         <h1>Connect Custom Software</h1>
                         <h1>Custom Integration</h1>
@@ -2718,6 +2718,108 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>Product Data Access</h2>
                         <p>Read Product List</p>
                         <p>Manage your custom software connections here.</p>
+
+                        <div class="card glass">
+                            <h3>Brevo Conversations</h3>
+                            <p>Unified Social Media Inbox</p>
+                            <button onclick="showScreen('inbox-screen')">Configure</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Cal.com Scheduling</h3>
+                            <p>Zero-Config Booking & Calendar Sync</p>
+                            <button onclick="showScreen('calendar-screen')">Configure</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Mailchimp Marketing</h3>
+                            <p>Automated Email Campaigns</p>
+                            <button onclick="showScreen('campaigns-screen')">Configure</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Stripe Connect</h3>
+                            <p>Universal Checkout & POS</p>
+                            <button onclick="showScreen('checkout-screen')">Configure</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Shippo Shipping</h3>
+                            <p>Real-Time Rates and Label Generation</p>
+                            <button onclick="showScreen('fulfillment-screen')">Configure</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Twilio SMS</h3>
+                            <p>Automated Order Notifications and Alerts</p>
+                            <button onclick="showScreen('settings-screen')">Configure</button>
+                        </div>
+
+                        <div class="card glass">
+                            <h3>Daily.co Video</h3>
+                            <p>Automated Virtual Lessons</p>
+                            <button onclick="showScreen('video-screen')">Configure</button>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Campaigns Screen (Mailchimp) -->
+                    <div id="campaigns-screen" class="screen">
+                        <h1>Campaigns</h1>
+                        <div class="card glass">
+                            <h2>Draft Announcement</h2>
+                            <textarea placeholder="Write your email here..."></textarea>
+                            <button>Send Campaign via Mailchimp</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Checkout Screen (Stripe) -->
+                    <div id="checkout-screen" class="screen">
+                        <h1>Checkout</h1>
+                        <div class="card glass">
+                            <h2>Stripe POS</h2>
+                            <button>Initialize Terminal</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Calendar Screen (Cal.com) -->
+                    <div id="calendar-screen" class="screen">
+                        <h1>Calendar Sync</h1>
+                        <div class="card glass">
+                            <h2>Connect Google/Apple Calendar</h2>
+                            <button>Connect Calendar</button>
+                        </div>
+                        <div class="card glass">
+                            <h2>Booking Page</h2>
+                            <p>Available timeslots shown here</p>
+                            <button>Select Timeslot</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Fulfillment Screen (Shippo) -->
+                    <div id="fulfillment-screen" class="screen">
+                        <h1>Fulfillment</h1>
+                        <div class="card glass">
+                            <h2>Pending Orders</h2>
+                            <p>Order #102: 2x Vegan Cake</p>
+                            <button>Calculate Shipping Rate</button>
+                            <button>Print Shipping Label</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Video Screen (Daily.co) -->
+                    <div id="video-screen" class="screen">
+                        <h1>Virtual Meeting</h1>
+                        <div class="card glass">
+                            <h2>Upcoming Virtual Appointments</h2>
+                            <p>Guitar Lesson with Leo</p>
+                            <button>Join Video</button>
+                        </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
