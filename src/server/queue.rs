@@ -56,8 +56,20 @@ impl MemoryTaskQueue {
 #[async_trait]
 impl TaskQueue for MemoryTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        let mut role_map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
         for job in jobs {
-            self.jobs.insert(job.id.clone(), job);
+            let role = job.agent_role.clone();
+            let id = job.id.clone();
+            self.jobs.insert(id.clone(), job);
+            role_map.entry(role).or_default().push(id);
+        }
+
+        for (role, ids) in role_map {
+            let queue = self.role_queues.entry(role).or_insert_with(|| Mutex::new(VecDeque::new()));
+            let mut q = queue.lock().unwrap();
+            for id in ids {
+                q.push_back(id);
+            }
         }
         Ok(())
     }
