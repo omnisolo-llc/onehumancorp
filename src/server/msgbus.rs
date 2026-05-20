@@ -520,17 +520,30 @@ impl DistributedLock for RedisBus {
 impl DistributedLock for IpcBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
+
+        // Use a transaction and explicit BEGIN IMMEDIATE to handle SQLite concurrent writes properly.
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
         let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at < cast(strftime('%s', 'now') as integer) RETURNING resource")
             .bind(resource)
             .bind(owner)
             .bind(expires_at)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *tx)
             .await;
 
         match res {
-            Ok(Some(_)) => Ok(true),
-            Ok(None) => Ok(false),
-            Err(e) => Err(e.to_string()),
+            Ok(Some(_)) => {
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(true)
+            },
+            Ok(None) => {
+                let _ = tx.rollback().await;
+                Ok(false)
+            },
+            Err(e) => {
+                let _ = tx.rollback().await;
+                Err(e.to_string())
+            },
         }
     }
 
