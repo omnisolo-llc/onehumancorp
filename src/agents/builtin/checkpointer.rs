@@ -1,3 +1,4 @@
+use serde::{Serialize, Deserialize};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
@@ -13,6 +14,25 @@ pub struct Checkpoint {
     pub metadata: serde_json::Value,
     pub created_at: DateTime<Utc>,
 }
+
+/// Local progress files as structured scratchpads (Claude Code mechanic)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProgressFile {
+    pub current_objective: String,
+    pub status: String,
+    pub notes: Vec<String>,
+}
+
+impl Default for ProgressFile {
+    fn default() -> Self {
+        Self {
+            current_objective: "Uninitialized".to_string(),
+            status: "pending".to_string(),
+            notes: vec![],
+        }
+    }
+}
+
 
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
@@ -39,6 +59,10 @@ pub struct GitCheckpointer {
 }
 
 impl GitCheckpointer {
+    fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
+        self.repo_path.join(format!(".scratchpad_{}.json", thread_id))
+    }
+
     pub fn new(repo_path: PathBuf) -> Self {
         let _ = Command::new("git")
             .arg("init")
@@ -86,14 +110,22 @@ impl CheckpointSaver for GitCheckpointer {
     }
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
         let file_path = self.progress_file_path(&checkpoint.thread_id);
+        let scratchpad_path = self.scratchpad_file_path(&checkpoint.thread_id);
 
         let json_data = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
         tokio::fs::write(&file_path, json_data).await.map_err(|e| e.to_string())?;
 
-        // 1. Stage all changes in the workspace (Claude Code mechanic)
+        // Structured scratchpad
+        let mut scratchpad = ProgressFile::default();
+        scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
+        let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
+        tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
+
+        // 1. Stage ONLY the checkpoint and scratchpad files (Claude Code mechanic)
         let _ = Command::new("git")
             .arg("add")
-            .arg(".")
+            .arg(file_path.file_name().unwrap())
+            .arg(scratchpad_path.file_name().unwrap())
             .current_dir(&self.repo_path)
             .output();
 
@@ -512,8 +544,9 @@ mod tests {
         // Restore to first checkpoint
         saver.restore_checkpoint("cp-restore-1").await.unwrap();
 
-        // Verify the file was restored
-        let content = std::fs::read_to_string(&file_path).unwrap();
-        assert_eq!(content, "state 1");
+        // Verify the checkpoint file was restored
+        let progress_path = temp_dir.path().join(format!(".agent_progress_{}.json", "thread-git-restore"));
+        let content = std::fs::read_to_string(&progress_path).unwrap();
+        assert!(content.contains(r#""state": "1""#));
     }
 }
