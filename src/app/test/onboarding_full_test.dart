@@ -3,14 +3,29 @@ import 'package:flutter_test/flutter_test.dart';
 import '../lib/screens/onboarding.dart';
 
 void main() {
-  testWidgets('Onboarding Screen - Validation test', (WidgetTester tester) async {
+  testWidgets('Onboarding Screen - Full Flow Test', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: OnboardingScreen()));
+
+    // Tap 'Start a Business' on the welcome screen
+    await tester.tap(find.text('Start a Business'));
+    await tester.pumpAndSettle();
+
+    // Verify we are on the input screen
+    expect(find.text('Your Details'), findsOneWidget);
 
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required'
-    expect(find.text('Required'), findsOneWidget);
+    // Expect the validator message 'Required' for both fields
+    expect(find.text('Required'), findsNWidgets(2));
+
+    // Fill out the form
+    await tester.enterText(find.byType(TextFormField), "Maya's Custom Cakes");
+    await tester.pumpAndSettle();
+
+    // Test that the form can be submitted when both fields are filled out properly.
+    // Note: Since we need to interact with a DropdownButtonFormField and simulate an HTTP request
+    // this test primarily asserts the UI validation and state transitions up to form submission.
   });
 }
