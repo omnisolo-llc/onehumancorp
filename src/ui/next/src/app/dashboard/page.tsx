@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
+  const [orderReadyCount, setOrderReadyCount] = useState(0);
+  const [milestone, setMilestone] = useState<{ title: string; body: string } | null>(null);
 
   useEffect(() => {
     async function fetchApprovals() {
@@ -71,9 +73,17 @@ export default function Dashboard() {
         }, ...prev].slice(0, 5));
     }, 4500);
 
+    const visitorsTimeout = setTimeout(() => {
+        setMilestone({
+            title: "🚀 100 Visitors Today!",
+            body: "Your storefront reached 100 visitors today!"
+        });
+    }, 5000);
+
     return () => {
         if (ws) ws.close();
         clearInterval(mockInterval);
+        clearTimeout(visitorsTimeout);
     };
   }, []);
 
@@ -87,6 +97,19 @@ export default function Dashboard() {
       setApprovals(approvals.filter(a => a.id !== id));
     } catch (e) {
       console.error("Failed to submit decision", e);
+    }
+  };
+
+  const markOrderReady = () => {
+    const newCount = orderReadyCount + 1;
+    setOrderReadyCount(newCount);
+
+    if (newCount === 1) {
+      setMilestone({ title: 'First Sale!', body: 'You completed your first order!' });
+    } else if (newCount === 3) {
+      setMilestone({ title: '🎉 3rd Order!', body: 'You completed 3 orders!' });
+    } else if (newCount === 10) {
+      setMilestone({ title: '🎉 10th Order!', body: 'You completed 10 orders!' });
     }
   };
 
@@ -123,8 +146,22 @@ export default function Dashboard() {
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>3</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{3 - orderReadyCount > 0 ? 3 - orderReadyCount : 0}</div>
+                    <button
+                      onClick={markOrderReady}
+                      className="mt-4 w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all text-sm"
+                    >
+                      Mark Order Ready
+                    </button>
                 </div>
+
+                {milestone && (
+                  <div id="milestone-card" className="p-5 shadow-sm flex flex-col justify-between md:col-span-3" style={{ background: 'linear-gradient(135deg, #4ade80 0%, #3b82f6 100%)', borderRadius: '16px' }}>
+                    <h3 className="text-xl font-bold mb-2 text-white" id="milestone-title">{milestone.title}</h3>
+                    <p className="text-sm text-white mb-4" id="milestone-body">{milestone.body}</p>
+                    <button onClick={() => setMilestone(null)} className="bg-white text-blue-600 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all text-sm w-fit">Dismiss</button>
+                  </div>
+                )}
 
             </div>
          </section>
