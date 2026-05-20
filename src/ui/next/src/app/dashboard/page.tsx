@@ -9,8 +9,10 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
 
   useEffect(() => {
+    setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
       try {
         const res = await fetch('/api/agents/approvals');
@@ -188,6 +190,41 @@ export default function Dashboard() {
                     })}
                 </div>
             </section>
+         )}
+
+         {/* Milestone Viral Share Loop Banner */}
+         {activeCustomers > 0 && !bannerDismissed && (
+             <section className="mb-6">
+                 <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', color: '#fff' }}>
+                     <div className="flex items-center gap-4">
+                         <span className="text-3xl">🎉</span>
+                         <div>
+                             <h3 className="font-bold text-lg font-outfit" style={{ color: '#fff' }}>Milestone Unlocked: Your First Customers!</h3>
+                             <p className="text-sm opacity-90 font-inter" style={{ color: '#fff' }}>You've reached {activeCustomers} active customers. Share your store's success to earn a free month of Pro!</p>
+                         </div>
+                     </div>
+                     <button
+                         onClick={() => {
+                             const tenant = localStorage.getItem('tenant') || 'DEFAULT';
+                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                             window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+
+                             localStorage.setItem('milestone_banner_dismissed', 'true');
+                             setBannerDismissed(true);
+                             fetch('/api/v1/growth/referrals/click', {
+                                 method: 'POST',
+                                 headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ id: tenant })
+                             }).catch(console.error);
+
+                             alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
+                         }}
+                         className="px-5 py-2 bg-white text-orange-500 font-bold rounded-lg shadow-sm hover:bg-orange-50 transition-colors whitespace-nowrap"
+                     >
+                         Share & Claim Reward
+                     </button>
+                 </div>
+             </section>
          )}
 
          {/* Business Snapshot */}
