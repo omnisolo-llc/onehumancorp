@@ -10,6 +10,12 @@ build:remote --config=buildbuddy
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=8
+# Keep local CPU slots low so large local Rust actions do not oversubscribe RAM.
+build --local_resources=cpu=HOST_CPUS*.8
+build --local_resources=memory=HOST_CPUS*.8
+# Apply host OS-specific rc fragments for plain `bazel build //...` and
+# `bazel test //...` invocations.
+build --enable_platform_specific_config
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -27,7 +33,7 @@ build --incompatible_strict_action_env
 build --announce_rc
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
-build --linkopt=-fuse-ld=bfd
+build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 # TODO: Revisit hermetic LLVM once toolchains_llvm analysis/linking is stable.
 # build --extra_toolchains=@llvm_toolchain//:cc-toolchain-x86_64-linux
 # ── Rust toolchains ─────────────────────────────────────────────────────────────
@@ -35,13 +41,13 @@ build --linkopt=-fuse-ld=bfd
 build --@rules_rust//rust/toolchain/channel=stable
 
 # Use rust_toolchains for asan and windows builds (like nativelink)
-# because asan explicitly needs to _not_ use the Nix toolchains
-# and Windows doesn't support LRE.
+# because asan explicitly needs to _not_ use the Nix toolchains.
 build:asan --extra_toolchains=@rust_toolchains//:all
-build:windows --extra_toolchains=@rust_toolchains//:all
-build:windows --linkopt=-fuse-ld=bfd
-build:windows --host_linkopt=-fuse-ld=bfd
-build:windows --keep_going
+build:windows_common --extra_toolchains=@rust_toolchains//:all
+build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_amd64
+build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_arm64
+build:windows_common --noenable_platform_specific_config
+build:windows_common --keep_going
 
 # Nightly toolchain
 build:nightly --@rules_rust//rust/toolchain/channel=nightly
@@ -127,7 +133,11 @@ build:local --spawn_strategy=sandboxed,local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
+build:linux --linkopt=-fuse-ld=bfd
+build:linux --host_linkopt=-fuse-ld=bfd
 build:linux_x86_64 --platforms=//bazel/platforms:linux_x86_64
+build:linux_x86_64 --linkopt=-fuse-ld=bfd
+build:linux_x86_64 --host_linkopt=-fuse-ld=bfd
 build:linux_arm64 --platforms=//bazel/platforms:linux_arm64
 build:linux_arm64 --extra_execution_platforms=//bazel/platforms:linux_arm64
 build:linux_aarch64 --platforms=//bazel/platforms:linux_aarch64
@@ -136,10 +146,14 @@ build:linux_aarch64 --extra_execution_platforms=//bazel/platforms:linux_aarch64
 # build:linux_llvm --extra_execution_platforms=@toolchains_llvm//platforms:linux-x86_64
 build:android --platforms=//bazel/platforms:android_aarch64
 build:ios --platforms=//bazel/platforms:ios_aarch64
-build:macos --platforms=//bazel/platforms:macos_aarch64
+build:macos --announce_rc
 build:macos_x86_64 --platforms=//bazel/platforms:macos_x86_64
 build:macos_aarch64 --platforms=//bazel/platforms:macos_aarch64
+build:windows_x86_64 --config=windows_common
 build:windows_x86_64 --platforms=//bazel/platforms:windows_x86_64
+build:windows_arm64 --config=windows_common
+build:windows_arm64 --platforms=//bazel/platforms:windows_arm64
+build:windows_i686 --config=windows_common
 build:windows_i686 --platforms=//bazel/platforms:windows_i686
 build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64

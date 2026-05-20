@@ -34,15 +34,19 @@ jobs:
         include:
           - name: linux-x86_64
             runner: ubuntu-24.04
-            bazel_config: linux
+            bazel_config: linux_x86_64
             install_linux_deps: true
-          # - name: windows-x86_64
-          #   runner: ubuntu-24.04
-          #   bazel_config: windows
-          #   install_linux_deps: true
+          - name: windows-x86_64
+            runner: ubuntu-24.04
+            bazel_config: windows_x86_64
+            install_linux_deps: true
+          - name: windows-arm64
+            runner: windows-11-arm
+            bazel_config: windows_arm64
+            install_linux_deps: false
           #- name: macos-aarch64
           #  runner: macos-latest
-          #  bazel_config: macos
+          #  bazel_config: macos_aarch64
           #  install_linux_deps: false
           #- name: macos-x86_64
           #  runner: macos-15-intel
@@ -61,7 +65,7 @@ jobs:
             libdbus-1-dev libatk1.0-dev libgtk-3-dev \
             libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
             librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git mingw-w64 rpm
+            ca-certificates curl git rpm
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -102,7 +106,7 @@ jobs:
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
-        run: bazelisk build //deploy:server_web_image_tar --config=linux --output_groups=+tarball
+        run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'linux-x86_64'
@@ -110,7 +114,7 @@ jobs:
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
             //src/ui/tauri:tauri_android_aab \
-            --config=linux
+            --config=linux_x86_64
 
       - name: Install iOS signing assets
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
@@ -142,8 +146,8 @@ jobs:
 
       - name: Build Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
 
       - name: Analyze Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos --nobuild
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
