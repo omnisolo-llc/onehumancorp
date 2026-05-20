@@ -2756,67 +2756,74 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                            <!-- Buffer Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Connect Facebook & Instagram</h3>
-                                    <span style="font-size: 24px;">💬</span>
+                                    <h3 style="margin: 0;">Buffer</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all customer messages in one unified inbox.</p>
-                                <button style="width: 100%; background: #0071E3;" onclick="alert('Connecting to Meta Business Suite...')">Connect Meta</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Customer Inbox. Manage all your messages and posts from one place.</p>
+                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Buffer...')">Connect</button>
                             </div>
 
+                            <!-- Acuity Scheduling Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Add Online Booking</h3>
-                                    <span style="font-size: 24px;">📅</span>
+                                    <h3 style="margin: 0;">Acuity Scheduling</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Sync with Google Calendar or add a Cal.com booking link.</p>
-                                <button style="width: 100%;" onclick="alert('Syncing Calendar...')">Sync Calendar</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Booking. Let customers schedule appointments 24/7.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Acuity...')">Connect</button>
                             </div>
 
+                            <!-- ActiveCampaign Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Email Marketing</h3>
-                                    <span style="font-size: 24px;">✉️</span>
+                                    <h3 style="margin: 0;">ActiveCampaign</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">✉️</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send automated newsletters and promotions effortlessly.</p>
-                                <button style="width: 100%;" onclick="alert('Setting up SendGrid/Listmonk...')">Setup Email Engine</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Newsletters. Keep your customers engaged easily.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up ActiveCampaign...')">Connect</button>
                             </div>
 
+                            <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Automated Shipping Labels</h3>
-                                    <span style="font-size: 24px;">📦</span>
+                                    <h3 style="margin: 0;">ShipStation</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Get real-time rates and print labels with one click.</p>
-                                <button style="width: 100%; background: #34C759;" onclick="alert('Connecting to EasyPost...')">Connect EasyPost</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Labels & Tracking. Save time on fulfilling orders.</p>
+                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to ShipStation...')">Connect</button>
                             </div>
 
+                            <!-- MessageBird Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Global SMS Notifications</h3>
-                                    <span style="font-size: 24px;">📱</span>
+                                    <h3 style="margin: 0;">MessageBird</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send reliable appointment reminders and order updates via text.</p>
-                                <button style="width: 100%;" onclick="alert('Connecting to Twilio...')">Connect SMS</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Text Alerts. Send critical updates directly to phones.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to MessageBird...')">Connect</button>
                             </div>
 
+                            <!-- Alipay Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Global Payment Methods</h3>
-                                    <span style="font-size: 24px;">💳</span>
+                                    <h3 style="margin: 0;">Alipay</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept local payment options like Mercado Pago for LATAM.</p>
-                                <button style="width: 100%;" onclick="alert('Setting up Mercado Pago...')">Add Payment Provider</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Alipay...')">Connect</button>
                             </div>
 
+                            <!-- Microsoft Teams Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Automated Video Links</h3>
-                                    <span style="font-size: 24px;">🎥</span>
+                                    <h3 style="margin: 0;">Microsoft Teams</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🎥</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Generate Zoom or Jitsi links for online consultations automatically.</p>
-                                <button style="width: 100%;" onclick="alert('Connecting Video Provider...')">Connect Video</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Instant Video Rooms. Host online meetings effortlessly.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting Video Provider...')">Connect</button>
                             </div>
                         </div>
 
