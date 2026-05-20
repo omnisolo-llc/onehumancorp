@@ -1,6 +1,8 @@
-use std::sync::atomic::Ordering;
-use crate::msgbus::MemoryBus;
 use crate::msgbus::{Bus, DistributedLock, Message};
+#[cfg(test)]
+use crate::msgbus::MemoryBus;
+#[cfg(test)]
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
 
@@ -231,7 +233,7 @@ impl InteropProtocol {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             action_name: action_name.to_string(),
-            payload: payload,
+            payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 

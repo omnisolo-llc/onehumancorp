@@ -32,7 +32,7 @@ The platform supports four operating modes:
 
 | Mode | Local footprint | Remote footprint | Notes |
 |------|-----------------|------------------|-------|
-| **Cloud-native shared service** | Tauri v2 desktop or web client | Rust API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
+| **Cloud-native shared service** | Tauri v2 desktop client | Rust API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
 | **Headless cloud API** | Tauri desktop client | API-only Rust server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
 | **Desktop standalone** | Tauri v2 desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Redis and Chatwoot are not required for the standalone wrapper flow. |
 | **Single-machine integration stack** | Full local Docker Compose stack | None | Useful for development, demos, and end-to-end verification on one machine. |
@@ -40,7 +40,7 @@ The platform supports four operating modes:
 ```mermaid
 graph TD;
     DesktopClient[Tauri v2 Desktop App\nStandalone or Remote] --> API[Rust Server / API];
-    WebClient[Next.js Web Client] --> API;
+    LegacyWeb[Legacy Next.js Prototype] -.-> API;
     API --> Orchestration[Orchestration Hub];
     API --> Auth[JWT / OIDC Auth];
     Orchestration --> Agents[AI Agents];
@@ -53,8 +53,8 @@ graph TD;
 
 | Directory | Language | Purpose |
 |-----------|----------|---------|
-| `src/ui/next/` | **React/TypeScript** | Next.js 14 web client with 67 components |
-| `src/ui/tauri/` | **Rust/JSON** | Tauri v2 desktop wrapper |
+| `src/ui/tauri/` | **Rust/HTML/JSON** | Canonical Tauri v2 desktop UI and packaged static frontend |
+| `src/ui/next/` | **React/TypeScript** | Legacy/prototype Next.js web client retained until route and asset references are fully audited |
 | `src/app/` | **Rust** | Backend agent client (formerly Slint UI, deprecated) |
 | `src/server/` | **Rust** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
 | `src/agents/` | **Rust** | Built-in agent implementations |
@@ -180,13 +180,13 @@ bazelisk run //src/ui/tauri:app
 
 The app connects to the server at `http://127.0.0.1:18789` by default.
 
-### Web UI (Next.js)
+### Legacy Web UI (Next.js Prototype)
 
 ```bash
 cd src/ui/next && npm run dev
 ```
 
-This starts the Next.js development server on `http://localhost:3000`.
+This starts the legacy Next.js development server on `http://localhost:3000`. Do not add new provider flows here; build new user-facing UI in Tauri.
 
 ### Server binary
 
@@ -199,16 +199,22 @@ bazelisk run //src/server:server
 | Variable | Description |
 |----------|-------------|
 | `GEMINI_API_KEY` | Google Gemini API key |
-| `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows and AI judge scoring |
+| `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows, AI judge scoring, and `OHC_LLM_PROVIDER=minimax` agent runs |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI API key |
+| `OHC_LLM_PROVIDER` | Builtin agent provider: `openai`, `openai-compatible`, `minimax`, `anthropic`, or `ollama` |
+| `OHC_LLM_MODEL` | Builtin agent model name. Defaults are provider-specific when unset |
+| `OHC_LLM_API_KEY` | Generic API key for `openai-compatible` providers, or fallback key for OpenAI/MiniMax |
+| `OHC_LLM_BASE_URL` | Generic OpenAI-compatible API root such as `https://api.example.com/v1`; endpoint URLs ending in `/chat/completions` are normalized |
+| `OPENAI_BASE_URL` | Optional OpenAI-compatible API root for `OHC_LLM_PROVIDER=openai` |
+| `MINIMAX_BASE_URL` | Optional MiniMax-compatible API root; defaults to `https://api.minimax.chat/v1` |
 | `DATABASE_URL` | PostgreSQL DSN. When unset, the server falls back to in-memory repositories and local SQLite-backed SIPDB support |
 | `OHC_MULTITENANT` | Set `true` for multi-tenant cloud-native mode |
 | `OHC_HEADLESS` | Set `true` for API-only deployments that should not serve the web UI |
 | `OHC_SERVE_UI` | Optional override to force UI serving on or off |
 | `OHC_CORE_URL` | URL of the Rust `ohc-core` sidecar |
 | `MCP_BUNDLE_DIR` | Directory for MCP bundles |
-| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets (e.g. `src/ui/next/out`) |
+| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets. Tauri currently packages `src/ui/tauri/next_out`; `src/ui/next/out` is legacy/prototype output |
 | `OHC_BOOTSTRAP_ORG_ID` | Optional bootstrap tenant ID used to serve unauthenticated routes in multi-tenant mode |
 | `OHC_BOOTSTRAP_ORG_NAME` | Optional bootstrap tenant display name |
 | `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
@@ -235,13 +241,18 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 - **Run E2E tests:** `bazelisk test //src/e2e:playwright`
 - **Run the server:** `bazelisk run //src/server:server`
 - **Launch the Tauri app:** `bazelisk run //src/ui/tauri:app`
-- **Build the Next.js UI:** `cd src/ui/next && npm run build`
+- **Run Rust lint with warnings as errors:** `bazelisk run //:rust_lint`
+- **Build the legacy Next.js prototype:** `cd src/ui/next && npm run build`
 - **Build the docs site:** `bazelisk run //:docs_build`
 
 ## Deprecated
 
+### Next.js Prototype (Legacy)
+
+`src/ui/next/` remains in the repository while references to its routes and assets are audited. It is not the canonical UI, and new provider flows should be implemented in the Tauri app.
+
 ### Slint UI (Deprecated)
 
-The `src/app/slint_deprecated/` directory contains 72 legacy `.slint` files that were part of the old Slint-based UI. These files are no longer used - the UI has been migrated to Next.js + Tauri v2.
+The `src/app/slint_deprecated/` directory contains 72 legacy `.slint` files that were part of the old Slint-based UI. These files are no longer used - the UI has been migrated to Tauri v2.
 
 Historical Slint components included: dashboard, login, wizard flows, agents, chat, channels, integrations, security, meetings, logs, pricing, scaling, swarm memory, website builder, setup wizard, task list, help center, release notes, tutorials, and API docs.

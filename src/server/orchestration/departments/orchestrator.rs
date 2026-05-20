@@ -80,10 +80,6 @@ impl Department for DummyDepartment {
     }
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        let risk_str = match risk {
-            ActionRisk::AutoExecute => "LOW",
-            ActionRisk::DraftForReview => "HIGH",
-        };
         let req = ApprovalRequest {
             id: Uuid::new_v4().to_string(),
             tenant_id,
@@ -406,9 +402,7 @@ impl DepartmentOrchestrator {
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
 
-        let mut opt_department: Option<String> = None;
-
-        match &self.db.store {
+        let opt_department = match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
                     .bind(new_status)
@@ -420,7 +414,7 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        opt_department = Some(r.get("department"));
+                        Some(r.get::<String, _>("department"))
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),
@@ -437,13 +431,13 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        opt_department = Some(r.get("department"));
+                        Some(r.get::<String, _>("department"))
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),
                 }
             }
-        }
+        };
 
         if approved {
             if let Some(dep) = opt_department {

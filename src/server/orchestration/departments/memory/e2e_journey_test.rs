@@ -2,7 +2,6 @@ use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
 use std::sync::Arc;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
-use sqlx::Row;
 
 #[tokio::test]
 async fn test_full_consolidated_memory_e2e_journey() {

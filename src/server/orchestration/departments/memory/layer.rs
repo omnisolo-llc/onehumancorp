@@ -1,12 +1,10 @@
-use ohc_builtin_agent::memory_store::{VectorRepository, EmbeddingRecord};
-use std::sync::Arc;
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use ohc_builtin_agent::memory_store::{EmbeddingRecord, VectorRepository};
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-    use std::str::FromStr;
     use sqlx::Row;
+    use std::str::FromStr;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_cross_department_context_sharing() {

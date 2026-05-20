@@ -4,7 +4,6 @@ mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::postgres::PgPoolOptions;
     use serde_json::json;
-    use std::time::Duration;
 
     #[tokio::test]
     async fn test_hybrid_sync_daemon_redaction() {

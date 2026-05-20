@@ -70,8 +70,6 @@ impl OnboardingAgent {
 
 
     pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
-        let org_id = tenant_id.to_string(); // In OHC architecture tenant_id is typically the same as org_id here, or just binding the same
-
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
@@ -130,7 +128,7 @@ impl OnboardingAgent {
         let company_name = req.company_name.clone();
 
         // Use organization id as tenant id if not provided
-        let tenant_id = org_id.clone();
+        let _tenant_id = org_id.clone();
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();

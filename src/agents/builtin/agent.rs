@@ -5252,7 +5252,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+        use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
             call_count: tokio::sync::Mutex<i32>,
@@ -5381,7 +5381,6 @@ mod stream_tests {
 
         struct MockTool {
             name: String,
-            is_read_only: bool,
             sleep_ms: u64,
         }
 
@@ -5399,28 +5398,28 @@ mod stream_tests {
                 description: "".to_string(),
                 is_read_only: true,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(MockTool { name: "read_tool_1".to_string(), is_read_only: true, sleep_ms: 100 }),
+                execute: Arc::new(MockTool { name: "read_tool_1".to_string(), sleep_ms: 100 }),
             },
             crate::tools::Tool {
                 name: "read_tool_2".to_string(),
                 description: "".to_string(),
                 is_read_only: true,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(MockTool { name: "read_tool_2".to_string(), is_read_only: true, sleep_ms: 100 }),
+                execute: Arc::new(MockTool { name: "read_tool_2".to_string(), sleep_ms: 100 }),
             },
             crate::tools::Tool {
                 name: "mutating_tool_1".to_string(),
                 description: "".to_string(),
                 is_read_only: false,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(MockTool { name: "mutating_tool_1".to_string(), is_read_only: false, sleep_ms: 100 }),
+                execute: Arc::new(MockTool { name: "mutating_tool_1".to_string(), sleep_ms: 100 }),
             },
             crate::tools::Tool {
                 name: "mutating_tool_2".to_string(),
                 description: "".to_string(),
                 is_read_only: false,
                 parameters: serde_json::json!({}),
-                execute: Arc::new(MockTool { name: "mutating_tool_2".to_string(), is_read_only: false, sleep_ms: 100 }),
+                execute: Arc::new(MockTool { name: "mutating_tool_2".to_string(), sleep_ms: 100 }),
             }
         ];
 

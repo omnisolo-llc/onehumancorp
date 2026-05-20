@@ -25,6 +25,7 @@ rust_library(
         "runner.rs",
         "screenshot.rs",
         "sendmessage.rs",
+        "skill.rs",
         "sleep.rs",
         "subagent.rs",
         "tail.rs",

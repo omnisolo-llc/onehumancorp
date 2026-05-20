@@ -5,10 +5,13 @@ use tonic::{Request, Response, Status};
 
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
-use ohc_builtin_agent_llm::{
-    anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
-};
 use chrono::{DateTime, Utc};
+use ohc_builtin_agent_llm::{
+    anthropic::AnthropicClient,
+    ollama::OllamaClient,
+    openai::{OpenAIClient, OpenAIClientConfig},
+    LlmClient,
+};
 
 #[derive(Debug, Clone)]
 pub struct MemoryEntry {
@@ -39,16 +42,18 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
 use crate::memory_store::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
-    RunTaskRequest, SubAgentRequest, SubAgentResponse,
+    RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
 };
 use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
-    SharedTodos,
+    SharedTodos, Tool,
 };
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
 use crate::consolidation_worker::ConsolidationWorker;
+use serde_json::Value;
+use std::path::PathBuf;
 use std::time::Duration;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
@@ -233,32 +238,160 @@ impl AgentServiceImpl {
         }
     }
 
-    fn resolve_llm(&self, req_provider: &str, req_model: &str, req_endpoint: &str) -> Arc<dyn LlmClient> {
+    fn first_non_empty_env(keys: &[&str]) -> Option<String> {
+        keys.iter()
+            .find_map(|key| std::env::var(key).ok().filter(|v| !v.trim().is_empty()))
+    }
+
+    fn ai_provider_config_path() -> PathBuf {
+        std::env::var("OHC_LLM_CONFIG_PATH")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(".ohc/ai-provider.json"))
+    }
+
+    fn ai_provider_config_string(key: &str) -> Option<String> {
+        let content = std::fs::read_to_string(Self::ai_provider_config_path()).ok()?;
+        let value: Value = serde_json::from_str(&content).ok()?;
+        value
+            .get(key)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(ToString::to_string)
+    }
+
+    fn configured_api_key(&self, env_keys: &[&str]) -> String {
+        Self::first_non_empty_env(env_keys)
+            .or_else(|| Self::ai_provider_config_string("apiKey"))
+            .unwrap_or_default()
+    }
+
+    fn effective_provider<'a>(&'a self, req_provider: &'a str) -> &'a str {
+        if !req_provider.trim().is_empty() {
+            req_provider
+        } else if !self.cfg.llm_provider.trim().is_empty() {
+            &self.cfg.llm_provider
+        } else {
+            ""
+        }
+    }
+
+    fn effective_provider_owned(&self, req_provider: &str) -> String {
+        let provider = self.effective_provider(req_provider);
+        if !provider.trim().is_empty() {
+            provider.to_string()
+        } else {
+            Self::ai_provider_config_string("provider").unwrap_or_default()
+        }
+    }
+
+    fn effective_endpoint(&self, req_endpoint: &str, env_keys: &[&str]) -> Option<String> {
+        if !req_endpoint.trim().is_empty() {
+            Some(req_endpoint.to_string())
+        } else if !self.cfg.llm_endpoint.trim().is_empty() {
+            Some(self.cfg.llm_endpoint.clone())
+        } else {
+            Self::first_non_empty_env(env_keys).or_else(|| Self::ai_provider_config_string("baseUrl"))
+        }
+    }
+
+    fn default_model_for_provider(provider: &str) -> String {
+        match provider {
+            "anthropic" => std::env::var("ANTHROPIC_MODEL")
+                .unwrap_or_else(|_| "claude-3-5-sonnet-latest".to_string()),
+            "minimax" => {
+                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
+            }
+            "openai" | "openai-compatible" | "openai_compatible" => {
+                Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
+                    .unwrap_or_else(|| "gpt-4.1-mini".to_string())
+            }
+            _ => String::new(),
+        }
+    }
+
+    fn resolve_model_for_request(&self, provider: &str, req_model: &str) -> String {
+        if !req_model.trim().is_empty() {
+            req_model.to_string()
+        } else if !self.cfg.model.trim().is_empty() {
+            self.cfg.model.clone()
+        } else if let Some(model) = Self::ai_provider_config_string("model") {
+            model
+        } else {
+            Self::default_model_for_provider(provider)
+        }
+    }
+
+    fn resolve_llm(
+        &self,
+        req_provider: &str,
+        req_model: &str,
+        req_endpoint: &str,
+    ) -> Arc<dyn LlmClient> {
         if let Some(llm) = &self.llm_override {
             return llm.clone();
         }
 
-        let provider = if !req_provider.is_empty() {
-            req_provider
-        } else {
-            &self.cfg.llm_provider
-        };
+        let provider = self.effective_provider_owned(req_provider);
+        let model = self.resolve_model_for_request(&provider, req_model);
 
-        match provider {
+        match provider.as_str() {
             "anthropic" => {
                 let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
                 Arc::new(AnthropicClient::new(key))
             }
             "openai" => {
-                let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
-                let _model_name = if req_model.is_empty() { &self.cfg.model } else { req_model };
-                if !req_endpoint.is_empty() {
-                    Arc::new(OpenAIClient::with_base_url(key, req_endpoint))
-                } else if !self.cfg.llm_endpoint.is_empty() {
-                    Arc::new(OpenAIClient::with_base_url(key, &self.cfg.llm_endpoint))
+                let key = self.configured_api_key(&["OPENAI_API_KEY", "OHC_LLM_API_KEY"]);
+                let endpoint = self.effective_endpoint(
+                    req_endpoint,
+                    &[
+                        "OPENAI_BASE_URL",
+                        "OHC_OPENAI_BASE_URL",
+                        "OHC_LLM_BASE_URL",
+                        "OHC_LLM_ENDPOINT",
+                    ],
+                );
+                let mut config = if let Some(endpoint) = endpoint {
+                    OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
                 } else {
-                    Arc::new(OpenAIClient::new(key))
-                }
+                    OpenAIClientConfig::openai(key)
+                };
+                config.default_model = Some(model);
+                Arc::new(OpenAIClient::from_config(config))
+            }
+            "openai-compatible" | "openai_compatible" => {
+                let key = self.configured_api_key(&["OHC_LLM_API_KEY", "OPENAI_API_KEY"]);
+                let endpoint = self
+                    .effective_endpoint(
+                        req_endpoint,
+                        &[
+                            "OHC_LLM_BASE_URL",
+                            "OHC_LLM_ENDPOINT",
+                            "OPENAI_BASE_URL",
+                            "OHC_OPENAI_BASE_URL",
+                        ],
+                    )
+                    .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
+                Arc::new(OpenAIClient::from_config(OpenAIClientConfig::openai_compatible(
+                    key,
+                    endpoint,
+                    Some(model),
+                )))
+            }
+            "minimax" => {
+                let key = self.configured_api_key(&["MINIMAX_API_KEY", "OHC_LLM_API_KEY"]);
+                let endpoint = self.effective_endpoint(
+                    req_endpoint,
+                    &[
+                        "MINIMAX_BASE_URL",
+                        "MINIMAX_API_BASE_URL",
+                        "OHC_LLM_BASE_URL",
+                        "OHC_LLM_ENDPOINT",
+                    ],
+                );
+                Arc::new(OpenAIClient::minimax(key, endpoint))
             }
             "ollama" => {
                 let endpoint = if !req_endpoint.is_empty() {
@@ -279,7 +412,21 @@ impl AgentServiceImpl {
                 }
                 if let Ok(key) = std::env::var("OPENAI_API_KEY") {
                     if !key.is_empty() {
-                        return Arc::new(OpenAIClient::new(key));
+                        let model = self.resolve_model_for_request("openai", req_model);
+                        let mut config = OpenAIClientConfig::openai(key);
+                        config.default_model = Some(model);
+                        return Arc::new(OpenAIClient::from_config(config));
+                    }
+                }
+                if let Ok(key) = std::env::var("MINIMAX_API_KEY") {
+                    if !key.is_empty() {
+                        return Arc::new(OpenAIClient::minimax(
+                            key,
+                            Self::first_non_empty_env(&[
+                                "MINIMAX_BASE_URL",
+                                "MINIMAX_API_BASE_URL",
+                            ]),
+                        ));
                     }
                 }
                 // Fallback: Ollama
@@ -291,11 +438,8 @@ impl AgentServiceImpl {
     }
 
     async fn build_run_config(&self, req: &RunTaskRequest, department: &str, llm: &Arc<dyn LlmClient>) -> AgentRunConfig {
-        let model = if req.model.is_empty() {
-            self.cfg.model.clone()
-        } else {
-            req.model.clone()
-        };
+        let provider = self.effective_provider_owned(&req.llm_provider);
+        let model = self.resolve_model_for_request(&provider, &req.model);
 
         let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
 
@@ -365,7 +509,24 @@ impl AgentServiceImpl {
         // Attempt to load AGENTS.md for user instructions
         let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         let user_instructions = load_cascading_agents_md(&current_dir, None).await;
-        let developer_instructions = "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string();
+        let mut developer_instructions = "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string();
+        if let Some(toolset) = req.toolset_config.as_ref() {
+            let skill_context = Self::format_loaded_skills(&toolset.skills);
+            if !skill_context.is_empty() {
+                developer_instructions.push_str("\n\n");
+                developer_instructions.push_str(&skill_context);
+            }
+            if !toolset.mcp_servers.is_empty() {
+                developer_instructions.push_str("\n\n[MCP Servers]\n");
+                for server in &toolset.mcp_servers {
+                    developer_instructions.push_str(&format!(
+                        "- {} via {}\n",
+                        server.name,
+                        if server.endpoint.is_empty() { "stdio" } else { &server.endpoint }
+                    ));
+                }
+            }
+        }
 
         let max_tokens = if req.max_tokens == 0 {
             if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens }
@@ -425,7 +586,7 @@ impl AgentServiceImpl {
             visual_verification_command: String::new(),
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
-            workspace_path: None,
+            workspace_path: Some(Self::workspace_path().to_string_lossy().to_string()),
             thread_id: None,
             resume_from_checkpoint_id: None,
             injected_context: None,
@@ -439,18 +600,113 @@ impl AgentServiceImpl {
         }
     }
 
+    fn workspace_path() -> PathBuf {
+        std::env::var("OHC_AGENT_WORKSPACE")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+    }
+
+    fn format_loaded_skills(skills: &[SkillConfig]) -> String {
+        if skills.is_empty() {
+            return String::new();
+        }
+
+        let mut out = String::from("[Loaded Skills]\nSkills are exposed as callable tools named Skill_<name>. Invoke the matching skill tool when a task fits its description.\n");
+        for skill in skills {
+            let loaded = ohc_builtin_agent_tools::skill::LoadedSkill {
+                name: skill.name.clone(),
+                description: skill.description.clone(),
+                instruction: skill.instruction.clone(),
+                allowed_tools: skill.allowed_tools.clone(),
+                model: skill.model.clone(),
+            };
+            out.push_str(&format!(
+                "- {}: {} (tool: {})\n",
+                skill.name,
+                skill.description,
+                loaded.tool_name()
+            ));
+        }
+        out
+    }
+
+    async fn build_tools(
+        &self,
+        toolset: Option<&ToolsetConfig>,
+        department: &str,
+        working_dir: Option<PathBuf>,
+        memory_accessor: Option<Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>>,
+        observation_store: Arc<dashmap::DashMap<String, String>>,
+    ) -> Vec<Tool> {
+        let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
+        let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
+        let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
+
+        let mut tools = ohc_builtin_agent_tools::all_tools(
+            todos,
+            task_store,
+            mailbox,
+            working_dir,
+            memory_accessor,
+            observation_store,
+        );
+
+        if !department.is_empty() {
+            if let Ok(dep) = Department::from_str(department) {
+                let dep_cfg = get_department_config(dep);
+                tools.retain(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()));
+            }
+        }
+
+        if let Some(toolset) = toolset {
+            if !toolset.builtin_tools.is_empty() {
+                let allowed = toolset
+                    .builtin_tools
+                    .iter()
+                    .map(|name| name.to_ascii_lowercase())
+                    .collect::<std::collections::HashSet<_>>();
+                tools.retain(|t| allowed.contains(&t.name.to_ascii_lowercase()));
+            }
+
+            for skill in &toolset.skills {
+                tools.push(ohc_builtin_agent_tools::skill::skill_tool(
+                    ohc_builtin_agent_tools::skill::LoadedSkill {
+                        name: skill.name.clone(),
+                        description: skill.description.clone(),
+                        instruction: skill.instruction.clone(),
+                        allowed_tools: skill.allowed_tools.clone(),
+                        model: skill.model.clone(),
+                    },
+                ));
+            }
+
+            let mut mcp_tools =
+                ohc_builtin_agent_tools::mcp_dynamic::load_mcp_server_tools(&toolset.mcp_servers)
+                    .await;
+            tools.append(&mut mcp_tools);
+        }
+
+        tools
+    }
+
     pub async fn run_ralph_loop(&self, req: RunTaskRequest) {
         let task_id = if req.task_id.is_empty() { uuid::Uuid::new_v4().to_string() } else { req.task_id.clone() };
         let progress_file = format!(".ralph_progress_{}.json", task_id);
         let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
         let run_cfg = self.build_run_config(&req, &req.department, &llm).await;
         
-        let todos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
-        let task_store = Arc::new(RwLock::new(TaskStore::default()));
-        let mailbox = Arc::new(RwLock::new(Mailbox::default()));
         let observation_store = Arc::new(dashmap::DashMap::new());
-        
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, None, observation_store.clone());
+        let tools = self
+            .build_tools(
+                req.toolset_config.as_ref(),
+                &req.department,
+                Some(Self::workspace_path()),
+                None,
+                observation_store.clone(),
+            )
+            .await;
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
@@ -503,10 +759,6 @@ impl AgentService for AgentServiceImpl {
         let task = task_req.task.clone();
         let memory = self.memory.clone();
 
-        let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
-        let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
-        let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-        
         // Inject memory accessor if using Anthropic3TierMemoryStore
         let anthropic_memory = self.anthropic_memory.clone();
         let accessor = if let Some(mem) = &anthropic_memory {
@@ -514,20 +766,15 @@ impl AgentService for AgentServiceImpl {
             mem.as_anthropic_accessor()
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
-
-        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, None, accessor, observation_store.clone());
-        let tools = if !task_req.department.is_empty() {
-            if let Ok(dep) = Department::from_str(&task_req.department) {
-                let dep_cfg = get_department_config(dep);
-                all_tools.into_iter()
-                    .filter(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()))
-                    .collect()
-            } else {
-                all_tools
-            }
-        } else {
-            all_tools
-        };
+        let tools = self
+            .build_tools(
+                task_req.toolset_config.as_ref(),
+                &task_req.department,
+                Some(Self::workspace_path()),
+                accessor,
+                observation_store.clone(),
+            )
+            .await;
 
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
@@ -746,7 +993,11 @@ impl AgentService for AgentServiceImpl {
                 visual_verification_command: String::new(),
                 enable_state_checkpointing: false,
                 state_scratchpad_path: None,
-                workspace_path: None,
+                workspace_path: Some(if sub_req.working_dir.is_empty() {
+                    Self::workspace_path().to_string_lossy().to_string()
+                } else {
+                    sub_req.working_dir.clone()
+                }),
                 thread_id: None,
                 resume_from_checkpoint_id: None,
                 injected_context,
@@ -758,13 +1009,18 @@ impl AgentService for AgentServiceImpl {
             manually_approved_tool_calls: vec![],
             };
 
-            let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
-            let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
-            let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
             let observation_store = Arc::new(dashmap::DashMap::new());
 
-            let working_dir = if sub_req.working_dir.is_empty() { None } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
-            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox, working_dir, None, observation_store.clone());
+            let working_dir = if sub_req.working_dir.is_empty() { Some(Self::workspace_path()) } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
+            let tools = self
+                .build_tools(
+                    sub_req.toolset_config.as_ref(),
+                    "",
+                    working_dir,
+                    None,
+                    observation_store.clone(),
+                )
+                .await;
             let mut agent = Agent::new(llm, tools);
             agent.observation_store = observation_store;
 
@@ -800,6 +1056,8 @@ impl AgentService for AgentServiceImpl {
             llm_provider: sub_req.llm_provider,
             max_tokens: self.cfg.max_tokens,
             injected_context_json: sub_req.parent_context_json,
+            runtime_config: sub_req.runtime_config,
+            toolset_config: sub_req.toolset_config,
             ..Default::default()
         };
 

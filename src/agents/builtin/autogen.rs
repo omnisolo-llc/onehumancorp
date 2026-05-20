@@ -549,7 +549,6 @@ mod tests {
             .contains("Agent2: I am Agent2. I received the output and did Output 2"));
     }
 
-    use super::*;
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
 
     struct AutoGenMockLlmClient {

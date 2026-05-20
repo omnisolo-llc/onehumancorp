@@ -247,12 +247,22 @@ platforms_host = use_extension("@platforms//host:extension.bzl", "host_platform"
 use_repo(platforms_host, "host_platform")
 
 bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
+# TODO: Revisit hermetic LLVM once toolchains_llvm analysis/linking is stable.
+# bazel_dep(name = "toolchains_llvm", version = "1.7.0")
 
 buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 buildbuddy.gcc_toolchain()
 use_repo(buildbuddy, "buildbuddy_toolchain")
 
 register_toolchains("@buildbuddy_toolchain//:all")
+
+# llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
+# llvm.toolchain(
+#     llvm_version = "21.1.8",
+# )
+# use_repo(llvm, "llvm_toolchain")
+#
+# register_toolchains("@llvm_toolchain//:all")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(

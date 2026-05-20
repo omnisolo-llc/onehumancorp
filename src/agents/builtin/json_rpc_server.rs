@@ -4,7 +4,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use ohc_builtin_agent_core::types::Message;
 
 use crate::codex_runner::Runner;
 use crate::agent::AgentRunConfig;
@@ -168,7 +167,7 @@ mod tests {
     };
     use tower::ServiceExt; // for `oneshot`
     use std::sync::Arc;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
     use crate::llm::LlmClient;
     use crate::agent::Agent;
 

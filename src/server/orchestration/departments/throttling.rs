@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use chrono::Utc;
-use sqlx::Row;
 
 pub struct ThrottlingManager {
     db: Arc<DB>,

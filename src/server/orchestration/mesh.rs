@@ -2,7 +2,7 @@ use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use ::server_ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
 use std::sync::Arc;
 use async_trait::async_trait;
 use opentelemetry::KeyValue;
@@ -93,7 +93,7 @@ impl TeammateMesh for CentrifugeNode {
             job_id: job_id.clone(),
             tenant_id: "default".to_string(),
             action_name: topic.to_string(),
-            payload: payload,
+            payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 

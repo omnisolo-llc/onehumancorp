@@ -12,7 +12,6 @@ use crate::telemetry::ViolationStore;
 pub struct MacOsSandbox {
     evaluator: PermissionEvaluator,
     policy: SandboxPolicy,
-    pool: Option<PgPool>,
     violation_store: Arc<ViolationStore>,
 }
 
@@ -22,7 +21,6 @@ impl MacOsSandbox {
         MacOsSandbox {
             evaluator: PermissionEvaluator::new(),
             policy: SandboxPolicy::default(),
-            pool,
             violation_store,
         }
     }

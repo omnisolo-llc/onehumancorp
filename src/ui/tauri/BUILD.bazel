@@ -129,6 +129,7 @@ rust_library(
     deps = [
         "@crates//:tauri",
         "@crates//:tauri-plugin-shell",
+        "@crates//:reqwest",
         "@crates//:serde",
         "@crates//:serde_json",
     ],

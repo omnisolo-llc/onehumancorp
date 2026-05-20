@@ -3,7 +3,7 @@ use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct ShippoProvider {
-    client: Arc<ShippoClient>,
+    _client: Arc<ShippoClient>,
     metadata: ProviderMetadata,
 }
 
@@ -12,7 +12,7 @@ impl ShippoProvider {
         let client = ShippoClient::new(api_key);
 
         Self {
-            client: Arc::new(client),
+            _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "shippo".to_string(),
                 name: "Shippo Logistics".to_string(),
