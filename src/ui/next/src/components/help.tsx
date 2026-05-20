@@ -211,8 +211,11 @@ export function HelpWidget() {
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
+
   const [chatInput, setChatInput] = useState("");
   const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string} | null>(null);
+
 
   useEffect(() => {
     fetch("/api/videos")
@@ -221,19 +224,23 @@ export function HelpWidget() {
       .catch(() => {});
   }, []);
 
+
+  const submitChat = async (val: string) => {
+    setChatInput("");
+    setChatMessages(prev => [...prev, { role: "user", text: val }]);
+
+    try {
+      const response = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: val }) });
+      const data = await response.json();
+      setChatMessages(prev => [...prev, { role: "bot", text: data.reply }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
+    }
+  };
+
   const handleChatSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && chatInput.trim()) {
-      const val = chatInput.trim();
-      setChatInput("");
-      setChatMessages(prev => [...prev, { role: "user", text: val }]);
-
-      try {
-        const response = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: val }) });
-        const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply }]);
-      } catch (err) {
-        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
-      }
+      await submitChat(chatInput.trim());
     }
   };
 
@@ -275,35 +282,36 @@ export function HelpWidget() {
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
                 <input type="text" placeholder="Search for help..." className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
                 <div className="space-y-2 mb-4">
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                  <a href="/help/getting-started" className="block bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                     <h4 className="font-bold text-gray-800 text-sm">Getting Started</h4>
                     <p className="text-xs text-gray-500 mt-1">Learn the basics of setting up your store.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                  </a>
+                  <a href="/help/my-store" className="block bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                     <h4 className="font-bold text-gray-800 text-sm">My Store</h4>
                     <p className="text-xs text-gray-500 mt-1">Manage your products and layout.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                  </a>
+                  <a href="/help/payments" className="block bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                     <h4 className="font-bold text-gray-800 text-sm">Payments</h4>
                     <p className="text-xs text-gray-500 mt-1">Connect your bank and get paid.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                  </a>
+                  <a href="/help/ai-agents" className="block bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                     <h4 className="font-bold text-gray-800 text-sm">AI Agents</h4>
                     <p className="text-xs text-gray-500 mt-1">Hire and manage your AI workforce.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                  </a>
+                  <a href="/help/marketing" className="block bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                     <h4 className="font-bold text-gray-800 text-sm">Marketing</h4>
                     <p className="text-xs text-gray-500 mt-1">Grow your audience and sales.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                  </a>
+                  <a href="/help/account-billing" className="block bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                     <h4 className="font-bold text-gray-800 text-sm">Account & Billing</h4>
                     <p className="text-xs text-gray-500 mt-1">Manage your subscription.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <a href="/api-docs"><h4 className="font-bold text-gray-800 text-sm hover:underline">API Documentation (Advanced)</h4></a>
+                  </a>
+                  <a href="/api-docs" className="block bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm hover:underline">API Documentation (Advanced)</h4>
                     <p className="text-xs text-gray-500 mt-1">Interactive API reference for integrations.</p>
-                  </div>
+                  </a>
                 </div>
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
@@ -346,34 +354,50 @@ export function HelpWidget() {
                     onKeyDown={handleChatSubmit}
                     className="flex-1 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
+
+                  <button onClick={() => { if(chatInput.trim()) submitChat(chatInput.trim()); }} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
+
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </div>
               </div>
             )}
 
+
             {tab === "videos" && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
-                        <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2 z-10">
-                        <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
-                        <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
-                      </div>
+                {selectedVideo ? (
+                  <div className="mb-4">
+                    <button onClick={() => setSelectedVideo(null)} className="text-blue-600 text-xs font-bold mb-2 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back to Videos
+                    </button>
+                    <div className="w-full aspect-video bg-black rounded-xl overflow-hidden relative flex items-center justify-center">
+                      <svg className="w-12 h-12 text-white/50 animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white font-bold text-sm z-10">Playing: {selectedVideo.title}</div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {videos.map((v) => (
+                        <div key={v.id} onClick={() => setSelectedVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
+                          <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
+                            <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                          </div>
+                          <div className="absolute bottom-2 left-2 right-2 z-10">
+                            <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
+                            <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
-
-            {tab === "whatsnew" && (
+{tab === "whatsnew" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">What's New</h3>
                 <div className="w-full aspect-video bg-gray-200 rounded-xl mb-4 relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
