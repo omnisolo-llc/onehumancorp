@@ -3218,85 +3218,87 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glassmorphism">
-                        <h1>OneHuman</h1>
-                        <div id="step-1">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; width: 375px; max-width: 100%; margin: 0 auto; overflow: hidden; position: relative; padding: 24px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">
+                        <h1 style="font-size: 24px; margin-bottom: 24px; font-weight: 700; color: #1D1D1F; text-align: center;">OneHuman</h1>
+                        <div id="step-1" style="transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 1;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 8px;">Your business, live in minutes.</h1>
+                            <p style="font-size: 14px; color: #86868B; margin-bottom: 24px;">Zero tech skills needed. We do the heavy lifting.</p>
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 12px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(2)">🚀 Start My Business Next</button>
+                            <button class="secondary" style="width: 100%; background: rgba(0, 113, 227, 0.1); color: #0071E3; border: 1px solid rgba(0, 113, 227, 0.2); padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" class="hidden" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" />
-                            <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                        <div id="step-2" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">What kind of business are you building?</h1>
+                            <input type="text" placeholder="Business type" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 16px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 16px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(3)">Next →</button>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+                                <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setBusinessType('Online Store')">🛒 <span style="margin-left: 8px;">Online Store</span></button>
+                                <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setBusinessType('Service Business')">🛠️ <span style="margin-left: 8px;">Service Business</span></button>
+                                <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setBusinessType('Restaurant / Food')">🍕 <span style="margin-left: 8px;">Restaurant / Food</span></button>
+                                <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setBusinessType('Creative')">🎨 <span style="margin-left: 8px;">Creative</span></button>
+                                <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setBusinessType('Local Business')">🏠 <span style="margin-left: 8px;">Local Business</span></button>
+                            </div>
+                            <button class="secondary" style="width: 100%; background: transparent; color: #86868B; border: none; padding: 12px; font-weight: 600; cursor: pointer;" onclick="nextStep(1)">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" class="hidden" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                        <div id="step-3" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">Give your business a name</h1>
+                            <input type="text" placeholder="What is your business called?" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 12px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 16px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <button style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 12px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep('generating')">Generate Description</button>
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 16px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(4)">Next →</button>
+                            <button class="secondary" style="width: 100%; background: transparent; color: #86868B; border: none; padding: 12px; font-weight: 600; cursor: pointer;" onclick="nextStep(2)">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" class="hidden" style="display: none;">
-                            <h1>What do you sell?</h1>
+                        <div id="step-4" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
+                                <label style="display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid #D2D2D7; border-radius: 8px; cursor: pointer; background: white; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);"><input type="checkbox" style="width: 18px; height: 18px; margin: 0; accent-color: #0071E3;"> <span style="font-size: 16px; color: #1D1D1F;">📦 Physical Products</span></label>
+                                <label style="display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid #D2D2D7; border-radius: 8px; cursor: pointer; background: white; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);"><input type="checkbox" style="width: 18px; height: 18px; margin: 0; accent-color: #0071E3;"> <span style="font-size: 16px; color: #1D1D1F;">📄 Digital Products</span></label>
+                                <label style="display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid #D2D2D7; border-radius: 8px; cursor: pointer; background: white; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);"><input type="checkbox" style="width: 18px; height: 18px; margin: 0; accent-color: #0071E3;"> <span style="font-size: 16px; color: #1D1D1F;">📅 Services / Appointments</span></label>
+                                <label style="display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid #D2D2D7; border-radius: 8px; cursor: pointer; background: white; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);"><input type="checkbox" style="width: 18px; height: 18px; margin: 0; accent-color: #0071E3;"> <span style="font-size: 16px; color: #1D1D1F;">🔁 Subscriptions</span></label>
                             </div>
-                            <button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 16px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(5)">Next →</button>
+                            <button class="secondary" style="width: 100%; background: transparent; color: #86868B; border: none; padding: 12px; font-weight: 600; cursor: pointer;" onclick="nextStep(3)">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" class="hidden" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                        <div id="step-5" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">Add your first product or service</h1>
+                            <input type="text" placeholder="What is the name of this product?" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 12px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <input type="text" placeholder="0.00" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 16px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <button style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 12px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep('generating')">Generate AI Description</button>
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 16px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(6)">Next →</button>
+                            <button class="secondary" style="width: 100%; background: transparent; color: #86868B; border: none; padding: 12px; font-weight: 600; cursor: pointer;" onclick="nextStep(4)">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" class="hidden" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                        <div id="step-6" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">How do you want to receive payments?</h1>
+                            <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 16px; border-radius: 8px; font-weight: 500; margin-bottom: 12px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setPaymentPref('online')">Online</button>
+                            <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 16px; border-radius: 8px; font-weight: 500; margin-bottom: 16px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setPaymentPref('both')">Both Online & In-person</button>
+                            <button class="secondary" style="width: 100%; background: transparent; color: #86868B; border: none; padding: 12px; font-weight: 600; cursor: pointer;" onclick="nextStep(5)">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" class="hidden" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
+                        <div id="step-7" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">Create your account</h1>
+                            <input type="text" placeholder="e.g. Maya Smith" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 12px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <input type="email" placeholder="you@email.com" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 12px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <input type="password" placeholder="Password" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D2D2D7; margin-bottom: 16px; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" />
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(8)">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" class="hidden" style="display: none;">
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)">Bold</button>
-                            <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
-                                <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
-                                <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
-                                <button class="secondary" style="background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
+                        <div id="step-8" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">Select a Template</h1>
+                            <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 16px; border-radius: 8px; font-weight: 500; margin-bottom: 12px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setTemplate('Modern', this)">Modern</button>
+                            <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 16px; border-radius: 8px; font-weight: 500; margin-bottom: 12px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setTemplate('Bold', this)">Bold</button>
+                            <div style="margin-top: 12px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,149,0,0.1), rgba(255,59,48,0.05)); border: 1px solid rgba(255,149,0,0.3);">
+                                <h3 style="margin-bottom: 8px; font-size: 16px; color: #1D1D1F; font-weight: 600;">✨ Premium Templates</h3>
+                                <p style="font-size: 13px; color: #86868B; margin-bottom: 16px; line-height: 1.4;">Unlock professional, high-converting designs optimized for your industry.</p>
+                                <button class="secondary" style="background: white; width: 100%; border: 1px solid #FF9500; color: #FF9500; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
                             </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px;">Next →</button>
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; margin-top: 16px; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(9)">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" class="hidden" style="display: none;">
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)">Next →</button>
+                        <div id="step-9" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px;">Choose your domain</h1>
+                            <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 16px; border-radius: 8px; font-weight: 500; margin-bottom: 12px; cursor: pointer; text-align: left; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setDomainChoice('subdomain', this)">🌐 <span style="margin-left: 8px;">Free OHC Domain</span></button>
+                            <button class="secondary" style="width: 100%; background: white; color: #1D1D1F; border: 1px solid #D2D2D7; padding: 16px; border-radius: 8px; font-weight: 500; margin-bottom: 16px; cursor: pointer; text-align: left; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="setDomainChoice('custom', this)">🔗 <span style="margin-left: 8px;">Connect Custom Domain</span></button>
+                            <button style="width: 100%; background: #0071E3; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="nextStep(10)">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)"><span>Publish my business</span> <span>→</span></button>
+                        <div id="step-10" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0;">
+                            <h1 style="font-size: 20px; font-weight: 600; color: #1D1D1F; margin-bottom: 24px; text-align: center;">Ready to launch!</h1>
+                            <button style="width: 100%; background: #34C759; color: white; border: none; padding: 16px; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);" onclick="publishBusiness(this)"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
