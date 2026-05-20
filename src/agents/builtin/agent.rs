@@ -211,6 +211,7 @@ pub(crate) struct HierarchicalPromptBuilder {
     tool_definitions: String,
     developer_instructions: String,
     user_instructions: String,
+    enable_lost_in_the_middle_prevention: bool,
 }
 
 impl HierarchicalPromptBuilder {
@@ -240,6 +241,7 @@ impl HierarchicalPromptBuilder {
             tool_definitions: tool_defs,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
+            enable_lost_in_the_middle_prevention: cfg.enable_lost_in_the_middle_prevention,
         }
     }
 
@@ -277,6 +279,14 @@ impl HierarchicalPromptBuilder {
             }
             combined_system.push_str("[User Instructions]\n");
             combined_system.push_str(&self.user_instructions);
+        }
+
+        if self.enable_lost_in_the_middle_prevention && !self.server_system_message.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
+            combined_system.push_str(&self.server_system_message);
         }
 
         combined_system
@@ -3868,6 +3878,7 @@ mod tests {
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
 
         let tool = crate::tools::Tool {
             name: "test_tool".to_string(),
@@ -3890,6 +3901,7 @@ mod tests {
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
@@ -3904,6 +3916,7 @@ mod tests {
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
@@ -5445,3 +5458,41 @@ mod stream_tests {
         // We'll trust the trace and the logic. A more deterministic check is fine.
         assert!(elapsed >= 300, "Should take at least 300ms (100 concurrent + 100 serial + 100 serial)");
     }
+
+#[cfg(test)]
+mod hierarchical_prompt_tests {
+    use super::*;
+
+    #[test]
+    fn test_lost_in_the_middle_prevention() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
+        cfg.developer_instructions = "Use standard libraries.".to_string();
+        cfg.user_instructions = "Please calculate 2+2".to_string();
+        cfg.enable_lost_in_the_middle_prevention = true;
+
+        let tools = vec![];
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let prompt = builder.build();
+
+        assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
+        assert!(prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
+        assert!(prompt.ends_with("CRITICAL: Never delete the database."));
+    }
+
+    #[test]
+    fn test_lost_in_the_middle_prevention_disabled() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
+        cfg.developer_instructions = "Use standard libraries.".to_string();
+        cfg.user_instructions = "Please calculate 2+2".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
+
+        let tools = vec![];
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let prompt = builder.build();
+
+        assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
+        assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"));
+    }
+}
