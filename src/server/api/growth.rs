@@ -230,34 +230,6 @@ async fn handle_create_team_invite(
     }
 }
 
-async fn handle_referral_click(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    state.hub.referral_tracker().record_click(&req.id);
-    Ok(Json(()))
-}
-
-async fn handle_referral_convert(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    state.hub.referral_tracker().record_conversion(&req.id);
-    Ok(Json(()))
-}
-
-async fn handle_team_invite_accept(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<InviteIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
-    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
-
-    match tracker.accept_invite(&req.id).await {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
 
 
 #[cfg(test)]
@@ -325,7 +297,7 @@ mod tests {
         let accept_req = InviteIdRequest {
             id: invite_id,
         };
-        let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
+        let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(GrowthIdRequest { id: accept_req.id })).await;
         assert!(accept_res.is_ok());
     }
 
@@ -344,13 +316,13 @@ mod tests {
         let click_req = ReferralIdRequest {
             id: "ref-code-123".to_string(),
         };
-        let res = handle_referral_click(Extension(state.clone()), Json(click_req)).await;
+        let res = handle_referral_click(Extension(state.clone()), Json(GrowthIdRequest { id: click_req.id })).await;
         assert!(res.is_ok());
 
         let convert_req = ReferralIdRequest {
             id: "ref-code-123".to_string(),
         };
-        let res = handle_referral_convert(Extension(state.clone()), Json(convert_req)).await;
+        let res = handle_referral_convert(Extension(state.clone()), Json(GrowthIdRequest { id: convert_req.id })).await;
         assert!(res.is_ok());
     }
 
