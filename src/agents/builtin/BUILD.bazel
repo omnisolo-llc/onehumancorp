@@ -55,6 +55,7 @@ rust_library(
         "json_store.rs",
         "memory_store.rs",
         "sqlite_memory.rs",
+        "output_parser.rs",
         "memory_exhaustive_tests.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
@@ -189,6 +190,7 @@ rust_binary(
         "guardrails",
         "harness",
         "memory_store",
+        "output_parser",
         "pubsub",
         "registry",
     ]
