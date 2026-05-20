@@ -101,7 +101,7 @@ Chart.lock
 
 # Golang is not allowed in this project
 *.go
-!/src/server/orchestration/hybrid_sync/*.go
+!**/hybrid_sync/*.go
 
 # Rust build artifacts
 /target/
