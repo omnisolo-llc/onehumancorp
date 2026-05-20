@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "models",
+    srcs = ["unified.go"],
+    importpath = "github.com/ohc/server/lib/models",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@com_github_pgvector_pgvector_go//:pgvector-go",
+    ],
+)
+
+go_test(
+    name = "models_test",
+    srcs = ["unified_test.go"],
+    embed = [":models"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@com_github_pgvector_pgvector_go//:pgvector-go",
+        "@com_github_jackc_pgx_v5//pgxpool",
+    ],
+)
