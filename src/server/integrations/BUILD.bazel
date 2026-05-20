@@ -27,6 +27,10 @@ filegroup(
         "//src/server/integrations/manychat:srcs",
         "//src/server/integrations/calendly:srcs",
         "//src/server/integrations/mailchimp:srcs",
+        "//src/server/integrations/ayrshare:srcs",
+        "//src/server/integrations/listmonk:srcs",
+        "//src/server/integrations/easypost:srcs",
+        "//src/server/integrations/jitsi:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
