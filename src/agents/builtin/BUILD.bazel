@@ -215,6 +215,25 @@ rust_test(
     }),
 )
 
+rust_test(
+    name = "compaction_tests",
+    srcs = ["compaction_tests.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "@crates//:tokio",
+        "@crates//:dashmap",
+        "@crates//:serde_json",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
 exports_files([
     "worker.rs",
     "mcp/mod.rs",
