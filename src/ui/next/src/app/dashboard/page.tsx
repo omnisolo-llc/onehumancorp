@@ -90,6 +90,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText("ohc.store/ref/acme_123");
+      alert("Referral link copied!");
+    } catch (e) {
+      console.error("Failed to copy link", e);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
 
@@ -104,6 +113,30 @@ export default function Dashboard() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Growth Loop: Acquisition & Virality (Referral Program) */}
+         <section>
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 shadow-lg text-white mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex-1">
+                    <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-sm font-medium mb-3 backdrop-blur-sm">
+                        <span>🚀</span> Grow with OHC
+                    </div>
+                    <h2 className="text-2xl font-bold font-outfit mb-2">Give a Free Month, Get a Free Month</h2>
+                    <p className="text-blue-100 font-inter text-sm max-w-lg">
+                        Know another business owner who could benefit from OHC? Share your unique link. When they launch, you both get 1 month of Premium free.
+                    </p>
+                </div>
+                <div className="w-full md:w-auto bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/20 flex items-center gap-2">
+                    <span className="text-sm font-mono text-white/90 px-3 truncate select-all">ohc.store/ref/acme_123</span>
+                    <button
+                        onClick={handleCopyLink}
+                        className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition-all whitespace-nowrap"
+                    >
+                        Copy Link
+                    </button>
+                </div>
+            </div>
+         </section>
 
          {/* Business Snapshot */}
          <section>
