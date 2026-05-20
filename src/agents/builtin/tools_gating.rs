@@ -18,7 +18,6 @@ impl ToolGater {
                 return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
             }
         }
-
         // Stage 3: Explicit user confirmation for high-risk operations
         // If a tool is in high_risk_tools, or if PermissionArchitecture is Restrictive and the tool is mutating.
         let is_high_risk = cfg.high_risk_tools.contains(&tc.name);
@@ -35,9 +34,11 @@ impl ToolGater {
             }
         }
 
+
         Ok(())
     }
 }
+
 
 #[cfg(test)]
 mod tests {
