@@ -81,4 +81,82 @@ mod tests {
         assert!(has_ops_auto, "Cross-department flow should result in an Operations task");
         assert!(has_cs_draft, "Cross-department flow should result in a pending Customer Success approval");
     }
+
+    #[tokio::test]
+    async fn test_customer_success_message_handling() {
+        use crate::orchestration::departments::orchestrator::Department;
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(orchestrator.clone())));
+        orchestrator.register_department(cs_agent.clone()).await;
+
+        let tenant_id = "test-tenant-456".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        // Add a memory record
+        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            agent_id: "customer_success_agent".to_string(),
+            content: "We make excellent vegan cakes for special occasions.".to_string(),
+            embedding: vec![0.5; 1536],
+            source_type: "MANUAL".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 100,
+            owner_override: false,
+            metadata: None,
+        };
+        orchestrator.write_long_term_memory(record).await.unwrap();
+
+        // 1. Test Draft Mode (auto_approve_limits = 0.0)
+        {
+            let mut agent = cs_agent.write().await;
+            use crate::orchestration::departments::types::DepartmentConfig;
+            agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0 });
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.message.received".to_string(),
+            payload: serde_json::json!({"message": "Do you do vegan cakes?"}),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_draft = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+            if pending.iter().any(|req| req.description.contains("Drafted reply for message")) {
+                has_draft = true;
+                break;
+            }
+        }
+        assert!(has_draft, "Should generate a draft for review");
+    }
 }
