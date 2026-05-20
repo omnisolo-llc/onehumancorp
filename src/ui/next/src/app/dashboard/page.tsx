@@ -129,6 +129,44 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Agent Approval Queue */}
+         {approvals.length > 0 && (
+           <section>
+             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Pending Approvals</h2>
+             <div className="flex flex-col gap-4">
+               {approvals.map((approval) => (
+                 <div key={approval.id} className="p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                   <div>
+                     <div className="flex items-center gap-2 mb-1">
+                       <span className="text-sm font-semibold" style={{ color: '#0066FF' }}>{approval.department}</span>
+                       {approval.action_risk === 'HIGH' && (
+                         <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FF3B30', color: 'white' }}>High Risk</span>
+                       )}
+                     </div>
+                     <p className="text-base font-medium" style={{ color: '#1D1D1F' }}>{approval.description}</p>
+                   </div>
+                   <div className="flex items-center gap-3">
+                     <button
+                       onClick={() => handleApprove(approval.id, false)}
+                       className="min-h-[44px] min-w-[44px] px-6 py-2 rounded-xl font-semibold text-sm transition-colors"
+                       style={{ background: 'rgba(255, 59, 48, 0.1)', color: '#FF3B30', border: '1px solid rgba(255, 59, 48, 0.2)' }}
+                     >
+                       Deny
+                     </button>
+                     <button
+                       onClick={() => handleApprove(approval.id, true)}
+                       className="min-h-[44px] min-w-[44px] px-6 py-2 rounded-xl font-semibold text-sm transition-colors text-white"
+                       style={{ background: '#0066FF', boxShadow: '0 4px 12px rgba(0, 102, 255, 0.2)' }}
+                     >
+                       Approve
+                     </button>
+                   </div>
+                 </div>
+               ))}
+             </div>
+           </section>
+         )}
+
          {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">

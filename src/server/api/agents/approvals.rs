@@ -40,8 +40,46 @@ where
 {
     Router::new()
         .route("/", get(list_approvals))
+        .route("/events", post(receive_event))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
+}
+
+#[derive(Deserialize)]
+pub struct ExternalEventRequest {
+    pub event_type: String,
+    pub payload: serde_json::Value,
+}
+
+#[derive(Serialize)]
+pub struct ExternalEventResponse {
+    pub success: bool,
+    pub event_id: String,
+}
+
+async fn receive_event(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ExternalEventRequest>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(ExternalEventResponse { success: false, event_id: "".to_string() })).into_response(),
+    };
+
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id,
+        event_type: payload.event_type,
+        payload: payload.payload,
+    };
+
+    let event_id = event.id.clone();
+
+    match orchestrator.dispatch_event(event).await {
+        Ok(_) => (StatusCode::OK, Json(ExternalEventResponse { success: true, event_id })).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ExternalEventResponse { success: false, event_id: "".to_string() })).into_response(),
+    }
 }
 
 async fn list_approvals(
