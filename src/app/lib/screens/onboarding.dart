@@ -13,7 +13,12 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String businessName = '';
-  String? businessType;
+  String? businessType = 'Physical';
+  String productName = '';
+  String productPrice = '';
+  String websiteTemplate = 'Modern';
+  String domainChoice = 'subdomain';
+  int _inputStep = 0;
   OnboardingState _state = OnboardingState.welcome;
 
   Future<void> submit() async {
@@ -33,11 +38,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'admin_email': 'admin@test.com',
             'admin_name': 'Admin User',
             'admin_password': 'password123',
-            'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
-            'domain_choice': 'subdomain',
-            'price_type': 'fixed'
+            'website_template': websiteTemplate,
+            'first_product_name': productName,
+            'first_product_price': productPrice,
+            'domain_choice': domainChoice,
+            'price_type': 'fixed',
           }),
         );
 
@@ -45,11 +50,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           setState(() => _state = OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-           setState(() => _state = OnboardingState.input);
+          setState(() => _state = OnboardingState.input);
         }
       } catch (e) {
         print('Error: \$e');
-         setState(() => _state = OnboardingState.input);
+        setState(() => _state = OnboardingState.input);
       }
     }
   }
@@ -68,8 +73,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       backgroundColor: Color(0xFFF5F5F7), // Light background
       body: Center(
         child: Container(
-          width: 375, // Mobile viewport constraint
-          height: 812, // Standard mobile height
+          width:
+              MediaQuery.of(context).size.width > 768
+                  ? 768
+                  : MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: BackdropFilter(
@@ -78,7 +86,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.65),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.4),
+                    width: 1,
+                  ),
                 ),
                 child: _buildContent(),
               ),
@@ -165,6 +176,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildInputState() {
+    switch (_inputStep) {
+      case 0:
+        return _buildBusinessStep();
+      case 1:
+        return _buildProductStep();
+      case 2:
+        return _buildTemplateStep();
+      case 3:
+        return _buildDomainStep();
+      default:
+        return _buildBusinessStep();
+    }
+  }
+
+  Widget _buildBusinessStep() {
     return Padding(
       padding: EdgeInsets.all(24),
       child: Form(
@@ -173,6 +199,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _state = OnboardingState.welcome;
+                    });
+                  },
+                ),
+              ],
+            ),
             Text(
               'Your Details',
               style: TextStyle(
@@ -196,6 +234,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
+              initialValue: businessName,
               decoration: InputDecoration(
                 labelText: 'Business Name',
                 hintText: 'e.g., Maya\'s Custom Cakes',
@@ -208,11 +247,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              validator:
+                  (value) => value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => businessName = value!,
             ),
             SizedBox(height: 16),
             DropdownButtonFormField<String>(
+              value: businessType,
               decoration: InputDecoration(
                 labelText: 'Business Type',
                 filled: true,
@@ -223,25 +264,348 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 contentPadding: EdgeInsets.all(20),
               ),
-              items: ['Physical', 'Digital', 'Service', 'Food']
-                  .map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      ))
-                  .toList(),
+              items:
+                  ['Physical', 'Digital', 'Service', 'Food']
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
+                      .toList(),
               onChanged: (value) {
                 setState(() {
                   businessType = value;
                 });
               },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              validator:
+                  (value) => value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => businessType = value!,
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() {
+                    _inputStep = 1;
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Next',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductStep() {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _inputStep = 0;
+                    });
+                  },
+                ),
+              ],
+            ),
+            Text(
+              'Your First Product',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D1D1F),
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'What are you selling?',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            TextFormField(
+              initialValue: productName,
+              decoration: InputDecoration(
+                labelText: 'Product Name',
+                hintText: 'e.g., Custom Cake Deposit',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              validator:
+                  (value) => value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => productName = value!,
+            ),
+            SizedBox(height: 16),
+            TextFormField(
+              initialValue: productPrice,
+              decoration: InputDecoration(
+                labelText: 'Price',
+                hintText: 'e.g., 25.00',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              keyboardType: TextInputType.number,
+              validator:
+                  (value) => value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => productPrice = value!,
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() {
+                    _inputStep = 2;
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Next',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemplateStep() {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _inputStep = 1;
+                    });
+                  },
+                ),
+              ],
+            ),
+            Text(
+              'Select Template',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D1D1F),
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Choose a style for your storefront.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            DropdownButtonFormField<String>(
+              value: websiteTemplate,
+              decoration: InputDecoration(
+                labelText: 'Template',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              items:
+                  ['Modern', 'Classic', 'Minimal', 'Bold']
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
+                      .toList(),
+              onChanged: (value) {
+                setState(() {
+                  websiteTemplate = value!;
+                });
+              },
+              onSaved: (value) => websiteTemplate = value!,
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() {
+                    _inputStep = 3;
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Next',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDomainStep() {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _inputStep = 2;
+                    });
+                  },
+                ),
+              ],
+            ),
+            Text(
+              'Attach Domain',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D1D1F),
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'How should customers find you?',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            DropdownButtonFormField<String>(
+              value: domainChoice,
+              decoration: InputDecoration(
+                labelText: 'Domain Type',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              items:
+                  ['subdomain', 'custom']
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
+                      .toList(),
+              onChanged: (value) {
+                setState(() {
+                  domainChoice = value!;
+                });
+              },
+              onSaved: (value) => domainChoice = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
               onPressed: submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+                backgroundColor: Color(0xFF0066FF),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
@@ -348,7 +712,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.check_circle, size: 48, color: Color(0xFF34C759)),
+                      Icon(
+                        Icons.check_circle,
+                        size: 48,
+                        color: Color(0xFF34C759),
+                      ),
                       SizedBox(height: 16),
                       Text(
                         'Storefront Generated!',
@@ -412,7 +780,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               Text(
                 'Preview Mode',
-                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -503,8 +875,11 @@ class StoreLiveScreen extends StatelessWidget {
       backgroundColor: Color(0xFFF5F5F7),
       body: Center(
         child: Container(
-          width: 375,
-          height: 812,
+          width:
+              MediaQuery.of(context).size.width > 768
+                  ? 768
+                  : MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
           padding: EdgeInsets.all(24),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -514,7 +889,10 @@ class StoreLiveScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.65),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.4),
+                    width: 1,
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -525,7 +903,11 @@ class StoreLiveScreen extends StatelessWidget {
                         color: Color(0xFF34C759).withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.check_circle, size: 64, color: Color(0xFF34C759)),
+                      child: Icon(
+                        Icons.check_circle,
+                        size: 64,
+                        color: Color(0xFF34C759),
+                      ),
                     ),
                     SizedBox(height: 32),
                     Text(
