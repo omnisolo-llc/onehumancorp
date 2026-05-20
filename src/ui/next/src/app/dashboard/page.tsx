@@ -9,8 +9,24 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [sharedMilestones, setSharedMilestones] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    async function fetchMilestones() {
+      try {
+        const res = await fetch('/api/v1/growth/milestones/check');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.milestones) {
+            setMilestones(data.milestones);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch milestones", e);
+      }
+    }
+    fetchMilestones();
     async function fetchApprovals() {
       try {
         const res = await fetch('/api/agents/approvals');
@@ -213,6 +229,48 @@ export default function Dashboard() {
 
             </div>
          </section>
+
+         {/* Success Milestone Alerts */}
+         {milestones.filter(m => m.reached).length > 0 && (
+             <section className="mb-8">
+                 <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Milestones Unlocked</h2>
+                 <div className="grid grid-cols-1 gap-4">
+                     {milestones.filter(m => m.reached).map((milestone) => (
+                         <div key={milestone.id} className="p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, rgba(254, 243, 199, 0.65) 0%, rgba(253, 230, 138, 0.65) 100%)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(252, 211, 77, 0.4)', borderRadius: '16px' }}>
+                             <div className="flex items-center gap-3">
+                                 <div className="text-3xl">🎉</div>
+                                 <div>
+                                     <h3 className="font-semibold text-lg font-outfit text-amber-900">{milestone.title}</h3>
+                                     <p className="text-sm font-inter text-amber-800">{milestone.description}</p>
+                                 </div>
+                             </div>
+                             <button
+                                 onClick={async () => {
+                                     try {
+                                         const res = await fetch('/api/v1/growth/social/post', {
+                                             method: 'POST',
+                                             headers: { 'Content-Type': 'application/json' },
+                                             body: JSON.stringify({ content: `I just unlocked the ${milestone.title} milestone on OHC!`, platforms: ['twitter', 'linkedin'] })
+                                         });
+                                         if (res.ok) {
+                                             setSharedMilestones(new Set(sharedMilestones).add(milestone.id));
+                                             alert("Successfully shared to social media!");
+                                         }
+                                     } catch (e) {
+                                         console.error("Failed to share milestone", e);
+                                     }
+                                 }}
+                                 disabled={sharedMilestones.has(milestone.id)}
+                                 className="px-5 py-2 font-medium text-white bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
+                                 style={{ borderRadius: '8px' }}
+                             >
+                                 {sharedMilestones.has(milestone.id) ? 'Shared ✓' : 'Share Milestone'}
+                             </button>
+                         </div>
+                     ))}
+                 </div>
+             </section>
+         )}
 
          {/* Growth Loop: Referral Program Snapshot */}
          <section>
