@@ -101,6 +101,17 @@ impl InviteRepository {
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
+
+    pub async fn accept_invite(&self, invite_id: &str) -> Result<(), String> {
+        sqlx::query(
+            "UPDATE team_invites SET status = 'ACCEPTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1"
+        )
+        .bind(invite_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 pub struct InviteTracker {
@@ -157,6 +168,10 @@ impl InviteTracker {
         self.repo.create_invites(&invites).await?;
         
         Ok(())
+    }
+
+    pub async fn accept_invite(&self, invite_id: &str) -> Result<(), String> {
+        self.repo.accept_invite(invite_id).await
     }
 }
 
