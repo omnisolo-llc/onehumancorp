@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 
 type Props = {
   name: string;
@@ -9,6 +9,8 @@ type Props = {
 };
 
 export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
+  const [isActive, setIsActive] = useState(true);
+
   return (
     <button
       onClick={onClick}
@@ -26,15 +28,18 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
               {pendingCount} item{pendingCount > 1 ? 's' : ''} awaiting approval
             </p>
           ) : (
-            <p className="text-sm text-gray-500 mt-0.5">Active and running</p>
+            <p className="text-sm text-gray-500 mt-0.5">{isActive ? 'Active and running' : 'Paused'}</p>
           )}
         </div>
       </div>
 
-      <div className="text-gray-300 group-hover:text-blue-500 transition-colors">
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+      <div className="flex items-center">
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsActive(!isActive); }}
+          className={`w-10 h-6 rounded-full transition-colors duration-300 relative flex-shrink-0 ${isActive ? 'bg-blue-500' : 'bg-gray-300'}`}
+        >
+          <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${isActive ? 'translate-x-4' : 'translate-x-0'}`}></span>
+        </button>
       </div>
     </button>
   );

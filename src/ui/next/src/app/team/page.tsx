@@ -27,6 +27,7 @@ export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
 
   const fetchApprovals = async () => {
     try {
@@ -44,6 +45,38 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetchApprovals();
+
+    // Connect to Teammate Mesh WebSocket for real-time swarm activity
+    const connectSwarmMesh = () => {
+        try {
+            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
+
+            ws.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    setSwarmActivity(prev => [{
+                        id: Math.random().toString(),
+                        agent: payload.agent_id || "Swarm Agent",
+                        action: payload.action || "Working on task...",
+                        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
+                    }, ...prev].slice(0, 5)); // Keep last 5
+                } catch(e) {
+                   // Ignore parsing errors
+                }
+            };
+
+            return ws;
+        } catch(e) {
+            console.error("Mesh websocket failed", e);
+            return null;
+        }
+    };
+
+    const ws = connectSwarmMesh();
+
+    return () => {
+        if (ws) ws.close();
+    };
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -121,6 +154,49 @@ export default function TeamPage() {
               );
             })
           )}
+
+          {/* Swarm Observability / Team Activity Panel */}
+          <section className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2>
+                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
+                    <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
+                </div>
+            </div>
+
+            <div className="shadow-sm overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                {swarmActivity.length === 0 ? (
+                    <div className="p-8 text-center">
+                        <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
+                        <p className="text-sm" style={{ color: '#86868B' }}>Waiting for team activity...</p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col">
+                        {swarmActivity.map((activity, index) => (
+                            <div key={activity.id} className="flex items-center justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40" style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                        🤖
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>{activity.agent}</p>
+                                        <p className="text-sm" style={{ color: '#86868B' }}>{activity.action}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-xs font-medium" style={{ color: '#86868B' }}>{activity.time}</span>
+                                    {activity.status === 'success' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
+                                    {activity.status === 'warning' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
+                                    {activity.status === 'info' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+          </section>
+
         </div>
       </div>
 
