@@ -43,7 +43,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
                 - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get"],
+            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get", "booking_get_services", "booking_upsert_service", "booking_list_appointments", "booking_create_appointment"],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {
@@ -77,7 +77,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\
                 - Manages customer profiles, tags, and notes",
-            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list"],
+            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list", "booking_get_services", "booking_list_appointments", "booking_create_appointment"],
             confidence_threshold: 0.90,
         },
         Department::Finance => DepartmentConfig {
