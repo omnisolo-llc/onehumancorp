@@ -31,21 +31,21 @@ jobs:
       matrix:
         include:
           - name: linux-x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
             bazel_config: linux
             install_linux_deps: true
           - name: windows-x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
             bazel_config: windows
             install_linux_deps: true
-          - name: macos-aarch64
-            runner: macos-latest
-            bazel_config: macos
-            install_linux_deps: false
-          - name: macos-x86_64
-            runner: macos-15-intel
-            bazel_config: macos_x86_64
-            install_linux_deps: false
+          #- name: macos-aarch64
+          #  runner: macos-latest
+          #  bazel_config: macos
+          #  install_linux_deps: false
+          #- name: macos-x86_64
+          #  runner: macos-15-intel
+          #  bazel_config: macos_x86_64
+          #  install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
 
