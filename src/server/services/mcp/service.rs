@@ -17,12 +17,18 @@ pub struct MyMcpService {
 
 impl MyMcpService {
     pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
+        // We use a shared in-memory DB or a specific file for the local proxy SQLite requirement.
+        // OHC Standalone Mode configures a specific directory for SQLite DBs.
+        // We'll use a file-based SQLite database in the agent workspace or fallback to a default file.
+        let proxy_sandbox = std::env::var("OHC_AGENT_WORKSPACE").unwrap_or_else(|_| "/tmp".to_string());
+        let db_path = format!("{}/sipdb_proxy.sqlite", proxy_sandbox);
+        let proxy_db = sqlx::sqlite::SqlitePoolOptions::new().connect_lazy(&format!("sqlite:{}?mode=rwc", db_path)).unwrap();
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
             hub,
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
-            local_proxy_server: Arc::new(LocalProxyServer::new()),
+            local_proxy_server: Arc::new(LocalProxyServer::new(proxy_db, proxy_sandbox)),
         }
     }
 }
