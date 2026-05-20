@@ -1,5 +1,6 @@
 #[path = "store.rs"]
 pub mod store;
+pub mod metrics;
 use crate::db::DB;
 use std::sync::Arc;
 use tracing::{info, debug};
@@ -55,25 +56,33 @@ impl AutoDreamWorker {
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running completed tasks ingestion pipeline...");
+                let start_time = std::time::Instant::now();
                 if let Err(e) = Self::ingest_completed_tasks(&db, &counter).await {
+                    crate::autodream::metrics::get_consolidation_errors_total().add(1, &[]);
                     debug!("AutoDream: tasks ingestion failed: {}", e);
                 }
 
                 if let Err(e) = Self::compress_session_contexts(&db).await {
+                    crate::autodream::metrics::get_consolidation_errors_total().add(1, &[]);
                     tracing::error!("AutoDream: compress_session_contexts failed: {}", e);
                 }
                 if let Err(e) = Self::process_db_memories(&db, &counter).await {
+                    crate::autodream::metrics::get_consolidation_errors_total().add(1, &[]);
                     debug!("AutoDream: DB memories processing failed: {}", e);
                 }
                 if let Err(e) = Self::process_fs_memories(&db, &counter).await {
+                    crate::autodream::metrics::get_consolidation_errors_total().add(1, &[]);
                     debug!("AutoDream: FS memories processing failed: {}", e);
                 }
                 if let Err(e) = Self::consolidate_agent_task_memories(&db, &counter).await {
+                    crate::autodream::metrics::get_consolidation_errors_total().add(1, &[]);
                     debug!("AutoDream: agent-task memories consolidation failed: {}", e);
                 }
                 if let Err(e) = Self::process_mesh_messages(&db).await {
+                    crate::autodream::metrics::get_consolidation_errors_total().add(1, &[]);
                     debug!("AutoDream: Mesh messages processing failed: {}", e);
                 }
+                crate::autodream::metrics::get_batch_processing_duration().record(start_time.elapsed().as_secs_f64(), &[]);
                 sleep(Duration::from_secs(120)).await;
             }
         });
@@ -300,6 +309,7 @@ impl AutoDreamWorker {
 
             match client.generate_embedding(&context_data).await {
                 Ok(embedding) => {
+                    crate::autodream::metrics::get_memories_processed_total().add(1, &[]);
                     counter.add(1, &[]);
                     let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = uuid::Uuid::new_v4().to_string();
@@ -362,6 +372,7 @@ impl AutoDreamWorker {
                 
                 match client.generate_embedding(&content).await {
                     Ok(embedding) => {
+                        crate::autodream::metrics::get_memories_processed_total().add(1, &[]);
                         counter.add(1, &[]);
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
@@ -421,6 +432,7 @@ impl AutoDreamWorker {
 
                 match client.generate_embedding(&content).await {
                     Ok(embedding) => {
+                        crate::autodream::metrics::get_memories_processed_total().add(1, &[]);
                         counter.add(1, &[]);
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();

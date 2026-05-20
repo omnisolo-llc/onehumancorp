@@ -26,9 +26,12 @@ impl AutoDreamPipeline {
         tokio::spawn(async move {
             loop {
                 let pipeline = AutoDreamPipeline::new(db.clone(), llm_client.clone());
+                let start_time = std::time::Instant::now();
                 if let Err(e) = pipeline.process_closed_tasks().await {
+                    crate::autodream::metrics::get_consolidation_errors_total().add(1, &[]);
                     tracing::error!("AutoDreamPipeline worker error: {}", e);
                 }
+                crate::autodream::metrics::get_batch_processing_duration().record(start_time.elapsed().as_secs_f64(), &[]);
                 sleep(Duration::from_secs(60)).await;
             }
         });
@@ -87,6 +90,7 @@ impl AutoDreamPipeline {
             let chunks = Self::chunk_content(&content, 2000);
 
             for chunk in chunks {
+                crate::autodream::metrics::get_memories_processed_total().add(1, &[]);
                 let cached_embedding = if let Some(cache) = &self.cache {
                     cache.get(&chunk)
                 } else {

@@ -3,6 +3,7 @@ filegroup(
     srcs = [
         "mod.rs",
         "store.rs",
+        "metrics.rs",
 
     ],
     visibility = ["//src/server:__pkg__"],
