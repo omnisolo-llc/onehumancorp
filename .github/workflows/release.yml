@@ -60,7 +60,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends --fix-missing \
             build-essential pkg-config libssl-dev \
-            ca-certificates curl git mingw-w64 rpm
+            ca-certificates curl git mingw-w64 binutils-mingw-w64-x86-64 gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 rpm
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0

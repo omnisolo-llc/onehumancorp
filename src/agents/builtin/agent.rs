@@ -497,7 +497,7 @@ impl Agent {
             initial_messages.push(Message::user(initial_message));
         }
 
-        let mut graph = crate::langgraph::StateGraph::<serde_json::Value>::new(std::sync::Arc::new(crate::langgraph::DefaultReducer));
+        let mut graph = crate::langgraph::StateGraph::new(std::sync::Arc::new(crate::langgraph::DefaultReducer));
 
         let llm = self.llm.clone();
         let tools_def: Vec<_> = session_tools.iter().map(|t| crate::types::ToolDefinition {
