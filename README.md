@@ -20,7 +20,11 @@ This premium onboarding flow eliminates friction and ensures maximum developer v
 
 ## Identity
 
-One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
+One Human Corp employs the **OHC-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
+
+The platform implements a hybrid identity model:
+- **Agent Identity**: Relies on SPIFFE/SPIRE for universal workload identity, ensuring every inter-agent communication and tool call is cryptographically signed and mTLS validated.
+- **Human Identity**: Utilizes OIDC (OpenID Connect) for human users, mapping human authentication directly into the internal SPIFFE trust domain.
 
 ## Product Vision & Market Strategy
 
