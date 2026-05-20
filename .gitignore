@@ -41,6 +41,7 @@ go.work.sum
 
 # env file
 .env
+.ohc/
 
 .claude-code/
 .kilo/

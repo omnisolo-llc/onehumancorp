@@ -1,5 +1,4 @@
 use axum::{
-    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -220,7 +219,6 @@ mod tests {
     use axum::extract::Extension;
     use axum::Json;
     use axum::extract::Query;
-    use serde_json::json;
     use sqlx::PgPool;
 
     async fn setup_db() -> PgPool {
@@ -244,7 +242,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub };
 
         let req = CreateTeamInviteRequest {
             team_id: "team-test-direct".to_string(),

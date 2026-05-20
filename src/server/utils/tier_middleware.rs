@@ -1,12 +1,9 @@
 use axum::{
     extract::{Request, State},
-    http::StatusCode,
     middleware::Next,
-    response::{IntoResponse, Response},
-    Json,
+    response::Response,
 };
 use std::sync::Arc;
-use serde_json::json;
 use ::server_pricing::rate_limit::RedisRateLimiter;
 
 pub async fn tier_middleware(

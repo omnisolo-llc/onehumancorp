@@ -32,7 +32,7 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
 }
 
 pub async fn my_plan_handler(
-    headers: HeaderMap,
+    _headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<MyPlanResponse> {
@@ -80,7 +80,7 @@ pub async fn my_plan_handler(
 }
 
 pub async fn cost_dashboard_handler(
-    headers: HeaderMap,
+    _headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<CostDashboardResponse> {

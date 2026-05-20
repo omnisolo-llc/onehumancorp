@@ -48,7 +48,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -86,7 +86,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -124,7 +124,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -162,7 +162,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -200,7 +200,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -238,7 +238,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -276,7 +276,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -314,7 +314,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -352,7 +352,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -390,7 +390,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -428,7 +428,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -466,7 +466,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -504,7 +504,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -542,7 +542,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -580,7 +580,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -618,7 +618,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -656,7 +656,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -694,7 +694,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -732,7 +732,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -770,7 +770,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -808,7 +808,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -846,7 +846,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -884,7 +884,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -922,7 +922,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -960,7 +960,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -998,7 +998,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1036,7 +1036,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1074,7 +1074,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1112,7 +1112,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1150,7 +1150,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1188,7 +1188,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1226,7 +1226,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1264,7 +1264,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1302,7 +1302,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1340,7 +1340,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1378,7 +1378,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1416,7 +1416,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1454,7 +1454,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1492,7 +1492,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1530,7 +1530,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1568,7 +1568,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1606,7 +1606,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1644,7 +1644,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1682,7 +1682,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1720,7 +1720,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1758,7 +1758,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1796,7 +1796,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1834,7 +1834,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1872,7 +1872,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1910,7 +1910,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1948,7 +1948,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -1986,7 +1986,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2024,7 +2024,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2062,7 +2062,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2100,7 +2100,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2138,7 +2138,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2176,7 +2176,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2214,7 +2214,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2252,7 +2252,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2290,7 +2290,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2328,7 +2328,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2366,7 +2366,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2404,7 +2404,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2442,7 +2442,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2480,7 +2480,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2518,7 +2518,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2556,7 +2556,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2594,7 +2594,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2632,7 +2632,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2670,7 +2670,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2708,7 +2708,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2746,7 +2746,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2784,7 +2784,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2822,7 +2822,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2860,7 +2860,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2898,7 +2898,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2936,7 +2936,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -2974,7 +2974,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3012,7 +3012,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3050,7 +3050,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3088,7 +3088,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3126,7 +3126,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3164,7 +3164,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3202,7 +3202,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3240,7 +3240,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3278,7 +3278,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3316,7 +3316,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3354,7 +3354,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3392,7 +3392,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3430,7 +3430,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3468,7 +3468,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3506,7 +3506,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3544,7 +3544,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3582,7 +3582,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3620,7 +3620,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3658,7 +3658,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3696,7 +3696,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3734,7 +3734,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3772,7 +3772,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
     #[tokio::test]
@@ -3810,7 +3810,7 @@ mod exhaustive_tests {
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
-        assert!(resolved == 0 || resolved != 0);
+        assert!(resolved <= 2);
     }
 
 }

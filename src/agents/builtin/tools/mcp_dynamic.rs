@@ -1,8 +1,12 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::process::Command;
 
 use super::{Tool, ToolExecutor};
+use agent_service_proto::ohc::agent::service::{McpServerConfig, McpTransportType};
 
 // Simulated MCP Client Gateway
 struct McpGatewayClient {
@@ -131,6 +135,304 @@ pub fn mcp_invoke_tool(gateway_url: String) -> Tool {
             gateway: Arc::new(McpGatewayClient::new(gateway_url))
         }),
     }
+}
+
+#[derive(Clone, Debug)]
+struct McpToolSpec {
+    server: McpServerConfig,
+    exposed_name: String,
+    raw_name: String,
+    description: String,
+    parameters: Value,
+}
+
+struct McpConfiguredToolExecutor {
+    spec: McpToolSpec,
+}
+
+#[async_trait::async_trait]
+impl ToolExecutor for McpConfiguredToolExecutor {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        match McpTransportType::try_from(self.spec.server.transport)
+            .unwrap_or(McpTransportType::McpTransportUnspecified)
+        {
+            McpTransportType::McpTransportStdio => call_stdio_tool(&self.spec.server, &self.spec.raw_name, args)
+                .await
+                .map(format_mcp_result)
+                .map_err(|e| ToolError::LlmRecoverable(format!("MCP {}: {}", self.spec.exposed_name, e))),
+            McpTransportType::McpTransportSse => call_http_tool(&self.spec.server, &self.spec.raw_name, args)
+                .await
+                .map(format_mcp_result)
+                .map_err(|e| ToolError::LlmRecoverable(format!("MCP {}: {}", self.spec.exposed_name, e))),
+            McpTransportType::McpTransportUnspecified => Err(ToolError::LlmRecoverable(format!(
+                "MCP {}: transport is required",
+                self.spec.exposed_name
+            ))),
+        }
+    }
+}
+
+pub async fn load_mcp_server_tools(servers: &[McpServerConfig]) -> Vec<Tool> {
+    let mut tools = Vec::new();
+    for server in servers {
+        let specs = discover_mcp_tool_specs(server).await;
+        for spec in specs {
+            tools.push(Tool {
+                name: spec.exposed_name.clone(),
+                description: spec.description.clone(),
+                is_read_only: false,
+                parameters: spec.parameters.clone(),
+                execute: Arc::new(McpConfiguredToolExecutor { spec }),
+            });
+        }
+    }
+    tools
+}
+
+async fn discover_mcp_tool_specs(server: &McpServerConfig) -> Vec<McpToolSpec> {
+    let allowed = server
+        .allowed_tools
+        .iter()
+        .filter(|tool| !tool.trim().is_empty())
+        .cloned()
+        .collect::<Vec<_>>();
+
+    if !allowed.is_empty() {
+        return allowed
+            .into_iter()
+            .map(|raw_name| generic_tool_spec(server, &raw_name))
+            .collect();
+    }
+
+    let listed = match McpTransportType::try_from(server.transport).unwrap_or(McpTransportType::McpTransportUnspecified) {
+        McpTransportType::McpTransportStdio => list_stdio_tools(server).await,
+        McpTransportType::McpTransportSse => list_http_tools(server).await,
+        McpTransportType::McpTransportUnspecified => Err("transport is required".to_string()),
+    };
+
+    match listed {
+        Ok(tools) => tools
+            .into_iter()
+            .filter_map(|tool| {
+                let raw_name = tool.get("name").and_then(Value::as_str)?.to_string();
+                let mut spec = generic_tool_spec(server, &raw_name);
+                if let Some(description) = tool.get("description").and_then(Value::as_str) {
+                    spec.description = format!(
+                        "Invoke MCP tool '{}' from server '{}'. {}",
+                        raw_name, server.name, description
+                    );
+                }
+                if let Some(schema) = tool.get("inputSchema").or_else(|| tool.get("parameters")) {
+                    spec.parameters = schema.clone();
+                }
+                Some(spec)
+            })
+            .collect(),
+        Err(e) => {
+            tracing::warn!("Failed to list MCP tools for server '{}': {}", server.name, e);
+            Vec::new()
+        }
+    }
+}
+
+fn generic_tool_spec(server: &McpServerConfig, raw_name: &str) -> McpToolSpec {
+    let exposed_name = format!(
+        "Mcp_{}_{}",
+        super::skill::sanitize_tool_suffix(&server.name),
+        super::skill::sanitize_tool_suffix(raw_name)
+    );
+
+    McpToolSpec {
+        server: server.clone(),
+        exposed_name,
+        raw_name: raw_name.to_string(),
+        description: format!("Invoke MCP tool '{}' from server '{}'.", raw_name, server.name),
+        parameters: json!({
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Arguments passed through to the MCP tool."
+        }),
+    }
+}
+
+fn format_mcp_result(value: Value) -> String {
+    if let Some(content) = value.get("content") {
+        if let Some(items) = content.as_array() {
+            let mut out = Vec::new();
+            for item in items {
+                if let Some(text) = item.get("text").and_then(Value::as_str) {
+                    out.push(text.to_string());
+                } else {
+                    out.push(item.to_string());
+                }
+            }
+            return out.join("\n");
+        }
+    }
+    value.to_string()
+}
+
+async fn list_stdio_tools(server: &McpServerConfig) -> Result<Vec<Value>, String> {
+    let result = stdio_rpc(
+        server,
+        vec![
+            json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "ohc-builtin-agent", "version": "1.0.0"}
+                }
+            }),
+            json!({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}),
+            json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}),
+        ],
+        Some(2),
+    )
+    .await?;
+    parse_tools_list(result)
+}
+
+async fn call_stdio_tool(server: &McpServerConfig, tool_name: &str, args: Value) -> Result<Value, String> {
+    stdio_rpc(
+        server,
+        vec![
+            json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "ohc-builtin-agent", "version": "1.0.0"}
+                }
+            }),
+            json!({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}),
+            json!({
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": tool_name, "arguments": args}
+            }),
+        ],
+        Some(2),
+    )
+    .await
+}
+
+async fn stdio_rpc(
+    server: &McpServerConfig,
+    requests: Vec<Value>,
+    wanted_id: Option<i64>,
+) -> Result<Value, String> {
+    if server.command.is_empty() {
+        return Err("stdio MCP server command is empty".to_string());
+    }
+
+    let mut child = Command::new(&server.command[0])
+        .args(server.command.iter().skip(1))
+        .envs(server.env.clone())
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to spawn MCP server: {}", e))?;
+
+    let mut stdin = child.stdin.take().ok_or_else(|| "failed to open MCP stdin".to_string())?;
+    let stdout = child.stdout.take().ok_or_else(|| "failed to open MCP stdout".to_string())?;
+    let mut reader = BufReader::new(stdout).lines();
+
+    let mut wanted_response = None;
+    for request in requests {
+        let request_id = request.get("id").and_then(Value::as_i64);
+        let text = serde_json::to_string(&request).map_err(|e| e.to_string())?;
+        stdin.write_all(text.as_bytes()).await.map_err(|e| e.to_string())?;
+        stdin.write_all(b"\n").await.map_err(|e| e.to_string())?;
+        stdin.flush().await.map_err(|e| e.to_string())?;
+
+        if request_id.is_none() {
+            continue;
+        }
+
+        loop {
+            let line = tokio::time::timeout(Duration::from_secs(5), reader.next_line())
+                .await
+                .map_err(|_| "timed out waiting for MCP response".to_string())?
+                .map_err(|e| e.to_string())?
+                .ok_or_else(|| "MCP server closed stdout".to_string())?;
+            let response: Value = serde_json::from_str(&line).map_err(|e| e.to_string())?;
+            if let Some(error) = response.get("error") {
+                let _ = child.kill().await;
+                return Err(format!("MCP error: {}", error));
+            }
+            if response.get("id").and_then(Value::as_i64) == request_id {
+                if wanted_id.map(|id| Some(id) == request_id).unwrap_or(true) {
+                    wanted_response = response.get("result").cloned();
+                }
+                break;
+            }
+        }
+    }
+
+    let _ = child.kill().await;
+    wanted_response.ok_or_else(|| "missing result in MCP response".to_string())
+}
+
+async fn list_http_tools(server: &McpServerConfig) -> Result<Vec<Value>, String> {
+    let result = http_rpc(
+        server,
+        json!({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}),
+    )
+    .await?;
+    parse_tools_list(result)
+}
+
+async fn call_http_tool(server: &McpServerConfig, tool_name: &str, args: Value) -> Result<Value, String> {
+    http_rpc(
+        server,
+        json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": tool_name, "arguments": args}
+        }),
+    )
+    .await
+}
+
+async fn http_rpc(server: &McpServerConfig, request: Value) -> Result<Value, String> {
+    if server.endpoint.trim().is_empty() {
+        return Err("HTTP/SSE MCP endpoint is empty".to_string());
+    }
+    let response: Value = reqwest::Client::new()
+        .post(&server.endpoint)
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .error_for_status()
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some(error) = response.get("error") {
+        return Err(format!("MCP error: {}", error));
+    }
+    response
+        .get("result")
+        .cloned()
+        .ok_or_else(|| "missing result in MCP response".to_string())
+}
+
+fn parse_tools_list(result: Value) -> Result<Vec<Value>, String> {
+    result
+        .get("tools")
+        .and_then(Value::as_array)
+        .cloned()
+        .ok_or_else(|| "MCP tools/list response did not contain a tools array".to_string())
 }
 
 #[cfg(test)]

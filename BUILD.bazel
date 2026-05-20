@@ -76,6 +76,12 @@ sh_binary(
     }),
 )
 
+alias(
+    name = "rust_lint",
+    actual = "//scripts:rust_lint",
+    visibility = ["//visibility:public"],
+)
+
 sh_binary(
     name = "deploy_dev",
     srcs = ["//deploy:deploy_dev.sh"],

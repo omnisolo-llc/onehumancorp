@@ -1,10 +1,10 @@
 use async_trait::async_trait;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use reqwest::Client;
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use super::LlmClient;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -64,35 +64,167 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
 
-
 pub struct OpenAIClient {
     api_key: String,
     base_url: String,
+    default_model: Option<String>,
+    embedding_model: String,
+    embedding_format: EmbeddingRequestFormat,
+    organization: Option<String>,
+    project: Option<String>,
     client: Client,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum EmbeddingRequestFormat {
+    OpenAI,
+    Minimax,
+}
+
+#[derive(Debug, Clone)]
+pub struct OpenAIClientConfig {
+    pub api_key: String,
+    pub base_url: String,
+    pub default_model: Option<String>,
+    pub embedding_model: String,
+    pub embedding_format: EmbeddingRequestFormat,
+    pub organization: Option<String>,
+    pub project: Option<String>,
+    pub timeout: Duration,
+}
+
+impl OpenAIClientConfig {
+    pub fn openai(api_key: impl Into<String>) -> Self {
+        Self {
+            api_key: api_key.into(),
+            base_url: "https://api.openai.com/v1".to_string(),
+            default_model: None,
+            embedding_model: std::env::var("OHC_OPENAI_EMBEDDING_MODEL")
+                .or_else(|_| std::env::var("OHC_EMBEDDING_MODEL"))
+                .unwrap_or_else(|_| "text-embedding-3-small".to_string()),
+            embedding_format: EmbeddingRequestFormat::OpenAI,
+            organization: std::env::var("OPENAI_ORGANIZATION")
+                .ok()
+                .filter(|v| !v.trim().is_empty()),
+            project: std::env::var("OPENAI_PROJECT")
+                .ok()
+                .filter(|v| !v.trim().is_empty()),
+            timeout: Duration::from_secs(60),
+        }
+    }
+
+    pub fn openai_compatible(
+        api_key: impl Into<String>,
+        base_url: impl Into<String>,
+        default_model: Option<String>,
+    ) -> Self {
+        Self {
+            api_key: api_key.into(),
+            base_url: base_url.into(),
+            default_model,
+            embedding_model: std::env::var("OHC_OPENAI_COMPATIBLE_EMBEDDING_MODEL")
+                .or_else(|_| std::env::var("OHC_EMBEDDING_MODEL"))
+                .unwrap_or_else(|_| "text-embedding-3-small".to_string()),
+            embedding_format: EmbeddingRequestFormat::OpenAI,
+            organization: None,
+            project: None,
+            timeout: Duration::from_secs(60),
+        }
+    }
+
+    pub fn minimax(api_key: impl Into<String>, base_url: Option<String>) -> Self {
+        Self {
+            api_key: api_key.into(),
+            base_url: base_url.unwrap_or_else(|| "https://api.minimax.chat/v1".to_string()),
+            default_model: Some(
+                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string()),
+            ),
+            embedding_model: std::env::var("MINIMAX_EMBEDDING_MODEL")
+                .unwrap_or_else(|_| "embo-01".to_string()),
+            embedding_format: EmbeddingRequestFormat::Minimax,
+            organization: None,
+            project: None,
+            timeout: Duration::from_secs(60),
+        }
+    }
 }
 
 impl OpenAIClient {
     pub fn new(api_key: impl Into<String>) -> Self {
+        Self::from_config(OpenAIClientConfig::openai(api_key))
+    }
+
+    pub fn with_base_url(api_key: impl Into<String>, base_url: impl Into<String>) -> Self {
+        Self::from_config(OpenAIClientConfig::openai_compatible(
+            api_key,
+            base_url,
+            None,
+        ))
+    }
+
+    pub fn from_config(mut config: OpenAIClientConfig) -> Self {
+        config.base_url = normalize_api_base_url(&config.base_url);
         Self {
-            api_key: api_key.into(),
-            base_url: "https://api.openai.com/v1".to_string(),
+            api_key: config.api_key,
+            base_url: config.base_url,
+            default_model: config.default_model,
+            embedding_model: config.embedding_model,
+            embedding_format: config.embedding_format,
+            organization: config.organization,
+            project: config.project,
             client: Client::builder()
-                .timeout(std::time::Duration::from_secs(60))
+                .timeout(config.timeout)
                 .build()
                 .unwrap(),
         }
     }
 
-    pub fn with_base_url(api_key: impl Into<String>, base_url: impl Into<String>) -> Self {
-        Self {
-            api_key: api_key.into(),
-            base_url: base_url.into(),
-            client: Client::builder()
-                .timeout(std::time::Duration::from_secs(60))
-                .build()
-                .unwrap(),
+    pub fn minimax(api_key: impl Into<String>, base_url: Option<String>) -> Self {
+        Self::from_config(OpenAIClientConfig::minimax(api_key, base_url))
+    }
+
+    fn chat_completions_url(&self) -> String {
+        endpoint_url(&self.base_url, "chat/completions")
+    }
+
+    fn embeddings_url(&self) -> String {
+        endpoint_url(&self.base_url, "embeddings")
+    }
+
+    fn request_with_auth(&self, url: &str) -> reqwest::RequestBuilder {
+        let mut request = self
+            .client
+            .post(url)
+            .header("Content-Type", "application/json");
+
+        if !self.api_key.trim().is_empty() {
+            request = request.header("Authorization", format!("Bearer {}", self.api_key));
+        }
+
+        if let Some(org) = &self.organization {
+            request = request.header("OpenAI-Organization", org);
+        }
+
+        if let Some(project) = &self.project {
+            request = request.header("OpenAI-Project", project);
+        }
+
+        request
+    }
+}
+
+fn normalize_api_base_url(base_url: &str) -> String {
+    let trimmed = base_url.trim().trim_end_matches('/').to_string();
+    for suffix in ["/chat/completions", "/embeddings"] {
+        if let Some(root) = trimmed.strip_suffix(suffix) {
+            return root.trim_end_matches('/').to_string();
         }
     }
+    trimmed
+}
+
+fn endpoint_url(base_url: &str, endpoint: &str) -> String {
+    format!("{}/{}", base_url.trim_end_matches('/'), endpoint)
 }
 
 // ── Wire types ────────────────────────────────────────────────────────────────
@@ -140,6 +272,8 @@ struct OpenAIRequest {
     messages: Vec<OpenAIMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f32>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<OpenAIToolDef>,
 }
@@ -189,6 +323,32 @@ struct OpenAIUsage {
 struct PromptTokensDetails {
     #[serde(default)]
     cached_tokens: i32,
+}
+
+#[derive(Serialize)]
+struct OpenAIEmbeddingRequest<'a> {
+    model: &'a str,
+    input: &'a str,
+}
+
+#[derive(Serialize)]
+struct MinimaxEmbeddingRequest<'a> {
+    model: &'a str,
+    r#type: &'static str,
+    texts: [&'a str; 1],
+}
+
+#[derive(Deserialize)]
+struct OpenAIEmbeddingResponse {
+    #[serde(default)]
+    data: Vec<OpenAIEmbeddingData>,
+    #[serde(default)]
+    vectors: Vec<Vec<f32>>,
+}
+
+#[derive(Deserialize)]
+struct OpenAIEmbeddingData {
+    embedding: Vec<f32>,
 }
 
 #[async_trait]
@@ -250,7 +410,11 @@ impl LlmClient for OpenAIClient {
                     .collect();
                 messages.push(OpenAIMessage {
                     role: "assistant".to_string(),
-                    content: if m.content.is_empty() { None } else { Some(m.content.clone()) },
+                    content: if m.content.is_empty() {
+                        None
+                    } else {
+                        Some(m.content.clone())
+                    },
                     tool_calls: Some(calls),
                     tool_call_id: None,
                 });
@@ -286,10 +450,19 @@ impl LlmClient for OpenAIClient {
         };
         let max_tokens = Some(clamped_max_tokens);
 
+        let model = if req.model.trim().is_empty() {
+            self.default_model
+                .clone()
+                .ok_or("missing model: set OHC_LLM_MODEL or provider-specific model env var")?
+        } else {
+            req.model.clone()
+        };
+
         let payload = OpenAIRequest {
-            model: req.model.clone(),
+            model,
             messages,
             max_tokens,
+            temperature: Some(req.temperature),
             tools,
         };
 
@@ -299,17 +472,14 @@ impl LlmClient for OpenAIClient {
         // We also check for OHC_OPENAI_CACHE_BYPASS env var.
         let cache_bypass = std::env::var("OHC_OPENAI_CACHE_BYPASS").unwrap_or_default() == "true";
         if !cache_bypass && (req.model.contains("gpt-4o") || req.model.contains("gpt-4.1")) {
-             // In some scenarios we might want to specifically structure the prompt
-             // to maximize cache hits (e.g. putting static system instructions first).
-             // Our build_hierarchical_system_prompt already does this.
+            // In some scenarios we might want to specifically structure the prompt
+            // to maximize cache hits (e.g. putting static system instructions first).
+            // Our build_hierarchical_system_prompt already does this.
         }
 
-        let url = format!("{}/chat/completions", self.base_url);
+        let url = self.chat_completions_url();
         let resp = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
+            .request_with_auth(&url)
             .json(&payload)
             .send()
             .await?;
@@ -329,7 +499,6 @@ impl LlmClient for OpenAIClient {
         let result = result.unwrap();
         cb.record_success();
 
-
         let choice = result.choices.into_iter().next().ok_or("no choices")?;
         let finish_reason = choice.finish_reason.unwrap_or_default();
 
@@ -340,8 +509,8 @@ impl LlmClient for OpenAIClient {
             .unwrap_or_default()
             .into_iter()
             .map(|tc| {
-                let arguments: Value =
-                    serde_json::from_str(&tc.function.arguments).unwrap_or(Value::Object(Default::default()));
+                let arguments: Value = serde_json::from_str(&tc.function.arguments)
+                    .unwrap_or(Value::Object(Default::default()));
                 ToolCall {
                     id: tc.id,
                     name: tc.function.name,
@@ -352,10 +521,14 @@ impl LlmClient for OpenAIClient {
 
         let usage = result
             .usage
-                        .map(|u| Usage {
+            .map(|u| Usage {
                 input_tokens: u.prompt_tokens,
                 output_tokens: u.completion_tokens,
-                cache_read_input_tokens: u.prompt_tokens_details.as_ref().map(|d| d.cached_tokens).unwrap_or(0),
+                cache_read_input_tokens: u
+                    .prompt_tokens_details
+                    .as_ref()
+                    .map(|d| d.cached_tokens)
+                    .unwrap_or(0),
                 cache_creation_input_tokens: 0,
             })
             .unwrap_or_default();
@@ -373,5 +546,92 @@ impl LlmClient for OpenAIClient {
             stop_reason: finish_reason,
             response_id: result.id.clone(),
         })
+    }
+
+    async fn generate_embedding(
+        &self,
+        text: &str,
+    ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+        if text.trim().is_empty() {
+            return Ok(vec![]);
+        }
+
+        let cb = get_circuit_breaker();
+        if !cb.allow() {
+            return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
+        }
+
+        let url = self.embeddings_url();
+        let resp = match self.embedding_format {
+            EmbeddingRequestFormat::OpenAI => {
+                let payload = OpenAIEmbeddingRequest {
+                    model: &self.embedding_model,
+                    input: text,
+                };
+                self.request_with_auth(&url).json(&payload).send().await?
+            }
+            EmbeddingRequestFormat::Minimax => {
+                let payload = MinimaxEmbeddingRequest {
+                    model: &self.embedding_model,
+                    r#type: "db",
+                    texts: [text],
+                };
+                self.request_with_auth(&url).json(&payload).send().await?
+            }
+        };
+
+        if !resp.status().is_success() {
+            cb.record_failure();
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(
+                format!("openai-compatible embeddings error (status {}): {}", status, body)
+                    .into(),
+            );
+        }
+
+        let result: OpenAIEmbeddingResponse = resp.json().await?;
+        cb.record_success();
+
+        if let Some(item) = result.data.into_iter().next() {
+            return Ok(item.embedding);
+        }
+
+        if let Some(vector) = result.vectors.into_iter().next() {
+            return Ok(vector);
+        }
+
+        Err("openai-compatible embeddings response did not include a vector".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_chat_completion_url_to_api_root() {
+        assert_eq!(
+            normalize_api_base_url("https://example.test/v1/chat/completions"),
+            "https://example.test/v1"
+        );
+    }
+
+    #[test]
+    fn builds_chat_completion_endpoint_from_base_url() {
+        let client = OpenAIClient::with_base_url("key", "https://example.test/v1/");
+        assert_eq!(
+            client.chat_completions_url(),
+            "https://example.test/v1/chat/completions"
+        );
+    }
+
+    #[test]
+    fn minimax_uses_openai_compatible_api_root() {
+        let client = OpenAIClient::minimax("key", None);
+        assert_eq!(
+            client.chat_completions_url(),
+            "https://api.minimax.chat/v1/chat/completions"
+        );
     }
 }

@@ -1,5 +1,4 @@
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
-use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -127,7 +126,7 @@ impl AppServer {
 mod tests {
     use super::*;
     use crate::llm::LlmClient;
-    use crate::types::{ChatRequest, ChatResponse, Usage};
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
     use std::sync::Arc;
 
     struct MockLlmClient {

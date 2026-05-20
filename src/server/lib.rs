@@ -517,9 +517,9 @@ impl HubService for MyHubService {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
             ai_actions_limit: ai_limit,
-            storage_used_bytes: storage_used_bytes,
+            storage_used_bytes,
             storage_limit_bytes: storage_limit,
-            next_bill_estimated: next_bill_estimated,
+            next_bill_estimated,
         }))
     }
 
