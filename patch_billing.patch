@@ -1,0 +1,12 @@
+--- src/server/api/billing_webhook.rs
++++ src/server/api/billing_webhook.rs
+@@ -176,6 +176,9 @@
+     Json(payload): Json<MercadoPagoEvent>,
+ ) -> impl IntoResponse {
+     match payload.action.as_str() {
+         "payment.created" | "payment.updated" => {
++            // Try to notify the user upon payment via Mercado Pago
++            if let Ok(twilio) = _state.integrations.get_twilio_client("twilio") {
++                let _ = twilio.send_sms("+10000000000", "+1234567890", "Your Mercado Pago order has been placed successfully!").await;
++            }
+             // In a real implementation, you would fetch the payment details from MP API using data.id

@@ -54,6 +54,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let resend_provider = crate::integrations::resend::provider::ResendProvider::new("dummy_token".to_string());
     catalog.push(resend_provider.to_integration_provider());
 
+    let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
+    catalog.push(easypost_provider.to_integration_provider());
+
     let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
     catalog.push(shippo_provider.to_integration_provider());
 

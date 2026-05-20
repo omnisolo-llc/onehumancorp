@@ -19,3 +19,4 @@ pub mod cal_com;
 pub mod resend;
 pub mod shippo;
 pub mod zoom;
+pub mod easypost;

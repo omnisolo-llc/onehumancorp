@@ -1,0 +1,17 @@
+--- registry.rs
++++ registry.rs
+@@ -176,6 +176,14 @@
+         Ok(())
+     }
+
++    pub fn get_twilio_client(&self, integration_id: &str) -> Result<std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>, String> {
++        let clients = self.twilio_clients.read().unwrap();
++        if let Some(client) = clients.get(integration_id) {
++            return Ok(client.clone());
++        }
++        Err("Twilio client not found".to_string())
++    }
++
+     pub fn list_integrations(&self) -> Vec<IntegrationInstance> {
+         let instances = self.instances.read().unwrap();
+         instances.values().cloned().collect()

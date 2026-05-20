@@ -22,6 +22,7 @@ filegroup(
         "//src/server/integrations/google_calendar:srcs",
         "//src/server/integrations/cal_com:srcs",
         "//src/server/integrations/resend:srcs",
+        "//src/server/integrations/easypost:srcs",
         "//src/server/integrations/shippo:srcs",
         "//src/server/integrations/zoom:srcs",
     ],

@@ -15,7 +15,6 @@ pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
-    pub integrations: std::sync::Arc<crate::integrations::registry::IntegrationsRegistry>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -180,9 +179,6 @@ pub async fn mercadopago_webhook_handler(
 ) -> impl IntoResponse {
     match payload.action.as_str() {
         "payment.created" | "payment.updated" => {
-            if let Ok(twilio) = _state.integrations.get_twilio_client("twilio") {
-                let _ = twilio.send_sms("+10000000000", "+1234567890", "Your Mercado Pago order has been placed successfully!").await;
-            }
             // In a real implementation, you would fetch the payment details from MP API using data.id
             // and extract the tenant_id and tier from the metadata.
             // For mock purposes, assume we process it similarly to Stripe.

@@ -1,0 +1,10 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -2975,6 +2975,8 @@
+                             <h2>Product Data Access</h2>
+                             <p>Read Product List</p>
+                             <p>Manage your custom software connections here.</p>
++                            <h1>Twilio</h1>
++                            <button>Connect SMS</button>
+                         </div>
+                     </div>
