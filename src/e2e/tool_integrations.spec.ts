@@ -39,4 +39,9 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByRole('heading', { name: 'Automated Video Links' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect Video' })).toBeVisible();
   });
+
+  test('displays global sms notifications card', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Global SMS Notifications' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect SMS' })).toBeVisible();
+  });
 });

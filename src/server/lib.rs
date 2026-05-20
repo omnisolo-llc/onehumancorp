@@ -2828,7 +2828,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                     <!-- API Screen -->
-                    <div id="api-screen" class="screen">
+                    <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                             <h1>Connect Tools</h1>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
@@ -2917,6 +2917,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Settings</h1>
                         <h2>General</h2>
                         <label><input type="checkbox"> Enable Email Notifications</label>
+                        <label><input type="checkbox"> Enable SMS Reminders</label>
+                        <p>SMS Content</p>
+                        <p style="font-size: 14px; color: var(--text-secondary);">Sent 24h before appointment: "Hi, this is a reminder for your upcoming appointment tomorrow."</p>
+                        <p>Closing Greeting</p>
+                        <input type="text" placeholder="e.g. See you soon!" />
                         <label><input type="checkbox"> Enable Push Notifications</label>
                         <p>Timezone</p>
                         <select><option>UTC</option><option>EST</option></select>
