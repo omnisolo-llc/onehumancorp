@@ -3228,7 +3228,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-2" class="hidden" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" />
+                            <input type="text" placeholder="Business type" data-sync-id="business_type" />
                             <button onclick="nextStep(3)">Next →</button>
                             <button class="secondary" onclick="setBusinessType('Online Store')">🛒 <span>Online Store</span></button>
                             <button class="secondary" onclick="setBusinessType('Service Business')">🛠️ <span>Service Business</span></button>
@@ -3239,8 +3239,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="What is your business called?" data-sync-id="business_name" autocapitalize="words" autocomplete="organization" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" data-sync-id="business_name_fallback" autocapitalize="words" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
@@ -3248,18 +3248,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-4" class="hidden" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;" data-sync-id="sell_physical"> 📦 Physical Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;" data-sync-id="sell_digital"> 📄 Digital Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;" data-sync-id="sell_services"> 📅 Services / Appointments</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;" data-sync-id="sell_subscriptions"> 🔁 Subscriptions</label>
                             </div>
                             <button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
+                            <input type="text" placeholder="What is the name of this product?" data-sync-id="first_product_name" autocapitalize="words" />
+                            <input type="text" placeholder="0.00" data-sync-id="first_product_price" inputmode="decimal" />
                             <button onclick="nextStep('generating')">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
@@ -3272,9 +3272,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
+                            <input type="text" placeholder="e.g. Maya Smith" data-sync-id="account_name" autocomplete="name" autocapitalize="words" />
+                            <input type="email" placeholder="you@email.com" data-sync-id="account_email" autocomplete="email" inputmode="email" />
+                            <input type="password" placeholder="Password" data-sync-id="account_password" autocomplete="new-password" />
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
@@ -3317,7 +3317,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
+                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." data-sync-id="ai_business_desc" autocapitalize="sentences" />
                             <button onclick="generateAI()">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
@@ -3927,15 +3927,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         let currentStep = 1;
 
                         let debounceTimer;
-                        document.addEventListener('input', (e) => {
-                            if (e.target.tagName === 'INPUT') {
+                        function handleStateSync(e) {
+                            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
                                 clearTimeout(debounceTimer);
                                 debounceTimer = setTimeout(() => {
                                     try {
                                         const stateData = { step: currentStep };
-                                        document.querySelectorAll('input').forEach(input => {
-                                            if (input.placeholder && input.value) {
-                                                stateData[input.placeholder] = input.value;
+                                        document.querySelectorAll('#setup-screen input, #setup-screen textarea, #setup-screen select').forEach(input => {
+                                            if (input.type === 'password') return;
+                                            const key = input.getAttribute('data-sync-id') || input.placeholder;
+                                            if (key) {
+                                                if (input.type === 'checkbox') {
+                                                    stateData[key] = input.checked;
+                                                } else if (input.value) {
+                                                    stateData[key] = input.value;
+                                                }
                                             }
                                         });
                                         const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
@@ -3952,7 +3958,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     } catch (err) {}
                                 }, 500);
                             }
-                        });
+                        }
+                        document.addEventListener('input', handleStateSync);
+                        document.addEventListener('change', handleStateSync);
 
                         function validateInputs(stepId) {
                             if (stepId === 4 && currentStep === 3) {
@@ -3984,9 +3992,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 try {
 
                                     const stateData = { step: stepId };
-                                    document.querySelectorAll('input').forEach(input => {
-                                        if (input.placeholder && input.value) {
-                                            stateData[input.placeholder] = input.value;
+                                    document.querySelectorAll('#setup-screen input, #setup-screen textarea, #setup-screen select').forEach(input => {
+                                        if (input.type === 'password') return;
+                                        const key = input.getAttribute('data-sync-id') || input.placeholder;
+                                        if (key) {
+                                            if (input.type === 'checkbox') {
+                                                stateData[key] = input.checked;
+                                            } else if (input.value) {
+                                                stateData[key] = input.value;
+                                            }
                                         }
                                     });
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
@@ -4306,9 +4320,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         const data = await res.json();
                                         if (data.step && data.step > 1) {
                                             // Restore form inputs
-                                            document.querySelectorAll('input').forEach(input => {
-                                                if (input.placeholder && data[input.placeholder]) {
-                                                    input.value = data[input.placeholder];
+                                            document.querySelectorAll('#setup-screen input, #setup-screen textarea, #setup-screen select').forEach(input => {
+                                                const key = input.getAttribute('data-sync-id') || input.placeholder;
+                                                if (key && data[key] !== undefined) {
+                                                    if (input.type === 'checkbox') {
+                                                        input.checked = data[key];
+                                                    } else {
+                                                        input.value = data[key];
+                                                    }
                                                 }
                                             });
                                             nextStep(data.step);

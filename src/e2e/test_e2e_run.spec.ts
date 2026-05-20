@@ -34,7 +34,28 @@ test('verify state persistence', async ({ page }) => {
   await page.getByRole('button', { name: /Start My Business Next/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
 
-  // Reload the page and verify we're still on the company name step
+  // Fill text input and proceed to checkboxes
+  await page.getByPlaceholder('What is your business called?').fill('Maya State Store');
+  await page.getByRole('button', { name: /Next/ }).click();
+
+  // Check multiple boxes
+  await page.getByLabel(/Physical Products/).check();
+  await page.getByLabel(/Digital Products/).check();
+
+  // Wait for debounce sync
+  await page.waitForTimeout(1000);
+
+  // Reload the page and verify we're still on the "What do you sell?" step
+  // and the data is restored
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
+
+  // Check if checkboxes remained checked
+  await expect(page.getByLabel(/Physical Products/)).toBeChecked();
+  await expect(page.getByLabel(/Digital Products/)).toBeChecked();
+  await expect(page.getByLabel(/Services \/ Appointments/)).not.toBeChecked();
+
+  // Go back and verify text input
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByPlaceholder('What is your business called?')).toHaveValue('Maya State Store');
 });
