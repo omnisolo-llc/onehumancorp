@@ -54,8 +54,20 @@ impl AuthConfig {
         let token = &auth_str["Bearer ".len()..];
         if token.is_empty() { return Err(Status::unauthenticated("empty token")); }
         
-        let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
-        let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
+        let app_key = std::env::var("JWT_SECRET")
+            .map(|s| s.into_bytes())
+            .unwrap_or_else(|_| {
+                let secret_path = std::path::Path::new(".ohc_jwt_secret");
+                if secret_path.exists() {
+                    if let Ok(bytes) = std::fs::read(secret_path) {
+                        if bytes.len() >= 32 {
+                            return bytes;
+                        }
+                    }
+                }
+                panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+            });
+        let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
         
         if mac.verify(expected_hash.into()).is_ok() {
@@ -89,8 +101,20 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = std::env::var("JWT_SECRET").unwrap_or_else(|_| "ohc-builtin-agent-2025".to_string());
-    let mut mac = Hmac::<Sha256>::new_from_slice(app_key.as_bytes()).expect("HMAC can take key of any size");
+    let app_key = std::env::var("JWT_SECRET")
+        .map(|s| s.into_bytes())
+        .unwrap_or_else(|_| {
+            let secret_path = std::path::Path::new(".ohc_jwt_secret");
+            if secret_path.exists() {
+                if let Ok(bytes) = std::fs::read(secret_path) {
+                    if bytes.len() >= 32 {
+                        return bytes;
+                    }
+                }
+            }
+            panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+        });
+    let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
 }
