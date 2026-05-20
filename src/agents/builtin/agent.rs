@@ -4668,6 +4668,74 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_error_handling_llm_recoverable_explicit() {
+        struct MockLlmClient {
+            responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClient {
+            async fn chat(&self, _req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut resps = self.responses.lock().await;
+                if !resps.is_empty() {
+                    Ok(resps.remove(0))
+                } else {
+                    Ok(crate::types::ChatResponse {
+                        message: Message::assistant("Final success"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                }
+            }
+        }
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "llm_recoverable_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        struct MockRecoverableTool;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for MockRecoverableTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::LlmRecoverable("missing parameter X".to_string()))
+            }
+        }
+
+        let tool_recoverable = Tool {
+            name: "llm_recoverable_tool".to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(MockRecoverableTool),
+        };
+
+        let agent = Agent::new(client, vec![tool_recoverable]);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
     async fn test_langgraph_four_tier_errors() {
         struct TestLanggraphFourTierErrorToolExecutor {
             name: String,
