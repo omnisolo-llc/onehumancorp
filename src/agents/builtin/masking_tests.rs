@@ -83,7 +83,7 @@ async fn test_recency_aware_masking() {
 
     let mut cfg = AgentRunConfig::default();
     cfg.enable_observation_masking = true;
-    cfg.observation_masking_threshold = 1; // Mask very aggressively
+    cfg.observation_masking_threshold = 0; // Mask very aggressively
     cfg.observation_masking_size_limit = 10; // Small limit
 
     let mut events = vec![];
@@ -127,7 +127,8 @@ async fn test_recall_observation_tool() {
     let args = serde_json::json!({"tool_call_id": "secret_id"});
 
     let result = tool.execute.execute(args).await.unwrap();
-    assert_eq!(result, "The lost city is at 42, 42");
+    assert!(result.contains("Successfully recalled observation"));
+    assert!(result.contains("The lost city is at 42, 42"));
 
     let args_bad = serde_json::json!({"tool_call_id": "wrong_id"});
     let result_bad = tool.execute.execute(args_bad).await;
@@ -194,7 +195,7 @@ async fn test_masking_logic_depth() {
 
     let mut cfg = AgentRunConfig::default();
     cfg.enable_observation_masking = true;
-    cfg.observation_masking_threshold = 1;
+    cfg.observation_masking_threshold = 0;
     cfg.observation_masking_size_limit = 5;
 
     let _ = agent.run(&cfg, "Start", &mut |_| {}).await;
@@ -208,4 +209,96 @@ async fn test_masking_logic_depth() {
     let tr2 = &turn3_msgs[4];
     assert_eq!(tr2.role, Role::Tool);
     assert!(tr2.tool_results[0].content.contains("Long output content"), "Expected Result 2 NOT to be masked in turn 3");
+}
+
+#[tokio::test]
+async fn test_importance_aware_masking_logic() {
+    let observation_store = Arc::new(DashMap::new());
+    let client = Arc::new(RecordingMockLlm {
+        requests: Mutex::new(vec![]),
+        responses: Mutex::new(vec![
+            ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "Call 1".to_string(),
+                    tool_calls: vec![
+                        ToolCall { id: "c1".to_string(), name: "t".to_string(), arguments: serde_json::json!({"id": "c1"}) },
+                        ToolCall { id: "c2".to_string(), name: "t".to_string(), arguments: serde_json::json!({"id": "c2"}) },
+                    ],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("r1".to_string()),
+            },
+            ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "Call 2".to_string(),
+                    tool_calls: vec![
+                        ToolCall { id: "c3".to_string(), name: "t".to_string(), arguments: serde_json::json!({"id": "c3"}) },
+                    ],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("r2".to_string()),
+            },
+            ChatResponse {
+                message: Message::assistant("Final"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("r3".to_string()),
+            },
+        ]),
+    });
+
+    struct ImportanceTool;
+    #[async_trait::async_trait]
+    impl ohc_builtin_agent::tools::ToolExecutor for ImportanceTool {
+        async fn execute(&self, args: serde_json::Value) -> Result<String, ohc_builtin_agent::types::ToolError> {
+            if args["id"].as_str() == Some("c1") {
+                Ok("ERROR: Critical bug found in module X".to_string())
+            } else {
+                Ok("Normal long output that can be masked safely".repeat(10))
+            }
+        }
+    }
+
+    let mut agent = Agent::new(client.clone(), vec![Tool {
+        name: "t".to_string(),
+        description: "t".to_string(),
+        is_read_only: true,
+        parameters: serde_json::json!({}),
+        execute: Arc::new(ImportanceTool),
+    }]);
+    agent.observation_store = observation_store;
+
+    let mut cfg = AgentRunConfig::default();
+    cfg.enable_observation_masking = true;
+    cfg.observation_masking_threshold = 0;
+    cfg.observation_masking_size_limit = 5;
+
+    let _ = agent.run(&cfg, "Start", &mut |_| {}).await;
+
+    let reqs = client.requests.lock().await;
+    // reqs[0]: User
+    // reqs[1]: User, Assistant(T1), Tool(T1-unmasked because masking runs AFTER req is built)
+    // reqs[2]: User, Assistant(T1), Tool(T1-masked), Assistant(T2), Tool(T2)
+
+    let turn3_msgs = &reqs[2].messages;
+
+    // tr is ToolResults for Turn 1
+    let tr = &turn3_msgs[2];
+    assert_eq!(tr.role, Role::Tool);
+
+    let res1 = &tr.tool_results[0];
+    assert!(res1.content.contains("ERROR:"), "Important observation should NOT be masked. Content: {}", res1.content);
+
+    let res2 = &tr.tool_results[1];
+    assert!(res2.content.contains("Observation Masked"), "Unimportant long observation SHOULD be masked. Content: {}", res2.content);
 }

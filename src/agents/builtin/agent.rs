@@ -2100,12 +2100,13 @@ impl Agent {
                         if age > final_cfg.observation_masking_threshold {
                             for tr in &mut messages[i].tool_results {
                                 if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
-                                    let bytes = tr.content.len();
-                                    if bytes > final_cfg.observation_masking_size_limit {
+                                    let is_important = Self::is_high_importance_observation(&tr.content);
+                                    if !is_important && tr.content.len() > final_cfg.observation_masking_size_limit {
+                                        let bytes = tr.content.len();
                                         let preview_chars = 100;
                                         let char_count = tr.content.chars().count();
+                                        let start_preview: String = tr.content.chars().take(preview_chars).collect();
                                         if char_count > preview_chars * 2 {
-                                            let start_preview: String = tr.content.chars().take(preview_chars).collect();
                                             let end_preview: String = tr.content.chars().skip(char_count - preview_chars).collect();
                                             tr.content = format!(
                                                 "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
@@ -2113,8 +2114,8 @@ impl Agent {
                                             );
                                         } else {
                                             tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, tr.tool_call_id
+                                                "[Observation Masked to save context. Output was {} bytes. Preview: {}... The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                                bytes, start_preview, tr.tool_call_id
                                             );
                                         }
                                     }
@@ -2240,7 +2241,7 @@ impl Agent {
 
                         let summary_req = ChatRequest {
                             model: final_cfg.model.clone(),
-                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
+                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. CRITICAL: Preserve all architectural decisions, unresolved bugs, and pending TODOs. Discard redundant or raw tool outputs that do not contribute to these categories. Be concise but thorough regarding unresolved issues.".to_string(),
                             messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
                             tools: vec![],
                             max_tokens: 2000,
@@ -2276,6 +2277,20 @@ impl Agent {
     // Anthropic Mechanic: 3-Stage Tool Gating
 
 
+
+    fn is_high_importance_observation(content: &str) -> bool {
+        let content_upper = content.to_uppercase();
+        let high_importance_keywords = [
+            "BUG", "TODO", "FIXME", "ARCH", "DECISION", "ERROR", "FATAL", "FAIL", "REJECT",
+        ];
+
+        for kw in high_importance_keywords {
+            if content_upper.contains(kw) {
+                return true;
+            }
+        }
+        false
+    }
 
     fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
         if let Some(req_array) = schema.get("required").and_then(|v| v.as_array()) {
@@ -5193,7 +5208,6 @@ mod stream_tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Final verified result");
     }
-}
 
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
@@ -5280,3 +5294,5 @@ mod stream_tests {
         let _ = rewind_emitted; // Ensure we avoid unused variable warnings
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
+
+}

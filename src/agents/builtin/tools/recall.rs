@@ -20,7 +20,7 @@ impl ToolExecutor for RecallObservationExecutor {
             .ok_or_else(|| ToolError::LlmRecoverable("recall_observation: tool_call_id is required".to_string()))?;
 
         match self.observation_store.get(tool_call_id) {
-            Some(content) => Ok(content.clone()),
+            Some(content) => Ok(format!("Successfully recalled observation for tool call '{}':\n\n{}", tool_call_id, content.clone())),
             None => Err(ToolError::LlmRecoverable(format!("recall_observation: Tool call ID '{}' not found in observation store. It may have expired or was never stored.", tool_call_id))),
         }
     }
