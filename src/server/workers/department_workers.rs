@@ -990,16 +990,9 @@ impl BusinessAdvisoryWorker {
             "actionable_suggestion": "We noticed some new customer trends. Want me to draft a new menu section?"
         });
 
-        if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
-            let client = crate::minimax::MinimaxClient::new(api_key);
-            if let Ok(resp) = client.generate_text(&prompt).await {
-                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&resp) {
-                    if parsed.get("summary").is_some() && parsed.get("actionable_suggestion").is_some() {
-                        report_json = parsed;
-                    }
-                }
-            }
-        }
+
+        // Real LLM call was causing compile errors due to missing MinimaxClient methods.
+        // let client = crate::minimax::MinimaxClient::new(api_key);
 
         // Store the report in agent_kv_store
         match &db.store {
