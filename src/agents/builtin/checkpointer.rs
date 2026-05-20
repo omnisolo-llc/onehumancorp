@@ -121,11 +121,10 @@ impl CheckpointSaver for GitCheckpointer {
         let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
         tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
 
-        // 1. Stage ONLY the checkpoint and scratchpad files (Claude Code mechanic)
+        // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
         let _ = Command::new("git")
             .arg("add")
-            .arg(file_path.file_name().unwrap())
-            .arg(scratchpad_path.file_name().unwrap())
+            .arg("-A")
             .current_dir(&self.repo_path)
             .output();
 
