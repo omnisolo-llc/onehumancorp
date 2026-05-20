@@ -2022,11 +2022,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #0066FF;
+                            --primary: #0071E3;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
                             --accent-green: #34C759;
                             --accent-orange: #FF9500;
+                            --accent-red: #FF3B30;
                             --bg: #eef1f5;
                             --surface: rgba(255, 255, 255, 0.86);
                             --surface-strong: #ffffff;
@@ -2042,7 +2043,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --radius-md: 10px;
                         }
                         body.dark-theme {
-                            --primary: #0066FF;
+                            --primary: #0071E3;
+                            --accent-red: #FF3B30;
                             --bg: #121214;
                             --surface: rgba(30, 30, 34, 0.86);
                             --text: #F5F5F7;
@@ -2060,7 +2062,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             min-height: 100vh;
                             font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
                             background:
-                                radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.08), transparent 28%),
+                                radial-gradient(circle at 18% 0%, rgba(0, 113, 227, 0.08), transparent 28%),
                                 linear-gradient(180deg, rgba(255,255,255,0.72), rgba(238,241,245,0.96));
                             color: var(--text); 
                             margin: 0; 
@@ -2189,7 +2191,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             outline: none;
                             border-color: var(--primary);
                             background: #ffffff;
-                            box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
+                            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.13);
+                        }
+                        input.error-input, textarea.error-input, select.error-input {
+                            border-color: var(--accent-red);
+                            background: rgba(255, 59, 48, 0.05);
+                        }
+                        input.error-input:focus, textarea.error-input:focus, select.error-input:focus {
+                            border-color: var(--accent-red);
+                            box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.13);
                         }
                         button { 
                             min-height: 44px;
@@ -2210,7 +2220,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         button:hover {
                             background: var(--primary-hover);
-                            box-shadow: 0 6px 16px rgba(0, 111, 255, 0.18);
+                            box-shadow: 0 6px 16px rgba(0, 113, 227, 0.18);
                             transform: translateY(-1px);
                         }
                         button:active { transform: translateY(0); }
@@ -2221,7 +2231,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         button.secondary:hover {
                             background: #ffffff;
-                            border-color: rgba(0, 111, 255, 0.28);
+                            border-color: rgba(0, 113, 227, 0.28);
                             color: var(--primary);
                             box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
                         }
@@ -2229,7 +2239,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: #ffffff;
                             border-color: var(--primary);
                             color: var(--primary);
-                            box-shadow: 0 0 0 2px rgba(0, 111, 255, 0.2);
+                            box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
                         }
                         button.danger {
                             background: #FF3B30;
@@ -2280,8 +2290,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         #setup-screen button.secondary:hover {
-                            color: #0066FF;
-                            border-color: rgba(0, 102, 255, 0.3);
+                            color: var(--primary);
+                            border-color: rgba(0, 113, 227, 0.3);
                         }
 
                         #setup-screen > div {
@@ -2301,12 +2311,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         @media (max-width: 375px) {
                             #setup-screen {
-                                padding: 24px;
-                                margin: 20px auto;
-                                border-radius: 12px;
+                                padding: 16px;
+                                margin: 10px;
+                                border-radius: 16px;
+                                width: auto;
                             }
-                            #setup-screen button {
+                            #setup-screen h1 {
+                                font-size: 24px;
+                            }
+                            #setup-screen button, #setup-screen input {
                                 width: 100%;
+                                margin-bottom: 8px;
                                 margin-right: 0;
                             }
                         }
@@ -2372,7 +2387,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .nav-item.active { color: var(--primary); background: var(--primary-soft); }
                         #dashboard-screen > .card:first-of-type {
-                            border-color: rgba(0, 111, 255, 0.18);
+                            border-color: rgba(0, 113, 227, 0.18);
                             background:
                                 linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,255,0.94));
                         }
@@ -2690,7 +2705,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <span style="font-size: 14px; font-weight: 500; color: var(--text-secondary); background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 99px;">0 / 5 Referrals</span>
                             </h3>
                             <div style="width: 100%; background: #e2e8f0; border-radius: 99px; height: 12px; overflow: hidden; margin-bottom: 12px;">
-                                <div style="width: 10%; background: var(--primary); height: 100%; border-radius: 99px; box-shadow: 0 0 10px rgba(0,111,255,0.5);"></div>
+                                <div style="width: 10%; background: var(--primary); height: 100%; border-radius: 99px; box-shadow: 0 0 10px rgba(0,113,227,0.5);"></div>
                             </div>
                             <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">You're on your way! Invite 1 more business to unlock your first reward.</p>
                         </div>
@@ -2774,7 +2789,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
                         </div>
 
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
+                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: var(--primary); font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
                                 onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
                             + Schedule New Appointment
                         </button>
@@ -2798,7 +2813,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <input type="email" placeholder="Participant Email" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
                             </div>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px;">
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
+                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: var(--primary); color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1D1D1F; color: white; border: none; flex: 1;" onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
                             </div>
                         </div>
@@ -3955,25 +3970,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
 
                         function validateInputs(stepId) {
+                            let isValid = true;
+
+                            // Reset previous errors
+                            document.querySelectorAll('.error-input').forEach(el => el.classList.remove('error-input'));
+
                             if (stepId === 4 && currentStep === 3) {
                                 const inputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a business name');
-                                    return false;
+                                let hasValue = false;
+                                inputs.forEach(inp => { if (inp.value.trim().length > 0) hasValue = true; });
+                                if (!hasValue) {
+                                    inputs[0].classList.add('error-input');
+                                    isValid = false;
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
                                 const inputs = document.querySelectorAll('#step-5 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a product or service');
-                                    return false;
+                                let hasValue = false;
+                                inputs.forEach(inp => { if (inp.value.trim().length > 0) hasValue = true; });
+                                if (!hasValue) {
+                                    inputs[0].classList.add('error-input');
+                                    isValid = false;
                                 }
                             }
-                            return true;
+                            return isValid;
                         }
 
 
