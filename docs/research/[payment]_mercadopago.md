@@ -1,18 +1,15 @@
-## [Payment] Mercado Pago Integration
-**Title**: Integrate Mercado Pago for LATAM Payments
-**Problem Statement**: Small business owners in Latin America cannot easily use Stripe and need a trusted local payment processor to accept credit cards and local methods like Pix or Pago Fácil.
+## [Payment Processing] Mercado Pago Integration
+**Title**: Expand Payments with Mercado Pago for LATAM Users
+**Problem Statement**: Non-US users in Latin America cannot rely solely on Stripe due to high fees, lack of local currency support, and specific local payment methods (like Pix in Brazil or OXXO in Mexico).
 **Research Report**:
-- **Tool**: Mercado Pago
-- **Target Persona**: Global users outside the US/EU.
-- **Advantages**: Dominant in LATAM. Supports local payment methods (Pix in Brazil, OXXO in Mexico). Good developer docs.
-- **Risks**: Settlement times can be longer. API is slightly less standardized than Stripe.
-- **Pricing**: Variable by country (e.g., ~4-5% per transaction).
-- **Compatibility**: Cloud (OAuth). Standalone (API Key).
+- Mercado Pago is the dominant payment gateway in LATAM.
+- Supports local payment methods which are critical for conversion (often >50% of transactions).
+- API is well-documented. Settlement times are faster locally compared to cross-border Stripe.
+- Works for both Cloud (via OHC platform account) and Standalone (user supplies API keys).
 **Design Doc**:
-- User selects their country during onboarding. If LATAM, Mercado Pago is offered alongside Stripe.
-- User connects their Mercado Pago account.
-- Customers see a "Pay with Mercado Pago" button at checkout.
-- Webhooks update the order status in OHC when payment succeeds.
-**Implementation Prompt**: Add Mercado Pago as a secondary payment provider. Implement the checkout flow to redirect to Mercado Pago and handle the success/failure webhooks to update order status.
-**Priority**: P2
+- In the "Finance & Payments" settings, users select their region. If in LATAM, Mercado Pago is highlighted as the recommended provider.
+- Setup involves standard OAuth flow or API key drop-in.
+- Supports one-off payments and split payments for the eventual marketplace feature.
+**Implementation Prompt**: Add Mercado Pago as a payment provider alternative to Stripe, allowing users in supported LATAM countries to accept local payment methods via the OHC checkout flow.
+**Priority**: P1
 **Estimated Scope**: Large
