@@ -3690,6 +3690,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 showMilestone('🎉 3rd Order!', 'You completed 3 orders!');
                             } else if (orderReadyCount === 10) {
                                 showMilestone('🎉 10th Order!', 'You completed 10 orders!');
+                            } else if (orderReadyCount === 100) {
+                                showMilestone('🎉 100th Order!', 'You completed 100 orders!');
                             }
                         }
 
