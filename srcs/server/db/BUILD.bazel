@@ -1,5 +1,0 @@
-filegroup(
-    name = "embedsrcs",
-    srcs = glob(["migrations/*.sql"]),
-    visibility = ["//visibility:public"],
-)
