@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SmartBlock } from "./components";
 import { Tooltip, useWalkthrough } from "../../components/help";
 
@@ -15,9 +15,90 @@ export default function BuilderPage() {
   const [liveUrl, setLiveUrl] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
+  const isMounted = useRef(false);
+
   // Growth Loop: Soft Paywall State
   const [isPremium, setIsPremium] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Cross-device resume: Load state on mount from API or LocalStorage
+  useEffect(() => {
+    const loadApiState = async () => {
+      let stateFound = false;
+      try {
+        const res = await fetch('/api/wizard/state');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.state) {
+            const apiState = JSON.parse(data.state);
+            if (apiState.builder) {
+              stateFound = true;
+              if (apiState.builder.bio) setBio(apiState.builder.bio);
+              if (apiState.builder.businessName) setBusinessName(apiState.builder.businessName);
+              if (apiState.builder.businessCategory) setBusinessCategory(apiState.builder.businessCategory);
+              if (apiState.builder.vibe) setVibe(apiState.builder.vibe);
+              if (apiState.builder.wizardStep) setWizardStep(apiState.builder.wizardStep);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load cross-device state', e);
+      }
+
+      if (!stateFound) {
+        // Fallback to local storage if API doesn't have it
+        const saved = localStorage.getItem('ohc_builder_wizard_state');
+        if (saved) {
+            try {
+              const localState = JSON.parse(saved);
+              if (localState.bio) setBio(localState.bio);
+              if (localState.businessName) setBusinessName(localState.businessName);
+              if (localState.businessCategory) setBusinessCategory(localState.businessCategory);
+              if (localState.vibe) setVibe(localState.vibe);
+              if (localState.wizardStep) setWizardStep(localState.wizardStep);
+            } catch (e) {}
+        }
+      }
+    };
+    loadApiState();
+  }, []);
+
+  // Cross-device resume: Save state to API on change (debounced)
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+
+    const state = { bio, businessName, businessCategory, vibe, wizardStep };
+    localStorage.setItem('ohc_builder_wizard_state', JSON.stringify(state));
+
+    const timeout = setTimeout(async () => {
+      try {
+        // Fetch current full state first to not overwrite setup wizard state
+        const res = await fetch('/api/wizard/state');
+        let fullState = {};
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.state) {
+            fullState = JSON.parse(data.state);
+          }
+        }
+
+        fullState.builder = state;
+
+        await fetch('/api/wizard/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: JSON.stringify(fullState) })
+        });
+      } catch (e) {
+        console.error('Failed to save cross-device state', e);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [bio, businessName, businessCategory, vibe, wizardStep]);
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -95,7 +176,7 @@ export default function BuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
+        <div className="w-[375px] h-[812px] shadow-2xl overflow-hidden flex flex-col relative"
              style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
 
           <div className="px-8 pt-12 pb-4">
@@ -117,32 +198,52 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 p-4 mb-6 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  className={`w-full border p-4 mb-2 focus:ring-2 outline-none transition-all text-gray-800 ${
+                    businessName.trim() !== "" && businessName.trim().length < 3
+                      ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 focus:ring-[#0071E3] focus:border-[#0071E3]"
+                  }`}
                   style={{ borderRadius: '8px' }}
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="e.g. Acme Corp"
                 />
+                {businessName.trim() !== "" && businessName.trim().length < 3 && (
+                  <p className="text-xs text-red-500 mb-4 font-medium animate-fade-in">Name must be at least 3 characters.</p>
+                )}
+                {!(businessName.trim() !== "" && businessName.trim().length < 3) && (
+                  <div className="mb-4"></div>
+                )}
 
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  className={`w-full border p-4 mb-2 focus:ring-2 outline-none transition-all text-gray-800 ${
+                    businessCategory.trim() !== "" && businessCategory.trim().length < 3
+                      ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 focus:ring-[#0071E3] focus:border-[#0071E3]"
+                  }`}
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
                   placeholder="e.g. Retail, Consulting, Tech"
                 />
+                {businessCategory.trim() !== "" && businessCategory.trim().length < 3 && (
+                  <p className="text-xs text-red-500 mb-4 font-medium animate-fade-in">Category must be at least 3 characters.</p>
+                )}
+                {!(businessCategory.trim() !== "" && businessCategory.trim().length < 3) && (
+                  <div className="mb-4"></div>
+                )}
 
                 <button
                   className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
-                    businessName.trim() && businessCategory.trim()
+                    businessName.trim().length >= 3 && businessCategory.trim().length >= 3
                       ? "text-white shadow-md active:scale-[0.98]"
                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                   }`}
-                  style={{ borderRadius: '8px', background: (businessName.trim() && businessCategory.trim()) ? '#0071E3' : '' }}
+                  style={{ borderRadius: '8px', background: (businessName.trim().length >= 3 && businessCategory.trim().length >= 3) ? '#0071E3' : '' }}
                   onClick={() => setWizardStep(2)}
-                  disabled={!businessName.trim() || !businessCategory.trim()}
+                  disabled={businessName.trim().length < 3 || businessCategory.trim().length < 3}
                 >
                   Next: Choose Vibe
                 </button>
@@ -324,7 +425,7 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden">
+      <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">

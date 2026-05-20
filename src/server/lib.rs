@@ -3343,7 +3343,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = {};
+                                const state = { currentStep };
                                 inputs.forEach((input, index) => {
                                     if (input.type === 'checkbox') {
                                         state['checkbox_' + index] = input.checked;
@@ -3375,47 +3375,44 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 input.addEventListener('input', saveWizardState);
                             });
 
+                            let finalState = null;
                             try {
                                 const res = await fetch('/api/wizard/state');
                                 if (res.ok) {
                                     const data = await res.json();
                                     if (data && data.state) {
-                                        const state = JSON.parse(data.state);
-                                        inputs.forEach((input, index) => {
-                                            if (input.type === 'checkbox') {
-                                                if (state['checkbox_' + index] !== undefined) {
-                                                    input.checked = state['checkbox_' + index];
-                                                }
-                                            } else {
-                                                if (state['input_' + index] !== undefined) {
-                                                    input.value = state['input_' + index];
-                                                }
-                                            }
-                                        });
-                                        return;
+                                        finalState = JSON.parse(data.state);
                                     }
                                 }
                             } catch (e) {
                                 console.error('Failed to load state from server', e);
                             }
 
-                            // Fallback to localStorage
-                            const saved = localStorage.getItem('ohc_wizard_state');
-                            if (saved) {
-                                try {
-                                    const state = JSON.parse(saved);
-                                    inputs.forEach((input, index) => {
-                                        if (input.type === 'checkbox') {
-                                            if (state['checkbox_' + index] !== undefined) {
-                                                input.checked = state['checkbox_' + index];
-                                            }
-                                        } else {
-                                            if (state['input_' + index] !== undefined) {
-                                                input.value = state['input_' + index];
-                                            }
+                            if (!finalState) {
+                                // Fallback to localStorage
+                                const saved = localStorage.getItem('ohc_wizard_state');
+                                if (saved) {
+                                    try {
+                                        finalState = JSON.parse(saved);
+                                    } catch (e) { console.error('Failed to parse wizard state', e); }
+                                }
+                            }
+
+                            if (finalState) {
+                                inputs.forEach((input, index) => {
+                                    if (input.type === 'checkbox') {
+                                        if (finalState['checkbox_' + index] !== undefined) {
+                                            input.checked = finalState['checkbox_' + index];
                                         }
-                                    });
-                                } catch (e) { console.error('Failed to parse wizard state', e); }
+                                    } else {
+                                        if (finalState['input_' + index] !== undefined) {
+                                            input.value = finalState['input_' + index];
+                                        }
+                                    }
+                                });
+                                if (finalState.currentStep) {
+                                    nextStep(finalState.currentStep);
+                                }
                             }
                         }
 
