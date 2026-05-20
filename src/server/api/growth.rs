@@ -61,6 +61,11 @@ pub struct MilestonesResponse {
     pub milestones: Vec<Milestone>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GrowthIdRequest {
+    pub id: String,
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -71,6 +76,9 @@ where
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
+        .route("/referrals/click", post(handle_referral_click))
+        .route("/referrals/convert", post(handle_referral_convert))
+        .route("/team-invites/accept", post(handle_team_invite_accept))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -158,6 +166,48 @@ async fn handle_get_team_invites(
     }
 }
 
+async fn handle_referral_click(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<GrowthIdRequest>,
+) -> Result<Json<()>, StatusCode> {
+    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
+        .bind(&req.id)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_referral_convert(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<GrowthIdRequest>,
+) -> Result<Json<()>, StatusCode> {
+    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
+        .bind(&req.id)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_team_invite_accept(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<GrowthIdRequest>,
+) -> Result<Json<()>, StatusCode> {
+    match sqlx::query("UPDATE team_invites SET status = 'ACCEPTED' WHERE id = $1")
+        .bind(&req.id)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
@@ -233,5 +283,74 @@ mod tests {
             }
         }
         assert!(found);
+    }
+
+    #[tokio::test]
+    async fn test_referral_clicks_and_conversions() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        // Insert dummy referral
+        let ref_id = "test-ref-123";
+        sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, 'org1', 'user1', 'code1', 0, 0, 0) ON CONFLICT DO NOTHING")
+            .bind(ref_id)
+            .execute(&pool).await.unwrap();
+
+        let req = GrowthIdRequest { id: ref_id.to_string() };
+
+        // Test Click
+        let res = handle_referral_click(Extension(state.clone()), Json(req)).await;
+        assert!(res.is_ok());
+
+        let clicks: i32 = sqlx::query_scalar("SELECT clicks FROM referrals WHERE id = $1")
+            .bind(ref_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(clicks, 1);
+
+        let req2 = GrowthIdRequest { id: ref_id.to_string() };
+        // Test Convert
+        let res2 = handle_referral_convert(Extension(state.clone()), Json(req2)).await;
+        assert!(res2.is_ok());
+
+        let conversions: i32 = sqlx::query_scalar("SELECT conversions FROM referrals WHERE id = $1")
+            .bind(ref_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(conversions, 1);
+    }
+
+    #[tokio::test]
+    async fn test_team_invite_accept() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        // Insert dummy invite
+        let invite_id = "test-invite-123";
+        sqlx::query("INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at) VALUES ($1, 'team1', 'inviter1', 'invitee1', 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING")
+            .bind(invite_id)
+            .execute(&pool).await.unwrap();
+
+        let req = GrowthIdRequest { id: invite_id.to_string() };
+
+        let res = handle_team_invite_accept(Extension(state.clone()), Json(req)).await;
+        assert!(res.is_ok());
+
+        let status: String = sqlx::query_scalar("SELECT status FROM team_invites WHERE id = $1")
+            .bind(invite_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(status, "ACCEPTED");
     }
 }
