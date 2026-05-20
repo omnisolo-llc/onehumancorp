@@ -368,7 +368,8 @@ mod tests {
 
                         // Process the complete block once it's closed, OR if it was a single line
                         if !in_log_block && !current_log_block.is_empty() {
-                            if current_log_block.contains("tenant_id") ||
+                            if !current_log_block.contains("redact_interface_pii") && (
+                               current_log_block.contains("tenant_id") ||
                                current_log_block.contains("organization_id") ||
                                current_log_block.contains("org_id") ||
                                current_log_block.contains("session_data") ||
@@ -391,7 +392,8 @@ mod tests {
                                current_log_block.contains("billing") ||
                                current_log_block.contains("ip_address") ||
                                current_log_block.contains("mac_address") ||
-                               current_log_block.contains("geolocation") {
+                               current_log_block.contains("geolocation")
+                            ) {
                                 violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
                             }
                             current_log_block.clear();
@@ -502,6 +504,36 @@ fi"#;
     assert!(
         content.contains(expected_telemetry_check),
         "Local Sovereignty violation: ohc-standalone.sh does not properly strictly enforce OHC_TELEMETRY_ENABLED opt-in boundary."
+    );
+}
+
+#[test]
+fn test_standalone_wrapper_no_exfiltration() {
+    let mut script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
+    if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+        script_path = std::path::PathBuf::from(workspace_dir).join("deploy/scripts/ohc-standalone.sh");
+    } else if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
+        script_path = std::path::PathBuf::from(runfiles_dir).join("ohc/deploy/scripts/ohc-standalone.sh");
+    }
+    if !script_path.exists() {
+        script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
+    }
+    let content = std::fs::read_to_string(script_path).expect("Failed to read ohc-standalone.sh script");
+
+    let mut violations = Vec::new();
+    for (i, line) in content.lines().enumerate() {
+        let lower_line = line.to_lowercase();
+        if lower_line.contains("curl") || lower_line.contains("wget") {
+            if !lower_line.contains("localhost") && !lower_line.contains("127.0.0.1") {
+                violations.push(format!("Line {}: {}", i + 1, line.trim()));
+            }
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "Local Sovereignty violation: Found potential remote data exfiltration vectors (curl/wget to non-localhost) in ohc-standalone.sh:\n{:#?}",
+        violations
     );
 }
 

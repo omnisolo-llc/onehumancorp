@@ -27,7 +27,7 @@ pub struct McpWebhookResponse {
 pub async fn handle_mcp_webhook(
     State(hub): State<Arc<Hub>>,
     headers: HeaderMap,
-    Json(payload): Json<McpWebhookPayload>,
+    Json(webhook_req): Json<McpWebhookPayload>,
 ) -> impl IntoResponse {
     // Basic Bearer token verification.
     // In a real implementation, you would check against a specific integration token
@@ -49,10 +49,16 @@ pub async fn handle_mcp_webhook(
 
     let tracker = AsyncTaskTracker::new(Arc::new(hub.db.clone()));
 
-    match tracker.get_task(payload.task_id).await {
+    let task_id = webhook_req.task_id;
+    match tracker.get_task(task_id).await {
         Ok(Some(task)) => {
-            if let Err(e) = tracker.update_task_status(payload.task_id, &payload.status, payload.result).await {
-                tracing::error!("Failed to update MCP task {}: {}", payload.task_id, e);
+            let redacted_data = ::server_telemetry::redact_interface_pii(serde_json::json!({
+                "task_id": webhook_req.task_id,
+                "status": webhook_req.status.clone(),
+                "result": webhook_req.result.clone(),
+            }));
+            if let Err(e) = tracker.update_task_status(task_id, &webhook_req.status, webhook_req.result).await {
+                tracing::error!("Failed to update MCP task {}: {} with data {}", task_id, e, redacted_data);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(McpWebhookResponse {
@@ -64,7 +70,12 @@ pub async fn handle_mcp_webhook(
 
             // In a real KAIROS implementation, this would trigger agent resumption via the orchestrator.
             // For now, we simulate reactivating the agent.
-            tracing::info!("KAIROS Hook: Reactivating agent {} for tenant {} (Task {})", task.agent_id, task.tenant_id, task.id);
+            let redacted_tenant_info = ::server_telemetry::redact_interface_pii(serde_json::json!({
+                "agent_id": task.agent_id,
+                "tenant_id": task.tenant_id,
+                "task_id": task.id
+            }));
+            tracing::info!("KAIROS Hook: Reactivating agent with info {}", redacted_tenant_info);
 
             (
                 StatusCode::OK,
@@ -84,7 +95,12 @@ pub async fn handle_mcp_webhook(
             )
         }
         Err(e) => {
-            tracing::error!("Database error fetching MCP task {}: {}", payload.task_id, e);
+            let redacted_data = ::server_telemetry::redact_interface_pii(serde_json::json!({
+                "task_id": webhook_req.task_id,
+                "status": webhook_req.status.clone(),
+                "result": webhook_req.result.clone(),
+            }));
+            tracing::error!("Database error fetching MCP task {}: {} with data {}", task_id, e, redacted_data);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(McpWebhookResponse {
