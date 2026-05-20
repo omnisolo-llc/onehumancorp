@@ -84,11 +84,12 @@ impl CompetitorAuditWorker {
         }
 
         // Ensure the directory exists
-        std::fs::create_dir_all(".agent-task/memory")?;
+        let output_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".agent-task/memory".to_string());
+        std::fs::create_dir_all(&output_dir)?;
 
         let findings = "Competitor Audit Finding: OHC-HA dynamic escalation is functioning. Local SQLite fallback is operational.";
         std::fs::write(
-            format!(".agent-task/memory/competitor_audit_{}.txt", Utc::now().timestamp()),
+            format!("{}/competitor_audit_{}.txt", output_dir, Utc::now().timestamp()),
             findings
         )?;
 
@@ -98,15 +99,73 @@ impl CompetitorAuditWorker {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
+    use crate::db::{DB, DbStore};
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::sync::Arc;
 
     #[tokio::test]
-    async fn test_worker_initialization() {
-        // Skip full DB initialization in fast unit tests because connection timeout
-        // makes the test suite flaky. We can manually create a simplified DB struct
-        // if we needed to, but for this test's scope (90% cover logic), we verify the
-        // struct builds. In a real environment we'd use a MockPool or sqlite in-memory.
-        // For now, let's just assert our basic understanding.
-        assert_eq!(2 + 2, 4);
+    async fn test_run_audit_sqlite() {
+        // 1. Setup in-memory SQLite
+        let temp_dir = std::env::temp_dir().join(format!("ohc_memory_{}", Uuid::new_v4()));
+        std::env::set_var("OHC_MEMORY_DIR", temp_dir.to_str().unwrap());
+
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        // 2. Create the required table
+        sqlx::query(
+            "CREATE TABLE competitor_metrics (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                competitor_name TEXT NOT NULL,
+                metrics_data TEXT NOT NULL,
+                probed_at TEXT NOT NULL
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // 3. Create a dummy pg pool because DB requires it (won't be used)
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        // 4. Create the DB struct
+        let db = DB {
+            pool: pg_pool,
+            store: DbStore::Sqlite(pool.clone()),
+        };
+
+        // 5. Run the audit
+        let result = CompetitorAuditWorker::run_audit(&db).await;
+        assert!(result.is_ok(), "run_audit failed: {:?}", result.err());
+
+        // Ensure file was created
+        let files = std::fs::read_dir(&temp_dir).unwrap();
+        let count_files = files.count();
+        assert!(count_files > 0, "Expected at least one memory file to be created");
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_dir);
+
+        // 6. Verify data was inserted
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM competitor_metrics")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count.0, 3, "Expected 3 competitors to be audited");
+
+        let entries: Vec<(String, String)> = sqlx::query_as("SELECT competitor_name, metrics_data FROM competitor_metrics")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+
+        let mut names: Vec<String> = entries.into_iter().map(|(n, _)| n).collect();
+        names.sort();
+        assert_eq!(names, vec!["AI coding assistant", "OpenClaw", "Replit Agent"]);
     }
 }
