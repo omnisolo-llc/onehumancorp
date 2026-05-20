@@ -188,6 +188,7 @@ rust_binary(
         "guardrails",
         "harness",
         "memory_store",
+        "output_parser",
         "pubsub",
         "registry",
     ]
@@ -223,8 +224,3 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
-
-rust_test(
-    name = "output_parser_unit_test",
-    crate = ":core",
-)
