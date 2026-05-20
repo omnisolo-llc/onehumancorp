@@ -222,8 +222,9 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success after retry");
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ToolError::LlmRecoverable(_)));
     }
 
     #[tokio::test]
@@ -238,10 +239,10 @@ mod tests {
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::Fatal(msg)) = result {
-            assert!(msg.contains("Output parsing failed after 2 retries"));
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Failed to parse output as valid JSON"));
         } else {
-            panic!("Expected Fatal error");
+            panic!("Expected LlmRecoverable error, got {:?}", result);
         }
     }
 
@@ -268,8 +269,9 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success_tool_call_retry");
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ToolError::LlmRecoverable(_)));
     }
 
     #[tokio::test]
@@ -284,10 +286,10 @@ mod tests {
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::Fatal(msg)) = result {
-            assert!(msg.contains("Output parsing failed after 2 retries"));
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Failed to parse output as valid JSON"));
         } else {
-            panic!("Expected Fatal error");
+            panic!("Expected LlmRecoverable error, got {:?}", result);
         }
     }
 }
