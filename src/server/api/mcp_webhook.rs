@@ -64,7 +64,7 @@ pub async fn handle_mcp_webhook(
 
             // In a real KAIROS implementation, this would trigger agent resumption via the orchestrator.
             // For now, we simulate reactivating the agent.
-            tracing::info!("KAIROS Hook: Reactivating agent {} for tenant {} (Task {})", task.agent_id, task.tenant_id, task.id);
+            tracing::info!("KAIROS Hook: Reactivating agent (Task {})", task.id);
 
             (
                 StatusCode::OK,

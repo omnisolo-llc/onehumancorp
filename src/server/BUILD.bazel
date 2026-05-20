@@ -17,7 +17,7 @@ rust_library(
         "lib.rs",
         "minimax.rs",
         "msgbus.rs",
-        "pipeline.rs",
+
         "powersync.rs",
         "queue.rs",
         "scheduler.rs",
@@ -26,7 +26,7 @@ rust_library(
         "sip.rs",
         "store.rs",
         "tasks.rs",
-        "ultraplan.rs",
+
         "//src/server/api:srcs",
         "//src/server/autodream:srcs",
         "//src/server/autodream_pipeline:srcs",
@@ -155,12 +155,10 @@ rust_binary(
         "analytics",
         "db",
         "msgbus",
-        "pipeline",
         "powersync",
         "scheduler",
         "settings",
         "tasks",
-        "ultraplan",
     ]
 ]
 

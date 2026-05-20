@@ -5,14 +5,14 @@ pub use ::server_auth as auth;
 pub mod hub;
 pub mod minimax;
 pub mod billing;
-pub mod ultraplan;
+
 pub mod autodream;
 pub mod autodream_pipeline;
 pub mod tasks;
 pub mod settings;
 pub mod scheduler;
 pub mod msgbus;
-pub mod pipeline;
+
 pub use ::server_oidc as oidc;
 pub mod sip;
 pub mod seeder;
@@ -2703,7 +2703,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function updateApprovalSetting(deptId, isChecked) {
-                            console.log(`Updated setting for ${deptId}: require approval = ${isChecked}`);
                             alert(`Settings updated for ${deptId}.`);
                         }
                     </script>
