@@ -1631,12 +1631,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let cfg = crate::config::get();
-        let db_path = cfg.database_url.as_ref()
+        let _db_path = cfg.database_url.as_ref()
             .and_then(|url| url.strip_prefix("sqlite://"))
             .map(|s| s.split('?').next().unwrap_or("ohc-standalone.db"))
             .unwrap_or("ohc-standalone.db");
         #[cfg(unix)]
         {
+            let db_path = _db_path;
             use std::fs::OpenOptions;
             use std::os::unix::fs::OpenOptionsExt;
             use std::os::unix::fs::PermissionsExt;
