@@ -56,7 +56,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_chat_service() {
-        let registry = Arc::new(IntegrationsRegistry::new());
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let registry = Arc::new(IntegrationsRegistry::new(dummy_pool));
         let service = MyChatService::new(registry);
 
         let req = Request::new(ChatTestRequest {

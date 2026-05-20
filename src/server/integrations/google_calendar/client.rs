@@ -10,13 +10,15 @@ pub trait GoogleCalendarClientWrapper: Send + Sync {
 pub struct RealGoogleCalendarClient {
     access_token: String,
     http_client: Client,
+    pool: sqlx::PgPool,
 }
 
 impl RealGoogleCalendarClient {
-    pub fn new(access_token: String) -> Self {
+    pub fn new(access_token: String, pool: sqlx::PgPool) -> Self {
         Self {
             access_token,
             http_client: Client::new(),
+            pool,
         }
     }
 }
@@ -42,7 +44,7 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
             Ok(resp) => {
                 if resp.status().is_success() {
                     let _ = ::server_telemetry::record_api_call_cost(
-                        &crate::db::get_pool(),
+                        &self.pool,
                         "unknown",
                         "google_calendar_get_free_busy",
                         0.01
@@ -75,7 +77,7 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
             Ok(resp) => {
                 if resp.status().is_success() {
                     let _ = ::server_telemetry::record_api_call_cost(
-                        &crate::db::get_pool(),
+                        &self.pool,
                         "unknown",
                         "google_calendar_create_event",
                         0.01

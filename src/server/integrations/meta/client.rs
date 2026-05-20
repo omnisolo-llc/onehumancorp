@@ -9,13 +9,15 @@ pub trait MetaClientWrapper: Send + Sync {
 pub struct RealMetaClient {
     access_token: String,
     http_client: Client,
+    pool: sqlx::PgPool,
 }
 
 impl RealMetaClient {
-    pub fn new(access_token: String) -> Self {
+    pub fn new(access_token: String, pool: sqlx::PgPool) -> Self {
         Self {
             access_token,
             http_client: Client::new(),
+            pool,
         }
     }
 }
@@ -48,7 +50,7 @@ impl MetaClientWrapper for RealMetaClient {
             Ok(resp) => {
                 if resp.status().is_success() {
                     let _ = ::server_telemetry::record_api_call_cost(
-                        &crate::db::get_pool(),
+                        &self.pool,
                         "unknown", // tenant context
                         &format!("{}_send_message", platform),
                         0.01 // nominal meta cost
@@ -69,7 +71,10 @@ mod tests {
 
     #[test]
     fn test_real_client_creation() {
-        let client = RealMetaClient::new("token".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let client = RealMetaClient::new("token".to_string(), pool);
         assert_eq!(client.access_token, "token");
     }
 }

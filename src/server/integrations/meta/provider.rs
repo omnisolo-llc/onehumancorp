@@ -8,8 +8,8 @@ pub struct MetaProvider {
 }
 
 impl MetaProvider {
-    pub fn new(access_token: String) -> Self {
-        let client = RealMetaClient::new(access_token);
+    pub fn new(access_token: String, pool: sqlx::PgPool) -> Self {
+        let client = RealMetaClient::new(access_token, pool);
 
         Self {
             client: Arc::new(client),

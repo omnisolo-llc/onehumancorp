@@ -129,6 +129,20 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         use std::os::unix::fs::PermissionsExt;
 
         let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
+
+        let path = std::path::Path::new(db_path);
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() {
+                use std::os::unix::fs::DirBuilderExt;
+                let mut builder = std::fs::DirBuilder::new();
+                builder.recursive(true).mode(0o700);
+                if let Err(e) = builder.create(parent) {
+                    tracing::error!("Failed to securely create standalone DB directory: {}", e);
+                    panic!("Failed to securely create standalone DB directory: {}", e);
+                }
+            }
+        }
+
         match OpenOptions::new()
             .read(true)
             .write(true)

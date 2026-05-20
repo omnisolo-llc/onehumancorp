@@ -8,8 +8,8 @@ pub struct GoogleCalendarProvider {
 }
 
 impl GoogleCalendarProvider {
-    pub fn new(access_token: String) -> Self {
-        let client = RealGoogleCalendarClient::new(access_token);
+    pub fn new(access_token: String, pool: sqlx::PgPool) -> Self {
+        let client = RealGoogleCalendarClient::new(access_token, pool);
 
         Self {
             client: Arc::new(client),

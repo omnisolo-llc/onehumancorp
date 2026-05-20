@@ -23,16 +23,17 @@ pub struct StripeCustomer {
 
 pub struct StripeClient {
     pub api_key: String,
+    pub pool: sqlx::PgPool,
 }
 
 impl StripeClient {
-    pub fn new(api_key: String) -> Self {
-        StripeClient { api_key }
+    pub fn new(api_key: String, pool: sqlx::PgPool) -> Self {
+        StripeClient { api_key, pool }
     }
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
-            &crate::db::get_pool(),
+            &self.pool,
             customer_id, // assume customer_id is a proxy for organization_id
             "stripe_checkout_session",
             0.10 // mock cost for api orchestration
@@ -53,7 +54,7 @@ impl StripeClient {
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
         let _ = ::server_telemetry::record_api_call_cost(
-            &crate::db::get_pool(),
+            &self.pool,
             "unknown",
             "stripe_get_subscription",
             0.01

@@ -10,8 +10,8 @@ pub struct TwilioProvider {
 }
 
 impl TwilioProvider {
-    pub fn new(account_sid: String, auth_token: String) -> Self {
-        let client = RealTwilioClient::new(account_sid, auth_token);
+    pub fn new(account_sid: String, auth_token: String, pool: sqlx::PgPool) -> Self {
+        let client = RealTwilioClient::new(account_sid, auth_token, pool);
 
         Self {
             client: Arc::new(client),
@@ -78,14 +78,20 @@ mod tests {
 
     #[test]
     fn test_twilio_provider_new() {
-        let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let provider = TwilioProvider::new("sid".to_string(), "token".to_string(), pool);
         assert_eq!(provider.metadata.id, "twilio");
         assert_eq!(provider.metadata.category, "sms");
     }
 
     #[test]
     fn test_twilio_provider_into() {
-        let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let provider = TwilioProvider::new("sid".to_string(), "token".to_string(), pool);
         let integration = provider.into_integration_provider();
         assert_eq!(integration.metadata.id, "twilio");
     }

@@ -10,13 +10,14 @@ use super::provider::{BlobMetadata, Provider};
 pub struct LocalProvider {
     base_path: PathBuf,
     tracker: Tracker,
+    pool: sqlx::PgPool,
 }
 
 impl LocalProvider {
-    pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
+    pub fn new<P: AsRef<Path>>(base_path: P, pool: sqlx::PgPool) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
         fs::create_dir_all(&abs_path)?;
-        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new() })
+        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new(), pool })
     }
 
     fn get_local_path(&self, key: &str) -> io::Result<PathBuf> {
@@ -168,7 +169,7 @@ impl Provider for LocalProvider {
         let res = tokio::fs::write(&path, final_data).await;
         if res.is_ok() {
             let _ = ::server_telemetry::record_storage_rw_cost(
-                &crate::db::get_pool(),
+                &self.pool,
                 t_id,
                 "write",
                 reported_size as i64
@@ -193,7 +194,10 @@ mod tests {
         let dir = format!("/tmp/test_storage_{}", random_suffix);
         fs::create_dir_all(&dir).unwrap();
         let abs_dir = fs::canonicalize(&dir).unwrap();
-        let p = LocalProvider::new(&abs_dir).unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let p = LocalProvider::new(&abs_dir, pool).unwrap();
         (p, abs_dir.to_string_lossy().to_string())
     }
 

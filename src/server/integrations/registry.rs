@@ -19,12 +19,13 @@ pub struct IntegrationsRegistry {
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    pool: sqlx::PgPool,
 }
 
 impl IntegrationsRegistry {
-    pub fn new() -> Self {
+    pub fn new(pool: sqlx::PgPool) -> Self {
         let mut instances = std::collections::HashMap::new();
-        for provider in crate::integrations::catalog::get_catalog() {
+        for provider in crate::integrations::catalog::get_catalog(pool.clone()) {
             let id = provider.metadata.id.clone();
             instances.insert(id.clone(), IntegrationInstance {
                 id: id.clone(),
@@ -44,6 +45,7 @@ impl IntegrationsRegistry {
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            pool,
         }
     }
 
@@ -164,7 +166,7 @@ impl IntegrationsRegistry {
         });
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone(), self.pool.clone())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
@@ -180,7 +182,7 @@ impl IntegrationsRegistry {
         if integration_id == "meta" {
             let mut clients = self.meta_clients.write().unwrap();
             clients.insert("meta".to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                creds.api_token.clone()
+                creds.api_token.clone(), self.pool.clone()
             )));
         }
 
@@ -323,7 +325,10 @@ mod tests {
     use super::*;
     #[tokio::test]
     async fn test_twilio_integration() {
-        let registry = IntegrationsRegistry::new();
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let registry = IntegrationsRegistry::new(dummy_pool);
         let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
             integration_id: "twilio".to_string(),
             base_url: "https://api.twilio.com".to_string(),

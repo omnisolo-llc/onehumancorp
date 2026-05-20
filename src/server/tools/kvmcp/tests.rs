@@ -23,8 +23,12 @@ async fn test_kv_get_set_list_delete_standalone() {
             )"
         ).execute(&pool).await.unwrap();
 
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
         let db = Arc::new(DB {
-            pool: crate::db::get_pool(), // dummy pg pool
+            pool: dummy_pg_pool, // dummy pg pool
             store: DbStore::Sqlite(pool),
         });
 
@@ -89,8 +93,12 @@ async fn test_kv_get_set_list_delete_standalone() {
 
 #[tokio::test]
 async fn test_tenant_id_parsing() {
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+
     let db = Arc::new(DB {
-        pool: crate::db::get_pool(),
+        pool: dummy_pg_pool,
         store: DbStore::Postgres,
     });
     let server = KvMcpServer::new(db, None);
@@ -108,8 +116,12 @@ async fn test_tenant_id_parsing() {
 #[tokio::test]
 async fn test_redis_unconfigured() {
     with_var("OHC_STANDALONE", Some("false"), || async {
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
         let db = Arc::new(DB {
-            pool: crate::db::get_pool(),
+            pool: dummy_pg_pool,
             store: DbStore::Postgres,
         });
 

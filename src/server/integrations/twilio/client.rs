@@ -10,14 +10,16 @@ pub struct RealTwilioClient {
     account_sid: String,
     auth_token: String,
     http_client: Client,
+    pool: sqlx::PgPool,
 }
 
 impl RealTwilioClient {
-    pub fn new(account_sid: String, auth_token: String) -> Self {
+    pub fn new(account_sid: String, auth_token: String, pool: sqlx::PgPool) -> Self {
         Self {
             account_sid,
             auth_token,
             http_client: Client::new(),
+            pool,
         }
     }
 }
@@ -40,7 +42,7 @@ impl TwilioClientWrapper for RealTwilioClient {
             Ok(resp) => {
                 if resp.status().is_success() {
                     let _ = ::server_telemetry::record_api_call_cost(
-                        &crate::db::get_pool(),
+                        &self.pool,
                         "unknown",
                         "twilio_send_sms",
                         0.05
@@ -61,7 +63,11 @@ mod tests {
 
     #[test]
     fn test_real_client_creation() {
-        let client = RealTwilioClient::new("sid".to_string(), "token".to_string());
+        // Dummy pool for test compilation (won't be used for queries since URL is malformed in tests)
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let client = RealTwilioClient::new("sid".to_string(), "token".to_string(), pool);
         assert_eq!(client.account_sid, "sid");
         assert_eq!(client.auth_token, "token");
     }
@@ -70,7 +76,10 @@ mod tests {
     async fn test_send_sms_error_handling() {
         // This test verifies the error handling without making real HTTP calls
         // by supplying a malformed URL that reqwest will fail to parse/execute
-        let client = RealTwilioClient::new("sid".to_string(), "token".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let client = RealTwilioClient::new("sid".to_string(), "token".to_string(), pool);
 
         // Because we cannot easily mock the reqwest::Client without bringing in external dependencies
         // like wiremock or httpmock, we'll verify the structural error path for now

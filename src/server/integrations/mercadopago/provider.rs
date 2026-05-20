@@ -8,8 +8,8 @@ pub struct MercadoPagoProvider {
 }
 
 impl MercadoPagoProvider {
-    pub fn new(access_token: String) -> Self {
-        let client = MercadoPagoClient::new(access_token);
+    pub fn new(access_token: String, pool: sqlx::PgPool) -> Self {
+        let client = MercadoPagoClient::new(access_token, pool);
 
         Self {
             _client: Arc::new(client),

@@ -13,7 +13,7 @@ pub struct ProviderMetadata {
     pub base_url: String,
 }
 
-pub fn get_catalog() -> Vec<IntegrationProvider> {
+pub fn get_catalog(pool: sqlx::PgPool) -> Vec<IntegrationProvider> {
     let mut catalog = vec![];
 
     // We instantiate nats as a placeholder, without making actual network connection
@@ -42,10 +42,10 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
-    let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
+    let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string(), pool.clone());
     catalog.push(meta_provider.to_integration_provider());
 
-    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("dummy_token".to_string());
+    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("dummy_token".to_string(), pool.clone());
     catalog.push(google_calendar_provider.to_integration_provider());
 
     let cal_com_provider = crate::integrations::cal_com::provider::CalComProvider::new("dummy_token".to_string());
@@ -60,7 +60,7 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new("dummy_token".to_string());
     catalog.push(zoom_provider.to_integration_provider());
 
-    let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
+    let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string(), pool.clone());
     catalog.push(mercadopago_provider.to_integration_provider());
 
     catalog

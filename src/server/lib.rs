@@ -566,8 +566,9 @@ impl HubService for MyHubService {
 
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
-        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let stripe_pool = self.db.pool.clone();
+        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key, stripe_pool.clone());
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token, stripe_pool));
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -603,8 +604,9 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
-        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let stripe_pool = self.db.pool.clone();
+        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key, stripe_pool.clone());
+        let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token, stripe_pool));
 
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
