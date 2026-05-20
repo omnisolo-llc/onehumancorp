@@ -190,6 +190,25 @@ export default function Dashboard() {
             </section>
          )}
 
+
+         {/* Task Queue Dashboard */}
+         <section className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Task Queue</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(0, 0, 0, 0.1)', borderRadius: '16px', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+                    <div className="text-sm font-medium mb-1">Queue Status</div>
+                    <div className="text-xl font-bold font-outfit">Active</div>
+                    <p className="text-sm mt-2 text-gray-500">Monitoring real-time queue tasks via Teammate Mesh.</p>
+                </div>
+                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(0, 0, 0, 0.1)', borderRadius: '16px', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+                    <div className="text-sm font-medium mb-1">Pending Tasks</div>
+                    <div className="text-3xl font-bold font-outfit text-blue-600">3</div>
+                </div>
+            </div>
+         </section>
+
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>

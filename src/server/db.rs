@@ -35,6 +35,167 @@ pub struct DB {
 }
 
 impl DB {
+
+    pub async fn get_queue_length(&self) -> Result<i64, String> {
+        let count: (i64,) = match &self.store {
+            DbStore::Postgres => {
+                sqlx::query_as("SELECT count(*) FROM tasks WHERE status = 'PENDING'")
+                    .fetch_one(&self.pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query_as("SELECT count(*) FROM tasks WHERE status = 'PENDING'")
+                    .fetch_one(sqlite_pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+        };
+
+        let meter = opentelemetry::global::meter("ohc.queue");
+        let queue_length = meter.i64_histogram("queue.length.distribution").build();
+        queue_length.record(count.0, &[]);
+        tracing::debug!("Queue length: {}", count.0);
+
+        Ok(count.0)
+    }
+
+
+    pub async fn acquire_task(&self, agent_id: &str) -> Result<Option<crate::tasks::SharedTask>, String> {
+        let start = std::time::Instant::now();
+        let tracer = opentelemetry::global::tracer("ohc.queue");
+        use opentelemetry::trace::Tracer;
+        let _span = tracer.start("acquire_task");
+
+        let res = match &self.store {
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row = sqlx::query(
+                    r#"
+                    UPDATE tasks
+                    SET status = 'RUNNING', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = (
+                        SELECT id FROM tasks
+                        WHERE status = 'PENDING'
+                        ORDER BY created_at ASC
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 1
+                    )
+                    RETURNING id, parent_task_id, title, description, status, assigned_agent_id, payload, created_at, updated_at, tenant_id
+                    "#
+                )
+                .bind(agent_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if let Some(r) = row {
+                    let task = crate::tasks::SharedTask {
+                        id: r.get("id"),
+                        organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                        mission_id: String::new(),
+                        parent_plan_id: r.try_get("parent_task_id").unwrap_or_default(),
+                        dependencies: vec![],
+                        title: r.try_get("title").unwrap_or_default(),
+                        description: r.try_get("description").unwrap_or(None),
+                        assigned_agent_id: r.try_get("assigned_agent_id").unwrap_or(Some(agent_id.to_string())),
+                        status: r.try_get("status").unwrap_or_else(|_| "RUNNING".to_string()),
+                        priority: "P2".to_string(),
+                        payload: r.try_get("payload").unwrap_or_default(),
+                        locked_until: None,
+                        ultraplan_phase: None,
+                        deliberation_log: None,
+                        depth: None,
+                        created_at: r.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
+                        updated_at: r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                        action_risk: None,
+                        approval_status: None,
+                        proposed_content: None,
+                    };
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    Ok(Some(task))
+                } else {
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    Ok(None)
+                }
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row = sqlx::query(
+                    r#"
+                    UPDATE tasks
+                    SET status = 'RUNNING', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = (
+                        SELECT id FROM tasks
+                        WHERE status = 'PENDING'
+                        ORDER BY created_at ASC
+                        LIMIT 1
+                    )
+                    RETURNING id, parent_task_id, title, description, status, assigned_agent_id, payload, created_at, updated_at, tenant_id
+                    "#
+                )
+                .bind(agent_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if let Some(r) = row {
+                    let created_str: String = r.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now().to_rfc3339());
+                    let dt_created = chrono::DateTime::parse_from_rfc3339(&created_str)
+                        .map(|d| d.with_timezone(&chrono::Utc))
+                        .unwrap_or_else(|_| chrono::Utc::now());
+
+                    let updated_str: String = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now().to_rfc3339());
+                    let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_str)
+                        .map(|d| d.with_timezone(&chrono::Utc))
+                        .unwrap_or_else(|_| chrono::Utc::now());
+
+                    let task = crate::tasks::SharedTask {
+                        id: r.get("id"),
+                        organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                        mission_id: String::new(),
+                        parent_plan_id: r.try_get("parent_task_id").unwrap_or_default(),
+                        dependencies: vec![],
+                        title: r.try_get("title").unwrap_or_default(),
+                        description: r.try_get("description").unwrap_or(None),
+                        assigned_agent_id: r.try_get("assigned_agent_id").unwrap_or(Some(agent_id.to_string())),
+                        status: r.try_get("status").unwrap_or_else(|_| "RUNNING".to_string()),
+                        priority: "P2".to_string(),
+                        payload: r.try_get("payload").unwrap_or_default(),
+                        locked_until: None,
+                        ultraplan_phase: None,
+                        deliberation_log: None,
+                        depth: None,
+                        created_at: dt_created,
+                        updated_at: dt_updated,
+                        action_risk: None,
+                        approval_status: None,
+                        proposed_content: None,
+                    };
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    Ok(Some(task))
+                } else {
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    Ok(None)
+                }
+            }
+        };
+
+        // OpenTelemetry Metrics
+        let meter = opentelemetry::global::meter("ohc.queue");
+        let latency_recorder = meter.f64_histogram("queue.acquire_latency").build();
+        latency_recorder.record(start.elapsed().as_secs_f64(), &[]);
+
+        if let Ok(Some(_)) = &res {
+            let processed_counter = meter.u64_counter("queue.tasks.processed").build();
+            processed_counter.add(1, &[]);
+        }
+
+        res
+    }
+
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
             DbStore::Sqlite(_) => true,

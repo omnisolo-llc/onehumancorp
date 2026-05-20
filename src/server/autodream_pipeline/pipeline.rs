@@ -59,11 +59,11 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in consolidated_memory
+        // Find tasks that are COMPLETED but not yet in knowledge_embeddings
         let query = "
-            SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
-            FROM shared_tasks t
-            LEFT JOIN consolidated_memory m ON t.id = m.task_id
+            SELECT t.id, t.tenant_id, t.agent_id, t.payload
+            FROM tasks t
+            LEFT JOIN knowledge_embeddings m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
         ";
@@ -75,13 +75,12 @@ impl AutoDreamPipeline {
 
         for row in tasks {
             let task_id: String = row.get("id");
-            let tenant_id: String = row.get("organization_id");
-            let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| String::new());
+            let agent_id: Option<String> = row.try_get("agent_id").unwrap_or(None);
 
             let payload: String = row.try_get("payload").unwrap_or_default();
-            let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
 
-            let content = format!("Task Payload:\n{}\nDeliberation Log:\n{}", payload, log.unwrap_or_default());
+            let content = format!("Task Payload:\n{}", payload);
 
             // Chunk the content to avoid token limits (e.g., 2000 chars roughly to tokens)
             let chunks = Self::chunk_content(&content, 2000);
@@ -113,8 +112,8 @@ impl AutoDreamPipeline {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
                         let insert_query = "
-                            INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id)
-                            VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
+                            INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, content, embedding, source_type, task_id)
+                            VALUES ($1::uuid, $2, $3, $4, $5::vector, $6, $7)
                         ";
 
                         sqlx::query(insert_query)
@@ -175,11 +174,14 @@ mod tests {
         });
 
         // Clean up
-        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
+        let _ = sqlx::query("DELETE FROM knowledge_embeddings").execute(&pool).await;
+        let _ = sqlx::query("DELETE FROM tasks").execute(&pool).await;
 
         let task_id = "test-task-1";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tasks (id TEXT, tenant_id TEXT, parent_task_id TEXT, agent_id TEXT, assigned_agent_id TEXT, title TEXT, description TEXT, status TEXT, payload TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS knowledge_embeddings (id UUID, tenant_id TEXT, agent_id TEXT, task_id TEXT, content TEXT, embedding VECTOR(1536), source_type TEXT, created_at TIMESTAMPTZ)").execute(&pool).await;
+
+        sqlx::query("INSERT INTO tasks (id, tenant_id, status, payload) VALUES ($1, 'org1', 'COMPLETED', 'some payload')")
             .bind(task_id)
             .execute(&pool)
             .await
@@ -189,7 +191,7 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM knowledge_embeddings WHERE task_id = $1")
             .bind(task_id)
             .fetch_one(&pool)
             .await

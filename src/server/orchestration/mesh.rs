@@ -24,6 +24,9 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn publish_mesh_task(&self, agent_id: &str, action: &str, status: &str, mut payload: serde_json::Value) -> Result<(), String>;
+    async fn subscribe_mesh_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 pub struct CentrifugeNode {
@@ -214,6 +217,26 @@ impl TeammateMesh for CentrifugeNode {
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.subscribe("system:state_handoff", handler).await
+    }
+
+    async fn publish_mesh_task(&self, agent_id: &str, action: &str, status: &str, payload: Vec<u8>) -> Result<(), String> {
+        let tracer = global::tracer("ohc.orchestration.mesh");
+        let _span = tracer.start("publish_mesh_task");
+        self.publish_counter.add(1, &[KeyValue::new("topic", "mesh:tasks".to_string())]);
+
+        let msg = TeammateMeshEvent {
+            agent_id: agent_id.to_string(),
+            action: action.to_string(),
+            status: status.to_string(),
+            payload,
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+
+        self.transport.publish("mesh:tasks", msg).await
+    }
+
+    async fn subscribe_mesh_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.transport.subscribe("mesh:tasks", handler).await
     }
 }
 

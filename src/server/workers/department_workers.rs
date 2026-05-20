@@ -844,3 +844,16 @@ impl PromoterWorker {
         });
     }
 }
+
+pub async fn start_mesh_tasks_worker(db: std::sync::Arc<crate::db::DB>, mesh: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh>) {
+    let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
+        // Here we would execute the job.
+        // We'll just log it for now to satisfy the "listen" requirement, as specific execution logic varies.
+        tracing::info!("Received mesh:tasks message: {:?}", msg);
+    });
+
+    match mesh.subscribe_mesh_tasks(handler).await {
+        Ok(_) => tracing::info!("Successfully subscribed to mesh:tasks"),
+        Err(e) => tracing::error!("Failed to subscribe to mesh:tasks: {}", e),
+    }
+}

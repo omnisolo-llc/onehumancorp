@@ -44,6 +44,9 @@ async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: 
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    async fn publish_mesh_task(&self, _agent_id: &str, _action: &str, _status: &str, mut _payload: serde_json::Value) -> Result<(), String> { Ok(()) }
+    async fn subscribe_mesh_tasks(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+
 }
 
 async fn setup_db() -> Arc<DB> {
@@ -229,6 +232,9 @@ impl TeammateMesh for SleepingMockMesh {
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    async fn publish_mesh_task(&self, _agent_id: &str, _action: &str, _status: &str, mut _payload: serde_json::Value) -> Result<(), String> { Ok(()) }
+    async fn subscribe_mesh_tasks(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+
 }
 
 

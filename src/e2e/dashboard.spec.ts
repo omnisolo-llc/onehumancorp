@@ -22,3 +22,10 @@ test.describe('Dashboard Core', () => {
     await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
   });
 });
+
+// Task Queue Verification
+test('should display task queue section', async ({ page }) => {
+  await page.goto('/dashboard');
+  await expect(page.locator('text=Task Queue')).toBeVisible();
+  await expect(page.locator('text=Queue Status')).toBeVisible();
+});
