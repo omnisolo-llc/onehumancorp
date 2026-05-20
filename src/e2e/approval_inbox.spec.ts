@@ -1,35 +1,6 @@
 import { test, expect } from './fixtures';
 
 test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
-  // Mock the API for testing the UI specifically
-  await page.route('/api/agents/approvals', async (route) => {
-    const json = {
-      pending_approvals: [
-        {
-          id: 'e2e-approval-mock-1',
-          tenant_id: 'mock-tenant',
-          department: 'CustomerSuccess',
-          description: 'Draft email for review: Maya ordered a vegan cake',
-          status: 'Pending',
-          action_risk: 'High'
-        },
-        {
-          id: 'e2e-approval-mock-2',
-          tenant_id: 'mock-tenant',
-          department: 'Marketing',
-          description: 'Draft Instagram Post: New vegan cakes available!',
-          status: 'Pending',
-          action_risk: 'Low'
-        }
-      ]
-    };
-    await route.fulfill({ json });
-  });
-
-  await page.route('/api/agents/approvals/*', async (route) => {
-    await route.fulfill({ json: { success: true } });
-  });
-
   // 1. User opens the app, authenticates and navigates to the Team Dashboard
   await page.goto('/');
 
@@ -43,18 +14,21 @@ test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
 
   // "The Ambassador" has pending approvals indicator (e.g., a badge)
   const ambassadorCard = page.locator('text=The Ambassador').locator('..');
-  await expect(ambassadorCard.locator('text=1 item awaiting approval')).toBeVisible();
+  // There may be 1 or more items awaiting approval depending on seeded data.
+  // e2e-approval-1 in department_tasks.spec.ts is for CustomerSuccess (The Ambassador).
+  await expect(ambassadorCard.locator('text=awaiting approval')).toBeVisible();
 
   // 2. User taps "The Ambassador" department
   await ambassadorCard.click();
 
   // Verify approval inbox view for The Ambassador
-  await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).toBeVisible();
+  // Wait for the real API to return the items.
+  await expect(page.locator('text=Draft email for review')).toBeVisible();
 
   // 3. User approves the action (Swipe right / Approve button)
   const approveBtn = page.locator('button', { hasText: 'Approve' }).first();
   await approveBtn.click();
 
-  // Wait for the action to be processed (mocking the UI removal)
-  await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).not.toBeVisible();
+  // Wait for the action to be processed
+  await expect(page.locator('text=Draft email for review')).not.toBeVisible();
 });

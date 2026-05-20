@@ -28,7 +28,7 @@ export default function Dashboard() {
     // Using a fake mock for UI tests if connection fails
     const connectSwarmMesh = () => {
         try {
-            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
+            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/connect?topic=system`);
 
             ws.onmessage = (event) => {
                 try {
