@@ -3218,32 +3218,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glassmorphism">
-                        <h1>OneHuman</h1>
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" class="hidden" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" />
-                            <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
+                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
+                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
+                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-4" class="hidden" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
@@ -3253,73 +3253,73 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
                             </div>
-                            <button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
+                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-6" class="hidden" class="hidden" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
+                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
+                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
+                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)">Bold</button>
+                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
+                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
                             <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
                                 <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
                                 <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
-                                <button class="secondary" style="background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
+                                <button class="secondary" style="border-radius: 8px; background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
                             </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px;">Next →</button>
+                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-9" class="hidden" class="hidden" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)">Next →</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)"><span>Publish my business</span> <span>→</span></button>
+                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
                             <p>⬜ Add 3 more products</p>
                             <p>⬜ Connect Instagram</p>
                             <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
+                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
+                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-generating" class="hidden" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
@@ -3332,7 +3332,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-launch-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
                     </div>
 
@@ -3973,6 +3973,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     return false;
                                 }
                             }
+                            if (stepId === 8 && currentStep === 7) {
+                                const emailInput = document.querySelector('#step-7 input[type="email"]');
+                                if (!emailInput || emailInput.value.trim().length === 0 || !emailInput.value.includes('@')) {
+                                    alert('Please enter a valid email address');
+                                    return false;
+                                }
+                            }
                             return true;
                         }
 
@@ -3982,13 +3989,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
                                 try {
-
                                     const stateData = { step: stepId };
                                     document.querySelectorAll('input').forEach(input => {
                                         if (input.placeholder && input.value) {
                                             stateData[input.placeholder] = input.value;
                                         }
                                     });
+                                    localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
+
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
                                     const userId = localStorage.getItem('user_id') || 'test-user';
                                     fetch('/api/onboarding/state', {
@@ -4294,25 +4302,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (screenId === 'setup-screen') {
                                 try {
+                                    let stateData = null;
+                                    const localState = localStorage.getItem('ohc_wizard_state');
+                                    if (localState) {
+                                        try {
+                                            stateData = JSON.parse(localState);
+                                        } catch(e) {}
+                                    }
+
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
                                     const userId = localStorage.getItem('user_id') || 'test-user';
+
                                     const res = await fetch('/api/onboarding/state', {
                                         headers: {
                                             'X-Tenant-ID': tenantId,
                                             'X-User-ID': userId
                                         }
-                                    });
-                                    if (res.ok) {
+                                    }).catch(() => null);
+
+                                    if (res && res.ok) {
                                         const data = await res.json();
-                                        if (data.step && data.step > 1) {
-                                            // Restore form inputs
-                                            document.querySelectorAll('input').forEach(input => {
-                                                if (input.placeholder && data[input.placeholder]) {
-                                                    input.value = data[input.placeholder];
-                                                }
-                                            });
-                                            nextStep(data.step);
+                                        if (data && data.step) {
+                                            stateData = data;
                                         }
+                                    }
+
+                                    if (stateData && stateData.step && stateData.step > 1) {
+                                        // Restore form inputs
+                                        document.querySelectorAll('input').forEach(input => {
+                                            if (input.placeholder && stateData[input.placeholder]) {
+                                                input.value = stateData[input.placeholder];
+                                            }
+                                        });
+                                        nextStep(stateData.step);
                                     }
                                 } catch (e) {
                                     console.error('Failed to load state', e);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SmartBlock } from "../builder/components";
 import { Tooltip, useWalkthrough } from "../../components/help";
 
@@ -10,6 +10,36 @@ export default function WebsiteBuilderPage() {
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
   const { startWalkthrough } = useWalkthrough();
+
+  useEffect(() => {
+    const savedBio = localStorage.getItem("ohc_builder_bio");
+    if (savedBio) setBio(savedBio);
+
+    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
+    if (savedStatus) setStatus(savedStatus);
+
+    const savedBlocks = localStorage.getItem("ohc_builder_blocks");
+    if (savedBlocks) {
+      try {
+        setBlocks(JSON.parse(savedBlocks));
+      } catch (e) {
+        console.error("Failed to parse saved blocks", e);
+      }
+    }
+
+    const savedLiveUrl = localStorage.getItem("ohc_builder_liveUrl");
+    if (savedLiveUrl) setLiveUrl(savedLiveUrl);
+  }, []);
+
+  const updateBio = (newBio: string) => {
+    setBio(newBio);
+    localStorage.setItem("ohc_builder_bio", newBio);
+  };
+
+  const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
+    setStatus(newStatus);
+    localStorage.setItem("ohc_builder_status", newStatus);
+  };
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -30,10 +60,11 @@ export default function WebsiteBuilderPage() {
         props: b.content
       }));
       setBlocks(blocks);
-      setStatus("draft");
+      localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
+      updateStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
-      setStatus("idle");
+      updateStatus("idle");
     }
   };
 
@@ -72,8 +103,10 @@ export default function WebsiteBuilderPage() {
       });
       if (response.ok) {
         const data = await response.json();
-        setStatus("live");
-        setLiveUrl(`https://${data.domain || 'myshop'}.ohc.store`);
+        updateStatus("live");
+        const url = `https://${data.domain || 'myshop'}.ohc.store`;
+        setLiveUrl(url);
+        localStorage.setItem("ohc_builder_liveUrl", url);
       } else {
         console.error('Failed to publish');
       }
@@ -102,7 +135,7 @@ export default function WebsiteBuilderPage() {
                   className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
+                  onChange={(e) => updateBio(e.target.value)}
                   placeholder="e.g. I run a mobile dog grooming service in Portland"
                   rows={6}
                 />
@@ -135,7 +168,8 @@ export default function WebsiteBuilderPage() {
   if (status === "generating") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 justify-center items-center">
+        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 justify-center items-center"
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 font-medium">Agents are building your store...</p>
         </div>
@@ -146,7 +180,8 @@ export default function WebsiteBuilderPage() {
   if (status === "live") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden text-center p-8 justify-center">
+        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden text-center p-8 justify-center"
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
@@ -159,8 +194,9 @@ export default function WebsiteBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-gray-100 text-gray-800 font-bold p-4 rounded-xl active:scale-[0.98] transition-all hover:bg-gray-200"
-            onClick={() => setStatus("idle")}
+            className="w-full bg-gray-100 text-gray-800 font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
+            style={{ borderRadius: '8px' }}
+            onClick={() => updateStatus("idle")}
           >
             Go to Dashboard
           </button>
@@ -171,7 +207,8 @@ export default function WebsiteBuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden">
+      <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden"
+           style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
@@ -184,11 +221,12 @@ export default function WebsiteBuilderPage() {
           <SmartBlock type="PoweredBy" props={{}} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50">
+        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
           <Tooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              style={{ borderRadius: '8px' }}
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
