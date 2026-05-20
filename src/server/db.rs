@@ -1075,6 +1075,7 @@ mod autodream_db_tests {
 mod security_tests_final {
     use super::*;
     use std::fs;
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     use std::sync::Mutex;
 
@@ -1133,9 +1134,12 @@ mod security_tests_final {
         let parent_dir = db_path.parent().unwrap();
         assert!(parent_dir.exists(), "Secure directory should be created");
 
-        let meta = fs::metadata(&db_path).unwrap();
-        let mode = meta.permissions().mode();
-        assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
+        #[cfg(unix)]
+        {
+            let meta = fs::metadata(&db_path).unwrap();
+            let mode = meta.permissions().mode();
+            assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
+        }
             });
         });
     }
