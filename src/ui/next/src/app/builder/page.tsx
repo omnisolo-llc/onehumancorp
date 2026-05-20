@@ -6,6 +6,10 @@ import { Tooltip, useWalkthrough } from "../../components/help";
 
 export default function BuilderPage() {
   const [bio, setBio] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessCategory, setBusinessCategory] = useState("");
+  const [vibe, setVibe] = useState("");
+  const [wizardStep, setWizardStep] = useState(1);
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
@@ -91,49 +95,158 @@ export default function BuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
-          <div className="p-8 flex flex-col flex-1 justify-center">
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
-            <p className="text-gray-500 text-sm mb-4 leading-relaxed">
-              Tell us about your business in a few words, and we'll magically generate your storefront in seconds.
-            </p>
+        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
 
-            <button
-              onClick={() => startWalkthrough([
-                { targetId: "bio-input", message: "Start by entering a description of your business. The more detail, the better the AI can build your store." },
-                { targetId: "generate-btn", message: "Click here when you're ready, and we will generate your store for you!" }
-              ])}
-              className="mb-8 text-blue-600 font-bold text-sm bg-blue-50 py-2 px-4 rounded-full self-start hover:bg-blue-100 transition-colors"
-            >
-              Take a tour
-            </button>
+          <div className="px-8 pt-12 pb-4">
+             <div className="flex justify-between mb-8">
+               {[1, 2, 3].map(step => (
+                 <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0071E3]' : 'bg-gray-200'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
+               ))}
+             </div>
+          </div>
 
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business</label>
-            <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
-              <textarea
-                id="bio-input"
-                className="w-full border border-gray-300 p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-gray-800"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="e.g. I run a mobile dog grooming service in Portland"
-                rows={4}
-              />
-            </Tooltip>
+          <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto">
+            {wizardStep === 1 && (
+              <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Let's build your store</h1>
+                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                  Start with the basics. What's your business called, and what do you do?
+                </p>
 
-            <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
-              <button
-                id="generate-btn"
-                className={`w-full p-4 rounded-xl font-bold font-outfit text-lg transition-all ${
-                  bio.trim().length > 5
-                    ? "bg-gray-900 text-white hover:bg-gray-800 shadow-md active:scale-[0.98]"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-                onClick={handleGenerate}
-                disabled={bio.trim().length <= 5}
-              >
-                Build My Storefront
-              </button>
-            </Tooltip>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Business Name</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 p-4 mb-6 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  style={{ borderRadius: '8px' }}
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="e.g. Acme Corp"
+                />
+
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  style={{ borderRadius: '8px' }}
+                  value={businessCategory}
+                  onChange={(e) => setBusinessCategory(e.target.value)}
+                  placeholder="e.g. Retail, Consulting, Tech"
+                />
+
+                <button
+                  className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
+                    businessName.trim() && businessCategory.trim()
+                      ? "text-white shadow-md active:scale-[0.98]"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  }`}
+                  style={{ borderRadius: '8px', background: (businessName.trim() && businessCategory.trim()) ? '#0071E3' : '' }}
+                  onClick={() => setWizardStep(2)}
+                  disabled={!businessName.trim() || !businessCategory.trim()}
+                >
+                  Next: Choose Vibe
+                </button>
+              </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Select Your Vibe</h1>
+                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                  How should your store feel? Our AI agents will match this tone.
+                </p>
+
+                <div className="grid gap-4 mb-8">
+                  {['Professional', 'Friendly', 'Energetic', 'Minimalist'].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setVibe(v)}
+                      className={`p-4 border text-left transition-all font-semibold ${
+                        vibe === v ? "border-[#0071E3] bg-blue-50 text-[#0071E3]" : "border-gray-200 text-gray-700 hover:border-gray-300"
+                      }`}
+                      style={{ borderRadius: '8px' }}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
+                    style={{ borderRadius: '8px' }}
+                    onClick={() => setWizardStep(1)}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
+                      vibe
+                        ? "text-white shadow-md active:scale-[0.98]"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    }`}
+                    style={{ borderRadius: '8px', background: vibe ? '#0071E3' : '' }}
+                    onClick={() => {
+                       // Pre-fill bio based on earlier steps if empty
+                       if (!bio.trim()) {
+                         setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
+                       }
+                       setWizardStep(3);
+                    }}
+                    disabled={!vibe}
+                  >
+                    Next: Details
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 3 && (
+              <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Final Details</h1>
+                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                  Review and add any extra details to help our AI generate the perfect store.
+                </p>
+
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business Details</label>
+                <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+                  <textarea
+                    id="bio-input"
+                    className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
+                    style={{ borderRadius: '8px' }}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="e.g. I run a mobile dog grooming service in Portland"
+                    rows={6}
+                  />
+                </Tooltip>
+
+                <div className="flex gap-4">
+                  <button
+                    className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
+                    style={{ borderRadius: '8px' }}
+                    onClick={() => setWizardStep(2)}
+                  >
+                    Back
+                  </button>
+                  <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                    <button
+                      id="generate-btn"
+                      className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                        bio.trim().length > 5
+                          ? "text-white shadow-md active:scale-[0.98]"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      }`}
+                      style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                      onClick={handleGenerate}
+                      disabled={bio.trim().length <= 5}
+                    >
+                      Build Store
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
