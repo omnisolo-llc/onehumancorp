@@ -16,6 +16,7 @@ pub mod sendmessage;
 pub mod todowrite;
 pub mod toolsearch;
 pub mod task;
+pub mod booking;
 pub mod agent_tool;
 pub mod sleep;
 pub mod marketing;
@@ -89,6 +90,7 @@ pub fn all_tools(
     observation_store: Arc<dashmap::DashMap<String, String>>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
+    let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
     let mut tools = vec![
         bash::bash_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
@@ -100,6 +102,10 @@ pub fn all_tools(
         grep::grep_tool(working_dir.clone()),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
+        booking::booking_get_services_tool(booking_store.clone()),
+        booking::booking_upsert_service_tool(booking_store.clone()),
+        booking::booking_list_appointments_tool(booking_store.clone()),
+        booking::booking_create_appointment_tool(booking_store.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),
