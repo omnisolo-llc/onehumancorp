@@ -24,6 +24,105 @@ impl SandboxedCommandRunner {
     pub fn new(sandbox_dir: Option<PathBuf>) -> Self {
         Self { sandbox_dir }
     }
+
+    fn execution_mode() -> String {
+        std::env::var("OHC_AGENT_EXECUTION_MODE")
+            .or_else(|_| std::env::var("OHC_EXECUTION_MODE"))
+            .or_else(|_| std::env::var("OHC_SOURCE_MODE"))
+            .unwrap_or_else(|_| "standalone".to_string())
+            .to_lowercase()
+    }
+
+    fn should_use_container_backend() -> bool {
+        matches!(
+            std::env::var("OHC_AGENT_COMMAND_BACKEND")
+                .unwrap_or_default()
+                .to_lowercase()
+                .as_str(),
+            "container" | "docker" | "podman"
+        ) || matches!(Self::execution_mode().as_str(), "cluster" | "cloud")
+    }
+
+    fn find_container_runtime() -> Option<String> {
+        static RUNTIME: OnceLock<Option<String>> = OnceLock::new();
+        RUNTIME
+            .get_or_init(|| {
+                for candidate in ["docker", "podman"] {
+                    let available = std::process::Command::new(candidate)
+                        .arg("--version")
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status()
+                        .map(|s| s.success())
+                        .unwrap_or(false);
+                    if available {
+                        return Some(candidate.to_string());
+                    }
+                }
+                None
+            })
+            .clone()
+    }
+
+    fn shell_command(program: &str, args: &[&str]) -> String {
+        if (program == "bash" || program == "sh") && args.first() == Some(&"-c") {
+            return args.get(1).copied().unwrap_or_default().to_string();
+        }
+
+        let mut parts = Vec::with_capacity(args.len() + 1);
+        parts.push(shell_escape(program));
+        parts.extend(args.iter().map(|arg| shell_escape(arg)));
+        parts.join(" ")
+    }
+
+    fn container_args(
+        program: &str,
+        args: &[&str],
+        current_dir: Option<&Path>,
+        sandbox_dir: Option<&Path>,
+        envs: &[(String, String)],
+    ) -> Vec<String> {
+        let image = std::env::var("OHC_AGENT_CONTAINER_IMAGE")
+            .unwrap_or_else(|_| "alpine:3.20".to_string());
+        let workspace = sandbox_dir
+            .or(current_dir)
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+        let command = Self::shell_command(program, args);
+
+        let mut docker_args = vec![
+            "run".to_string(),
+            "--rm".to_string(),
+            "--network".to_string(),
+            std::env::var("OHC_AGENT_CONTAINER_NETWORK").unwrap_or_else(|_| "none".to_string()),
+            "-v".to_string(),
+            format!("{}:/workspace", workspace.display()),
+            "-w".to_string(),
+            "/workspace".to_string(),
+        ];
+
+        for (key, value) in envs {
+            docker_args.push("-e".to_string());
+            docker_args.push(format!("{}={}", key, value));
+        }
+
+        docker_args.push(image);
+        docker_args.push("/bin/sh".to_string());
+        docker_args.push("-lc".to_string());
+        docker_args.push(command);
+        docker_args
+    }
+}
+
+fn shell_escape(value: &str) -> String {
+    if value
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '_' | '-' | ':' | '='))
+    {
+        value.to_string()
+    } else {
+        format!("'{}'", value.replace('\'', "'\\''"))
+    }
 }
 
 #[async_trait]
@@ -35,6 +134,21 @@ impl CommandRunner for SandboxedCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
+        if Self::should_use_container_backend() {
+            if let Some(runtime) = Self::find_container_runtime() {
+                let container_args = Self::container_args(
+                    program,
+                    args,
+                    current_dir,
+                    self.sandbox_dir.as_deref(),
+                    &envs,
+                );
+                let mut cmd = Command::new(runtime);
+                cmd.args(&container_args);
+                return cmd.output().await;
+            }
+        }
+
         static BWRAP_AVAILABLE: OnceLock<bool> = OnceLock::new();
         let is_bwrap_available = *BWRAP_AVAILABLE.get_or_init(|| {
             if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {

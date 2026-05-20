@@ -3,7 +3,7 @@ use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct MercadoPagoProvider {
-    client: Arc<MercadoPagoClient>,
+    _client: Arc<MercadoPagoClient>,
     metadata: ProviderMetadata,
 }
 
@@ -12,7 +12,7 @@ impl MercadoPagoProvider {
         let client = MercadoPagoClient::new(access_token);
 
         Self {
-            client: Arc::new(client),
+            _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "mercadopago".to_string(),
                 name: "Mercado Pago".to_string(),

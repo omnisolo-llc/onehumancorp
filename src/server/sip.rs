@@ -1,5 +1,4 @@
 use sqlx::PgPool;
-use sqlx::Row;
 use chrono::Utc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
@@ -286,6 +285,7 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
     use std::env;
+    use sqlx::Row;
 
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
@@ -525,4 +525,3 @@ mod tests {
         assert!(res.is_err());
     }
 }
-

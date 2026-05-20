@@ -65,10 +65,8 @@ fn verify(password: &str, hash: &str) -> Result<bool, String> {
 }
 
 use serde::{Deserialize, Serialize};
-use jsonwebtoken::{decode, encode, Header, Validation, DecodingKey, EncodingKey};
-use chrono::{Utc, Duration, DateTime};
+use chrono::{DateTime, Utc};
 use rand::RngCore;
-use ::server_common::auth_utils::set_org_context;
 use ::server_common::Claims;
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::auth_service_server::AuthService;
@@ -112,6 +110,7 @@ pub struct OIDCConfig {
 
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
+    #[allow(dead_code)]
     roles: RwLock<HashMap<String, Role>>,
     by_name: RwLock<HashMap<TenantKey, String>>,
     by_email: RwLock<HashMap<TenantKey, String>>,
@@ -761,7 +760,7 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn create_role(&self, request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
+    async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
     }
 }

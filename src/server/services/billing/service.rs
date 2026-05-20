@@ -31,7 +31,7 @@ impl BillingService for MyBillingService {
 
         let event = AuditEvent {
             agent_id: req.agent_id.clone(),
-            tenant_id: tenant_id,
+            tenant_id,
             input_tokens: req.prompt_tokens,
             output_tokens: req.completion_tokens,
             cached_input_tokens: 0, // Proto doesn't have it yet, maybe add it later
@@ -70,7 +70,7 @@ impl BillingService for MyBillingService {
         Ok(Response::new(CostSummary {
             organization_id: org_id,
             total_cost_usd: total_cost,
-            total_tokens: total_tokens,
+            total_tokens,
             projected_monthly_usd: total_cost * 30.0, // Rough estimate
             agents,
         }))

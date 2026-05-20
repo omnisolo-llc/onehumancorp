@@ -33,6 +33,7 @@ pub mod generative_visibility;
 pub mod magentic;
 pub mod recall;
 pub mod mcp_dynamic;
+pub mod skill;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
