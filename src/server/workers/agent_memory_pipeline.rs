@@ -4,6 +4,9 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 #[async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
 pub trait MemoryEmbeddingApi: Send + Sync {
     async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String>;
 }
@@ -21,6 +24,9 @@ impl DefaultMemoryEmbeddingApi {
 }
 
 #[async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
 impl MemoryEmbeddingApi for DefaultMemoryEmbeddingApi {
     async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         self.client.generate_embedding(text).await
@@ -29,11 +35,11 @@ impl MemoryEmbeddingApi for DefaultMemoryEmbeddingApi {
 
 pub struct AgentMemoryPipeline {
     db: Arc<DB>,
-    embedding_api: Arc<dyn MemoryEmbeddingApi>,
+    embedding_api: Box<dyn MemoryEmbeddingApi>,
 }
 
 impl AgentMemoryPipeline {
-    pub fn new(db: Arc<DB>, embedding_api: Arc<dyn MemoryEmbeddingApi>) -> Self {
+    pub fn new(db: Arc<DB>, embedding_api: Box<dyn MemoryEmbeddingApi>) -> Self {
         Self { db, embedding_api }
     }
 
@@ -164,6 +170,9 @@ mod tests {
     }
 
     #[async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
+#[async_trait::async_trait]
     impl MemoryEmbeddingApi for MockEmbeddingApi {
         async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, String> {
             if self.succeeds {
@@ -178,7 +187,7 @@ mod tests {
     async fn test_agent_memory_pipeline_sqlite() {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://dummy").unwrap();
         let db_mock = Arc::new(DB { pool: pg_pool, store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap()) });
-        let _pipe = AgentMemoryPipeline::new(db_mock, Arc::new(MockEmbeddingApi { succeeds: true }));
+        let _pipe = AgentMemoryPipeline::new(db_mock, Box::new(MockEmbeddingApi { succeeds: true }));
         assert!(true);
         return;
     }
@@ -216,7 +225,7 @@ mod tests {
             .await
             .unwrap();
 
-        let pipeline = AgentMemoryPipeline::new(db.clone(), Arc::new(MockEmbeddingApi { succeeds: true }));
+        let pipeline = AgentMemoryPipeline::new(db.clone(), Box::new(MockEmbeddingApi { succeeds: true }));
         pipeline.run().await.unwrap();
 
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_session_data WHERE session_id = 'sess_pg_mem'").fetch_one(&pool).await.unwrap();
