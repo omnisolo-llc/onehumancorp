@@ -103,13 +103,13 @@ mod tests {
     };
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
     #[tokio::test]
     async fn test_mesh_ws_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(crate::orchestration::hub::MemoryMeshTransport::new());
         let transport_clone = transport.clone();
 
         let app = Router::new()
