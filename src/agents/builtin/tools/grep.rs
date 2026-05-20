@@ -76,14 +76,24 @@ async fn search_directory(
                     continue;
                 }
             }
-            if let Ok(content) = tokio::fs::read_to_string(&path).await {
-                for (i, line) in content.lines().enumerate() {
-                    if re.is_match(line) {
-                        results.push(format!("{}:{}:{}", path.display(), i + 1, line));
+            use tokio::io::{AsyncBufReadExt, BufReader};
+            if let Ok(file) = tokio::fs::File::open(&path).await {
+                let mut reader = BufReader::new(file);
+                let mut line_buffer = String::new();
+                let mut line_num = 1;
+
+                while let Ok(bytes) = reader.read_line(&mut line_buffer).await {
+                    if bytes == 0 {
+                        break; // EOF
+                    }
+                    if re.is_match(&line_buffer) {
+                        results.push(format!("{}:{}:{}", path.display(), line_num, line_buffer.trim_end_matches('\n').trim_end_matches('\r')));
                         if results.len() >= 500 {
                             return Ok(());
                         }
                     }
+                    line_num += 1;
+                    line_buffer.clear();
                 }
             }
         }
@@ -136,5 +146,45 @@ pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             "required": ["pattern"]
         }),
         execute: Arc::new(GrepExecutor { working_dir }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[tokio::test]
+    async fn test_grep_large_file_streaming() {
+        let temp_dir = std::env::temp_dir();
+        let test_dir = temp_dir.join(format!("grep_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&test_dir).unwrap();
+
+        let test_file = test_dir.join("large_log.txt");
+
+        let mut file = std::fs::File::create(&test_file).unwrap();
+        // Generate a large file to test memory constraint
+        for i in 1..=5000 {
+            if i == 4500 {
+                writeln!(file, "Error: critical failure found here!").unwrap();
+            } else {
+                writeln!(file, "Line {}", i).unwrap();
+            }
+        }
+
+        let executor = GrepExecutor { working_dir: Some(test_dir.clone()) };
+
+        let args = json!({
+            "pattern": "critical failure",
+            "path": ".",
+        });
+
+        let result = executor.execute(args).await.unwrap();
+        let expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
+        // The display string might be just the name if we strip it
+        assert!(result.contains("critical failure found here!"));
+        assert!(result.contains(":4500:"));
+
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 }
