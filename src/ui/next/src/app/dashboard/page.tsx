@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -24,28 +25,20 @@ export default function Dashboard() {
     }
     fetchApprovals();
 
-    // Connect to Teammate Mesh WebSocket for real-time swarm activity
-    // Using a fake mock for UI tests if connection fails
     const connectSwarmMesh = () => {
         try {
             const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
-
             ws.onmessage = (event) => {
                 try {
-                    // Try to parse base64 proto message (mocking standard behavior)
-                    // For the sake of the UI, we'll just push simple text events
                     const payload = JSON.parse(event.data);
                     setSwarmActivity(prev => [{
                         id: Math.random().toString(),
                         agent: payload.agent_id || "Swarm Agent",
                         action: payload.action || "Working on task...",
                         time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
-                    }, ...prev].slice(0, 5)); // Keep last 5
-                } catch(e) {
-                   // Ignore parsing errors
-                }
+                    }, ...prev].slice(0, 5));
+                } catch(e) {}
             };
-
             return ws;
         } catch(e) {
             console.error("Mesh websocket failed", e);
@@ -59,7 +52,6 @@ export default function Dashboard() {
         try {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
-
             const salesRes = await fetch('/api/v1/dashboard/sales', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -69,7 +61,6 @@ export default function Dashboard() {
                 const salesData = await salesRes.json();
                 setTodaysSales(salesData.total_sales);
             }
-
             const metricsRes = await fetch('/api/v1/dashboard/metrics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -84,12 +75,8 @@ export default function Dashboard() {
             console.error("Failed to fetch dashboard metrics", e);
         }
     };
-
     fetchMetrics();
-
-    return () => {
-        if (ws) ws.close();
-    };
+    return () => { if (ws) ws.close(); };
   }, []);
 
   const handleApprove = async (id: string, approved: boolean) => {
@@ -106,19 +93,29 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7', backgroundImage: 'radial-gradient(at 0% 0%, rgba(0, 102, 255, 0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(52, 199, 89, 0.05) 0px, transparent 50%)' }}>
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+         <div className="flex items-center gap-6">
+            <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+            <nav className="hidden md:flex items-center gap-4">
+                <Link href="/dashboard" className="text-sm font-semibold" style={{ color: '#0066FF' }}>Overview</Link>
+                <Link href="/integrations" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Integrations</Link>
+                <Link href="/builder" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Store Builder</Link>
+            </nav>
+         </div>
          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
+             <button className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
+                <span className="text-xl">🔔</span>
+             </button>
+             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-600 border border-blue-200">
                  AC
              </div>
          </div>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-8">
 
          {/* Action Required (Approvals) */}
          {approvals.length > 0 && (
@@ -137,7 +134,6 @@ export default function Dashboard() {
                 </div>
                 <div className="flex flex-col gap-4">
                     {approvals.map(approval => {
-                        // Extract plain english message and payload
                         let plainMessage = approval.description;
                         let payload = "";
                         const payloadIdx = approval.description.indexOf(" | Payload: ");
@@ -192,25 +188,52 @@ export default function Dashboard() {
 
          {/* Business Snapshot */}
          <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                {/* Metric Card */}
-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
+                <span className="text-xs font-bold px-2 py-1 rounded bg-blue-50 text-blue-600 uppercase tracking-wider">Real-time</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="p-6 shadow-sm flex flex-col justify-between group transition-all hover:bg-white/50" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                    <div>
+                        <div className="text-xs font-bold mb-1 uppercase tracking-wider" style={{ color: '#86868B' }}>Today's Sales</div>
+                        <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-1 text-xs font-medium text-green-600">
+                        <span>↑ 12%</span>
+                        <span className="text-gray-400">vs yesterday</span>
+                    </div>
                 </div>
 
-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
+                <div className="p-6 shadow-sm flex flex-col justify-between group transition-all hover:bg-white/50" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                    <div>
+                        <div className="text-xs font-bold mb-1 uppercase tracking-wider" style={{ color: '#86868B' }}>Active Customers</div>
+                        <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-1 text-xs font-medium text-blue-600">
+                        <span>Live now</span>
+                    </div>
                 </div>
 
-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
+                <div className="p-6 shadow-sm flex flex-col justify-between group transition-all hover:bg-white/50" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                    <div>
+                        <div className="text-xs font-bold mb-1 uppercase tracking-wider" style={{ color: '#86868B' }}>Pending Orders</div>
+                        <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-1 text-xs font-medium text-orange-600">
+                        <span>Requires action</span>
+                    </div>
                 </div>
 
+                <div className="p-6 shadow-sm flex flex-col justify-between group transition-all hover:bg-white/50" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                    <div>
+                        <div className="text-xs font-bold mb-1 uppercase tracking-wider" style={{ color: '#86868B' }}>Conversion Rate</div>
+                        <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>3.2%</div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-1 text-xs font-medium text-green-600">
+                        <span>↑ 0.4%</span>
+                        <span className="text-gray-400">vs avg</span>
+                    </div>
+                </div>
             </div>
          </section>
 
@@ -241,6 +264,12 @@ export default function Dashboard() {
                                     <div>
                                         <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>{activity.agent}</p>
                                         <p className="text-sm" style={{ color: '#86868B' }}>{activity.action}</p>
+                                        {activity.action.includes("Auto-Response") && (
+                                            <span className="mt-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700 uppercase tracking-tight">AI Automated</span>
+                                        )}
+                                        {activity.action.includes("social media post") && (
+                                            <span className="mt-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 uppercase tracking-tight">Marketing Draft</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">

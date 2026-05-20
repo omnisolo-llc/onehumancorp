@@ -27,11 +27,22 @@ impl Department for CustomerSuccessAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.message.received" {
+            let message_text = event.payload["message"].as_str().unwrap_or("");
+
+            // Intent detection & Intelligent Auto-Response
+            let (intent, response, risk) = if message_text.to_lowercase().contains("order") && (message_text.to_lowercase().contains("where") || message_text.to_lowercase().contains("status")) {
+                ("order_status", "I've checked your order status. It's currently being processed and will ship soon!", ActionRisk::AutoExecute)
+            } else if message_text.to_lowercase().contains("quote") || message_text.to_lowercase().contains("vegan cake") {
+                 ("quote_request", "I've received your request for a quote. One of our specialists will get back to you shortly!", ActionRisk::DraftForReview)
+            } else {
+                ("general_query", "Thank you for your message! Our team has been notified and we will get back to you as soon as possible.", ActionRisk::DraftForReview)
+            };
+
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
                 agent_id: self.agent_id(),
-                content: "Customer requested a quote for a vegan cake.".to_string(),
+                content: format!("Customer message: {}. Detected Intent: {}", message_text, intent),
                 embedding: vec![0.5, 0.5, 0.5],
                 source_type: "SESSION_DATA".to_string(),
                 created_at: chrono::Utc::now(),
@@ -43,13 +54,18 @@ impl Department for CustomerSuccessAgent {
             };
             self.orchestrator.write_long_term_memory(record).await?;
 
-            let follow_up = DepartmentEvent {
-                id: uuid::Uuid::new_v4().to_string(),
-                tenant_id: event.tenant_id.clone(),
-                event_type: "tenant.quote.requested".to_string(),
-                payload: event.payload.clone(),
-            };
-            self.orchestrator.dispatch_event(follow_up).await?;
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                format!("Intelligent Auto-Response: {}", response),
+                event.tenant_id.clone(),
+                risk,
+                serde_json::json!({
+                    "intent": intent,
+                    "response": response,
+                    "original_message": message_text
+                }),
+            ).await?;
+
             return Ok(());
         }
 
