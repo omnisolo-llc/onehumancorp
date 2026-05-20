@@ -134,6 +134,11 @@ impl SipDB {
                 return Some(content);
             }
 
+            let assistant_path = root_path.join("assistant_OHC.md");
+            if let Ok(content) = tokio::fs::read_to_string(&assistant_path).await {
+                return Some(content);
+            }
+
             let claude_path = root_path.join("CLAUDE.md");
             if let Ok(content) = tokio::fs::read_to_string(&claude_path).await {
                 return Some(content);
@@ -151,7 +156,7 @@ impl SipDB {
     pub fn enrich_payload_with_grounding_content(&self, payload: &str, grounding_content: &Option<String>) -> String {
         let mut final_payload = payload.to_string();
         if let Some(content) = grounding_content {
-            final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", payload, content);
+            final_payload = format!("{}\n\n[SYSTEM GROUNDING]\n{}", payload, content);
         }
         final_payload
     }
@@ -329,7 +334,7 @@ mod tests {
 
         let payload = "Original Task Payload";
         let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAlways write clean code.");
+        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]\nAlways write clean code.");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
@@ -375,7 +380,7 @@ mod tests {
 
         let payload = "Original Task Payload";
         let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nUse specialized tokens.");
+        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]\nUse specialized tokens.");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
@@ -400,7 +405,27 @@ mod tests {
         let payload = "Original Task Payload";
         let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
         // Only AGENTS.md should be injected
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAGENTS rules.");
+        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]\nAGENTS rules.");
+
+        std::fs::remove_dir_all(&dir_str).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_delegate_mission_tc_assistant_ohc_md_fallback() {
+        let pool = setup_dummy_pool().await;
+        let dir_str = create_temp_dir("tc_assistant");
+        let dir_path = std::path::Path::new(&dir_str);
+
+        let assistant_path = dir_path.join("assistant_OHC.md");
+        let mut file = File::create(&assistant_path).unwrap();
+        write!(file, "Use assistant_OHC rules.").unwrap();
+
+        let sip_db = SipDB::new(pool, "test_org".to_string())
+            .with_context_root(dir_str.clone());
+
+        let payload = "Original Task Payload";
+        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
+        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]\nUse assistant_OHC rules.");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
