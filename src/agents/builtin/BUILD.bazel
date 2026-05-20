@@ -46,6 +46,7 @@ rust_library(
         "agent.rs",
         "checkpointer.rs",
         "tools_gating.rs",
+        "observation_masking.rs",
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
