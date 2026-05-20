@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_minify_chat_request() {
-        let mut req = ChatRequest {
+        let req = ChatRequest {
             model: "test".to_string(),
             system: r#"{
                 "system": "instruction"
@@ -161,6 +161,8 @@ mod tests {
                             error: "".to_string(),
                         }
                     ],
+                    response_id: None,
+                    previous_response_id: None,
                 }
             ],
             tools: vec![],

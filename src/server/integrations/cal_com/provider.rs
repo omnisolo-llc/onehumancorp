@@ -3,7 +3,7 @@ use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct CalComProvider {
-    client: Arc<CalComClient>,
+    _client: Arc<CalComClient>,
     metadata: ProviderMetadata,
 }
 
@@ -12,7 +12,7 @@ impl CalComProvider {
         let client = CalComClient::new(access_token);
 
         Self {
-            client: Arc::new(client),
+            _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "cal_com".to_string(),
                 name: "Cal.com".to_string(),

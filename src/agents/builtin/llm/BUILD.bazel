@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "llm",
@@ -26,4 +26,14 @@ rust_library(
         "@crates//:async-trait",
     ],
 
+)
+
+rust_test(
+    name = "llm_unit_test",
+    crate = ":llm",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

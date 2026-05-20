@@ -77,7 +77,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = AgentConfig {
         llm_provider: get_env("OHC_LLM_PROVIDER", ""),
         model: get_env("OHC_LLM_MODEL", ""),
-        llm_endpoint: get_env("OHC_LOCAL_LLM_ENDPOINT", ""),
+        llm_endpoint: get_env(
+            "OHC_LLM_BASE_URL",
+            &get_env("OHC_LLM_ENDPOINT", &get_env("OHC_LOCAL_LLM_ENDPOINT", "")),
+        ),
         system_prompt: get_env("OHC_SYSTEM_PROMPT", ""),
         max_tokens: get_env_int("OHC_MAX_TOKENS", 2048),
         temperature: env::var("OHC_TEMPERATURE")

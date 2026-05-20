@@ -3,7 +3,7 @@ use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct ResendProvider {
-    client: Arc<ResendClient>,
+    _client: Arc<ResendClient>,
     metadata: ProviderMetadata,
 }
 
@@ -12,7 +12,7 @@ impl ResendProvider {
         let client = ResendClient::new(api_key);
 
         Self {
-            client: Arc::new(client),
+            _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "resend".to_string(),
                 name: "Resend Email".to_string(),
