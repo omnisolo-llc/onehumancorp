@@ -7,7 +7,7 @@ impl ShippoClient {
         ShippoClient { api_key }
     }
 
-    pub async fn create_shipping_label(&self, address_from: &str, address_to: &str, parcel_details: &str) -> Result<String, String> {
+    pub async fn create_shipping_label(&self, _address_from: &str, _address_to: &str, _parcel_details: &str) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             "unknown",

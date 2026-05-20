@@ -7,7 +7,7 @@ impl ResendClient {
         ResendClient { api_key }
     }
 
-    pub async fn send_email(&self, to: &str, from: &str, subject: &str, html: &str) -> Result<String, String> {
+    pub async fn send_email(&self, _to: &str, _from: &str, _subject: &str, _html: &str) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             "unknown",

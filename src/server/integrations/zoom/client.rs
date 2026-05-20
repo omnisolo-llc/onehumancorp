@@ -7,7 +7,7 @@ impl ZoomClient {
         ZoomClient { api_key }
     }
 
-    pub async fn create_meeting(&self, topic: &str, start_time: &str, duration_minutes: i32) -> Result<String, String> {
+    pub async fn create_meeting(&self, _topic: &str, _start_time: &str, _duration_minutes: i32) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             "unknown",

@@ -3,7 +3,7 @@ use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct ResendProvider {
-    client: Arc<ResendClient>,
+    _client: Arc<ResendClient>,
     metadata: ProviderMetadata,
 }
 
@@ -12,7 +12,7 @@ impl ResendProvider {
         let client = ResendClient::new(api_key);
 
         Self {
-            client: Arc::new(client),
+            _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "resend".to_string(),
                 name: "Resend Email".to_string(),
@@ -34,6 +34,6 @@ impl ResendProvider {
     }
 
     pub async fn send_email(&self, to: &str, from: &str, subject: &str, html: &str) -> Result<String, String> {
-        self.client.send_email(to, from, subject, html).await
+        self._client.send_email(to, from, subject, html).await
     }
 }

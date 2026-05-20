@@ -3,7 +3,7 @@ use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct ZoomProvider {
-    client: Arc<ZoomClient>,
+    _client: Arc<ZoomClient>,
     metadata: ProviderMetadata,
 }
 
@@ -12,7 +12,7 @@ impl ZoomProvider {
         let client = ZoomClient::new(api_key);
 
         Self {
-            client: Arc::new(client),
+            _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "zoom".to_string(),
                 name: "Zoom Video Conferencing".to_string(),
@@ -34,6 +34,6 @@ impl ZoomProvider {
     }
 
     pub async fn create_meeting(&self, topic: &str, start_time: &str, duration_minutes: i32) -> Result<String, String> {
-        self.client.create_meeting(topic, start_time, duration_minutes).await
+        self._client.create_meeting(topic, start_time, duration_minutes).await
     }
 }
