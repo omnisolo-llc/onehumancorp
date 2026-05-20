@@ -1018,7 +1018,7 @@ impl Agent {
             });
 
             // Gating mechanics
-            if let Err(e) = Self::check_tool_gating(&dummy_tc, false, cfg) {
+            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&dummy_tc, false, cfg) {
                  return Err(Box::new(e));
             }
 
@@ -1737,7 +1737,7 @@ impl Agent {
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
-                let gating_res = Self::check_tool_gating(tc, true, &final_cfg);
+                let gating_res = crate::tools_gating::ToolGater::check_gating(tc, true, &final_cfg);
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
@@ -1920,7 +1920,7 @@ impl Agent {
                 }
 
                 // Anthropic Mechanic: 3-Stage Tool Gating
-                if let Err(e) = Self::check_tool_gating(&tc, false, &final_cfg) {
+                if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, false, &final_cfg) {
                     match e {
                         ToolError::UserFixable(msg) => {
                             let err = format!("USER_FIXABLE: {}", msg);
@@ -2274,26 +2274,7 @@ impl Agent {
 
 
     // Anthropic Mechanic: 3-Stage Tool Gating
-    fn check_tool_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
-        // Stage 1: Trust establishment at project load
-        if !cfg.project_trusted && !is_read_only {
-            return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
-        }
 
-        // Stage 2: Permission check before each tool call
-        if let Some(allowed) = &cfg.allowed_tools {
-            if !allowed.contains(&tc.name) {
-                return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
-            }
-        }
-
-        // Stage 3: Explicit user confirmation for high-risk operations
-        if cfg.high_risk_tools.contains(&tc.name) && !cfg.approved_tool_calls.contains(&tc.id) {
-            return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
-        }
-
-        Ok(())
-    }
 
 
     fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
