@@ -45,5 +45,23 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
     catalog.push(meta_provider.to_integration_provider());
 
+    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("dummy_token".to_string());
+    catalog.push(google_calendar_provider.to_integration_provider());
+
+    let cal_com_provider = crate::integrations::cal_com::provider::CalComProvider::new("dummy_token".to_string());
+    catalog.push(cal_com_provider.to_integration_provider());
+
+    let resend_provider = crate::integrations::resend::provider::ResendProvider::new("dummy_token".to_string());
+    catalog.push(resend_provider.to_integration_provider());
+
+    let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
+    catalog.push(shippo_provider.to_integration_provider());
+
+    let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new("dummy_token".to_string());
+    catalog.push(zoom_provider.to_integration_provider());
+
+    let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
+    catalog.push(mercadopago_provider.to_integration_provider());
+
     catalog
 }
