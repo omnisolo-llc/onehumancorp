@@ -1,26 +1,24 @@
-# [SMS & Notifications] Integrate MessageBird for Global SMS
+# [SMS & Notifications] Global SMS Alerts
 
 ## Problem Statement
-For users with limited English or low internet connectivity (like Fatima the Food Cart Operator), push notifications and emails are unreliable. They need immediate SMS alerts when a new order arrives, and their customers need SMS order confirmations.
+For users like Fatima (food cart operator), checking an app or email constantly isn't feasible while working. She needs an immediate, loud text message on her basic smartphone the second an order is placed so she can start preparing the food.
 
 ## Research Report
-**Evaluated Tool:** MessageBird API (now Bird)
-**Alternatives Considered:** Twilio, Vonage
-**Pros:** Excellent global coverage, competitive pricing outside the US, and a unified API that also handles WhatsApp. Strong omnichannel capabilities.
-**Cons:** Less market dominance in the US compared to Twilio; recent rebranding may cause minor API documentation confusion.
-**Ease of Use for Non-technical Users:** The user simply provides their phone number and toggles "SMS Alerts" on. No technical setup required.
-**Pricing:** Pay-per-message, varies by destination country.
-**Deployment:** Cloud-native.
+- **Target Tools**: Twilio API or MessageBird.
+- **Competitive Analysis**: Many platforms charge extra for SMS. Offering this out-of-the-box for critical alerts is a strong differentiator for specific personas (food, urgent services).
+- **Ease of Use**: Completely invisible setup. The user just enters their phone number and checks a box for "Text me when I get a new order."
+- **Pricing**: ~$0.01 - $0.05 per message depending on the country. Costs need to be managed (e.g., limited free texts per month, unlimited on paid plans).
+- **Reputation**: Twilio is the gold standard for global SMS delivery.
+- **Advantages and Risks**: Ensures operators like Fatima don't miss orders. Risk is high cost per message and strict compliance (A2P 10DLC) rules in the US.
+- **Cloud vs Standalone**: Cloud uses central Twilio account. Standalone cannot use central SMS; users would need their own Twilio credentials, rendering it unusable for non-technical users.
 
 ## Design Doc
-**Integration with OHC:**
-- **Trigger:** A critical event occurs (e.g., new paid order, pickup ready).
-- **Action:** OHC sends a templated SMS via the MessageBird API to the business owner or the customer.
-- **AI Agent Interaction:** "The Operations Manager" decides when an SMS is necessary (vs. email) based on user preferences and urgency.
-- **User View:** A simple toggle in settings: "Send me an SMS for new orders", and a field in checkout for customers to opt-in to SMS updates.
+- **Integration Flow**: In the "Operations" or Profile settings, users verify their mobile number and enable SMS alerts.
+- **Actions**: When a specific trigger occurs (e.g., Order Paid), the system dispatches an SMS via the Twilio API to the owner's phone.
+- **User Experience**: A simple toggle: "Send me a text message for new orders." The received text is concise: "OHC Alert: New order #123 for $15.00 - Chicken Over Rice."
 
 ## Implementation Prompt
-Integrate the MessageBird API for sending transactional SMS messages. Add preference toggles in the tenant dashboard for receiving SMS alerts. Ensure checkout flows capture customer phone numbers and opt-in consent, and trigger SMS confirmations for pickups/deliveries.
+Build an SMS notification service integrated with Twilio that allows business owners to opt-in to receive text message alerts for critical events, such as new orders or bookings. The feature must include a simple phone number verification flow and toggle switches to control which events trigger an SMS. The notification content must be concise and informative.
 
 ## Priority
 P1
