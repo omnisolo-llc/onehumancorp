@@ -145,3 +145,5 @@ build:windows --action_env=CC_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-
 build:windows --action_env=CXX_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-g++
 build:windows --action_env=AR_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ar
 build:windows --action_env=LD_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ld
+# Workaround to fix bazel analysis failure on Windows CI
+build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
