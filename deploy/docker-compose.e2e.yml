@@ -11,7 +11,7 @@
 services:
   # ─── Infrastructure ───────────────────────────────────────────────────────
   postgres:
-    image: public.ecr.aws/docker/library/postgres:16-alpine
+    image: postgres:16
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_USER: ohc
@@ -34,7 +34,7 @@ services:
           memory: 256M
 
   redis:
-    image: public.ecr.aws/docker/library/redis:7-alpine
+    image: redis:7
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
