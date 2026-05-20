@@ -55,6 +55,15 @@ mod tests {
             )"
         ).execute(&pg_pool).await.unwrap();
 
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id VARCHAR PRIMARY KEY,
+                status VARCHAR NOT NULL,
+                payload TEXT,
+                tenant_id VARCHAR
+            )"
+        ).execute(&pg_pool).await.unwrap();
+
         let raw_context = json!({
             "email": "test@example.com",
             "safe_data": "hello world"
@@ -87,5 +96,15 @@ mod tests {
         assert!(payload_str.contains("[REDACTED]"));
         assert!(!payload_str.contains("test@example.com"));
         assert!(payload_str.contains("safe_data"));
+
+        // Let's also check the agent_missions table redaction.
+        let mission_row = sqlx::query("SELECT payload FROM agent_missions WHERE payload LIKE '%test_mem_1%'")
+            .fetch_one(&pg_pool)
+            .await
+            .unwrap();
+        let mission_payload_str: String = mission_row.get("payload");
+        assert!(mission_payload_str.contains("[REDACTED]"));
+        assert!(!mission_payload_str.contains("test@example.com"));
+        assert!(mission_payload_str.contains("safe_data"));
     }
 }
