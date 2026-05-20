@@ -163,6 +163,7 @@ rust_binary(
         "tasks",
         "ultraplan",
         "orchestration",
+        "interop",
     ]
 ]
 
