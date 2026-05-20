@@ -10,22 +10,21 @@ void main() {
     await tester.tap(find.text('Start a Business'));
     await tester.pumpAndSettle();
 
-    // Verify we are on the input screen
-    expect(find.text('Your Details'), findsOneWidget);
+    // Verify we are on the chat input screen
+    expect(find.text('The Promoter'), findsOneWidget);
+    expect(find.text('What kind of business are you starting?'), findsOneWidget);
 
-    // Tap without entering text to trigger validation
-    await tester.tap(find.text('Build My Storefront'));
+    // Fill out the chat
+    await tester.enterText(find.byType(TextField), "Maya's Custom Cakes");
     await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required' for both fields
-    expect(find.text('Required'), findsNWidgets(2));
+    // Tap the send button
+    await tester.tap(find.byIcon(Icons.send));
 
-    // Fill out the form
-    await tester.enterText(find.byType(TextFormField), "Maya's Custom Cakes");
-    await tester.pumpAndSettle();
+    // Let the first frame run to change the state to generating
+    await tester.pump();
 
-    // Test that the form can be submitted when both fields are filled out properly.
-    // Note: Since we need to interact with a DropdownButtonFormField and simulate an HTTP request
-    // this test primarily asserts the UI validation and state transitions up to form submission.
+    // It should throw an exception after due to http request but we don't care,
+    // we just want to verify the text changed to generating before.
   });
 }

@@ -7,14 +7,17 @@ test.describe('Onboarding Wizard', () => {
     // 1. Acquisition & Onboarding start
     await page.goto('/website-builder');
 
-    // Wait for the Smart Builder welcome screen
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    // Wait for the Smart Builder welcome screen (now The Promoter)
+    await expect(page.getByRole('heading', { name: 'The Promoter' })).toBeVisible();
+
+    // Verify initial chat message
+    await expect(page.getByText('What kind of business are you starting?')).toBeVisible();
 
     // Fill in the bio
     await page.locator('#bio-input').fill("I bake custom vegan cakes in Seattle. Maya's Cakes.");
 
-    // Click generate
-    await page.getByRole('button', { name: /Build My Storefront/i }).click();
+    // Click generate (send button)
+    await page.locator('#generate-btn').click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByText('Preview Mode')).toBeVisible({ timeout: 15000 });

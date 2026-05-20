@@ -85,46 +85,52 @@ export default function WebsiteBuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
+        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200"
              style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
 
-          <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
-            <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
-              <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                Review and add any extra details to help our AI generate the perfect store.
-              </p>
+          {/* Chat Header */}
+          <div className="p-4 border-b border-gray-200 flex items-center bg-white/80 rounded-t-[16px]">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+            </div>
+            <h1 className="text-lg font-bold font-outfit text-gray-900">The Promoter</h1>
+          </div>
 
-              <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business Details</label>
-              <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
-                <textarea
+          {/* Messages Area */}
+          <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-4">
+            <div className="self-start bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 max-w-[85%]">
+              <p className="text-gray-800 text-[15px]">What kind of business are you starting?</p>
+            </div>
+          </div>
+
+          {/* Input Area */}
+          <div className="p-4 bg-white border-t border-gray-200 rounded-b-[16px]">
+            <div className="flex gap-2">
+              <Tooltip id="bio-input-tooltip" defaultText="Describe your business in a short message.">
+                <input
                   id="bio-input"
-                  className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
-                  style={{ borderRadius: '8px' }}
+                  type="text"
+                  className="flex-1 bg-gray-100 border-none rounded-full px-5 py-3 text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="e.g. I run a mobile dog grooming service in Portland"
-                  rows={6}
+                  placeholder="Describe your business..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && bio.trim().length > 5) handleGenerate();
+                  }}
                 />
               </Tooltip>
-
-              <div className="flex gap-4">
-                <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
-                  <button
-                    id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
-                      bio.trim().length > 5
-                        ? "text-white shadow-md active:scale-[0.98]"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    }`}
-                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
-                    onClick={handleGenerate}
-                    disabled={bio.trim().length <= 5}
-                  >
-                    Build My Storefront
-                  </button>
-                </Tooltip>
-              </div>
+              <Tooltip id="generate-btn-tooltip" defaultText="Send your description to the AI Promoter.">
+                <button
+                  id="generate-btn"
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                    bio.trim().length > 5 ? "bg-blue-600 text-white hover:bg-blue-700 active:scale-95" : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                  onClick={handleGenerate}
+                  disabled={bio.trim().length <= 5}
+                >
+                  <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>

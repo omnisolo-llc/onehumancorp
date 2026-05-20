@@ -11,46 +11,74 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String businessName = '';
-  String? businessType;
+  String businessName = 'Generated Store';
   OnboardingState _state = OnboardingState.welcome;
+  final TextEditingController _chatController = TextEditingController();
+  final List<Map<String, String>> _messages = [
+    {"role": "ai", "content": "What kind of business are you starting?"}
+  ];
 
-  Future<void> submit() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      setState(() => _state = OnboardingState.generating);
+  Future<void> submitChat() async {
+    final text = _chatController.text.trim();
+    if (text.isEmpty) return;
 
-      try {
-        final response = await http.post(
-          Uri.parse('http://localhost:8080/api/onboarding/start'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'company_name': businessName,
-            'business_type': businessType,
-            'selling_categories': ['food', 'physical'],
-            'payment_pref': 'online',
-            'admin_email': 'admin@test.com',
-            'admin_name': 'Admin User',
-            'admin_password': 'password123',
-            'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
-            'domain_choice': 'subdomain',
-            'price_type': 'fixed'
-          }),
-        );
+    setState(() {
+      _messages.add({"role": "user", "content": text});
+      _chatController.clear();
+      _state = OnboardingState.generating;
+    });
 
-        if (response.statusCode == 200) {
-          setState(() => _state = OnboardingState.dashboard);
-        } else {
-          // If error occurs, go back to input.
-           setState(() => _state = OnboardingState.input);
+    try {
+      // Try intake API first
+      final intakeResponse = await http.post(
+        Uri.parse('http://localhost:8080/api/onboarding/intake'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'description': text}),
+      );
+
+      String bizName = text;
+      String bizType = 'Service';
+      String cat = 'service';
+
+      if (intakeResponse.statusCode == 200) {
+        final data = jsonDecode(intakeResponse.body);
+        bizName = data['business_name'] ?? bizName;
+        bizType = data['business_type'] ?? bizType;
+        if (data['categories'] != null && data['categories'].isNotEmpty) {
+          cat = data['categories'][0];
         }
-      } catch (e) {
-        print('Error: \$e');
-         setState(() => _state = OnboardingState.input);
       }
+      setState(() {
+        businessName = bizName;
+      });
+
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/onboarding/start'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'company_name': bizName,
+          'business_type': bizType,
+          'selling_categories': [cat, 'physical'],
+          'payment_pref': 'online',
+          'admin_email': 'admin@test.com',
+          'admin_name': 'Admin User',
+          'admin_password': 'password123',
+          'website_template': 'Modern',
+          'first_product_name': 'Custom Product',
+          'first_product_price': '25.00',
+          'domain_choice': 'subdomain',
+          'price_type': 'fixed'
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() => _state = OnboardingState.dashboard);
+      } else {
+        setState(() => _state = OnboardingState.input);
+      }
+    } catch (e) {
+      print('Error: $e');
+      setState(() => _state = OnboardingState.input);
     }
   }
 
@@ -165,102 +193,94 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildInputState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Your Details',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1D1D1F),
-                letterSpacing: -0.5,
+    return Column(
+      children: [
+        // Chat Header
+        Container(
+          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Color(0xFF0066FF).withOpacity(0.1),
+                child: Icon(Icons.auto_awesome, color: Color(0xFF0066FF)),
               ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Just a few details to get started.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: Colors.grey[600],
+              SizedBox(width: 12),
+              Text(
+                'The Promoter',
+                style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 32),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Custom Cakes',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Business Type',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              items: ['Physical', 'Digital', 'Service', 'Food']
-                  .map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  businessType = value;
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessType = value!,
-            ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Build My Storefront',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        // Messages Area
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final msg = _messages[index];
+              final isAi = msg['role'] == 'ai';
+              return Align(
+                alignment: isAi ? Alignment.centerLeft : Alignment.centerRight,
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 16),
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isAi ? Colors.white : Color(0xFF0066FF),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: Text(
+                    msg['content']!,
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: isAi ? Colors.black87 : Colors.white),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Input Area
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: Colors.grey[200]!)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatController,
+                  decoration: InputDecoration(
+                    hintText: 'Describe your business...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  ),
+                  onSubmitted: (_) => submitChat(),
+                ),
+              ),
+              SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF0066FF),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.send, color: Colors.white),
+                  onPressed: submitChat,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
