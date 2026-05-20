@@ -31,8 +31,8 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/", get(list_approvals))
-        .route("/{id}", post(decide_approval))
+        .route("/approvals", get(list_approvals))
+        .route("/approvals/{id}", post(decide_approval))
         .with_state(sip_db)
 }
 
