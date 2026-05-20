@@ -10,6 +10,8 @@ use opentelemetry::metrics::Histogram;
 use opentelemetry::metrics::UpDownCounter;
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
@@ -32,6 +34,34 @@ pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
             .with_description("The current number of jobs in the sub-agent task queue")
             .build()
     })
+}
+
+pub fn get_sub_agent_queue_delay_histogram() -> &'static Histogram<f64> {
+    SUB_AGENT_QUEUE_DELAY_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.sub_agent");
+        meter.f64_histogram("SubAgentQueueDelayHistogram")
+            .with_description("Measures time from job enqueue to dequeue")
+            .build()
+    })
+}
+
+pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
+    TASK_CLAIM_CONTENTION_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sub_agent");
+        meter.i64_up_down_counter("TaskClaimContentionTotal")
+            .with_description("Tracks the number of failed task claim attempts or retries due to lock contention")
+            .build()
+    })
+}
+
+pub fn record_sub_agent_queue_delay(delay: f64) {
+    let histogram = get_sub_agent_queue_delay_histogram();
+    histogram.record(delay, &[]);
+}
+
+pub fn record_task_claim_contention(mode: &str) {
+    let counter = get_task_claim_contention_total();
+    counter.add(1, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
 }
 
 pub async fn record_autodream_sync(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
