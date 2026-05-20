@@ -13,6 +13,7 @@ rust_library(
         "sandbox/permissions.rs",
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
+        "sandbox/macos_sandbox.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
