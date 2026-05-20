@@ -11,7 +11,13 @@ export default function Integrations() {
     { id: "mailchimp", name: "Mailchimp Automations", category: "marketing", status: "disconnected", icon: "📧", description: "Trigger email campaigns based on customer purchase behavior." },
     { id: "quickbooks", name: "QuickBooks Online", category: "finance", status: "connected", icon: "📊", description: "Automatically sync sales data and expenses for easier accounting." },
     { id: "stripe", name: "Stripe Advanced", category: "finance", status: "connected", icon: "💳", description: "Accept global payments and manage subscriptions seamlessly." },
-    { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." }
+    { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." },
+    { id: "manychat", name: "Manychat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated scheduling and calendar sync for service businesses." },
+    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚚", description: "Automated shipping rates and label printing for orders." },
+    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automatically generate Zoom meeting links for booked online services." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
