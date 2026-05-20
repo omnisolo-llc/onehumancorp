@@ -1485,6 +1485,57 @@ impl HubService for MyHubService {
     }
 }
 
+#[derive(serde::Deserialize)]
+struct DecideApprovalRequest {
+    approval_id: String,
+    approved: bool,
+}
+
+async fn handle_pending_approvals(
+    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
+    req: axum::extract::Request,
+) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
+    let org_id = req.extensions().get::<::server_common::Claims>()
+        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
+        .organization_id.as_ref()
+        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
+        .clone();
+
+    let tasks = hub.task_manager().get_pending_approvals(&org_id);
+    let mapped_tasks: Vec<serde_json::Value> = tasks.into_iter().map(|task| {
+        serde_json::json!({
+            "id": task.id,
+            "title": task.title,
+            "description": task.description.unwrap_or_default(),
+            "proposed_content": task.proposed_content.unwrap_or_default(),
+            "action_risk": match task.action_risk {
+                Some(crate::tasks::ActionRisk::Low) => "low",
+                Some(crate::tasks::ActionRisk::High) => "high",
+                _ => "unknown",
+            },
+        })
+    }).collect();
+
+    Ok(axum::Json(serde_json::json!({ "pending_approvals": mapped_tasks })))
+}
+
+async fn handle_decide_approval(
+    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
+    axum::extract::Json(payload): axum::extract::Json<DecideApprovalRequest>,
+    req: axum::extract::Request,
+) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
+    let org_id = req.extensions().get::<::server_common::Claims>()
+        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
+        .organization_id.as_ref()
+        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?
+        .clone();
+
+    hub.task_manager().approve_task(&payload.approval_id, payload.approved, &org_id).await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(axum::Json(serde_json::json!({ "success": true })))
+}
+
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
@@ -1770,16 +1821,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             }),
         )
         .route(
-            "/api/approvals/request",
-            axum::routing::post(|| async {
-                axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "pending" }))
-            }),
+            "/api/approvals",
+            axum::routing::get(handle_pending_approvals)
         )
         .route(
             "/api/approvals/decide",
-            axum::routing::put(|| async {
-                axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "approved" }))
-            }),
+            axum::routing::post(handle_decide_approval)
         )
         .route(
             "/api/handoffs",
