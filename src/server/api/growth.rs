@@ -175,47 +175,6 @@ async fn handle_get_team_invites(
     }
 }
 
-async fn handle_referral_click(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<GrowthIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
-        .bind(&req.id)
-        .execute(&state.pool)
-        .await
-    {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
-async fn handle_referral_convert(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<GrowthIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
-        .bind(&req.id)
-        .execute(&state.pool)
-        .await
-    {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
-async fn handle_team_invite_accept(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<GrowthIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE team_invites SET status = 'ACCEPTED' WHERE id = $1")
-        .bind(&req.id)
-        .execute(&state.pool)
-        .await
-    {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
 
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
@@ -232,7 +191,7 @@ async fn handle_create_team_invite(
 
 async fn handle_referral_click(
     Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
+    Json(req): Json<GrowthIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     state.hub.referral_tracker().record_click(&req.id);
     Ok(Json(()))
@@ -240,7 +199,7 @@ async fn handle_referral_click(
 
 async fn handle_referral_convert(
     Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
+    Json(req): Json<GrowthIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     state.hub.referral_tracker().record_conversion(&req.id);
     Ok(Json(()))
@@ -248,7 +207,7 @@ async fn handle_referral_convert(
 
 async fn handle_team_invite_accept(
     Extension(state): Extension<GrowthState>,
-    Json(req): Json<InviteIdRequest>,
+    Json(req): Json<GrowthIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
@@ -322,7 +281,7 @@ mod tests {
         }
         assert!(found);
 
-        let accept_req = InviteIdRequest {
+        let accept_req = GrowthIdRequest {
             id: invite_id,
         };
         let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
@@ -341,13 +300,13 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
-        let click_req = ReferralIdRequest {
+        let click_req = GrowthIdRequest {
             id: "ref-code-123".to_string(),
         };
         let res = handle_referral_click(Extension(state.clone()), Json(click_req)).await;
         assert!(res.is_ok());
 
-        let convert_req = ReferralIdRequest {
+        let convert_req = GrowthIdRequest {
             id: "ref-code-123".to_string(),
         };
         let res = handle_referral_convert(Extension(state.clone()), Json(convert_req)).await;

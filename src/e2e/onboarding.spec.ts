@@ -10,8 +10,13 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
 
-    // Fill in the bio
-    await page.locator('#bio-input').fill("I bake custom vegan cakes in Seattle. Maya's Cakes.");
+    // Step 1: Basic info
+    await page.locator('#business-name-input').fill("Maya's Cakes");
+    await page.locator('#business-type-input').fill("Bakery");
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Step 2: Description
+    await page.locator('#bio-input').fill("I bake custom vegan cakes in Seattle.");
 
     // Click generate
     await page.getByRole('button', { name: /Build My Storefront/i }).click();
