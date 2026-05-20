@@ -175,48 +175,6 @@ async fn handle_get_team_invites(
     }
 }
 
-async fn handle_referral_click(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<GrowthIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
-        .bind(&req.id)
-        .execute(&state.pool)
-        .await
-    {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
-async fn handle_referral_convert(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<GrowthIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
-        .bind(&req.id)
-        .execute(&state.pool)
-        .await
-    {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
-async fn handle_team_invite_accept(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<GrowthIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE team_invites SET status = 'ACCEPTED' WHERE id = $1")
-        .bind(&req.id)
-        .execute(&state.pool)
-        .await
-    {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,

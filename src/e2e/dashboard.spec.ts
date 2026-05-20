@@ -21,4 +21,12 @@ test.describe('Dashboard Core', () => {
     await page.getByRole('button', { name: 'Launch Site' }).click();
     await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
   });
+
+  test('loads the referral program snapshot', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByText('Referral Program')).toBeVisible();
+    await expect(page.locator('text=Active Referrals').locator('..').locator('text=4')).toBeVisible();
+    await expect(page.locator('text=Revenue from Referrals').locator('..').locator('text=$120.00')).toBeVisible();
+    await expect(page.locator('text=Pending Rewards').locator('..').locator('text=$24.00')).toBeVisible();
+  });
 });

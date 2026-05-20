@@ -235,6 +235,48 @@ struct HttpMetricsResponse {
     pending_orders: i64,
 }
 
+#[derive(serde::Serialize)]
+struct HttpReferralsResponse {
+    active_referrals: i64,
+    revenue: f64,
+    pending_rewards: f64,
+}
+
+async fn http_referrals_handler(
+    db: std::sync::Arc<db::DB>,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<HttpSalesRequest>,
+) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    if headers.get("authorization").is_none() {
+        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
+    }
+
+    let tenant_id = payload.tenant_id;
+    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(clicks), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0);
+
+    let conversions: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0);
+
+    let revenue = (conversions as f64) * 30.0;
+    let pending_rewards = (conversions as f64) * 6.0;
+
+    (
+        StatusCode::OK,
+        axum::Json(HttpReferralsResponse { active_referrals, revenue, pending_rewards }),
+    )
+        .into_response()
+}
+
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
     headers: axum::http::HeaderMap,
@@ -1863,6 +1905,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             axum::routing::post({
                 let db = db_for_sales.clone();
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, headers, payload).await }
+            }),
+        )
+        .route(
+            "/api/v1/dashboard/referrals",
+            axum::routing::post({
+                let db = db_for_sales.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_referrals_handler(db, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))

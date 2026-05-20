@@ -9,6 +9,9 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [activeReferrals, setActiveReferrals] = useState<number>(0);
+  const [revenueFromReferrals, setRevenueFromReferrals] = useState<number>(0);
+  const [pendingRewards, setPendingRewards] = useState<number>(0);
 
   useEffect(() => {
     async function fetchApprovals() {
@@ -79,6 +82,18 @@ export default function Dashboard() {
                 const metricsData = await metricsRes.json();
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
+            }
+
+            const refRes = await fetch('/api/v1/dashboard/referrals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ tenant_id: tenant })
+            });
+            if (refRes.ok) {
+                const refData = await refRes.json();
+                setActiveReferrals(refData.active_referrals);
+                setRevenueFromReferrals(refData.revenue);
+                setPendingRewards(refData.pending_rewards);
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -226,17 +241,17 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'linear-gradient(135deg, rgba(238, 242, 255, 0.65) 0%, rgba(224, 231, 255, 0.65) 100%)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(199, 210, 254, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'linear-gradient(135deg, rgba(238, 242, 255, 0.65) 0%, rgba(224, 231, 255, 0.65) 100%)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(199, 210, 254, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$120.00</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${revenueFromReferrals.toFixed(2)}</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'linear-gradient(135deg, rgba(238, 242, 255, 0.65) 0%, rgba(224, 231, 255, 0.65) 100%)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(199, 210, 254, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${pendingRewards.toFixed(2)}</div>
                 </div>
             </div>
          </section>
