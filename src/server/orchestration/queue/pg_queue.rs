@@ -74,12 +74,14 @@ impl TaskQueue for PgTaskQueue {
 
         let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
-             FROM sub_agent_jobs
-             WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
-             ORDER BY run_after ASC, created_at ASC
-             LIMIT 1
-             FOR UPDATE SKIP LOCKED",
+            "UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP
+             WHERE id = (
+                 SELECT id FROM sub_agent_jobs
+                 WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
+                 ORDER BY run_after ASC, created_at ASC
+                 LIMIT 1
+                 FOR UPDATE SKIP LOCKED
+             ) RETURNING id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id",
             role_placeholders
         );
 
@@ -107,15 +109,6 @@ impl TaskQueue for PgTaskQueue {
                 updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
                 tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };
-
-            // Basic quota enforcement stub (could be a separate table check here)
-            // e.g. SELECT check_quota(organization_id, vram, tokens) ...
-
-            sqlx::query("UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-                .bind(&job.id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
 
             tx.commit().await.map_err(|e| e.to_string())?;
             return Ok(Some(job));
