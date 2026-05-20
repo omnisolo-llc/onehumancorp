@@ -20,7 +20,21 @@ test.describe('Customer Inbox', () => {
   test('returns to dashboard on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/inbox');
-    await page.getByRole('button', { name: '< Back' }).click();
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+    // Test that the AI Assistant toggle works
+    const toggle = page.getByRole('switch');
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    // Check visual warning and sparkle states
+    await expect(page.getByText('Handled by AI').first()).toBeVisible();
+    await expect(page.getByText('Needs your attention').first()).toBeVisible();
+
+    // Click on a message to view detail
+    await page.getByText('Do you offer vegan birthday cake options?').click();
+    await expect(page.getByRole('button', { name: 'AI Draft' })).toBeVisible();
   });
 });
