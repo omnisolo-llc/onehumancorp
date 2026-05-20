@@ -25,9 +25,6 @@ pub async fn sync_telemetry_handler(
     StatusCode::OK
 }
 
-pub fn router<S>() -> axum::Router<S>
-where
-    S: Clone + Send + Sync + 'static,
-{
+pub fn router() -> axum::Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new().route("/sync", axum::routing::post(sync_telemetry_handler))
 }
