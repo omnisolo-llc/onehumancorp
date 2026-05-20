@@ -2552,6 +2552,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
 
+                        <!-- Milestone Viral Share Loop Banner -->
+                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
+                            <div class="flex items-center gap-4">
+                                <span class="text-3xl" style="font-size: 32px;">🎉</span>
+                                <div>
+                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked: Your First Customers!</h3>
+                                    <p class="m-0 text-sm opacity-90" style="margin: 0; opacity: 0.9; color: white;">You've reached <span id="milestone-customers-count">0</span> active customers. Share your store's success to earn a free month of Pro!</p>
+                                </div>
+                            </div>
+                            <button
+                                onclick="const tenant = localStorage.getItem('tenant_id') || 'DEFAULT'; window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just reached ' + document.getElementById('milestone-customers-count').textContent + ' customers on my store! Start your own business today with One Human Corp: ohc://join?ref=' + tenant)}`, '_blank'); dismissMilestoneShareBanner();"
+                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold text-orange-500 shadow-sm transition-colors hover:bg-orange-50"
+                                style="background: white; color: #f97316; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
+                            >
+                                Share & Claim Reward
+                            </button>
+                        </div>
+
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
                             <h2 id="todays-sales" style="font-size: 48px; margin: 0; color: var(--primary);">$0.00</h2>
@@ -3759,6 +3777,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('milestone-card').style.display = 'none';
                         }
 
+                        function dismissMilestoneShareBanner() {
+                            const banner = document.getElementById('milestone-share-banner');
+                            if (banner) {
+                                banner.style.display = 'none';
+                                banner.classList.add('hidden');
+                            }
+                            localStorage.setItem('milestone_banner_dismissed', 'true');
+
+                            fetch('/api/v1/growth/referrals/click', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: localStorage.getItem('tenant_id') || 'DEFAULT' })
+                            }).catch(console.error);
+
+                            alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
+                        }
+
                         async function draftInboxReply(btn) {
                             const input = document.getElementById('reply-input');
                             btn.disabled = true;
@@ -4223,6 +4258,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
                                 })
                                 .catch(err => console.error('Error fetching sales:', err));
+
+                                fetch('/api/v1/dashboard/metrics', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                    body: JSON.stringify({ tenant_id: tenant })
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    const banner = document.getElementById('milestone-share-banner');
+                                    const countEl = document.getElementById('milestone-customers-count');
+                                    const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
+                                    if (banner && countEl && !dismissed) {
+                                        if (data.active_customers > 0) {
+                                            banner.style.display = 'flex';
+                                            banner.classList.remove('hidden');
+                                            countEl.textContent = data.active_customers;
+                                        } else {
+                                            banner.style.display = 'none';
+                                            banner.classList.add('hidden');
+                                        }
+                                    }
+                                })
+                                .catch(err => console.error('Error fetching metrics:', err));
                             }
 
                             if (id === 'my-plan-screen') {
