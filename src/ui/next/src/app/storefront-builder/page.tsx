@@ -14,6 +14,8 @@ export default function BuilderPage() {
   // Growth Loop: Soft Paywall State
   const [isPremium, setIsPremium] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showDomainInput, setShowDomainInput] = useState(false);
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -41,7 +43,11 @@ export default function BuilderPage() {
     }
   };
 
-  const handleLaunch = async () => {
+  const handleLaunch = () => {
+    setShowPublishModal(true);
+  };
+
+  const handleFinalPublish = async () => {
     try {
       const draftBlocks = blocks.map((b, i) => ({
         block_type: b.type === 'Hero' ? 'HeroBlock' :
@@ -52,8 +58,6 @@ export default function BuilderPage() {
         sort_order: i
       }));
 
-      // In a more complete implementation, we'd store the SiteDraft returned from generate,
-      // but for now we construct a minimal valid draft payload preserving current blocks.
       const payload = {
           domain: null,
           draft: {
@@ -80,6 +84,7 @@ export default function BuilderPage() {
         const data = await response.json();
         setStatus("live");
         setLiveUrl(`https://${data.domain || 'myshop'}.ohc.store`);
+        setShowPublishModal(false);
       } else {
         console.error('Failed to publish');
       }
@@ -244,10 +249,50 @@ export default function BuilderPage() {
             className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
             onClick={handleLaunch}
           >
-            <span>1-Tap Launch</span>
+            <span>Publish Changes</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
           </button>
         </div>
+
+        {/* Publish Modal */}
+        {showPublishModal && (
+          <div className="absolute inset-0 bg-black/60 z-[60] flex flex-col justify-end">
+            <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl animate-slide-up pb-10">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold font-outfit text-gray-900">Publish Site</h2>
+                <button
+                  onClick={() => setShowPublishModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              {!showDomainInput ? (
+                <button
+                  onClick={() => setShowDomainInput(true)}
+                  className="w-full bg-gradient-to-r from-gray-900 to-black text-white font-bold p-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex justify-center items-center"
+                >
+                  <span>Free OHC Subdomain</span>
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="mybusiness"
+                    className="w-full p-4 border border-gray-300 rounded-xl"
+                  />
+                  <button
+                    onClick={handleFinalPublish}
+                    className="w-full bg-blue-600 text-white font-bold p-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex justify-center items-center"
+                  >
+                    <span>Publish</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Upgrade Modal */}
         {showUpgradeModal && (
