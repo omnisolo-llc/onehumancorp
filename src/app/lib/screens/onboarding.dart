@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-enum OnboardingState { idle, generating, draft, live }
+enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
   @override
@@ -12,8 +12,9 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
-  String bio = '';
-  OnboardingState _state = OnboardingState.idle;
+  String businessName = '';
+  String? businessType;
+  OnboardingState _state = OnboardingState.welcome;
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
@@ -25,8 +26,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Uri.parse('http://localhost:8080/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'company_name': bio, // use bio as company name for now based on previous behavior
-            'business_type': 'Bakery',
+            'company_name': businessName,
+            'business_type': businessType,
             'selling_categories': ['food', 'physical'],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
@@ -41,14 +42,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
 
         if (response.statusCode == 200) {
-          setState(() => _state = OnboardingState.draft);
+          setState(() => _state = OnboardingState.dashboard);
         } else {
-          // If error occurs, go back to idle.
-           setState(() => _state = OnboardingState.idle);
+          // If error occurs, go back to input.
+           setState(() => _state = OnboardingState.input);
         }
       } catch (e) {
         print('Error: \$e');
-         setState(() => _state = OnboardingState.idle);
+         setState(() => _state = OnboardingState.input);
       }
     }
   }
@@ -90,10 +91,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildContent() {
     switch (_state) {
-      case OnboardingState.idle:
-        return _buildIdleState();
+      case OnboardingState.welcome:
+        return _buildWelcomeState();
+      case OnboardingState.input:
+        return _buildInputState();
       case OnboardingState.generating:
         return _buildGeneratingState();
+      case OnboardingState.dashboard:
+        return _buildDashboardState();
       case OnboardingState.draft:
         return _buildDraftState();
       default:
@@ -101,7 +106,65 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Widget _buildIdleState() {
+  Widget _buildWelcomeState() {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
+          SizedBox(height: 32),
+          Text(
+            'OneHumanCorp',
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1D1D1F),
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'The universal operating system for small business.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 48),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => _state = OnboardingState.input);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              'Start a Business',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputState() {
     return Padding(
       padding: EdgeInsets.all(24),
       child: Form(
@@ -111,7 +174,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'What do you do?',
+              'Your Details',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -123,7 +186,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Describe your business. We\'ll magically generate your storefront in seconds.',
+              'Just a few details to get started.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -134,7 +197,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             SizedBox(height: 32),
             TextFormField(
               decoration: InputDecoration(
-                hintText: 'e.g., I bake custom vegan cakes in Seattle.',
+                labelText: 'Business Name',
+                hintText: 'e.g., Maya\'s Custom Cakes',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -143,10 +207,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 contentPadding: EdgeInsets.all(20),
               ),
-              maxLines: 4,
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
+              onSaved: (value) => businessName = value!,
+            ),
+            SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                labelText: 'Business Type',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              items: ['Physical', 'Digital', 'Service', 'Food']
+                  .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  businessType = value;
+                });
+              },
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => businessType = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
@@ -187,7 +276,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           SizedBox(height: 32),
           Text(
-            'The Promoter is building your business...',
+            'AI is building your storefront...',
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 24,
@@ -198,6 +287,115 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDashboardState() {
+    return Column(
+      children: [
+        // Top banner
+        Container(
+          width: double.infinity,
+          color: Colors.white,
+          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 32),
+              Text(
+                'Dashboard',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1D1D1F),
+                  letterSpacing: -0.5,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Welcome, $businessName',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Main Content Area
+        Expanded(
+          child: Container(
+            color: Color(0xFFF5F5F7),
+            width: double.infinity,
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.check_circle, size: 48, color: Color(0xFF34C759)),
+                      SizedBox(height: 16),
+                      Text(
+                        'Storefront Generated!',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Your AI agent has created a draft based on your business profile.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                      SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() => _state = OnboardingState.draft);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF0066FF),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          minimumSize: Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Preview Site',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
