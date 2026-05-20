@@ -6,6 +6,7 @@ import { SmartBlock } from "./components";
 export default function BuilderPage() {
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
+  const [draftData, setDraftData] = useState<any>(null);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
 
@@ -17,14 +18,17 @@ export default function BuilderPage() {
     setStatus("generating");
 
     try {
-      const response = await fetch('/builder/api', {
+      const response = await fetch('/api/v1/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio })
+        body: JSON.stringify({ description: bio })
       });
 
       const data = await response.json();
-      setBlocks(data.blocks);
+      setDraftData(data);
+      if (data.pages && data.pages.length > 0) {
+        setBlocks(data.pages[0].blocks);
+      }
       setStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -32,13 +36,25 @@ export default function BuilderPage() {
     }
   };
 
-  const handleLaunch = () => {
-    // Simulate background provisioning of subdomain and SSL
-    setTimeout(() => {
-      setStatus("live");
-      const subdomain = bio.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
-      setLiveUrl(`https://${subdomain || 'myshop'}.ohc.store`);
-    }, 1500);
+  const handleLaunch = async () => {
+    const subdomain = bio.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
+
+    try {
+      const response = await fetch('/api/v1/builder/publish_draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: subdomain, draft: draftData })
+      });
+
+      if (response.ok) {
+        setStatus("live");
+        setLiveUrl(`https://${subdomain || 'myshop'}.ohc.store`);
+      } else {
+        console.error("Failed to publish storefront");
+      }
+    } catch (error) {
+      console.error("Failed to publish storefront", error);
+    }
   };
 
   if (status === "idle") {
@@ -128,9 +144,9 @@ export default function BuilderPage() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
+        <div id="builder-preview-container" className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
           {blocks.map((b, i) => (
-            <SmartBlock key={i} {...b} />
+            <SmartBlock key={i} type={b.block_type || b.type} props={b.content || b.props} />
           ))}
           {!isPremium && <SmartBlock type="PoweredBy" props={{}} />}
         </div>

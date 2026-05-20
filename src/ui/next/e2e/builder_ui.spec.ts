@@ -19,7 +19,7 @@ test('builder flow completes successfully', async ({ page }) => {
   await expect(page.getByText(/The Promoter is picking colors/i)).toBeVisible();
 
   // 3. Draft Preview Screen
-  await expect(page.getByText(/Preview Mode/i)).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(/Welcome/i)).toBeVisible({ timeout: 10000 });
   await expect(page.getByText(/1-Tap Launch/i)).toBeVisible();
 
   // 4. Click Launch
