@@ -818,24 +818,27 @@ mod chaos_tests {
             .await
             .unwrap();
 
-        // Setup tables
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
+
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        // The dummy pg pool is required by DB struct but we use Sqlite store.
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://localhost/dummy")
             .unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool.clone(), store: crate::db::DbStore::Sqlite(pool.clone()) });
         let mesh = std::sync::Arc::new(ChaosMesh);
         let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
 
         // Insert 100 tasks
         for i in 0..100 {
-            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies, organization_id) VALUES (?, 'PENDING', '[]', 'org_test')")
                 .bind(format!("task_{}", i))
                 .execute(&pool).await.unwrap();
         }
