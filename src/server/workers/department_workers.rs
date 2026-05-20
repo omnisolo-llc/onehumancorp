@@ -52,7 +52,7 @@ impl OperationsWorker {
                         SELECT id FROM department_tasks
                         WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-                        ORDER BY created_at ASC
+                        ORDER BY updated_at ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
                     )
@@ -75,7 +75,7 @@ impl OperationsWorker {
                     SELECT id, tenant_id, payload FROM department_tasks
                     WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-                    ORDER BY created_at ASC
+                    ORDER BY updated_at ASC
                     LIMIT 1
                     "#
                 )
@@ -600,7 +600,7 @@ impl CustomerSuccessWorker {
                         WHERE status = 'PENDING' AND department = 'customer_success'
                         AND (event_type = 'OrderProcessed' OR event_type = 'CustomerMessageReceived')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-                        ORDER BY created_at ASC
+                        ORDER BY updated_at ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
                     )
@@ -624,7 +624,7 @@ impl CustomerSuccessWorker {
                     WHERE status = 'PENDING' AND department = 'customer_success'
                     AND (event_type = 'OrderProcessed' OR event_type = 'CustomerMessageReceived')
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-                    ORDER BY created_at ASC
+                    ORDER BY updated_at ASC
                     LIMIT 1
                     "#
                 )

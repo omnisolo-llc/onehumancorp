@@ -777,7 +777,7 @@ impl Hub {
         let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
         let sync_errors_res = sync_errors_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-        let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
+        let mission_sync_backlog = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
@@ -803,7 +803,7 @@ impl Hub {
             "mesh_active": mesh_active,
             "cloud_connected": cloud_connected,
             "hybrid_mode_ready": hybrid_mode_ready,
-            "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
+            "mission_sync_backlog": mission_sync_backlog,
             "sync_error_count": sync_error_count,
         }))
     }
@@ -1054,6 +1054,6 @@ mod tests {
         assert!(health.get("status").is_some());
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
-        assert!(health.get("local_to_cloud_sync_queue").is_some());
+        assert!(health.get("mission_sync_backlog").is_some());
     }
 }

@@ -520,7 +520,7 @@ impl QueueManager {
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) ORDER BY updated_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
             .bind(worker_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -563,7 +563,7 @@ impl QueueManager {
         // Since SubAgentJob's polling uses `status = 'QUEUED'`, and some implementations might not filter by scheduled_at,
         // we can still add a simple delay by using tokio::time::sleep here or rely on the caller to backoff,
         // or actually update the scheduled_at column if the poll query respects it.
-        // Wait, QueueManager::poll does: `SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC`
+        // Wait, QueueManager::poll does: `SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY updated_at ASC`
         // It does NOT use `scheduled_at`!
         // To implement a true backoff, we need to add `AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)`.
 
