@@ -1,3 +1,4 @@
+import 'dashboard.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -10,47 +11,130 @@ class OnboardingScreen extends StatefulWidget {
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
 
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  ChatMessage({required this.text, required this.isUser});
+}
+
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String businessName = '';
   String? businessType;
+  String contactInfo = '';
   OnboardingState _state = OnboardingState.welcome;
 
-  Future<void> submit() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      setState(() => _state = OnboardingState.generating);
+  List<ChatMessage> _messages = [];
+  final TextEditingController _chatController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  int _chatStep = 0; // 0: Name, 1: Goal/Offering, 2: Contact
 
-      try {
-        final response = await http.post(
-          Uri.parse('http://localhost:8080/api/onboarding/start'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'company_name': businessName,
-            'business_type': businessType,
-            'selling_categories': ['food', 'physical'],
-            'payment_pref': 'online',
-            'admin_email': 'admin@test.com',
-            'admin_name': 'Admin User',
-            'admin_password': 'password123',
-            'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
-            'domain_choice': 'subdomain',
-            'price_type': 'fixed'
-          }),
-        );
+  @override
+  void initState() {
+    super.initState();
+    _messages.add(
+      ChatMessage(
+        text:
+            "Hi! Let's get your business set up. First, what's the name of your business?",
+        isUser: false,
+      ),
+    );
+  }
 
-        if (response.statusCode == 200) {
-          setState(() => _state = OnboardingState.dashboard);
-        } else {
-          // If error occurs, go back to input.
-           setState(() => _state = OnboardingState.input);
+  void _handleChatSubmit(String text) {
+    if (text.trim().isEmpty) return;
+
+    setState(() {
+      _messages.add(ChatMessage(text: text, isUser: true));
+      _chatController.clear();
+    });
+
+    _scrollToBottom();
+
+    Future.delayed(Duration(milliseconds: 500), () {
+      setState(() {
+        if (_chatStep == 0) {
+          businessName = text;
+          _messages.add(
+            ChatMessage(
+              text:
+                  "Great name! What is your primary offering or goal? (e.g., selling physical products, booking services)",
+              isUser: false,
+            ),
+          );
+          _chatStep++;
+        } else if (_chatStep == 1) {
+          businessType =
+              text; // Simplification: storing offering in businessType
+          _messages.add(
+            ChatMessage(
+              text:
+                  "Got it. Finally, what's a good contact email or phone number for your business?",
+              isUser: false,
+            ),
+          );
+          _chatStep++;
+        } else if (_chatStep == 2) {
+          contactInfo = text;
+          _messages.add(
+            ChatMessage(
+              text: "Perfect. I'm building your storefront now...",
+              isUser: false,
+            ),
+          );
+          // Start generation
+          submit();
         }
-      } catch (e) {
-        print('Error: \$e');
-         setState(() => _state = OnboardingState.input);
+      });
+      _scrollToBottom();
+    });
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
+    });
+  }
+
+  Future<void> submit() async {
+    setState(() => _state = OnboardingState.generating);
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/onboarding/start'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'company_name': businessName,
+          'business_type': businessType ?? 'Unknown',
+          'contact_info': contactInfo,
+          'selling_categories': ['food', 'physical'],
+          'payment_pref': 'online',
+          'admin_email': 'admin@test.com',
+          'admin_name': 'Admin User',
+          'admin_password': 'password123',
+          'website_template': 'Modern',
+          'first_product_name': 'Custom Product',
+          'first_product_price': '25.00',
+          'domain_choice': 'subdomain',
+          'price_type': 'fixed',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() => _state = OnboardingState.dashboard);
+      } else {
+        // If error occurs, go back to input.
+        setState(() => _state = OnboardingState.input);
+      }
+    } catch (e) {
+      print('Error: $e');
+      setState(() => _state = OnboardingState.input);
     }
   }
 
@@ -78,7 +162,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.65),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.4),
+                    width: 1,
+                  ),
                 ),
                 child: _buildContent(),
               ),
@@ -113,10 +200,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
+          Icon(Icons.auto_awesome, size: 80, color: Color(0xFF0066FF)),
           SizedBox(height: 32),
           Text(
-            'OneHumanCorp',
+            'What are you building today?',
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 32,
@@ -128,7 +215,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           SizedBox(height: 16),
           Text(
-            'The universal operating system for small business.',
+            'Let AI set up your business in seconds.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 16,
@@ -142,7 +229,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               setState(() => _state = OnboardingState.input);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+              backgroundColor: Color(0xFF0066FF),
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 18),
               shape: RoundedRectangleBorder(
@@ -151,7 +238,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               elevation: 0,
             ),
             child: Text(
-              'Start a Business',
+              'Get Started',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -165,102 +252,134 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildInputState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Your Details',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1D1D1F),
-                letterSpacing: -0.5,
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Color(0xFF0066FF).withOpacity(0.1),
+                child: Icon(Icons.auto_awesome, color: Color(0xFF0066FF)),
               ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Just a few details to get started.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: Colors.grey[600],
+              SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'OHC Agent',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Onboarding Wizard',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 32),
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Custom Cakes',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Business Type',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              items: ['Physical', 'Digital', 'Service', 'Food']
-                  .map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  businessType = value;
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessType = value!,
-            ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Build My Storefront',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        // Chat Area
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: EdgeInsets.all(24),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final msg = _messages[index];
+              return Container(
+                margin: EdgeInsets.only(bottom: 16),
+                alignment: msg.isUser
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                child: Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: msg.isUser ? Color(0xFF0066FF) : Colors.white,
+                    borderRadius: BorderRadius.circular(16).copyWith(
+                      bottomRight: msg.isUser
+                          ? Radius.zero
+                          : Radius.circular(16),
+                      bottomLeft: !msg.isUser
+                          ? Radius.zero
+                          : Radius.circular(16),
+                    ),
+                    boxShadow: [
+                      if (!msg.isUser)
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: Offset(0, 2),
+                        ),
+                    ],
+                  ),
+                  child: Text(
+                    msg.text,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      color: msg.isUser ? Colors.white : Color(0xFF1D1D1F),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Input Area
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: Colors.grey[200]!)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatController,
+                  decoration: InputDecoration(
+                    hintText: 'Type your answer...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Color(0xFFF5F5F7),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                  ),
+                  onSubmitted: _handleChatSubmit,
+                ),
+              ),
+              SizedBox(width: 12),
+              CircleAvatar(
+                backgroundColor: Color(0xFF0066FF),
+                radius: 24,
+                child: IconButton(
+                  icon: Icon(Icons.send, color: Colors.white),
+                  onPressed: () => _handleChatSubmit(_chatController.text),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -348,7 +467,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.check_circle, size: 48, color: Color(0xFF34C759)),
+                      Icon(
+                        Icons.check_circle,
+                        size: 48,
+                        color: Color(0xFF34C759),
+                      ),
                       SizedBox(height: 16),
                       Text(
                         'Storefront Generated!',
@@ -412,7 +535,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               Text(
                 'Preview Mode',
-                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -514,7 +641,10 @@ class StoreLiveScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.65),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.4),
+                    width: 1,
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -525,7 +655,11 @@ class StoreLiveScreen extends StatelessWidget {
                         color: Color(0xFF34C759).withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.check_circle, size: 64, color: Color(0xFF34C759)),
+                      child: Icon(
+                        Icons.check_circle,
+                        size: 64,
+                        color: Color(0xFF34C759),
+                      ),
                     ),
                     SizedBox(height: 32),
                     Text(
@@ -552,7 +686,14 @@ class StoreLiveScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DashboardScreen(),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey[100],
                           foregroundColor: Color(0xFF1D1D1F),
