@@ -330,7 +330,7 @@ mod tests {
             .bind(ref_id)
             .execute(&pool).await.unwrap();
 
-        let req = GrowthIdRequest { id: ref_id.to_string() };
+        let req = ReferralIdRequest { id: ref_id.to_string() };
 
         // Test Click
         let res = handle_referral_click(Extension(state.clone()), Json(req)).await;
@@ -341,7 +341,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(clicks, 1);
 
-        let req2 = GrowthIdRequest { id: ref_id.to_string() };
+        let req2 = ReferralIdRequest { id: ref_id.to_string() };
         // Test Convert
         let res2 = handle_referral_convert(Extension(state.clone()), Json(req2)).await;
         assert!(res2.is_ok());
@@ -370,7 +370,7 @@ mod tests {
             .bind(invite_id)
             .execute(&pool).await.unwrap();
 
-        let req = GrowthIdRequest { id: invite_id.to_string() };
+        let req = InviteIdRequest { id: invite_id.to_string() };
 
         let res = handle_team_invite_accept(Extension(state.clone()), Json(req)).await;
         assert!(res.is_ok());
