@@ -196,10 +196,10 @@ pub async fn mercadopago_webhook_handler(
             // Handle webhooks for payment status updates (pending, approved, rejected)
             match fetched_status.as_str() {
                 "pending" => {
-                    tracing::info!("MercadoPago payment pending for id: {}", payload.data.id);
+                    tracing::info!("mercadopago payment pending");
                 },
                 "approved" => {
-                    tracing::info!("MercadoPago payment approved for id: {}", payload.data.id);
+                    tracing::info!("mercadopago payment approved");
                     // Process approved logic here
                     let tenant_id = "mock_tenant_from_mp_metadata"; // Simulating metadata parsing
 
@@ -232,7 +232,7 @@ pub async fn mercadopago_webhook_handler(
                     }
                 },
                 "rejected" => {
-                    tracing::info!("MercadoPago payment rejected for id: {}", payload.data.id);
+                    tracing::info!("mercadopago payment rejected");
                     // Process rejected logic here
                 },
                 _ => {

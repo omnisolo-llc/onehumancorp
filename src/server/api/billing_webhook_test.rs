@@ -194,6 +194,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         action: "payment.created".to_string(),
         data: MercadoPagoEventData {
             id: "pay_123".to_string(),
+            status: Some("approved".to_string()),
         },
     };
 
