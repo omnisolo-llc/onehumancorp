@@ -15,14 +15,13 @@ impl MercadoPagoClient {
         MercadoPagoClient { access_token }
     }
 
-    pub async fn create_checkout_preference(&self, _price_id: &str, tenant_id: &str) -> Result<String, String> {
-        let _ = ::server_telemetry::record_api_call_cost(
-            &crate::db::get_pool(),
-            tenant_id,
-            "mercadopago_create_checkout_preference",
-            0.15
-        ).await;
+    pub async fn create_checkout_preference(&self, _price_id: &str, _tenant_id: &str) -> Result<String, String> {
         // Return a mock checkout URL for Mercado Pago
         Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
+    }
+
+    pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
+        // Mock handle webhook
+        Ok(())
     }
 }
