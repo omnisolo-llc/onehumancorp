@@ -10,6 +10,10 @@ use opentelemetry::metrics::Histogram;
 use opentelemetry::metrics::UpDownCounter;
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+
 
 pub fn get_deployment_mode() -> &'static str {
     static DEPLOYMENT_MODE: OnceLock<String> = OnceLock::new();
@@ -345,5 +349,58 @@ pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
     histogram.record(duration_ms, &[
         opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
         opentelemetry::KeyValue::new("step", step.to_string()),
+    ]);
+}
+
+
+pub fn get_bubblewrap_spawn_total() -> &'static UpDownCounter<i64> {
+    BUBBLEWRAP_SPAWN_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter.i64_up_down_counter("BubblewrapSpawnTotal")
+            .with_description("Total number of Bubblewrap process spawns")
+            .build()
+    })
+}
+
+pub fn get_bubblewrap_execution_latency() -> &'static Histogram<f64> {
+    BUBBLEWRAP_EXECUTION_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter.f64_histogram("BubblewrapExecutionLatency")
+            .with_description("Execution latency of Bubblewrap processes")
+            .build()
+    })
+}
+
+pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
+    BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter.i64_up_down_counter("BubblewrapViolationTotal")
+            .with_description("Total number of Bubblewrap policy violations")
+            .build()
+    })
+}
+
+pub fn record_bubblewrap_spawn(agent_id: &str, task_id: &str) {
+    let gauge = get_bubblewrap_spawn_total();
+    gauge.add(1, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+    ]);
+}
+
+pub fn record_bubblewrap_execution_latency(agent_id: &str, task_id: &str, latency_ms: f64) {
+    let histogram = get_bubblewrap_execution_latency();
+    histogram.record(latency_ms, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+    ]);
+}
+
+pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) {
+    let gauge = get_bubblewrap_violation_total();
+    gauge.add(1, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+        opentelemetry::KeyValue::new("reason", reason.to_string()),
     ]);
 }
