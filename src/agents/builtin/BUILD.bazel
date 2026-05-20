@@ -246,3 +246,8 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+
+rust_test(
+    name = "tools_gating_unit_test",
+    crate = ":ohc_builtin_agent_lib",
+)
