@@ -119,7 +119,6 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         }
 
         if attempt >= max_retries {
-            tracing::error!("OutputParsing: Failed after {} retries. Fallback mechanic (Legacy RetryWithErrorOutputParser) exhausted.", max_retries);
             return Err(ToolError::Fatal(format!(
                 "Output parsing failed after {} retries. Last error: {}",
                 max_retries,
@@ -128,7 +127,6 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         }
 
         // Feed the original prompt, the failed completion, and the parsing error back to the model
-        tracing::warn!("OutputParsing: Feeding parsing error back to the model (RetryWithErrorOutputParser mechanic). Error: {}", parse_error_msg.as_ref().unwrap());
         current_req.messages.push(msg.clone());
         current_req.messages.push(Message::user(parse_error_msg.unwrap()));
         attempt += 1;
@@ -311,18 +309,5 @@ mod tests {
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }
-    }
-
-    #[tokio::test]
-    async fn test_parse_structured_output_with_raw_fallback_mechanic() {
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_text_resp("Here is my data: { \"result\": \"raw_fallback_success\" }"),
-            ]),
-        });
-
-        let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "raw_fallback_success");
     }
 }
