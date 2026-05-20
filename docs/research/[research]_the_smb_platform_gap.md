@@ -17,7 +17,7 @@ A comprehensive analysis of major platforms reveals that none fully solve the "S
 | **Mobile UX** | Poor for setup | Partial | No | No | **100% Mobile-First** |
 | **Business Mgmt**| Complex (App Store) | Good | Basic | Basic | **All-in-one** |
 
-### Competitor Positioning
+### Competitive Landscape Matrix
 
 ```mermaid
 quadrantChart
@@ -33,7 +33,8 @@ quadrantChart
     "Squarespace": [0.2, 0.45]
     "GoDaddy": [0.3, 0.6]
     "Durable": [0.7, 0.8]
-    "OHC (Goal)": [0.95, 0.95]
+    "OHC (Current)": [0.6, 0.7]
+    "OHC (Target)": [0.95, 0.95]
 ```
 
 ## 2. Top 10 SMB User Pain Points
@@ -64,6 +65,18 @@ pie title Frequency of Top SMB Pain Points
     "Support Deserts" : 30
 ```
 
+### Persona-Specific Pain Point Summaries
+
+*   **Maya (The Home Baker, 28)**: Currently sells via Instagram DMs and uses Venmo.
+    *   **Pain Point**: Overwhelmed by Shopify's complex "collections" and setups. Frequently loses track of custom orders buried in DMs.
+    *   **Need**: A simple, mobile-first unified inbox where AI handles custom cake inquiries while she sleeps.
+*   **Carlos (The Freelance Handyman, 42)**: Relies entirely on word of mouth; uses pen and paper.
+    *   **Pain Point**: Misses important calls while on the job. Abhors complex software platforms with technical jargon.
+    *   **Need**: A straightforward, AI-generated booking page that automatically texts leads he couldn't answer.
+*   **Priya (The Boutique Owner, 35)**: Has a physical store, wants to expand online.
+    *   **Pain Point**: Inventory synchronization between physical point-of-sale and the online storefront is a nightmare.
+    *   **Need**: Native integration between her physical POS (Stripe Terminal) and the online catalog, with AI flagging low stock.
+
 ## 3. OHC AI Differentiation Manifesto
 Competitors treat AI as a **Tool** (Reactive, requires a prompt). OHC must treat AI as a **Teammate** (Proactive, event-driven).
 
@@ -91,4 +104,33 @@ graph LR
 
 ## 4. Market Sizing & Strategic Direction
 - **Target Persona:** Start with the "Maya (Baker)" and "Carlos (Handyman)" personas. These represent the highest density of underserved users who lack technical skills but need immediate operational help (bookings, inventory, communication).
-- **Go-to-Market Wedge:** "No Jargon, 10-Minute Setup, Mobile-Only Management."
+- **Go-to-Market Wedge:** "No Jargon, 10-Minute Setup, Mobile-Only Management." OHC should prioritize absolute mobile-first design, given that 42% of pain points revolve around poor mobile experiences on competitors.
+
+## 5. Implementation Recommendations (Issue Briefs)
+
+**Issue Brief 1: 10-Minute Setup Wizard**
+- **Title**: 10-Minute Setup Wizard
+- **Problem Statement**: 73% of SMBs cite setup complexity and technical jargon as their primary barrier to launching online.
+- **Research Report**: Based on the Top 10 SMB User Pain Points, users abandon platforms like Shopify due to the technical jargon. Durable offers a 30-second site generation, but it lacks operational depth. We can provide a conversational setup flow that synthesizes website structure, copy, and product catalogs in under a minute without jargon.
+- **Design Doc**: A conversational, jargon-free UI flow (Slint) optimized for 375px screens. The user answers simple questions, and the `autodream` agent framework synthesizes the website structure, copy, and initial product catalog in under a minute (targeting the Durable 30-second benchmark).
+- **Implementation Prompt**: Implement a step-by-step Setup Wizard using Riverpod/Slint. The Critical User Journey goes from "Launch App" -> "Answer 3 plain-language questions" -> "View generated site". Ensure all interactions use large touch targets.
+- **Priority**: P0
+- **Estimated Scope**: Large
+
+**Issue Brief 2: Unified Omnichannel AI Inbox**
+- **Title**: Unified Omnichannel AI Inbox
+- **Problem Statement**: "Scattered Communications" and "Operational Fatigue" plague users like Maya, who lose orders across Instagram, WhatsApp, and email.
+- **Research Report**: Analysis of Maya (The Home Baker) persona reveals she loses track of custom orders in DMs. A unified inbox would consolidate these scattered messages and leverage an AI agent to draft replies based on past customer history.
+- **Design Doc**: A centralized feed (`Hub` data model) aggregating all external messages. The 'Ambassador' AI agent listens to the event mesh, drafts contextual replies based on past customer history, and presents them for 1-tap approval.
+- **Implementation Prompt**: Create the UI for the Unified Inbox. The Critical User Journey involves opening a new message, reviewing an AI-generated draft, and tapping 'Approve to Send'. Must integrate with the existing `Hub` Go backend and NATS event mesh.
+- **Priority**: P0
+- **Estimated Scope**: Medium
+
+**Issue Brief 3: Plain Language Advisory Dashboard**
+- **Title**: Plain Language Advisory Dashboard
+- **Problem Statement**: SMB owners (like Fatima) suffer from "Financial Fog" and find traditional analytics dashboards confusing and unhelpful.
+- **Research Report**: 35% of SMBs report "Financial Fog" as a key pain point. Competitors like Wix and Shopify provide complex dashboards that users find difficult to interpret without a technical background. An AI advisory agent can deliver simple, actionable insights in plain language.
+- **Design Doc**: Replace complex charts with an "Advisory Agent" feed. The dashboard presents daily text-based insights ("You had 12 orders today. Consider running a discount on Friday.").
+- **Implementation Prompt**: Build a dashboard view that consumes the Business Advisory Agent's output. The Critical User Journey is viewing a simple, natural language summary of daily/weekly performance metrics.
+- **Priority**: P1
+- **Estimated Scope**: Medium
