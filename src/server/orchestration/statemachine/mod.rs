@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use crate::orchestration::mesh::TeammateMesh;
+use crate::orchestration::state::MeshLockGuard;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DeliberationState {
@@ -47,13 +49,15 @@ pub enum DbStore {
 pub struct DeliberationStateMachine {
     pub db: DbStore,
     sqlite_mutex: Arc<Mutex<()>>,
+    mesh: Arc<dyn TeammateMesh>,
 }
 
 impl DeliberationStateMachine {
-    pub fn new(db: DbStore) -> Self {
+    pub fn new(db: DbStore, mesh: Arc<dyn TeammateMesh>) -> Self {
         Self {
             db,
             sqlite_mutex: Arc::new(Mutex::new(())),
+            mesh,
         }
     }
 
@@ -184,6 +188,9 @@ impl DeliberationStateMachine {
         task_id: &str,
         dependencies: serde_json::Value,
     ) -> Result<(), String> {
+        let lock_key = format!("ohc:lock:{}:task:{}", organization_id, task_id);
+        let _lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key, "deliberation_statemachine".to_string(), 30).await?;
+
         match &self.db {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
@@ -234,6 +241,9 @@ impl DeliberationStateMachine {
     }
 
     pub async fn complete_deliberation(&self, organization_id: &str, task_id: &str) -> Result<(), String> {
+        let lock_key = format!("ohc:lock:{}:task:{}", organization_id, task_id);
+        let _lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key, "deliberation_statemachine".to_string(), 30).await?;
+
         match &self.db {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
@@ -282,6 +292,9 @@ impl DeliberationStateMachine {
     }
 
     pub async fn fail_deliberation(&self, organization_id: &str, task_id: &str) -> Result<(), String> {
+        let lock_key = format!("ohc:lock:{}:task:{}", organization_id, task_id);
+        let _lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key, "deliberation_statemachine".to_string(), 30).await?;
+
         match &self.db {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
@@ -336,6 +349,24 @@ mod tests {
     use serde_json::json;
     use sqlx::sqlite::SqlitePoolOptions;
 
+
+    struct MockMesh;
+    #[async_trait::async_trait]
+    impl crate::orchestration::mesh::TeammateMesh for MockMesh {
+        async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+        async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+        async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+        async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+        async fn ping(&self) -> Result<(), String> { Ok(()) }
+        async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    }
+
+
     async fn setup_db() -> sqlx::SqlitePool {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
@@ -372,7 +403,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_claim() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         // Insert pending task
         sqlx::query(
@@ -398,7 +429,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_resolve_dependencies() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         sqlx::query(
             "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
@@ -422,7 +453,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_resolve_dependencies_invalid_state() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         sqlx::query(
             "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2b', 'org1', 'task 2', 'COMPLETED', 'agent1')"
@@ -440,7 +471,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_resolve_dependencies_cross_tenant() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         sqlx::query(
             "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2c', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
@@ -458,7 +489,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_complete() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         sqlx::query(
             "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t3', 'org1', 'task 3', 'RESOLVING_DEPENDENCIES')"
@@ -480,7 +511,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_complete_invalid_state() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         sqlx::query(
             "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t3b', 'org1', 'task 3', 'PENDING')"
@@ -497,7 +528,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_fail() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         sqlx::query(
             "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t4', 'org1', 'task 4', 'DELIBERATING')"
@@ -519,7 +550,7 @@ mod tests {
     #[tokio::test]
     async fn test_deliberation_state_machine_fail_cross_tenant() {
         let pool = setup_db().await;
-        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
+        let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()), Arc::new(MockMesh));
 
         sqlx::query(
             "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t4b', 'org1', 'task 4', 'DELIBERATING')"

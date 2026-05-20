@@ -1334,6 +1334,7 @@ impl HubService for MyHubService {
         
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
+            self.db.clone(),
             &req.target_role,
             &req.instruction,
             &req.parent_thread_id,
@@ -1743,7 +1744,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
 
-        ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+        //ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
