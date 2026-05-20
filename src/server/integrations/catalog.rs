@@ -60,6 +60,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new("dummy_token".to_string());
     catalog.push(zoom_provider.to_integration_provider());
 
+    let tiktok_provider = crate::integrations::tiktok::provider::TikTokProvider::new("dummy_token".to_string());
+    catalog.push(tiktok_provider.to_integration_provider());
+
     let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
     catalog.push(mercadopago_provider.to_integration_provider());
 
