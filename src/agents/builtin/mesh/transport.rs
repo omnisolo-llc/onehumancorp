@@ -321,16 +321,18 @@ impl MeshTransport for PgTransport {
 
         let result = sqlx::query(
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES ($1, $2, NOW() + CAST($3 AS INTERVAL))
-             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= NOW() OR mesh_locks.owner = EXCLUDED.owner"
+             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= NOW() OR mesh_locks.owner = EXCLUDED.owner
+             RETURNING resource"
         )
         .bind(resource)
         .bind(owner)
         .bind(format!("{} seconds", ttl_seconds))
-        .execute(&self.pool)
+        .fetch_optional(&self.pool)
         .await;
 
         match result {
-            Ok(res) => Ok(res.rows_affected() > 0),
+            Ok(Some(_)) => Ok(true),
+            Ok(None) => Ok(false),
             Err(e) => Err(e.to_string()),
         }
     }
@@ -545,16 +547,18 @@ impl MeshTransport for SqliteTransport {
 
         let result = sqlx::query(
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
-             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= datetime('now') OR mesh_locks.owner = EXCLUDED.owner"
+             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= datetime('now') OR mesh_locks.owner = EXCLUDED.owner
+             RETURNING resource"
         )
         .bind(resource)
         .bind(owner)
         .bind(format!("+{} seconds", ttl_seconds))
-        .execute(&self.pool)
+        .fetch_optional(&self.pool)
         .await;
 
         match result {
-            Ok(res) => Ok(res.rows_affected() > 0),
+            Ok(Some(_)) => Ok(true),
+            Ok(None) => Ok(false),
             Err(e) => Err(e.to_string()),
         }
     }
