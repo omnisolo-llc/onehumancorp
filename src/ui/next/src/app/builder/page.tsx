@@ -15,9 +15,42 @@ export default function BuilderPage() {
   const [liveUrl, setLiveUrl] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
+  // GEO UI State
+  const [geoScore, setGeoScore] = useState<number | null>(null);
+  const [geoRecs, setGeoRecs] = useState<string[]>([]);
+  const [seoApplied, setSeoApplied] = useState(false);
+
   // Growth Loop: Soft Paywall State
   const [isPremium, setIsPremium] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const handleGeoAnalysis = async () => {
+    try {
+      const response = await fetch('/api/v1/builder/geo_score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: bio })
+      });
+      const data = await response.json();
+      setGeoScore(data.generative_score);
+      setGeoRecs(data.recommendations);
+    } catch (error) {
+      console.error("Failed to analyze GEO score", error);
+    }
+  };
+
+  const handleAutoSeo = async () => {
+    try {
+      await fetch('/api/v1/builder/auto_seo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: bio })
+      });
+      setSeoApplied(true);
+    } catch (error) {
+      console.error("Failed to apply Auto SEO", error);
+    }
+  };
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -310,6 +343,44 @@ export default function BuilderPage() {
             </div>
           </div>
 
+
+          {/* Generative Visibility Score */}
+          <div className="w-full bg-blue-50 border border-blue-200 shadow-sm p-5 mb-6 text-left rounded-2xl">
+            <h2 className="text-lg font-bold font-outfit text-blue-900 mb-1">Generative Visibility Score (GEO)</h2>
+            <p className="text-xs text-blue-700 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
+
+            {geoScore === null ? (
+              <button
+                onClick={handleGeoAnalysis}
+                className="w-full bg-blue-600 text-white font-semibold py-2 rounded-xl text-sm shadow-sm hover:bg-blue-700 transition-all"
+              >
+                Analyze Visibility
+              </button>
+            ) : (
+              <div className="animate-fade-in">
+                <div className="flex items-end gap-2 mb-3">
+                  <span className="text-3xl font-black text-blue-900">{geoScore}</span>
+                  <span className="text-sm font-medium text-blue-600 pb-1">/ 100</span>
+                </div>
+                {geoRecs.length > 0 && (
+                  <ul className="text-xs text-blue-800 space-y-1 mb-4 list-disc pl-4">
+                    {geoRecs.map((r, idx) => <li key={idx}>{r}</li>)}
+                  </ul>
+                )}
+                <button
+                  onClick={handleAutoSeo}
+                  disabled={seoApplied}
+                  className={`w-full font-semibold py-2 rounded-xl text-sm shadow-sm transition-all ${
+                    seoApplied
+                    ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {seoApplied ? "Recommendations Applied ✓" : "Auto-Apply SEO Metadata"}
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             className="w-full bg-gray-100 text-gray-800 font-bold p-4 rounded-xl active:scale-[0.98] transition-all hover:bg-gray-200"

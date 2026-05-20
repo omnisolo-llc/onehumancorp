@@ -72,6 +72,7 @@ rust_library(
         "//src/proto:common_prost",
         "//src/proto:interop_prost",
         "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
         "@crates//:aes-gcm",
         "@crates//:axum",
         "@crates//:async-nats",
