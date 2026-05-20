@@ -1,0 +1,6 @@
+# Stub BUILD file
+filegroup(
+    name = "orchestration",
+    srcs = glob(["*.go"]),
+    visibility = ["//visibility:public"],
+)
