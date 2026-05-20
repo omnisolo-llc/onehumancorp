@@ -2377,6 +2377,11 @@ impl Agent {
         session_tools: &[Tool],
         current_messages: &[Message],
     ) -> Result<String, ToolError> {
+        ::server_telemetry::record_agent_execution_trace(
+            self.identity.id.as_deref().unwrap_or("unknown"),
+            &tc.name,
+        );
+
         let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)

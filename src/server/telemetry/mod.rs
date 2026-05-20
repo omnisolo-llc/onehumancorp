@@ -88,8 +88,10 @@ pub async fn record_sync_escalation(pool: &PgPool, count: f32, mode: &str) -> Re
     buffer_metric(pool, "sync_escalation_total", "counter", count, serde_json::json!({ "mode": mode })).await
 }
 
-pub async fn record_sync_daemon_batch_size(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, "sync_daemon_batch_size", "gauge", count, serde_json::json!({ "mode": mode })).await
+pub async fn record_sync_daemon_batch_size(_pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let histogram = get_sync_daemon_batch_size_histogram();
+    histogram.record(count as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+    Ok(())
 }
 
 pub async fn record_sync_latency(pool: &PgPool, latency_ms: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -433,4 +435,32 @@ pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) 
         opentelemetry::KeyValue::new("task_id", task_id.to_string()),
         opentelemetry::KeyValue::new("reason", reason.to_string()),
     ]);
+}
+
+pub fn get_agent_execution_traces_total() -> &'static UpDownCounter<i64> {
+    static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+    AGENT_EXECUTION_TRACES_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter.i64_up_down_counter("ohc_agent_execution_traces_total")
+            .with_description("Total number of agent execution traces")
+            .build()
+    })
+}
+
+pub fn record_agent_execution_trace(agent_id: &str, trace_type: &str) {
+    let counter = get_agent_execution_traces_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("trace_type", trace_type.to_string()),
+    ]);
+}
+
+pub fn get_sync_daemon_batch_size_histogram() -> &'static Histogram<f64> {
+    static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+    SYNC_DAEMON_BATCH_SIZE_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.sync_daemon");
+        meter.f64_histogram("ohc_sync_daemon_batch_size")
+            .with_description("Batch size for the sync daemon")
+            .build()
+    })
 }
