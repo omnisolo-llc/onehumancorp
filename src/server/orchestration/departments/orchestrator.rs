@@ -177,9 +177,65 @@ impl DepartmentOrchestrator {
                             KeyValue::new("tenant_id", event.tenant_id.clone()),
                             KeyValue::new("department", dep_type.to_string())
                         ]);
-                        let result = dep.read().await.handle_event(&event).await;
+
+                        let mut success = false;
+                        let mut last_err = String::new();
+                        for _ in 0..3 {
+                            let res = dep.read().await.handle_event(&event).await;
+                            match res {
+                                Ok(_) => {
+                                    success = true;
+                                    break;
+                                }
+                                Err(e) => {
+                                    last_err = e.to_string();
+                                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                }
+                            }
+                        }
+
+                        if !success {
+                            tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
+                            let dl_id = Uuid::new_v4().to_string();
+                            let dl_payload = serde_json::to_string(&event.payload).unwrap_or_default();
+
+                            match &self.db.store {
+                                DbStore::Postgres => {
+                                    let res = sqlx::query(
+                                        "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)"
+                                    )
+                                    .bind(&dl_id)
+                                    .bind(&event.tenant_id)
+                                    .bind(&event.event_type)
+                                    .bind(dep_type.to_string())
+                                    .bind(&dl_payload)
+                                    .bind(&last_err)
+                                    .execute(&self.db.pool)
+                                    .await;
+                                    if let Err(err) = res {
+                                        tracing::error!("Failed to insert dead letter into DB: {}", err);
+                                    }
+                                }
+                                DbStore::Sqlite(pool) => {
+                                    let res = sqlx::query(
+                                        "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(&dl_id)
+                                    .bind(&event.tenant_id)
+                                    .bind(&event.event_type)
+                                    .bind(dep_type.to_string())
+                                    .bind(&dl_payload)
+                                    .bind(&last_err)
+                                    .execute(pool)
+                                    .await;
+                                    if let Err(err) = res {
+                                        tracing::error!("Failed to insert dead letter into DB: {}", err);
+                                    }
+                                }
+                            }
+                        }
+
                         let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
-                        let _ = result;
                     }
                 }
             }
