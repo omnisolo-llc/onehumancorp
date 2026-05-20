@@ -2195,7 +2195,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: #ffffff;
                             box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
-                        button { 
+                        button {
+            min-height: 44px;
+            min-width: 44px;
                             min-height: 44px;
                             min-width: 44px;
                             padding: 10px 18px;
@@ -2310,6 +2312,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 border-radius: 12px;
                             }
                             #setup-screen button {
+            min-height: 44px;
+            min-width: 44px;
                                 width: 100%;
                                 margin-right: 0;
                             }
