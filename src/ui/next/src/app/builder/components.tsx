@@ -15,7 +15,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         >
           <div className="absolute inset-0 bg-black bg-opacity-40" />
         </div>
-        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white backdrop-blur-sm bg-white/10 glassmorphism">
+        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white  glassmorphism">
           <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>
           <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.copy}</p>
         </div>

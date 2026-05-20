@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/components/ErrorState.tsx</title>
+    <title>Code coverage report for src/components/Header.tsx</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,7 +19,7 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/components</a> ErrorState.tsx</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/components</a> Header.tsx</h1>
         <div class='clearfix'>
 
             <div class='fl pad1y space-right2'>
@@ -74,23 +74,11 @@
 <a name='L9'></a><a href='#L9'>9</a>
 <a name='L10'></a><a href='#L10'>10</a>
 <a name='L11'></a><a href='#L11'>11</a>
-<a name='L12'></a><a href='#L12'>12</a>
-<a name='L13'></a><a href='#L13'>13</a>
-<a name='L14'></a><a href='#L14'>14</a>
-<a name='L15'></a><a href='#L15'>15</a>
-<a name='L16'></a><a href='#L16'>16</a>
-<a name='L17'></a><a href='#L17'>17</a>
-<a name='L18'></a><a href='#L18'>18</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L12'></a><a href='#L12'>12</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -100,17 +88,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React from 'react';
 import { Box, Text } from 'ink';
 &nbsp;
-export interface ErrorStateProps {
-  error: string;
-}
-&nbsp;
-export const ErrorState: React.FC&lt;ErrorStateProps&gt; = ({ error }) =&gt; {
+export const Header: React.FC = () =&gt; {
   return (
-    &lt;Box paddingY={1} flexDirection="column"&gt;
-      &lt;Text bold color="red"&gt;ERROR:&lt;/Text&gt;
-      &lt;Box paddingLeft={2}&gt;
-        &lt;Text color="red"&gt;{error}&lt;/Text&gt;
-      &lt;/Box&gt;
+    &lt;Box justifyContent="center" marginBottom={1} borderStyle="double" borderColor="cyan" padding={1}&gt;
+      &lt;Text bold color="white" backgroundColor="blue"&gt; ONE HUMAN CORP &lt;/Text&gt;
+      &lt;Text dimColor&gt; - Standalone Agent Mode &lt;/Text&gt;
     &lt;/Box&gt;
   );
 };
