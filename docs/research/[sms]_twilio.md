@@ -1,17 +1,16 @@
-## [SMS] Twilio Integration
-**Title**: Integrate Twilio for SMS Notifications
-**Problem Statement**: Fatima (Food Cart Operator) relies on her phone for everything and might miss app push notifications in a noisy environment. She needs reliable SMS alerts when a new pre-order arrives so she can start cooking.
+## [SMS & Notifications] Twilio Integration
+**Title**: Integrate Twilio for Global SMS Alerts & Customer Notifications
+**Problem Statement**: Fatima the Food Cart Operator doesn't have a reliable internet connection at her cart and relies on SMS text messages to know when a pre-order arrives.
 **Research Report**:
-- **Tool**: Twilio
-- **Target Persona**: Fatima (Food Cart Operator)
-- **Advantages**: Global coverage, incredibly reliable. Programmable messaging.
-- **Risks**: A2P 10DLC compliance in the US is complex and requires business registration, which might be a barrier for informal businesses.
-- **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account). Standalone (User provides API key).
+- Twilio is the industry standard for SMS and WhatsApp messaging globally.
+- Reliable delivery, deep global coverage.
+- Supports WhatsApp, which is critical for markets outside the US.
+- Simple API, integrates well with Go backend.
+- Costs per message, can be passed to the tenant or subsidized in premium tiers.
 **Design Doc**:
 - Users can enable "SMS Notifications" in the "Operations" settings.
 - When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
 - Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
-**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers. Add a setting for the business owner to opt-in to SMS alerts for new orders. Ensure compliance with local messaging regulations.
+**Implementation Prompt**: Add Twilio integration to dispatch SMS order notifications to the business owner and provide SMS-based order updates to end customers.
 **Priority**: P0
 **Estimated Scope**: Small
