@@ -416,7 +416,13 @@ impl DashboardService for MyDashboardService {
             org
         };
 
-                let health_report_val = match &self.db.store {
+                let tenant_id = if ::server_config::get().multitenant {
+            req.organization_id.clone()
+        } else {
+            "system".to_string()
+        };
+
+        let health_report_val = match &self.db.store {
             crate::db::DbStore::Postgres => {
                 use sqlx::Row;
                 let row = sqlx::query("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'weekly_health_report'")
