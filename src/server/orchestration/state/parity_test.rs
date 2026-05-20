@@ -213,7 +213,7 @@ mod parity_tests {
 
             let mut tx1 = pool.begin().await.unwrap();
             // In SQLite, an immediate transaction acquires a lock, we simulate updating.
-            sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'")
+            sqlx::query("UPDATE swarm_tasks SET status = 'EXECUTING' WHERE id = ? AND status = 'PENDING'")
                 .bind(&task_id)
                 .execute(&mut *tx1)
                 .await
@@ -246,7 +246,7 @@ mod parity_tests {
                 .unwrap();
             assert!(row1.is_some());
 
-            sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = $1")
+            sqlx::query("UPDATE swarm_tasks SET status = 'EXECUTING' WHERE id = $1")
                 .bind(parsed_id)
                 .execute(&mut *tx1)
                 .await

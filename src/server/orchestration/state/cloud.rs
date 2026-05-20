@@ -56,6 +56,19 @@ impl CloudStateManager {
             ));
         }
 
+        // Enforce strict state transitions
+        match (current_state.as_str(), to_state) {
+            ("PENDING", "EXECUTING") => (),
+            ("EXECUTING", "REVIEW") => (),
+            ("REVIEW", "COMPLETED") => (),
+            (_, "FAILED") => (),
+            (curr, to) => {
+                if curr != to {
+                    return Err(format!("Invalid state transition from {} to {}", curr, to));
+                }
+            }
+        }
+
         let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
@@ -235,7 +248,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             let now = Utc::now();
             for (id_str, tenant_id) in task_ids {
                 sqlx::query(
-                    "UPDATE swarm_tasks SET status = 'IN_PROGRESS', updated_at = $1 WHERE id = $2::uuid"
+                    "UPDATE swarm_tasks SET status = 'EXECUTING', updated_at = $1 WHERE id = $2::uuid"
                 )
                 .bind(now)
                 .bind(&id_str)
@@ -247,7 +260,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, occurred_at)
-                    VALUES ($1, $2, $3, 'swarm_task', 'PENDING', 'IN_PROGRESS', $4)
+                    VALUES ($1, $2, $3, 'swarm_task', 'PENDING', 'EXECUTING', $4)
                     "#
                 )
                 .bind(trans_id)
@@ -263,7 +276,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         tx.commit().await.map_err(|e| e.to_string())?;
 
         for t in &mut tasks {
-            t.status = "IN_PROGRESS".to_string();
+            t.status = "EXECUTING".to_string();
         }
 
         Ok(tasks)

@@ -184,7 +184,7 @@ impl TaskManager {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
             if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
-                task.status = "IN_PROGRESS".to_string();
+                task.status = "EXECUTING".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
                 return Ok(Some(task.clone()));
@@ -273,7 +273,7 @@ impl TaskManager {
                 let mut task_clone = task.clone();
                 task_clone.approval_status = Some(if is_approved { "APPROVED".to_string() } else { "REJECTED".to_string() });
                 if is_approved {
-                    task_clone.status = "IN_PROGRESS".to_string();
+                    task_clone.status = "EXECUTING".to_string();
                 } else {
                     task_clone.status = "FAILED".to_string();
 
@@ -359,7 +359,7 @@ impl TaskManager {
         
         for task in tasks.values_mut() {
             if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
-                task.status = "IN_PROGRESS".to_string();
+                task.status = "EXECUTING".to_string();
                 task.assigned_agent_id = Some(agent_id.to_string());
                 task.updated_at = Utc::now();
                 claimed_tasks.push(task.clone());
@@ -398,7 +398,7 @@ mod tests {
         let claimed = tm.claim_task(&task.id, "agent1".to_string()).unwrap();
         assert!(claimed.is_some());
         let claimed = claimed.unwrap();
-        assert_eq!(claimed.status, "IN_PROGRESS");
+        assert_eq!(claimed.status, "EXECUTING");
         assert_eq!(claimed.assigned_agent_id, Some("agent1".to_string()));
         
         // Try to claim again
@@ -488,7 +488,7 @@ mod tests {
 
         let fetched = tm.get_task(&task.id).unwrap();
         assert_eq!(fetched.approval_status, Some("APPROVED".to_string()));
-        assert_eq!(fetched.status, "IN_PROGRESS");
+        assert_eq!(fetched.status, "EXECUTING");
     }
 
     #[tokio::test]

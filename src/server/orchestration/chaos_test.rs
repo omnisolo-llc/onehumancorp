@@ -281,7 +281,7 @@ mod chaos_tests {
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
         let state_manager = CloudStateManager::new(db, mesh);
 
-        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "EXECUTING", None, None).await;
 
         // Should fallback safely instead of panicking/blocking forever
         assert!(result.is_err());
@@ -325,7 +325,7 @@ mod chaos_tests {
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
         let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
 
-        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "EXECUTING", None, None).await;
 
         assert!(result.is_err());
     }

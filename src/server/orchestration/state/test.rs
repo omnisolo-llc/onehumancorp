@@ -157,19 +157,137 @@ async fn test_dag_workflow() {
             .unwrap();
     }
 
-    // Since pull_available_tasks now updates them to IN_PROGRESS directly
+    // Since pull_available_tasks now updates them to EXECUTING directly
     let tasks = state_manager.pull_available_tasks(10).await.unwrap();
 
-    // Parent should be available, child should not because parent is PENDING (now IN_PROGRESS)
+    // Parent should be available, child should not because parent is PENDING (now EXECUTING)
     assert!(tasks.iter().any(|t| t.id == parent_id));
     assert!(!tasks.iter().any(|t| t.id == child_id));
 
-    // Complete parent - parent was moved to IN_PROGRESS by pull_available_tasks
-    state_manager.transition_state(&parent_id, "system", "IN_PROGRESS", "COMPLETED", Some("agent_1"), None).await.unwrap();
+    // Complete parent - parent was moved to EXECUTING by pull_available_tasks
+    // EXECUTING -> REVIEW -> COMPLETED
+    state_manager.transition_state(&parent_id, "system", "EXECUTING", "REVIEW", Some("agent_1"), None).await.unwrap();
+    state_manager.transition_state(&parent_id, "system", "REVIEW", "COMPLETED", Some("agent_1"), None).await.unwrap();
 
     // Now child should be available
     let tasks_after = state_manager.pull_available_tasks(10).await.unwrap();
     assert!(tasks_after.iter().any(|t| t.id == child_id));
+}
+
+#[tokio::test]
+async fn test_invalid_state_transition() {
+    let db = setup_db().await;
+    let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
+
+    let task_id = uuid::Uuid::new_v4().to_string();
+
+    if let DbStore::Sqlite(pool) = &db.store {
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 't1', 'PENDING')")
+            .bind(&task_id)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    // PENDING -> COMPLETED is invalid (must go through EXECUTING and REVIEW)
+    let result = state_manager.transition_state(&task_id, "system", "PENDING", "COMPLETED", Some("agent_1"), None).await;
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("Invalid state transition"));
+
+    // PENDING -> EXECUTING is valid
+    state_manager.transition_state(&task_id, "system", "PENDING", "EXECUTING", Some("agent_1"), None).await.unwrap();
+
+    // EXECUTING -> COMPLETED is invalid (must go through REVIEW)
+    let result = state_manager.transition_state(&task_id, "system", "EXECUTING", "COMPLETED", Some("agent_1"), None).await;
+    assert!(result.is_err());
+
+    // EXECUTING -> REVIEW is valid
+    state_manager.transition_state(&task_id, "system", "EXECUTING", "REVIEW", Some("agent_1"), None).await.unwrap();
+
+    // REVIEW -> COMPLETED is valid
+    state_manager.transition_state(&task_id, "system", "REVIEW", "COMPLETED", Some("agent_1"), None).await.unwrap();
+}
+
+#[tokio::test]
+async fn test_complex_dag_workflow() {
+    let db = setup_db().await;
+    let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
+
+    // T1 -> T2 -> T4
+    // T1 -> T3 -> T4
+    let t1_id = uuid::Uuid::new_v4().to_string();
+    let t2_id = uuid::Uuid::new_v4().to_string();
+    let t3_id = uuid::Uuid::new_v4().to_string();
+    let t4_id = uuid::Uuid::new_v4().to_string();
+
+    if let DbStore::Sqlite(pool) = &db.store {
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'T1', 'PENDING', '[]')").bind(&t1_id).execute(pool).await.unwrap();
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'T2', 'PENDING', ?)").bind(&t2_id).bind(format!(r#"["{}"]"#, t1_id)).execute(pool).await.unwrap();
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'T3', 'PENDING', ?)").bind(&t3_id).bind(format!(r#"["{}"]"#, t1_id)).execute(pool).await.unwrap();
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'T4', 'PENDING', ?)").bind(&t4_id).bind(format!(r#"["{}", "{}"]"#, t2_id, t3_id)).execute(pool).await.unwrap();
+    }
+
+    // T1 should be available
+    let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].id, t1_id);
+
+    // Complete T1
+    state_manager.transition_state(&t1_id, "system", "EXECUTING", "REVIEW", Some("a1"), None).await.unwrap();
+    state_manager.transition_state(&t1_id, "system", "REVIEW", "COMPLETED", Some("a1"), None).await.unwrap();
+
+    // T2 and T3 should be available
+    let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    assert_eq!(tasks.len(), 2);
+    assert!(tasks.iter().any(|t| t.id == t2_id));
+    assert!(tasks.iter().any(|t| t.id == t3_id));
+
+    // Complete T2
+    state_manager.transition_state(&t2_id, "system", "EXECUTING", "REVIEW", Some("a1"), None).await.unwrap();
+    state_manager.transition_state(&t2_id, "system", "REVIEW", "COMPLETED", Some("a1"), None).await.unwrap();
+
+    // T4 should NOT be available yet because T3 is not COMPLETED
+    let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    assert_eq!(tasks.len(), 0);
+
+    // Complete T3
+    state_manager.transition_state(&t3_id, "system", "EXECUTING", "REVIEW", Some("a1"), None).await.unwrap();
+    state_manager.transition_state(&t3_id, "system", "REVIEW", "COMPLETED", Some("a1"), None).await.unwrap();
+
+    // Now T4 should be available
+    let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].id, t4_id);
+}
+
+#[tokio::test]
+async fn test_failed_transition_from_any_state() {
+    let db = setup_db().await;
+    let mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
+    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
+
+    let t1 = uuid::Uuid::new_v4().to_string();
+    let t2 = uuid::Uuid::new_v4().to_string();
+
+    if let DbStore::Sqlite(pool) = &db.store {
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 'T1', 'PENDING')").bind(&t1).execute(pool).await.unwrap();
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 'T2', 'EXECUTING')").bind(&t2).execute(pool).await.unwrap();
+    }
+
+    // PENDING -> FAILED
+    state_manager.transition_state(&t1, "system", "PENDING", "FAILED", None, Some("unwanted")).await.unwrap();
+
+    // EXECUTING -> FAILED
+    state_manager.transition_state(&t2, "system", "EXECUTING", "FAILED", None, Some("crashed")).await.unwrap();
+
+    if let DbStore::Sqlite(pool) = &db.store {
+        let s1: String = sqlx::query_scalar("SELECT status FROM swarm_tasks WHERE id = ?").bind(&t1).fetch_one(pool).await.unwrap();
+        let s2: String = sqlx::query_scalar("SELECT status FROM swarm_tasks WHERE id = ?").bind(&t2).fetch_one(pool).await.unwrap();
+        assert_eq!(s1, "FAILED");
+        assert_eq!(s2, "FAILED");
+    }
 }
 
 use super::cloud::CloudStateManager;

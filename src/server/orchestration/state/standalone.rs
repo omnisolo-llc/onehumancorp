@@ -55,6 +55,19 @@ impl StandaloneStateManager {
             ));
         }
 
+        // Enforce strict state transitions
+        match (current_state.as_str(), to_state) {
+            ("PENDING", "EXECUTING") => (),
+            ("EXECUTING", "REVIEW") => (),
+            ("REVIEW", "COMPLETED") => (),
+            (_, "FAILED") => (),
+            (curr, to) => {
+                if curr != to {
+                    return Err(format!("Invalid state transition from {} to {}", curr, to));
+                }
+            }
+        }
+
         let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
@@ -169,7 +182,7 @@ impl StateManager for StandaloneStateManager {
             let rows = sqlx::query(
                 r#"
                 UPDATE swarm_tasks
-                SET status = 'IN_PROGRESS', updated_at = ?
+                SET status = 'EXECUTING', updated_at = ?
                 WHERE id IN (
                     SELECT t.id
                     FROM swarm_tasks t
@@ -289,7 +302,7 @@ impl StateManager for StandaloneStateManager {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, occurred_at)
-                    VALUES (?, ?, ?, 'swarm_task', 'PENDING', 'IN_PROGRESS', ?)
+                    VALUES (?, ?, ?, 'swarm_task', 'PENDING', 'EXECUTING', ?)
                     "#
                 )
                 .bind(trans_id)
@@ -304,9 +317,9 @@ impl StateManager for StandaloneStateManager {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        // Update the returned tasks statuses to match what we committed (IN_PROGRESS)
+        // Update the returned tasks statuses to match what we committed (EXECUTING)
         for t in &mut tasks {
-            t.status = "IN_PROGRESS".to_string();
+            t.status = "EXECUTING".to_string();
         }
 
         Ok(tasks)
