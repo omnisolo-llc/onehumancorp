@@ -5,8 +5,9 @@ use tokio::sync::mpsc;
 
 
 /// OpenAI Codex & Agents SDK Archetype:
-/// Uses a `Runner` class with async, sync, and streamed modes.
+/// Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.
 pub struct Runner {
+    // Codex Core (agent code + runtime)
     pub agent: Arc<Agent>,
 }
 
@@ -123,6 +124,22 @@ impl AppServer {
     }
 }
 
+/// Client surfaces sharing the exact same harness layer.
+/// Uses the Runner natively instead of re-implementing the orchestration loop.
+pub struct ClientSurface {
+    pub runner: Arc<Runner>,
+}
+
+impl ClientSurface {
+    pub fn new(runner: Arc<Runner>) -> Self {
+        Self { runner }
+    }
+
+    pub async fn execute_task(&self, cfg: &AgentRunConfig, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        self.runner.run_async(cfg, message).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,5 +253,23 @@ mod tests {
         let resp_json_bad = app_server.handle_request(req_json_bad).await;
         let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
         assert_eq!(resp_bad.error.unwrap().code, -32601);
+    }
+
+    #[tokio::test]
+    async fn test_client_surface() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("client surface success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let surface = ClientSurface::new(runner);
+        let cfg = AgentRunConfig::default();
+        let result = surface.execute_task(&cfg, "hello").await.unwrap();
+        assert_eq!(result, "client surface success");
     }
 }
