@@ -58,6 +58,7 @@ impl DashboardService for MyDashboardService {
         let org_id1 = req.organization_id.clone();
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
+        let org_id4 = req.organization_id.clone();
 
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
@@ -73,7 +74,7 @@ impl DashboardService for MyDashboardService {
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
-                    cost_auditor.get_total_cost(),
+                    cost_auditor.get_tenant_total_cost(&org_id3),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
                 ))
@@ -185,7 +186,7 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(results)
             },
             async {
-                let org_id = org_id3;
+                let org_id = org_id4;
                 let cache_key = format!("hub:org:{}", org_id);
                 let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
 

@@ -102,12 +102,13 @@ pub async fn cost_dashboard_handler(
     let period_end = now.format("%Y-%m-%d").to_string();
     let auditor = hub.get_cost_auditor();
 
-    let llm_cost_f64 = auditor.get_total_cost();
+    let llm_cost_f64 = auditor.get_tenant_total_cost(&tenant_id);
     let total_revenue_f64 = auditor.get_total_revenue();
 
     let storage_bytes = hub.tracker().get_tenant_storage_used(&tenant_id).await.unwrap_or(0);
+    let config = ::server_pricing::calculator::CostConfig::default();
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
+    let storage_cost_f64 = storage_gb * config.cost_per_gb_month;
 
     let payment_fees_f64 = total_revenue_f64 * 0.029;
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
