@@ -1,0 +1,12 @@
+--- .gitignore
++++ .gitignore
+@@ -107,3 +107,3 @@
+ # Golang is not allowed in this project
+ *.go
++!src/server/orchestration/hybrid_sync/*.go
+
+@@ -125,4 +125,3 @@
+ dummy.*
+ dummy_*
+ .next/
+-!src/server/orchestration/hybrid_sync/*.go
