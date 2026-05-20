@@ -1133,6 +1133,35 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let timeout_duration = std::time::Duration::from_secs(60);
+        let mut attempts = 0;
+        let max_attempts = 3;
+        loop {
+            attempts += 1;
+            let result = tokio::time::timeout(timeout_duration, self.run_structured_internal(cfg, initial_message, &output_schema, on_event)).await;
+            match result {
+                Ok(res) => {
+                    return res;
+                },
+                Err(_) => {
+                    if attempts >= max_attempts {
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
+                    }
+                }
+            }
+        }
+    }
+
+    async fn run_structured_internal<T: serde::de::DeserializeOwned + Send + Sync + 'static, F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        output_schema: &serde_json::Value,
+        on_event: &mut F,
+    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
         let mut final_cfg = cfg.clone();
 
         // Append instruction to force the use of the structured output tool
@@ -1156,7 +1185,7 @@ impl Agent {
             name: "return_structured_output".to_string(),
             description: "Returns the final output matching the required JSON schema.".to_string(),
             is_read_only: false,
-            parameters: output_schema,
+            parameters: output_schema.clone(),
             execute: std::sync::Arc::new(DummyExecutor),
         });
 
@@ -1189,10 +1218,21 @@ impl Agent {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = std::time::Duration::from_secs(60);
 
-        let result = tokio::time::timeout(timeout_duration, self.run_internal(cfg, initial_message, on_event)).await;
-        match result {
-            Ok(res) => res,
-            Err(_) => Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule."))),
+        let mut attempts = 0;
+        let max_attempts = 3;
+        loop {
+            attempts += 1;
+            let result = tokio::time::timeout(timeout_duration, self.run_internal(cfg, initial_message, on_event)).await;
+            match result {
+                Ok(res) => {
+                    return res;
+                },
+                Err(_) => {
+                    if attempts >= max_attempts {
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
+                    }
+                }
+            }
         }
     }
 
