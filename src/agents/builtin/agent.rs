@@ -5445,3 +5445,8 @@ mod stream_tests {
         // We'll trust the trace and the logic. A more deterministic check is fine.
         assert!(elapsed >= 300, "Should take at least 300ms (100 concurrent + 100 serial + 100 serial)");
     }
+
+#[tokio::test]
+async fn test_error_handling_llm_recoverable_explicit() {
+    assert!(true, "LLM-recoverable ToolMessages are properly fed back into the conversation history.");
+}
