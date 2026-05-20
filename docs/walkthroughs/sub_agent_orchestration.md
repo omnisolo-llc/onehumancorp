@@ -6,7 +6,7 @@ This guide details the architectural flow of the Sub-Agent Orchestration Queue. 
 
 ## 1. Overview of the Orchestration Queue
 
-As the OHC Swarm handles more complex workloads, we require a distributed execution framework. It must handle sub-agent task routing, retries, exponential backoffs, and execution timeouts. The Sub-Agent Orchestration Queue provides this by seamlessly transitioning between Redis-backed (Cloud mode) and SQLite-backed (Standalone mode) queues.
+As the OHC Swarm handles more complex workloads, we require a distributed execution framework. It must handle sub-agent task routing, retries, exponential backoffs, and execution timeouts. The Sub-Agent Orchestration Queue provides this (in a **BullMQ/Celery-style** architecture) by seamlessly transitioning between Redis-backed (Cloud mode) and SQLite-backed (Standalone mode) queues. This ensures robust background execution where transient failures are automatically retried with exponential backoff, and persistently failing tasks are moved to a dead-letter queue for further analysis.
 
 ### Architecture Comparison
 
@@ -35,7 +35,7 @@ The job lifecycle guarantees at-least-once delivery. This ensures resilient task
 1. **Enqueue**: The parent agent delegates a sub-task. The `TaskManager` inserts a `Job` record with `status='QUEUED'`.
 2. **Dequeue**: Worker sub-agents poll the queue for jobs matching their role.
 3. **Execution**: The worker agent attempts the task, communicating progress over the Teammate Mesh.
-4. **Completion/Failure**: The task transitions to `COMPLETED` on success, or `FAILED` (after retrying up to `max_attempts`).
+4. **Completion/Failure**: The task transitions to `COMPLETED` on success, or `FAILED` (after retrying up to `max_attempts` with exponential backoff, at which point it acts as a poisoned message placed in the dead-letter queue).
 
 ```mermaid
 stateDiagram-v2
