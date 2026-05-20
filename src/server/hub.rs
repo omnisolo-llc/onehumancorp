@@ -567,10 +567,6 @@ impl Hub {
     }
 
     pub fn start_token_burn_rate_worker(self: std::sync::Arc<Self>) {
-        if self.get_token_usage.is_none() {
-            return;
-        }
-        
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
             loop {
@@ -581,40 +577,65 @@ impl Hub {
     }
 
     async fn calculate_token_burn_rate(&self) {
-        if let Some(ref get_usage) = self.get_token_usage {
-            let usages = get_usage();
-            let mut forecasts_to_record = Vec::new();
-            
-            {
-                let mut history = self.token_usage_history.write().unwrap();
-                let mut active_orgs = HashMap::new();
+        let usages = {
+            if let Some(ref get_usage) = self.get_token_usage {
+                get_usage()
+            } else {
+                // Fetch from telemetry_buffer
+                let threshold = chrono::Utc::now() - chrono::Duration::hours(24);
+                let rows = sqlx::query("SELECT value, labels_json FROM telemetry_buffer WHERE metric_name = 'ohc_token_usage_total' AND timestamp >= $1")
+                    .bind(threshold)
+                    .fetch_all(&self.pool)
+                    .await;
 
-                for (org_id, total_tokens) in usages {
-                    active_orgs.insert(org_id.clone(), true);
-                    if total_tokens > 0 {
-                        let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
-                        hist.push(total_tokens);
-
-                        if hist.len() > 5 {
-                            hist.remove(0);
+                let mut computed = HashMap::new();
+                if let Ok(records) = rows {
+                    for row in records {
+                        use sqlx::Row;
+                        let val: f32 = row.get("value");
+                        let labels_json: String = row.get("labels_json");
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&labels_json) {
+                            if let Some(org_id) = parsed.get("organization_id").and_then(|v| v.as_str()) {
+                                *computed.entry(org_id.to_string()).or_insert(0) += val as i64;
+                            }
                         }
-
-                        if hist.len() > 1 {
-                            let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                            let forecast = hist.last().unwrap() + (rate * 43200.0) as i64;
-                            forecasts_to_record.push((org_id.clone(), forecast as f32));
-                        }
-                    } else {
-                        history.remove(&org_id);
                     }
                 }
+                computed
+            }
+        };
 
-                history.retain(|org_id, _| active_orgs.contains_key(org_id));
+        let mut forecasts_to_record = Vec::new();
+
+        {
+            let mut history = self.token_usage_history.write().unwrap();
+            let mut active_orgs = HashMap::new();
+
+            for (org_id, total_tokens) in usages {
+                active_orgs.insert(org_id.clone(), true);
+                if total_tokens > 0 {
+                    let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
+                    hist.push(total_tokens);
+
+                    if hist.len() > 5 {
+                        hist.remove(0);
+                    }
+
+                    if hist.len() > 1 {
+                        let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
+                        let forecast = hist.last().unwrap() + (rate * 43200.0) as i64;
+                        forecasts_to_record.push((org_id.clone(), forecast as f32));
+                    }
+                } else {
+                    history.remove(&org_id);
+                }
             }
-            
-            for (org_id, forecast) in forecasts_to_record {
-                let _ = ::server_telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
-            }
+
+            history.retain(|org_id, _| active_orgs.contains_key(org_id));
+        }
+
+        for (org_id, forecast) in forecasts_to_record {
+            let _ = ::server_telemetry::record_token_usage_forecast(&self.pool, &org_id, forecast).await;
         }
     }
 

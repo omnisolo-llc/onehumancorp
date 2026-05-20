@@ -20,8 +20,69 @@ impl HybridSyncDaemon {
             if let Err(e) = self.sync_step().await {
                 error!("Hybrid sync daemon error: {}", e);
             }
+            if let Err(e) = self.sync_telemetry_step().await {
+                error!("Hybrid sync telemetry error: {}", e);
+            }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
+    }
+
+    pub async fn sync_telemetry_step(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let rows = sqlx::query("SELECT id, metric_name, metric_type, value, labels_json, timestamp FROM telemetry_buffer WHERE sync_status = 'pending'")
+            .fetch_all(&self.sqlite_pool)
+            .await?;
+
+        if rows.is_empty() {
+            return Ok(());
+        }
+
+        let mut tx = match self.pg_pool.begin().await {
+            Ok(t) => t,
+            Err(e) => {
+                warn!("Failed to begin pg transaction for telemetry sync: {}", e);
+                return Ok(());
+            }
+        };
+
+        for row in &rows {
+            let metric_name: String = row.get("metric_name");
+            let metric_type: String = row.get("metric_type");
+            let value: f32 = row.get("value");
+            let labels_json: String = row.get("labels_json");
+            let timestamp: chrono::NaiveDateTime = row.get("timestamp");
+
+            let res = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'synced')")
+                .bind(metric_name)
+                .bind(metric_type)
+                .bind(value)
+                .bind(labels_json)
+                .bind(chrono::DateTime::<Utc>::from_naive_utc_and_offset(timestamp, Utc))
+                .execute(&mut *tx)
+                .await;
+
+            if let Err(e) = res {
+                let _ = tx.rollback().await;
+                warn!("Failed to insert telemetry to pg: {}", e);
+                return Ok(());
+            }
+        }
+
+        if let Err(e) = tx.commit().await {
+            warn!("Failed to commit telemetry to pg: {}", e);
+            return Ok(());
+        }
+
+        for row in rows {
+            let id: i32 = row.get("id");
+            let _ = sqlx::query("UPDATE telemetry_buffer SET sync_status = 'SYNCED' WHERE id = ?")
+                .bind(id)
+                .execute(&self.sqlite_pool)
+                .await;
+        }
+
+        info!("Successfully synced telemetry batch");
+
+        Ok(())
     }
 
     pub async fn sync_step(&self) -> Result<(), Box<dyn std::error::Error>> {
