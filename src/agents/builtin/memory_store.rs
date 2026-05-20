@@ -968,30 +968,13 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
     }
 
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
-        let path = self.topics_dir.join(format!("{}.md", safe_name));
-        if path.exists() {
-            tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())
-        } else {
-            Err(format!("Topic '{}' not found", safe_name))
-        }
+        use ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor;
+        MemoryAccessor::retrieve_topic(self, topic_name).await
     }
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let mut results = Vec::new();
-        let mut dir = tokio::fs::read_dir(&self.transcripts_dir).await.map_err(|e| e.to_string())?;
-        while let Ok(Some(entry)) = dir.next_entry().await {
-            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
-            for par in content.split("\n\n") {
-                if par.to_lowercase().contains(&query.to_lowercase()) {
-                    results.push(par.to_string());
-                    if results.len() >= limit {
-                        return Ok(results);
-                    }
-                }
-            }
-        }
-        Ok(results)
+        use ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor;
+        MemoryAccessor::search_transcripts(self, query, limit).await
     }
     fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
@@ -2014,6 +1997,18 @@ mod anthropic_memory_tests {
 
         let results3 = store.retrieve("nonexistent", 5).await.unwrap();
         assert_eq!(results3.len(), 0);
+
+        let topic_content = store.retrieve_topic("Database Architecture").await.unwrap();
+        assert!(topic_content.contains("PostgreSQL"));
+
+        let search_results = store.search_transcripts("glassmorphism", 5).await.unwrap();
+        // Since we didn't add transcripts in this test yet, it should be empty
+        assert_eq!(search_results.len(), 0);
+
+        store.append_transcript("session-1", "I really like glassmorphism. Let's use it.").await.unwrap();
+        let search_results2 = store.search_transcripts("glassmorphism", 5).await.unwrap();
+        assert_eq!(search_results2.len(), 1);
+        assert!(search_results2[0].contains("glassmorphism"));
     }
 
     #[tokio::test]
