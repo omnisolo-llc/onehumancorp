@@ -1032,8 +1032,8 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, transition) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
-          "legendFormat": "{{transition}}",
+          "expr": "histogram_quantile(0.95, sum by (le, transition, deployment_mode) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
+          "legendFormat": "{{transition}} ({{deployment_mode}})",
           "range": true,
           "refId": "A"
         }

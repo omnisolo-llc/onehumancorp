@@ -238,7 +238,7 @@ impl TaskQueue for PostgresTaskQueue {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await
@@ -246,6 +246,9 @@ impl TaskQueue for PostgresTaskQueue {
         tx.commit().await.map_err(|e| e.to_string())?;
             
         if let Some(row) = row {
+            let created_at: DateTime<Utc> = row.get("created_at");
+            let pending_duration = Utc::now().signed_duration_since(created_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+            let _ = crate::telemetry::record_agent_transition_latency(&self.pool, "pending_to_running", pending_duration).await;
             let id: String = row.get("id");
             let tenant_id: String = row.get("tenant_id");
             let parent_task_id: String = row.get("parent_task_id");
@@ -527,6 +530,9 @@ impl QueueManager {
         tx.commit().await?;
             
         if let Some(row) = row {
+            let created_at: DateTime<Utc> = row.get("created_at");
+            let pending_duration = Utc::now().signed_duration_since(created_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+            let _ = crate::telemetry::record_agent_transition_latency(&self.pool, "pending_to_running", pending_duration).await;
             let payload_str: String = row.get("payload");
             let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
             
@@ -548,6 +554,19 @@ impl QueueManager {
     pub async fn mark_completed(&self, job_id: &str, tenant_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
+
+        let row = sqlx::query("SELECT updated_at FROM sub_agent_queue WHERE id = $1 AND tenant_id = $2")
+            .bind(job_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+
+        if let Some(r) = row {
+            let last_updated_at: DateTime<Utc> = r.get("updated_at");
+            let execution_duration = Utc::now().signed_duration_since(last_updated_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+            let _ = crate::telemetry::record_agent_transition_latency(&self.pool, "running_to_completed", execution_duration).await;
+        }
+
         sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)
@@ -583,6 +602,22 @@ impl QueueManager {
     pub async fn mark_failed(&self, job_id: &str, _reason: &str, tenant_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
+
+        let row = sqlx::query("SELECT status, updated_at FROM sub_agent_queue WHERE id = $1 AND tenant_id = $2")
+            .bind(job_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+
+        if let Some(r) = row {
+            let status: String = r.get("status");
+            let last_updated_at: DateTime<Utc> = r.get("updated_at");
+            if status == "RUNNING" {
+                let execution_duration = Utc::now().signed_duration_since(last_updated_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+                let _ = crate::telemetry::record_agent_transition_latency(&self.pool, "running_to_completed", execution_duration).await;
+            }
+        }
+
         sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)

@@ -5,7 +5,7 @@ use crate::tasks::SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::trace::Tracer;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
@@ -170,6 +170,11 @@ impl TaskDecompositionService {
                     }
                 }
 
+                // Fetch created_at to calculate pending_to_running latency
+                let created_at: chrono::DateTime<Utc> = row.get("created_at");
+                let pending_duration = now.signed_duration_since(created_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+                let _ = crate::telemetry::record_agent_transition_latency(&self.db.pool, "pending_to_running", pending_duration).await;
+
                 // Transition state
                 sqlx::query(
                     r#"
@@ -224,24 +229,17 @@ impl TaskDecompositionService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
-                    WHERE id = (
-                        SELECT st.id FROM shared_tasks_decomposition st
-                        WHERE st.status = 'PENDING'
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM json_each(st.dependencies) AS dep_id
-                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
-                            WHERE parent.status != 'COMPLETED'
-                        )
-                        LIMIT 1
+                    SELECT id, created_at FROM shared_tasks_decomposition st
+                    WHERE st.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                        WHERE parent.status != 'COMPLETED'
                     )
-                    RETURNING id
+                    LIMIT 1
                     "#
                 )
-                .bind(agent_id)
-                .bind(now)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -255,6 +253,30 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
+                let created_at_str: String = row.get("created_at");
+                let created_at = if created_at_str.contains('T') {
+                    chrono::DateTime::parse_from_rfc3339(&created_at_str).map(|d| d.with_timezone(&Utc)).unwrap_or_default()
+                } else {
+                    chrono::NaiveDateTime::parse_from_str(&created_at_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                        .unwrap_or_default()
+                };
+                let pending_duration = now.signed_duration_since(created_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+                let _ = crate::telemetry::record_agent_transition_latency(&self.db.pool, "pending_to_running", pending_duration).await;
+
+                sqlx::query(
+                    r#"
+                    UPDATE shared_tasks_decomposition
+                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
+                    WHERE id = ?
+                    "#
+                )
+                .bind(agent_id)
+                .bind(now.to_rfc3339())
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
@@ -489,21 +511,26 @@ impl TaskDecompositionService {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
+                let row = sqlx::query(
+                    "SELECT status, updated_at FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status = match old_status {
-                    Some(s) => s,
+                let (old_status, last_updated_at): (String, chrono::DateTime<Utc>) = match row {
+                    Some(r) => (r.get("status"), r.get("updated_at")),
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Err("Task not found".to_string());
                     }
                 };
+
+                if old_status == "EXECUTING" || old_status == "RUNNING" {
+                    let execution_duration = now.signed_duration_since(last_updated_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+                    let _ = crate::telemetry::record_agent_transition_latency(&self.db.pool, "running_to_completed", execution_duration).await;
+                }
 
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
 
@@ -540,21 +567,37 @@ impl TaskDecompositionService {
             DbStore::Sqlite(pool) => {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?"
+                let row = sqlx::query(
+                    "SELECT status, updated_at FROM shared_tasks_decomposition WHERE id = ?"
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status = match old_status {
-                    Some(s) => s,
+                let (old_status, last_updated_at): (String, chrono::DateTime<Utc>) = match row {
+                    Some(r) => {
+                        let s: String = r.get("status");
+                        let u_str: String = r.get("updated_at");
+                        let u = if u_str.contains('T') {
+                            chrono::DateTime::parse_from_rfc3339(&u_str).map(|d| d.with_timezone(&Utc)).unwrap_or_default()
+                        } else {
+                            chrono::NaiveDateTime::parse_from_str(&u_str, "%Y-%m-%d %H:%M:%S")
+                                .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                                .unwrap_or_default()
+                        };
+                        (s, u)
+                    },
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Err("Task not found".to_string());
                     }
                 };
+
+                if old_status == "EXECUTING" || old_status == "RUNNING" {
+                    let execution_duration = now.signed_duration_since(last_updated_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+                    let _ = crate::telemetry::record_agent_transition_latency(&self.db.pool, "running_to_completed", execution_duration).await;
+                }
 
                 // SQLite json patching
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
@@ -597,21 +640,26 @@ impl TaskDecompositionService {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
+                let row = sqlx::query(
+                    "SELECT status, updated_at FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE"
                 )
                 .bind(id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status = match old_status {
-                    Some(s) => s,
+                let (old_status, last_updated_at): (String, chrono::DateTime<Utc>) = match row {
+                    Some(r) => (r.get("status"), r.get("updated_at")),
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Err("Task not found".to_string());
                     }
                 };
+
+                if old_status == "EXECUTING" && new_status == "COMPLETED" {
+                    let execution_duration = now.signed_duration_since(last_updated_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+                    let _ = crate::telemetry::record_agent_transition_latency(&self.db.pool, "running_to_completed", execution_duration).await;
+                }
 
                 sqlx::query(
                     "UPDATE shared_tasks_decomposition SET status = $1, updated_at = $2 WHERE id = $3"
@@ -652,21 +700,37 @@ impl TaskDecompositionService {
             DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?"
+                let row = sqlx::query(
+                    "SELECT status, updated_at FROM shared_tasks_decomposition WHERE id = ?"
                 )
                 .bind(id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status = match old_status {
-                    Some(s) => s,
+                let (old_status, last_updated_at): (String, chrono::DateTime<Utc>) = match row {
+                    Some(r) => {
+                        let s: String = r.get("status");
+                        let u_str: String = r.get("updated_at");
+                        let u = if u_str.contains('T') {
+                            chrono::DateTime::parse_from_rfc3339(&u_str).map(|d| d.with_timezone(&Utc)).unwrap_or_default()
+                        } else {
+                            chrono::NaiveDateTime::parse_from_str(&u_str, "%Y-%m-%d %H:%M:%S")
+                                .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                                .unwrap_or_default()
+                        };
+                        (s, u)
+                    },
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Err("Task not found".to_string());
                     }
                 };
+
+                if old_status == "EXECUTING" && new_status == "COMPLETED" {
+                    let execution_duration = now.signed_duration_since(last_updated_at).to_std().unwrap_or(std::time::Duration::from_secs(0));
+                    let _ = crate::telemetry::record_agent_transition_latency(&self.db.pool, "running_to_completed", execution_duration).await;
+                }
 
                 sqlx::query(
                     "UPDATE shared_tasks_decomposition SET status = ?, updated_at = ? WHERE id = ?"

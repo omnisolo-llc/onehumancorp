@@ -347,3 +347,42 @@ pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
         opentelemetry::KeyValue::new("step", step.to_string()),
     ]);
 }
+
+static AGENT_TRANSITION_LATENCY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+
+pub fn get_agent_transition_latency_histogram() -> &'static Histogram<f64> {
+    AGENT_TRANSITION_LATENCY_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter.f64_histogram("ohc_agent_transition_latency_seconds")
+            .with_description("Latency of agent discrete state transitions")
+            .build()
+    })
+}
+
+pub async fn record_agent_transition_latency(pool: &PgPool, transition: &str, duration: std::time::Duration) -> Result<(), Box<dyn std::error::Error>> {
+    let latency_secs = duration.as_secs_f64();
+    let deployment_mode = get_deployment_mode();
+    let histogram = get_agent_transition_latency_histogram();
+    histogram.record(latency_secs, &[
+        opentelemetry::KeyValue::new("transition", transition.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+    ]);
+
+    // Only buffer if we have a valid Postgres pool. In standalone mode without cloud sync enabled,
+    // the dummy pool might be disconnected.
+    if ::server_config::get().telemetry_enabled {
+         buffer_metric(
+            pool,
+            "ohc_agent_transition_latency_seconds",
+            "histogram",
+            latency_secs as f32,
+            serde_json::json!({
+                "transition": transition,
+                "deployment_mode": deployment_mode,
+            }),
+        )
+        .await?;
+    }
+
+    Ok(())
+}

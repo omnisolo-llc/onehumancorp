@@ -590,3 +590,30 @@ fn test_multi_tenant_pii_leakage_guardrail() {
     assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
     assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
 }
+
+#[tokio::test]
+async fn test_record_agent_transition_latency() {
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
+
+    let duration = std::time::Duration::from_millis(1500);
+    let res = ::server_telemetry::record_agent_transition_latency(&pool, "pending_to_running", duration).await;
+    assert!(res.is_ok());
+
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_transition_latency_seconds' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+    use sqlx::Row;
+    let value: f32 = row.get("value");
+    assert_eq!(value, 1.5);
+
+    let labels_json: String = row.get("labels_json");
+    let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
+    assert_eq!(parsed["transition"], "pending_to_running");
+    assert!(parsed.get("deployment_mode").is_some());
+}

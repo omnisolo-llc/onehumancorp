@@ -35,7 +35,8 @@
         "mode": "html",
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
-      "transparent": true
+      "transparent": true,
+      "id": 1
     },
     {
       "gridPos": {
@@ -64,8 +65,7 @@
         "y": 3
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -254,8 +254,7 @@
         "y": 12
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -589,8 +588,7 @@
         "y": 29
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -1034,8 +1032,8 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, transition) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
-          "legendFormat": "{{transition}}",
+          "expr": "histogram_quantile(0.95, sum by (le, transition, deployment_mode) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
+          "legendFormat": "{{transition}} ({{deployment_mode}})",
           "range": true,
           "refId": "A"
         }
@@ -1298,8 +1296,7 @@
         "y": 62
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -1646,8 +1643,7 @@
         "y": 79
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 24,
@@ -1894,7 +1890,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_ohc_autodream_memories_ingested_total[5m]))",
+          "expr": "sum(rate(ohc_autodream_memories_ingested_total[5m]))",
           "legendFormat": "Ingested",
           "range": true,
           "refId": "A"
@@ -1905,7 +1901,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_ohc_autodream_memories_compressed_total[5m]))",
+          "expr": "sum(rate(ohc_autodream_memories_compressed_total[5m]))",
           "legendFormat": "Compressed",
           "range": true,
           "refId": "B"
@@ -2078,6 +2074,302 @@
       "transparent": true
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Errors",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 104
+      },
+      "id": 69018,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (error) (rate(ohc_autodream_sync_errors_total[5m]))",
+          "legendFormat": "Sync Errors - {{error}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "AutoDream Sync Errors",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Errors",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 104
+      },
+      "id": 69019,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (error) (rate(ohc_autodream_ingestion_error_total[5m]))",
+          "legendFormat": "Ingestion Errors - {{error}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (error) (rate(ohc_autodream_compression_error_total[5m]))",
+          "legendFormat": "Compression Errors - {{error}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "AutoDream Processing Errors",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Cycles",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 112
+      },
+      "id": 69020,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(ohc_autodream_consolidation_total[5m]))",
+          "legendFormat": "Consolidation Cycles",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "AutoDream Consolidation",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
       "id": 56,
       "title": "LLM Performance",
       "type": "row",
@@ -2085,11 +2377,10 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 120
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -2100,7 +2391,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 105
+        "y": 121
       },
       "id": 19,
       "targets": [
@@ -2186,7 +2477,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 105
+        "y": 121
       },
       "title": "LLM Cache Efficiency",
       "type": "timeseries",
@@ -2323,7 +2614,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 113
+        "y": 129
       },
       "id": 39,
       "options": {
@@ -2429,7 +2720,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 113
+        "y": 129
       },
       "id": 29,
       "options": {
@@ -2470,7 +2761,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 121
+        "y": 137
       },
       "id": 20,
       "targets": [
@@ -2549,11 +2840,10 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 129
+        "y": 145
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 27,
@@ -2561,7 +2851,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 130
+        "y": 146
       },
       "title": "Sync Daemon Health",
       "type": "timeseries",
@@ -2645,7 +2935,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 130
+        "y": 146
       },
       "title": "Telemetry Batch Size",
       "type": "timeseries",
@@ -2721,7 +3011,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 138
+        "y": 154
       },
       "title": "Telemetry Sync Backoff Duration",
       "type": "timeseries",
@@ -2797,7 +3087,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 138
+        "y": 154
       },
       "type": "timeseries",
       "title": "PostgreSQL Job Queue Batch Size",
@@ -2871,11 +3161,10 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 146
+        "y": 162
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 34,
@@ -2883,7 +3172,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 147
+        "y": 163
       },
       "type": "timeseries",
       "title": "Swarm Task Queue Length",
@@ -2955,7 +3244,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 147
+        "y": 163
       },
       "type": "timeseries",
       "title": "Sub-Agent Queue Length",
@@ -3114,7 +3403,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 155
+        "y": 171
       },
       "targets": [
         {
@@ -3209,7 +3498,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 155
+        "y": 171
       },
       "targets": [
         {
@@ -3304,7 +3593,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 163
+        "y": 179
       },
       "targets": [
         {
@@ -3399,7 +3688,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 163
+        "y": 179
       },
       "targets": [
         {
@@ -3423,11 +3712,10 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 171
+        "y": 187
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -3492,7 +3780,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 172
+        "y": 188
       },
       "id": 36,
       "options": {
@@ -3587,7 +3875,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 172
+        "y": 188
       },
       "id": 37,
       "options": {
@@ -3643,7 +3931,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 180
+        "y": 196
       },
       "targets": [
         {
@@ -3738,7 +4026,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 180
+        "y": 196
       },
       "targets": [
         {
@@ -3833,7 +4121,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 188
+        "y": 204
       },
       "targets": [
         {
@@ -3928,7 +4216,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 188
+        "y": 204
       },
       "targets": [
         {
