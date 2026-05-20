@@ -444,6 +444,51 @@ async fn http_login_handler(
         .into_response()
 }
 
+
+async fn health_report_handler(
+    axum::extract::State(state): axum::extract::State<crate::api::billing_webhook::WebhookState>,
+) -> impl axum::response::IntoResponse {
+    use sqlx::Row;
+    let tenant_id = "system"; // Simplified for demonstration or use proper auth
+    let mut summary = "No report generated yet.".to_string();
+    let mut actionable_suggestion = "".to_string();
+
+    let db = &state.db;
+
+    let health_report_val = match &db.store {
+        crate::db::DbStore::Postgres => {
+            let row = sqlx::query("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'weekly_health_report'")
+                .bind(tenant_id)
+                .fetch_optional(&db.pool)
+                .await
+                .ok()
+                .flatten();
+            row.map(|r| r.get::<String, _>("kv_value"))
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let row = sqlx::query("SELECT kv_value FROM agent_kv_store WHERE tenant_id = ? AND kv_key = 'weekly_health_report'")
+                .bind(tenant_id)
+                .fetch_optional(sqlite_pool)
+                .await
+                .ok()
+                .flatten();
+            row.map(|r| r.get::<String, _>("kv_value"))
+        }
+    };
+
+    if let Some(val) = health_report_val {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&val) {
+            summary = json.get("summary").and_then(|s| s.as_str()).unwrap_or("").to_string();
+            actionable_suggestion = json.get("actionable_suggestion").and_then(|s| s.as_str()).unwrap_or("").to_string();
+        }
+    }
+
+    axum::Json(serde_json::json!({
+        "summary": summary,
+        "actionable_suggestion": actionable_suggestion
+    }))
+}
+
 async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
