@@ -2414,8 +2414,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 600px;
@@ -2426,6 +2426,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -3334,56 +3336,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <script>
 
 
-                        // LocalStorage State Management
-                        function saveWizardState() {
-                            const inputs = document.querySelectorAll('#setup-screen input');
-                            const state = {};
-                            inputs.forEach((input, index) => {
-                                if (input.type === 'checkbox') {
-                                    state['checkbox_' + index] = input.checked;
-                                } else {
-                                    state['input_' + index] = input.value;
-                                }
-                            });
-                            localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
-                        }
-
-                        function loadWizardState() {
-                            const saved = localStorage.getItem('ohc_wizard_state');
-                            if (saved) {
-                                try {
-                                    const state = JSON.parse(saved);
-                                    const inputs = document.querySelectorAll('#setup-screen input');
-                                    inputs.forEach((input, index) => {
-                                        if (input.type === 'checkbox') {
-                                            if (state['checkbox_' + index] !== undefined) {
-                                                input.checked = state['checkbox_' + index];
-                                            }
-                                        } else {
-                                            if (state['input_' + index] !== undefined) {
-                                                input.value = state['input_' + index];
-                                            }
-                                        }
-                                        // add listener for auto-save
-                                        input.addEventListener('change', saveWizardState);
-                                        input.addEventListener('input', saveWizardState);
-                                    });
-                                } catch (e) { console.error('Failed to parse wizard state', e); }
-                            } else {
-                                const inputs = document.querySelectorAll('#setup-screen input');
-                                inputs.forEach((input) => {
-                                    input.addEventListener('change', saveWizardState);
-                                    input.addEventListener('input', saveWizardState);
-                                });
-                            }
-                        }
-
-                        document.addEventListener('DOMContentLoaded', () => {
-                            // Run setup logic after page load
-                            setTimeout(loadWizardState, 100);
-                        });
-
-
                         // Server-Side State Management for Cross-Device Resumes
                         let saveWizardStateTimeout = null;
 
@@ -3400,6 +3352,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }
                                 });
 
+                                // Ensure local storage is always up to date
+                                localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
+
                                 try {
                                     await fetch('/api/wizard/state', {
                                         method: 'POST',
@@ -3408,8 +3363,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     });
                                 } catch (e) {
                                     console.error('Failed to save state to server', e);
-                                    // Fallback to localStorage just in case
-                                    localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
                                 }
                             }, 500); // Debounce
                         }
