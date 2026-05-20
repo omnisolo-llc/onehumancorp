@@ -1,6 +1,8 @@
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use crate::db::get_pool;
+use sqlx::Row;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
@@ -18,6 +20,26 @@ pub struct Quote {
 pub struct BookingTimeSlot {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Service {
+    pub id: String,
+    pub tenant_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub price_cents: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BookingRecord {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub product_id: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub status: String,
 }
 
 pub struct BookingService;
@@ -81,6 +103,89 @@ impl BookingService {
                 return Err("Time slot overlaps with an existing booking".to_string());
             }
         }
+        Ok(())
+    }
+
+    pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
+        let pool = get_pool();
+        let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE tenant_id = $1 AND type = 'booking'")
+            .bind(tenant_id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let services = rows.into_iter().map(|row| Service {
+            id: row.get("id"),
+            tenant_id: row.get("tenant_id"),
+            title: row.get("title"),
+            description: row.get("description"),
+            price_cents: row.get("price_cents"),
+        }).collect();
+
+        Ok(services)
+    }
+
+    pub async fn upsert_service(service: Service) -> Result<(), String> {
+        let pool = get_pool();
+        sqlx::query(
+            "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
+             VALUES ($1, $2, $3, $4, $5, 'booking') \
+             ON CONFLICT (id) DO UPDATE SET \
+             title = EXCLUDED.title, \
+             description = EXCLUDED.description, \
+             price_cents = EXCLUDED.price_cents, \
+             updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(&service.id)
+        .bind(&service.tenant_id)
+        .bind(&service.title)
+        .bind(&service.description)
+        .bind(service.price_cents)
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
+        let pool = get_pool();
+        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let bookings = rows.into_iter().map(|row| BookingRecord {
+            id: row.get("id"),
+            tenant_id: row.get("tenant_id"),
+            customer_id: row.get("customer_id"),
+            product_id: row.get("product_id"),
+            start_time: row.get("start_time"),
+            end_time: row.get("end_time"),
+            status: row.get("status"),
+        }).collect();
+
+        Ok(bookings)
+    }
+
+    pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
+        let pool = get_pool();
+        sqlx::query(
+            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        )
+        .bind(&booking.id)
+        .bind(&booking.tenant_id)
+        .bind(&booking.customer_id)
+        .bind(&booking.product_id)
+        .bind(booking.start_time)
+        .bind(booking.end_time)
+        .bind(&booking.status)
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 }
