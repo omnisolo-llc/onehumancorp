@@ -1722,33 +1722,48 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let webhook_router = axum::Router::new()
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
     let db_for_sales = db.clone();
     let app = axum::Router::new()
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/business-setup", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/website-builder", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/login", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/agents", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/meetings", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/dashboard", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/inbox", axum::routing::get(ui_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/dev/seed",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "ok": true }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/dashboard",
             axum::routing::get(|| async {
@@ -1759,46 +1774,54 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/meetings",
             axum::routing::get(|| async { axum::Json(serde_json::json!([])) }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/costs",
             axum::routing::get(|| async {
                 axum::Json(serde_json::json!({ "totalCostUSD": 0.0, "currency": "USD" }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/approvals/request",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "pending" }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/approvals/decide",
             axum::routing::put(|| async {
                 axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "approved" }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/handoffs",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "handoff-e2e", "status": "created" }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/skills/import",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "skill-e2e", "status": "imported" }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/snapshots/create",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "snapshot-e2e", "status": "created" }))
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/v1/auth/login",
             axum::routing::post(move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
@@ -1806,6 +1829,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 async move { http_login_handler(db, payload).await }
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/v1/ai/draft-reply",
             axum::routing::post(|axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
@@ -1813,6 +1837,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             }),
         )
 
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route(
             "/api/v1/dashboard/sales",
             axum::routing::post({
@@ -1820,10 +1845,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, headers, payload).await }
             }),
         )
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler))
+        .merge(crate::api::billing_api::router(hub.clone()))
         .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler))
+        .nest("/api/billing", crate::api::billing_api::router(hub.clone()))
+        .nest("/api", crate::api::billing_api::router(hub.clone()))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
