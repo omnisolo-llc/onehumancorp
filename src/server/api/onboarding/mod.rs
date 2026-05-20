@@ -11,8 +11,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
     let r = Router::new()
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
-        .route("/state", get(get_state))
-        .route("/state", post(save_state))
+        .route("/state", get(get_state).post(save_state))
         .with_state(agent);
 
     // Convert to accept MeshTransport state

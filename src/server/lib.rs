@@ -3220,7 +3220,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1">
+                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
@@ -3424,10 +3424,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
 
                                 try {
-                                    await fetch('/api/wizard/state', {
+                                    await fetch('/api/onboarding/state', {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ state: JSON.stringify(state) })
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
+                                            'X-User-ID': localStorage.getItem('user_id') || 'test-user'
+                                        },
+                                        body: JSON.stringify(state)
                                     });
                                 } catch (e) {
                                     console.error('Failed to save state to server', e);
@@ -3444,11 +3448,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
 
                             try {
-                                const res = await fetch('/api/wizard/state');
+                                const res = await fetch('/api/onboarding/state', {
+                                    headers: {
+                                        'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
+                                        'X-User-ID': localStorage.getItem('user_id') || 'test-user'
+                                    }
+                                });
                                 if (res.ok) {
                                     const data = await res.json();
-                                    if (data && data.state) {
-                                        const state = JSON.parse(data.state);
+                                    if (data) {
+                                        const state = data;
                                         inputs.forEach((input, index) => {
                                             if (input.type === 'checkbox') {
                                                 if (state['checkbox_' + index] !== undefined) {
