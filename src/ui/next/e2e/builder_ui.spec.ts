@@ -1,8 +1,35 @@
 import { test, expect } from '@playwright/test';
 
 test('builder flow completes successfully', async ({ page }) => {
-  // Use the baseURL from playwright config (or relative to it if Next is served there)
-  await page.goto('/builder');
+
+  // Mock API responses for E2E tests
+  await page.route('/api/onboarding/intake', async route => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: 'Dog Grooming', business_type: 'Service', categories: ['physical'], initial_products: [{name: 'Grooming', price: '50'}] }) });
+  });
+  await page.route('/api/onboarding/start', async route => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+  });
+  await page.route('/api/v1/builder/generate', async route => {
+    // Delay to ensure the 'generating' screen stays visible for playwright to assert
+    await new Promise(r => setTimeout(r, 1500));
+    await route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        pages: [{
+          blocks: [
+            { block_type: 'HeroBlock', content: { headline: 'Welcome', copy: 'Best grooming', image: 'test.jpg' } },
+            { block_type: 'ProductGridBlock', content: { items: [{name: 'Grooming', price: '$50', description: 'desc'}] } }
+          ]
+        }]
+      })
+    });
+  });
+  await page.route('/api/v1/builder/publish_draft', async route => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ domain: 'myshop' }) });
+  });
+
+  const url = process.env.BASE_URL ? `${process.env.BASE_URL}/builder` : 'http://127.0.0.1:3000/builder';
+  await page.goto(url);
 
   // 1. Onboarding Screen
   const textarea = page.getByPlaceholder(/e.g. I run a mobile dog grooming service/i);
@@ -10,6 +37,8 @@ test('builder flow completes successfully', async ({ page }) => {
 
   // Fill the bio
   await textarea.fill('I run a mobile dog grooming service');
+  await textarea.press('Tab');
+  await page.waitForTimeout(500);
 
   // Click Generate
   const buildButton = page.getByRole('button', { name: /Build My Storefront/i });
