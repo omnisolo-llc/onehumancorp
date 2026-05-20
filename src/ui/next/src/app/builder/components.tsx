@@ -70,18 +70,23 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "PoweredBy") {
     return (
-      <div className="py-6 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-100">
+      <div className="py-6 bg-gradient-to-r from-blue-50 to-indigo-50 flex flex-col items-center justify-center border-t border-blue-100 px-4 text-center">
+        <p className="text-sm text-gray-600 font-inter mb-3">Want a free storefront like this?</p>
         <a
           href="https://ohc.store"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+          className="group w-full max-w-[280px] bg-white border border-blue-200 shadow-sm hover:shadow-md hover:border-blue-300 rounded-xl p-3 flex items-center justify-between transition-all active:scale-[0.98]"
         >
-          <span className="font-inter">Powered by</span>
-          <span className="font-outfit font-bold tracking-tight">OHC</span>
-          <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
+          <div className="flex flex-col items-start">
+            <span className="text-xs text-gray-500 font-inter font-medium">Build yours in 30s with</span>
+            <span className="font-outfit font-bold text-gray-900 text-lg tracking-tight">OHC<span className="text-blue-600">.store</span></span>
+          </div>
+          <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </div>
         </a>
       </div>
     );

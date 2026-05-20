@@ -101,9 +101,37 @@ export default function BuilderPage() {
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h1>
           <p className="text-gray-500 mb-8">Your automated storefront is successfully published and ready for customers.</p>
 
-          <div className="w-full bg-gray-50 p-4 rounded-xl border border-gray-100 mb-8 flex items-center justify-between">
+          <div className="w-full bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline">Copy</button>
+          </div>
+
+          <div className="w-full text-left mb-6">
+            <h3 className="text-sm font-bold font-outfit text-gray-900 mb-2">Get your first customer</h3>
+            <div className="flex gap-3">
+              <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out my new storefront!')}&url=${encodeURIComponent(liveUrl)}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 font-semibold py-2 rounded-lg flex items-center justify-center gap-2 text-sm hover:bg-blue-100 transition-colors">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
+                Twitter
+              </a>
+              <a href={`https://wa.me/?text=${encodeURIComponent('Check out my new storefront! ' + liveUrl)}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-green-50 text-green-700 border border-green-100 font-semibold py-2 rounded-lg flex items-center justify-center gap-2 text-sm hover:bg-green-100 transition-colors">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.651.854 5.114 2.33 7.15L.82 24l5.042-1.46c1.944 1.258 4.26 1.986 6.74 1.986 6.646 0 12.031-5.385 12.031-12.031C24.633 5.385 19.248 0 12.031 0zm0 22.42c-2.316 0-4.484-.73-6.26-1.996l-.45-.316-3.666 1.06.98-3.548-.346-.546C1.177 15.347.41 13.722.41 12.03.41 5.614 5.614.41 12.03.41c6.417 0 11.62 5.203 11.62 11.62 0 6.416-5.203 11.62-11.62 11.62zm6.36-8.73c-.347-.174-2.054-1.014-2.373-1.13-.318-.116-.55-.174-.78.174-.23.348-.9 1.13-1.1 1.362-.2.23-.4.26-.748.087-2.12-.99-3.5-2.066-4.836-4.343-.23-.347.086-.347.434-.694.348-.348.695-.695.81-.926.116-.23.058-.434-.03-.608-.087-.174-.78-1.88-.11-2.576.67-.696 2.08-.174 2.89.58 1.928 1.796 2.448 3.012 3.144 4.546.116.26.058.492-.058.695-.116.203-.434.318-.78.492z"/></svg>
+                WhatsApp
+              </a>
+            </div>
+          </div>
+
+          <div className="w-full bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-100 mb-8 text-left">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">🎁</span>
+              <h3 className="font-bold font-outfit text-yellow-900">Invite & Get Premium Free</h3>
+            </div>
+            <p className="text-xs text-yellow-800 mb-3 font-inter leading-relaxed">Know another business owner? Share OHC and both get 3 months of Premium when they launch.</p>
+            <button
+              className="w-full bg-white text-yellow-900 border border-yellow-200 font-semibold py-2 rounded-lg text-sm hover:bg-yellow-100 transition-colors"
+              onClick={() => alert("Copied referral link: https://ohc.store/ref/" + liveUrl.split('//')[1].split('.')[0])}
+            >
+              Get Referral Link
+            </button>
           </div>
 
           <button
