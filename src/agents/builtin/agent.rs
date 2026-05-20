@@ -55,7 +55,6 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub visual_verification_command: String,
     pub guardrails: Option<GuardrailConfig>,
     pub enable_state_checkpointing: bool,
-    pub enable_git_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
@@ -106,7 +105,6 @@ enable_llmcompiler_plan_and_execute: false,
             visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
-            enable_git_checkpointing: false,
             state_scratchpad_path: None,
             workspace_path: None,
             project_trusted: true,
@@ -2175,46 +2173,6 @@ impl Agent {
                         });
                     }
                 }
-            }
-
-            // 3. Git Commit Checkpointing (Claude Code Mechanic)
-            if cfg.enable_git_checkpointing && !mutating_calls.is_empty() {
-                let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-
-                // 1. Progress File (Claude Code structured scratchpad)
-                let thread_id_val = final_cfg.thread_id.clone().unwrap_or_else(|| "default".to_string());
-                let progress_file_path = std::path::Path::new(&wd).join(format!(".agent_progress_{}.json", thread_id_val));
-
-                let checkpoint_id = uuid::Uuid::new_v4().to_string();
-                let cp = crate::checkpointer::Checkpoint {
-                    thread_id: thread_id_val,
-                    checkpoint_id: checkpoint_id.clone(),
-                    parent_id: last_checkpoint_id.clone(),
-                    data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
-                    metadata: serde_json::json!({
-                        "iteration": iteration,
-                        "agent_id": final_cfg.agent_id,
-                    }),
-                    created_at: chrono::Utc::now(),
-                };
-
-                if let Ok(json_data) = serde_json::to_string_pretty(&cp) {
-                    let _ = std::fs::write(&progress_file_path, json_data);
-                }
-
-                // 2. Git commit (Claude Code)
-                let commit_msg = format!("Checkpoint: {}", checkpoint_id);
-                let _ = std::process::Command::new("git").arg("add").arg(".").current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("commit").arg("--allow-empty").arg("-m").arg(&commit_msg).current_dir(&wd).output();
-                let _ = std::process::Command::new("git").arg("tag").arg("-f").arg(&checkpoint_id).current_dir(&wd).output();
-
-                last_checkpoint_id = Some(checkpoint_id.clone());
-                checkpoint_history.push(checkpoint_id.clone());
-
-                on_event(AgentEvent::CheckpointSaved {
-                    iteration,
-                    path: format!("git:{}", checkpoint_id),
-                });
             }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
@@ -4332,7 +4290,6 @@ mod tests {
         agent.checkpointer = Some(Arc::new(cp));
 
         let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_checkpointing = true;
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
         cfg.thread_id = Some("test-thread".to_string());
 
@@ -4346,7 +4303,7 @@ mod tests {
         let mut found_checkpoint_event = false;
         for e in events {
             if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path.starts_with("git:") {
+                if path.starts_with("db:") {
                     found_checkpoint_event = true;
                 }
             }
@@ -4646,7 +4603,6 @@ mod tests {
         let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
 
         let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_checkpointing = true;
         cfg.thread_id = Some("git-thread-123".to_string());
 
         let mut events = vec![];
@@ -4962,16 +4918,17 @@ mod tests {
             ]),
         });
 
-        let agent = Agent::new(client, vec![mutating_tool]);
-
         // We don't actually run git in a real repo, but we can verify it doesn't crash
         // and that we can supply the config cleanly.
         let temp_dir = std::env::temp_dir().join(format!("git_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
 
+        let cp = crate::checkpointer::GitCheckpointer::new(temp_dir.clone());
+        let agent = Agent::new(client, vec![mutating_tool]).with_checkpointer(std::sync::Arc::new(cp));
+
         let mut cfg = AgentRunConfig::default();
-        cfg.enable_git_checkpointing = true;
         cfg.workspace_path = Some(temp_dir.to_str().unwrap().to_string());
+        cfg.thread_id = Some("test-thread".to_string());
 
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
