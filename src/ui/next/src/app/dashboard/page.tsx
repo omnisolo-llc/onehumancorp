@@ -9,6 +9,16 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [referralCopied, setReferralCopied] = useState<boolean>(false);
+  const referralLink = "https://ohc.store/ref/nova_user";
+
+  let copyTimeout: NodeJS.Timeout | null = null;
+  const handleCopyReferral = () => {
+    navigator.clipboard.writeText(referralLink);
+    setReferralCopied(true);
+    if (copyTimeout) clearTimeout(copyTimeout);
+    copyTimeout = setTimeout(() => setReferralCopied(false), 2000);
+  };
 
   useEffect(() => {
     async function fetchApprovals() {
@@ -211,6 +221,33 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
+            </div>
+         </section>
+
+         {/* Growth Loop: Referral Hub */}
+         <section>
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Referral Hub</h2>
+            <div className="p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit mb-1" style={{ color: '#1D1D1F' }}>Share OHC & Get Free Premium! 🚀</h3>
+                    <p className="text-sm font-inter text-gray-500">Invite other business owners and unlock Premium for free when they make their first sale.</p>
+                </div>
+                <div className="flex flex-col gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        <span className="text-sm text-gray-600 font-mono truncate max-w-[200px]">{referralLink}</span>
+                        <button onClick={handleCopyReferral} className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-semibold rounded-md hover:bg-blue-200 transition">
+                            {referralCopied ? "Copied!" : "Copy"}
+                        </button>
+                    </div>
+                    <div className="flex gap-2">
+                        <a href={`https://wa.me/?text=${encodeURIComponent("Start your business with OHC! " + referralLink)}`} target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-[#25D366] text-white py-2 rounded-lg font-semibold text-sm hover:bg-[#20bd5a] transition">
+                            WhatsApp
+                        </a>
+                        <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("I'm running my business on OHC! Start yours today: " + referralLink)}`} target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-black text-white py-2 rounded-lg font-semibold text-sm hover:bg-gray-800 transition">
+                            X / Twitter
+                        </a>
+                    </div>
+                </div>
             </div>
          </section>
 
