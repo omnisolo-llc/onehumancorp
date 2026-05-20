@@ -2905,71 +2905,71 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <!-- Buffer Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Buffer</h3>
+                                    <h3 style="margin: 0;">Brevo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Customer Inbox. Manage all your messages and posts from one place.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Buffer...')">Connect</button>
+                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Brevo...')">Connect</button>
                             </div>
 
                             <!-- Acuity Scheduling Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Acuity Scheduling</h3>
+                                    <h3 style="margin: 0;">Cal.com</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Booking. Let customers schedule appointments 24/7.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Acuity...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
                             <!-- ActiveCampaign Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">ActiveCampaign</h3>
+                                    <h3 style="margin: 0;">Mailchimp</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">✉️</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Newsletters. Keep your customers engaged easily.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up ActiveCampaign...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
                             </div>
 
                             <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">ShipStation</h3>
+                                    <h3 style="margin: 0;">Shippo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Labels & Tracking. Save time on fulfilling orders.</p>
-                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to ShipStation...')">Connect</button>
+                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to Shippo...')">Connect</button>
                             </div>
 
                             <!-- MessageBird Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">MessageBird</h3>
+                                    <h3 style="margin: 0;">Twilio</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Text Alerts. Send critical updates directly to phones.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to MessageBird...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
                             <!-- Alipay Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Alipay</h3>
+                                    <h3 style="margin: 0;">Stripe Connect</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Alipay...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Stripe Connect...')">Connect</button>
                             </div>
 
                             <!-- Microsoft Teams Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Microsoft Teams</h3>
+                                    <h3 style="margin: 0;">Daily.co</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🎥</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Instant Video Rooms. Host online meetings effortlessly.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting Video Provider...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Daily.co...')">Connect</button>
                             </div>
                         </div>
 
