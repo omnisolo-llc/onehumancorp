@@ -230,35 +230,6 @@ async fn handle_create_team_invite(
     }
 }
 
-async fn handle_referral_click(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    state.hub.referral_tracker().record_click(&req.id);
-    Ok(Json(()))
-}
-
-async fn handle_referral_convert(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    state.hub.referral_tracker().record_conversion(&req.id);
-    Ok(Json(()))
-}
-
-async fn handle_team_invite_accept(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<InviteIdRequest>,
-) -> Result<Json<()>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
-    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
-
-    match tracker.accept_invite(&req.id).await {
-        Ok(_) => Ok(Json(())),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
