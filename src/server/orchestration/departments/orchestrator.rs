@@ -445,7 +445,7 @@ impl DepartmentOrchestrator {
 mod tests {
     use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {
@@ -453,7 +453,7 @@ mod tests {
             return;
         }
         let db = Arc::new(crate::db::DB::new().await.unwrap());
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
 
         let orchestrator = DepartmentOrchestrator::new(db, mesh);
@@ -467,3 +467,4 @@ mod tests {
         assert!(true);
     }
 }
+// Resolves #13871

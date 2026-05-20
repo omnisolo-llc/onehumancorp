@@ -31,11 +31,11 @@ jobs:
       matrix:
         include:
           - name: linux-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             bazel_config: linux
             install_linux_deps: true
           - name: windows-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             bazel_config: windows
             install_linux_deps: true
           - name: macos-aarch64

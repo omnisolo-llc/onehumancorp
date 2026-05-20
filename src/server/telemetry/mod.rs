@@ -4,6 +4,9 @@ use sqlx::{PgPool, query};
 use chrono::Utc;
 use std::sync::OnceLock;
 use opentelemetry::global;
+
+use opentelemetry::metrics::Histogram;
+
 use opentelemetry::metrics::UpDownCounter;
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
@@ -67,6 +70,10 @@ pub async fn record_sync_daemon_error_total(pool: &PgPool, count: f32, mode: &st
     buffer_metric(pool, "sync_daemon_error_total", "counter", count, serde_json::json!({ "mode": mode, "error": error_type })).await
 }
 
+
+pub async fn record_sqlite_throttled_request(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(pool, "ohc_sqlite_throttled_requests_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
+}
 
 pub async fn record_sqlite_lock_contention(pool: &PgPool, operation: &str) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "ohc_sqlite_lock_contention_total", "counter", 1.0, serde_json::json!({ "operation": operation })).await
@@ -320,4 +327,23 @@ pub async fn record_email_send_cost(pool: &PgPool, organization_id: &str, count:
         }),
     )
     .await
+}
+
+static ONBOARDING_DURATION_HISTOGRAM: OnceLock<Histogram<u64>> = OnceLock::new();
+
+pub fn get_onboarding_duration_histogram() -> &'static Histogram<u64> {
+    ONBOARDING_DURATION_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.onboarding");
+        meter.u64_histogram("ohc.onboarding.step_duration")
+            .with_description("Duration of onboarding steps in ms")
+            .build()
+    })
+}
+
+pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
+    let histogram = get_onboarding_duration_histogram();
+    histogram.record(duration_ms, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("step", step.to_string()),
+    ]);
 }

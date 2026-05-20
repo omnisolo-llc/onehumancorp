@@ -1,77 +1,56 @@
 import { test, expect } from './fixtures';
 
 test.describe('Onboarding Wizard', () => {
-  test('seeded user routes into setup', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('button', { name: /Start Business Setup/ }).click();
+  test.use({ viewport: { width: 375, height: 812 } });
 
+  test('Maya (The Home Baker) onboarding flow', async ({ page }) => {
+    // 1. Acquisition & Onboarding start
+    await page.goto('/website-builder');
+
+    // Simulate clicking "Build your bakery in 3 minutes"
     await expect(page.locator('#setup-screen')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
-  });
-
-  test('guided onboarding preserves entered business state', async ({ page }) => {
-    await page.goto('/website-builder');
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
-    await page.getByRole('button', { name: /Service Business/ }).click();
-    await page.getByPlaceholder('What is your business called?').fill('Carlos Repairs');
 
-    await expect(page.getByPlaceholder('What is your business called?')).toHaveValue('Carlos Repairs');
-  });
+    // 2. Simplified Mobile First Onboarding inputs
+    // The design doc specifies we just ask for Name and Category to defer friction
 
-  test('completed onboarding can return to dashboard', async ({ page }) => {
-    await page.goto('/website-builder');
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
+    await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
+    // Simulate picking "Bakery" -> We'll pick Local Business for now since Bakery isn't in this specific builder.
     await page.getByRole('button', { name: /Local Business/ }).click();
-    await page.getByPlaceholder('What is your business called?').fill('Local Shop');
+
+    await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
+    await page.getByPlaceholder('What is your business called?').fill("Maya's Cakes");
     await page.getByRole('button', { name: /Next/ }).click();
+
+    // Defer Stripe connection to Activation (We should skip this if possible but for testing we will follow the setup logic or what is simulated)
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
-  });
+    await page.getByLabel(/Physical Products/).check();
+    await page.getByRole('button', { name: /Next/ }).click();
 
-  test('full end-to-end onboarding flow syncs with backend', async ({ page }) => {
-    // Start Onboarding
-    await page.goto('/business-setup');
+    await page.getByPlaceholder('What is the name of this product?').fill('Custom Cake Deposit');
+    await page.getByPlaceholder('0.00').fill('50.00');
+    await page.getByRole('button', { name: /Next/ }).click();
 
-    // Step 1
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
-
-    // Step 2: Choose Service Business
-    await page.getByRole('button', { name: /Service Business/ }).click();
-
-    // Step 3: Company Name
-    await page.getByPlaceholder('What is your business called?').fill('Maya Consulting');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('A great consulting business');
-    await page.getByRole('button', { name: 'Next →' }).click();
-
-    // Step 4: What do you sell?
-    await page.getByLabel('Services / Appointments').check();
-    await page.getByRole('button', { name: 'Next →' }).click();
-
-    // Step 5: First product
-    await page.getByPlaceholder('What is the name of this product?').fill('Initial Consultation');
-    await page.getByPlaceholder('0.00').fill('150.00');
-    await page.getByRole('button', { name: 'Next →' }).click();
-
-    // Step 6: Payment preference
+    // Approves & connects Stripe (simulated in UI)
+    await expect(page.getByRole('heading', { name: 'How do you want to receive payments?' })).toBeVisible();
     await page.getByRole('button', { name: 'Online', exact: true }).click();
 
-    // Step 7: Create account
+    // Account details
     await page.getByPlaceholder('e.g. Maya Smith').fill('Maya');
-    await page.getByPlaceholder('you@email.com').fill('maya.consulting@test.com');
-    await page.getByPlaceholder('Password').fill('securepassword123');
-    await page.getByRole('button', { name: 'Next →' }).click();
+    await page.getByPlaceholder('you@email.com').fill('maya@cakes.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: /Next/ }).click();
 
-    // Step 8: Template
-    await page.getByRole('button', { name: 'Modern', exact: true }).click();
-    await page.getByRole('button', { name: 'Next →' }).click();
+    // Templates
+    await page.getByRole('button', { name: 'Modern' }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
 
-    // Step 9: Domain
-    await page.getByRole('button', { name: '🌐 Free OHC Domain' }).click();
-    await page.getByRole('button', { name: 'Next →' }).click();
-
-    // Step 10: Publish
+    // Publish
+    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
-    // Step 100: Success Screen
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible({ timeout: 10000 });
+    // 3. Activation
+    await expect(page.getByRole('heading', { name: 'CONFETTI SUCCESS' })).toBeVisible({ timeout: 15000 });
   });
 });

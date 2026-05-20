@@ -123,6 +123,7 @@ impl OnboardingAgent {
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+        let start_time = std::time::Instant::now();
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
         let business_type = req.business_type.clone();
@@ -305,6 +306,7 @@ impl OnboardingAgent {
         .await
         .map_err(|e| e.to_string())?;
 
+        crate::telemetry::track_onboarding_step(&org_id, "start_onboarding", start_time.elapsed().as_millis() as u64);
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),

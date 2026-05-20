@@ -202,59 +202,91 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
     combined
 }
 
+/// A dedicated builder for the Hierarchical Priority Stack mechanic.
+/// This fulfills the Master Catalog specification:
+/// 1. Server-controlled System Message (Highest Priority)
+/// 2. Tool Definitions
+/// 3. Developer Instructions
+/// 4. User Instructions (capped at 32 KiB)
+pub(crate) struct HierarchicalPromptBuilder {
+    server_system_message: String,
+    tool_definitions: String,
+    developer_instructions: String,
+    user_instructions: String,
+}
+
+impl HierarchicalPromptBuilder {
+    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> Self {
+        let mut tool_defs = String::new();
+        if !tools.is_empty() {
+            for tool in tools {
+                tool_defs.push_str(&format!("Tool: {}\n", tool.name));
+                tool_defs.push_str(&format!("Description: {}\n", tool.description));
+                tool_defs.push_str(&format!("Parameters: {}\n", tool.parameters));
+            }
+            tool_defs.pop(); // Remove trailing newline
+        }
+
+        let mut end_idx = 32768;
+        if cfg.user_instructions.len() > 32768 {
+            while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+                end_idx -= 1;
+            }
+        } else {
+            end_idx = cfg.user_instructions.len();
+        }
+        let user_instr = cfg.user_instructions[..end_idx].to_string();
+
+        Self {
+            server_system_message: cfg.server_system_message.clone(),
+            tool_definitions: tool_defs,
+            developer_instructions: cfg.developer_instructions.clone(),
+            user_instructions: user_instr,
+        }
+    }
+
+    pub fn build(&self) -> String {
+        let mut combined_system = String::new();
+
+        // 1. Server-controlled System Message (Highest Priority)
+        if !self.server_system_message.is_empty() {
+            combined_system.push_str("[Server System Message]\n");
+            combined_system.push_str(&self.server_system_message);
+        }
+
+        // 2. Tool Definitions
+        if !self.tool_definitions.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("[Tool Definitions]\n");
+            combined_system.push_str(&self.tool_definitions);
+        }
+
+        // 3. Developer Instructions
+        if !self.developer_instructions.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("[Developer Instructions]\n");
+            combined_system.push_str(&self.developer_instructions);
+        }
+
+        // 4. User Instructions
+        if !self.user_instructions.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("[User Instructions]\n");
+            combined_system.push_str(&self.user_instructions);
+        }
+
+        combined_system
+    }
+}
+
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
-    let mut end_idx = 32768;
-    if cfg.user_instructions.len() > 32768 {
-        while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
-            end_idx -= 1;
-        }
-    } else {
-        end_idx = cfg.user_instructions.len();
-    }
-    let user_instr = &cfg.user_instructions[..end_idx];
-
-    let mut combined_system = String::new();
-
-    // 1. Server-controlled System Message (Highest Priority)
-    if !cfg.server_system_message.is_empty() {
-        combined_system.push_str("[Server System Message]\n");
-        combined_system.push_str(&cfg.server_system_message);
-    }
-
-    // 2. Tool Definitions
-    if !tools.is_empty() {
-        if !combined_system.is_empty() {
-            combined_system.push_str("\n\n");
-        }
-        combined_system.push_str("[Tool Definitions]\n");
-        for tool in tools {
-            combined_system.push_str(&format!("Tool: {}\n", tool.name));
-            combined_system.push_str(&format!("Description: {}\n", tool.description));
-            combined_system.push_str(&format!("Parameters: {}\n", tool.parameters));
-        }
-        // Remove trailing newline
-        combined_system.pop();
-    }
-
-    // 3. Developer Instructions
-    if !cfg.developer_instructions.is_empty() {
-        if !combined_system.is_empty() {
-            combined_system.push_str("\n\n");
-        }
-        combined_system.push_str("[Developer Instructions]\n");
-        combined_system.push_str(&cfg.developer_instructions);
-    }
-
-    // 4. User Instructions
-    if !user_instr.is_empty() {
-        if !combined_system.is_empty() {
-            combined_system.push_str("\n\n");
-        }
-        combined_system.push_str("[User Instructions]\n");
-        combined_system.push_str(user_instr);
-    }
-
-    combined_system
+    HierarchicalPromptBuilder::new(cfg, tools).build()
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
@@ -4644,12 +4676,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_langgraph_four_tier_errors() {
-        struct LanggraphFourTierErrorToolExecutor {
+        struct TestLanggraphFourTierErrorToolExecutor {
             name: String,
             call_count: tokio::sync::Mutex<usize>,
         }
         #[async_trait::async_trait]
-        impl ToolExecutor for LanggraphFourTierErrorToolExecutor {
+        impl ToolExecutor for TestLanggraphFourTierErrorToolExecutor {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
@@ -4700,7 +4732,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "llm_recoverable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         let agent1 = Agent::new(client1, vec![tool_recoverable]);
@@ -4737,7 +4769,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "fatal_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "fatal_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         // Test Transient
@@ -4774,7 +4806,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "transient_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "transient_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         let agent3 = Agent::new(client3, vec![tool_transient.clone()]);
@@ -4819,7 +4851,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(LanggraphFourTierErrorToolExecutor { name: "user_fixable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
+            execute: Arc::new(TestLanggraphFourTierErrorToolExecutor { name: "user_fixable_tool".to_string(), call_count: tokio::sync::Mutex::new(0) }),
         };
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);

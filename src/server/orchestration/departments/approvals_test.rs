@@ -3,7 +3,7 @@ mod tests {
     use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, ActionRisk};
     use crate::orchestration::departments::types::DepartmentType;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use crate::db::DbStore;
 
@@ -32,7 +32,7 @@ mod tests {
             }
         }
 
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
 
         let orchestrator = DepartmentOrchestrator::new(db, mesh);
