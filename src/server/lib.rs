@@ -1976,11 +1976,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #006fff;
+                            --primary: #0066FF;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
-                            --accent-green: #15a46f;
-                            --accent-orange: #f59e0b;
+                            --accent-green: #34C759;
+                            --accent-orange: #FF9500;
+                            --accent-red: #FF3B30;
                             --bg: #eef1f5;
                             --surface: rgba(255, 255, 255, 0.86);
                             --surface-strong: #ffffff;
@@ -2039,15 +2040,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: rgba(255, 255, 255, 0.65);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border-radius: 16px;
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2060,8 +2061,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -2100,7 +2101,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -2205,8 +2206,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -2350,8 +2351,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 600px;
@@ -2388,6 +2389,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
+
+                        .step-hidden {
+                            opacity: 0;
+                            transform: translateY(10px);
+                            pointer-events: none;
+                            position: absolute;
+                            visibility: hidden;
+                            transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1), visibility 150ms;
+                        }
+                        .step-visible {
+                            opacity: 1;
+                            transform: translateY(0);
+                            pointer-events: auto;
+                            position: relative;
+                            visibility: visible;
+                            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0ms;
+                        }
                     </style>
                 </head>
                 <body>
@@ -3064,13 +3082,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
                         <h1>OneHuman</h1>
-                        <div id="step-1">
+                        <div id="step-1" class="step-visible">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" style="display: none;">
+                        <div id="step-2" class="step-hidden">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" />
                             <button onclick="nextStep(3)">Next →</button>
@@ -3081,7 +3099,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
-                        <div id="step-3" style="display: none;">
+                        <div id="step-3" class="step-hidden">
                             <h1>Give your business a name</h1>
                             <input type="text" placeholder="What is your business called?" />
                             <input type="text" placeholder="e.g. Maya's Cakes" />
@@ -3089,7 +3107,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
-                        <div id="step-4" style="display: none;">
+                        <div id="step-4" class="step-hidden">
                             <h1>What do you sell?</h1>
                             <label><input type="checkbox"> Physical Products</label>
                             <label><input type="checkbox"> 📦 Physical products</label>
@@ -3099,7 +3117,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <br/><button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
-                        <div id="step-5" style="display: none;">
+                        <div id="step-5" class="step-hidden">
                             <h1>Add your first product or service</h1>
                             <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="0.00" />
@@ -3107,43 +3125,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
-                        <div id="step-6" style="display: none;">
+                        <div id="step-6" class="step-hidden">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
-                        <div id="step-7" style="display: none;">
+                        <div id="step-7" class="step-hidden">
                             <h1>Create your account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
-                        <div id="step-8" style="display: none;">
+                        <div id="step-8" class="step-hidden">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)">Bold</button>
                             <button onclick="nextStep(9)">Next →</button>
                         </div>
-                        <div id="step-9" style="display: none;">
+                        <div id="step-9" class="step-hidden">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)">🔗 Connect Custom Domain</button>
                             <button onclick="nextStep(10)">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none;">
+                        <div id="step-10" class="step-hidden">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none;">
+                        <div id="step-100" class="step-hidden">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen">
+                        <div id="checklist-screen" class="step-hidden screen">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
@@ -3153,13 +3171,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" style="display: none;">
+                        <div id="step-ai" class="step-hidden">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
                             <button onclick="generateAI()">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
-                        <div id="step-generating" style="display: none;">
+                        <div id="step-generating" class="step-hidden">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -3168,7 +3186,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" style="display: none;">
+                        <div id="step-launch-ai" class="step-hidden">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
                         </div>
@@ -3858,6 +3876,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     return false;
                                 }
                             }
+                            if (stepId === 8 && currentStep === 7) {
+                                const email = document.querySelector('#step-7 input[type="email"]');
+                                const pass = document.querySelector('#step-7 input[type="password"]');
+                                if (!email || email.value.trim().length === 0 || !pass || pass.value.trim().length === 0) {
+                                    alert('Please enter your email and password');
+                                    return false;
+                                }
+                            }
                             return true;
                         }
 
@@ -3901,14 +3927,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
-                                    d.style.display = 'none';
+                                    d.classList.add('step-hidden'); d.classList.remove('step-visible'); d.style.display = '';
                                     suppressButtonText(d, true);
                                     suppressInputSelectors(d, true);
                                 }
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
-                                next.style.display = 'block';
+                                next.classList.remove('step-hidden'); next.classList.add('step-visible'); next.style.display = '';
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
@@ -4045,8 +4071,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (id === 'checklist-screen') {
                                     const setupScreen = document.getElementById('setup-screen');
                                     if (setupScreen) setupScreen.style.display = 'block';
+                                    screen.classList.remove('step-hidden');
+                                    screen.classList.add('step-visible');
+                                    screen.style.display = 'block';
+                                } else {
+                                    screen.style.display = 'block';
                                 }
-                                screen.style.display = 'block';
                                 suppressButtonText(screen, false);
                                 suppressInputSelectors(screen, false);
                                 // Auto-advance wizard if nested and needed
