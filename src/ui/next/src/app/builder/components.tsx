@@ -48,8 +48,8 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl text-center">
           <h2 className="text-lg font-bold font-outfit text-blue-900 mb-2">{props.title}</h2>
           <p className="text-sm text-blue-700 mb-4">{props.availability}</p>
-          <button className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm active:scale-[0.98] transition-transform">
-            Select Time
+          <button data-cal-namespace="" data-cal-link="team/ohc/booking" className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm active:scale-[0.98] transition-transform">
+            Book with Cal.com
           </button>
         </div>
       </div>

@@ -21,7 +21,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('displays online booking integration card', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Add Online Booking' })).toBeVisible();
     await expect(page.getByText('Sync with Google Calendar or add a Cal.com booking link.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sync Calendar' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect Cal.com' })).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {

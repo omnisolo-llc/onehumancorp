@@ -188,3 +188,22 @@ pub async fn mercadopago_webhook_handler(
         _ => StatusCode::OK.into_response()
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct CalComEvent {
+    pub triggerEvent: String,
+    pub payload: Value,
+}
+
+pub async fn calcom_webhook_handler(
+    State(_state): State<WebhookState>,
+    Json(payload): Json<CalComEvent>,
+) -> impl IntoResponse {
+    match payload.triggerEvent.as_str() {
+        "BOOKING_CREATED" => {
+            // Call BookingService dummy or return 200 OK
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}

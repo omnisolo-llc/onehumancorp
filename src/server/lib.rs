@@ -1724,6 +1724,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
+        .route("/api/v1/webhooks/calcom", axum::routing::post(api::billing_webhook::calcom_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -2731,6 +2732,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        function connectCalCom() {
+                            const calUsername = prompt("Enter your Cal.com username or URL (e.g., cal.com/carlos):");
+                            if (calUsername) {
+                                alert("Successfully linked Cal.com profile: " + calUsername);
+                                localStorage.setItem("cal_username", calUsername);
+                            }
+                        }
+
                         function toggleDepartment(deptId) {
                             const settingsDiv = document.getElementById(deptId + '-settings');
                             if (settingsDiv) {
@@ -2771,7 +2780,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px;">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Sync with Google Calendar or add a Cal.com booking link.</p>
-                                <button style="width: 100%;" onclick="alert('Syncing Calendar...')">Sync Calendar</button>
+                                <button style="width: 100%;" onclick="connectCalCom()">Connect Cal.com</button>
                             </div>
 
                             <div class="card glass" style="border-radius: 16px;">
