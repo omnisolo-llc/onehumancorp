@@ -416,6 +416,45 @@ impl DashboardService for MyDashboardService {
             org
         };
 
+
+        // Fetch weekly health report from agent_kv_store
+        let tenant_id = if ::server_config::get().multitenant {
+            req.organization_id.clone()
+        } else {
+            "system".to_string()
+        };
+
+        let health_report_val = match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'weekly_health_report'")
+                    .bind(&tenant_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                row.map(|r| r.get::<String, _>("kv_value"))
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let row = sqlx::query("SELECT kv_value FROM agent_kv_store WHERE tenant_id = ? AND kv_key = 'weekly_health_report'")
+                    .bind(&tenant_id)
+                    .fetch_optional(sqlite_pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                row.map(|r| r.get::<String, _>("kv_value"))
+            }
+        };
+
+        let mut weekly_health_report = None;
+        if let Some(val) = health_report_val {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&val) {
+                let summary = json.get("summary").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                let actionable_suggestion = json.get("actionable_suggestion").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                weekly_health_report = Some(::server_ohc::app::WeeklyHealthReport {
+                    summary,
+                    actionable_suggestion,
+                });
+            }
+        }
+
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents,
@@ -425,6 +464,7 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            weekly_health_report,
         }))
     }
 

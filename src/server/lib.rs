@@ -36,6 +36,47 @@ pub use ::server_ohc as ohc;
 pub mod builder;
 pub mod tools;
 pub mod workers;
+
+pub struct HealthReportCronWorker {
+    pub db: std::sync::Arc<crate::db::DB>,
+}
+
+impl HealthReportCronWorker {
+    pub fn new(db: std::sync::Arc<crate::db::DB>) -> Self {
+        Self { db }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600 * 24)); // daily check
+            loop {
+                interval.tick().await;
+                // Enqueue health report tasks for tenants
+                let _ = Self::enqueue_tasks(&db).await;
+            }
+        });
+    }
+
+    async fn enqueue_tasks(db: &std::sync::Arc<crate::db::DB>) -> Result<(), String> {
+        let tenant_id = "system"; // Simplified for demonstration
+        let task_id = uuid::Uuid::new_v4().to_string();
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'business_advisory', 'WeeklyHealthReport', '{}', 'PENDING') ON CONFLICT DO NOTHING"
+                ).bind(&task_id).bind(tenant_id).execute(&db.pool).await;
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, 'business_advisory', 'WeeklyHealthReport', '{}', 'PENDING') ON CONFLICT DO NOTHING"
+                ).bind(&task_id).bind(tenant_id).execute(pool).await;
+            }
+        }
+        Ok(())
+    }
+}
+
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
@@ -1535,6 +1576,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    // Start Business Advisory Worker
+    let ba_worker = crate::workers::department_workers::BusinessAdvisoryWorker::new(db.clone());
+    ba_worker.start();
+    let hr_cron = HealthReportCronWorker::new(db.clone());
+    hr_cron.start();
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
@@ -1722,17 +1769,21 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let webhook_router = axum::Router::new()
+        .route("/api/v1/dashboard/health_report", axum::routing::get(health_report_handler))
+
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
+
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
     let db_for_sales = db.clone();
     let app = axum::Router::new()
+
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
@@ -2441,6 +2492,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
                             <p>Orders to Ship</p>
+                            <div id="weekly-health-report" style="margin-top: 15px; padding: 15px; background: rgba(0,123,255,0.1); border-radius: 8px;">
+                                <h4>📈 Weekly Health Report</h4>
+                                <p id="weekly-health-summary">Loading your snapshot...</p>
+                                <div id="weekly-health-suggestion-box" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 6px;">
+                                    <strong>💡 Suggestion:</strong> <span id="weekly-health-suggestion"></span>
+                                    <div style="margin-top: 8px;">
+                                        <button class="primary" onclick="alert('Drafting...')">Yes, draft it</button>
+                                        <button class="secondary">No thanks</button>
+                                    </div>
+                                </div>
+                            </div>
                             <p>Team Members</p>
                             <p>Ongoing Tasks</p>
                             <p>Needs Your Approval</p>
@@ -4074,6 +4136,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             if (id === 'dashboard-screen') {
+                                fetch('/api/v1/dashboard/health_report')
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        if (data.summary) {
+                                            document.getElementById('weekly-health-summary').textContent = data.summary;
+                                        }
+                                        if (data.actionable_suggestion) {
+                                            document.getElementById('weekly-health-suggestion-box').style.display = 'block';
+                                            document.getElementById('weekly-health-suggestion').textContent = data.actionable_suggestion;
+                                        }
+                                    }).catch(e => console.error('Error fetching health report:', e));
+
                                 const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
                                 fetch('/api/v1/dashboard/sales', {
                                     method: 'POST',
@@ -4207,4 +4281,50 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         "#,
     };
     axum::response::Html(content)
+}
+
+
+
+async fn health_report_handler(
+    axum::extract::State(state): axum::extract::State<crate::api::billing_webhook::WebhookState>,
+) -> impl axum::response::IntoResponse {
+    use sqlx::Row;
+    let tenant_id = "system"; // Simplified for demonstration or use proper auth
+    let mut summary = "No report generated yet.".to_string();
+    let mut actionable_suggestion = "".to_string();
+
+    let db = &state.db;
+
+    let health_report_val = match &db.store {
+        crate::db::DbStore::Postgres => {
+            let row = sqlx::query("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'weekly_health_report'")
+                .bind(tenant_id)
+                .fetch_optional(&db.pool)
+                .await
+                .ok()
+                .flatten();
+            row.map(|r| r.get::<String, _>("kv_value"))
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let row = sqlx::query("SELECT kv_value FROM agent_kv_store WHERE tenant_id = ? AND kv_key = 'weekly_health_report'")
+                .bind(tenant_id)
+                .fetch_optional(sqlite_pool)
+                .await
+                .ok()
+                .flatten();
+            row.map(|r| r.get::<String, _>("kv_value"))
+        }
+    };
+
+    if let Some(val) = health_report_val {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&val) {
+            summary = json.get("summary").and_then(|s| s.as_str()).unwrap_or("").to_string();
+            actionable_suggestion = json.get("actionable_suggestion").and_then(|s| s.as_str()).unwrap_or("").to_string();
+        }
+    }
+
+    axum::Json(serde_json::json!({
+        "summary": summary,
+        "actionable_suggestion": actionable_suggestion
+    }))
 }

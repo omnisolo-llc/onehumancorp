@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dashboard.dart';
 
 class OnboardingScreen extends StatefulWidget {
   @override
@@ -42,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
         if (response.statusCode == 200) {
           // Navigate to Success / Store Live
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => StoreLiveScreen()));
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
         }
       } catch (e) {
         print('Error: \$e');

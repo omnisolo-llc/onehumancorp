@@ -29,6 +29,12 @@ message Order {
   int64 created_at_unix = 6;
 }
 
+
+message WeeklyHealthReport {
+  string summary = 1;
+  string actionable_suggestion = 2;
+}
+
 message DashboardSnapshot {
 
   ohc.organization.Organization organization = 1;
@@ -39,6 +45,7 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
+  WeeklyHealthReport weekly_health_report = 9;
 }
 
 message GetDashboardRequest {

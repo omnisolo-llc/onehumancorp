@@ -844,3 +844,203 @@ impl PromoterWorker {
         });
     }
 }
+
+pub struct BusinessAdvisoryWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: Duration,
+}
+
+impl BusinessAdvisoryWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self {
+            db,
+            poll_interval: Duration::from_secs(60 * 60 * 24 * 7), // Weekly
+        }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let interval_duration = Duration::from_secs(10); // Polling interval
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(interval_duration);
+            loop {
+                interval.tick().await;
+                loop {
+                    match Self::poll(&db).await {
+                        Ok(true) => continue, // keep polling until queue is empty
+                        Ok(false) => break,
+                        Err(e) => {
+                            tracing::error!("BusinessAdvisoryWorker error: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
+        let task = match &db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                let row = sqlx::query(
+                    r#"
+                    UPDATE department_tasks
+                    SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = (
+                        SELECT id FROM department_tasks
+                        WHERE status = 'PENDING' AND department = 'business_advisory' AND event_type = 'WeeklyHealthReport'
+                        AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+                        ORDER BY created_at ASC
+                        LIMIT 1
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    RETURNING id, tenant_id, payload
+                    "#
+                )
+                .bind(Utc::now() + chrono::Duration::minutes(5))
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                tx.commit().await.map_err(|e| e.to_string())?;
+                res
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+                let row = sqlx::query(
+                    r#"
+                    SELECT id, tenant_id, payload FROM department_tasks
+                    WHERE status = 'PENDING' AND department = 'business_advisory' AND event_type = 'WeeklyHealthReport'
+                    AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+                    ORDER BY created_at ASC
+                    LIMIT 1
+                    "#
+                )
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let res = if let Some(r) = row {
+                    let id: String = r.get("id");
+                    let tenant_id: String = r.get("tenant_id");
+                    let payload_str: String = r.get("payload");
+                    let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
+
+                    sqlx::query(
+                        "UPDATE department_tasks SET status = 'IN_PROGRESS', locked_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    )
+                    .bind((Utc::now() + chrono::Duration::minutes(5)).to_rfc3339())
+                    .bind(&id)
+                    .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                    Some((id, tenant_id, payload))
+                } else {
+                    None
+                };
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                res
+            }
+        };
+
+        let (task_id, tenant_id, _payload) = match task {
+            Some(t) => t,
+            None => return Ok(false), // queue is empty
+        };
+
+        // Synthesize data (e.g. mock orders, check interactions)
+        // In a real app we'd fetch this from the db:
+        // let sales_data = fetch_weekly_sales(&tenant_id, &db).await;
+
+
+        let mut sales_amount = 0.0;
+        let mut order_count = 0;
+        // Best effort to fetch actual sales if available
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                if let Ok(row) = sqlx::query("SELECT COUNT(*) as cnt, SUM(amount_cents) as total FROM orders WHERE organization_id = $1")
+                    .bind(&tenant_id).fetch_one(&db.pool).await {
+                    order_count = row.try_get::<i64, _>("cnt").unwrap_or(0);
+                    let cents = row.try_get::<i64, _>("total").unwrap_or(0);
+                    sales_amount = (cents as f64) / 100.0;
+                }
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                if let Ok(row) = sqlx::query("SELECT COUNT(*) as cnt, SUM(amount_cents) as total FROM orders WHERE organization_id = ?")
+                    .bind(&tenant_id).fetch_one(sqlite_pool).await {
+                    order_count = row.try_get::<i32, _>("cnt").unwrap_or(0) as i64;
+                    let cents = row.try_get::<i64, _>("total").unwrap_or(0);
+                    sales_amount = (cents as f64) / 100.0;
+                }
+            }
+        }
+
+        let prompt = format!(
+            "You are a Business Advisory AI. The tenant had {} orders this week, totaling ${:.2} in sales. \
+            Write a very simple, plain-language summary for the business owner. No jargon. \
+            Also provide one actionable suggestion (e.g. drafting a new menu, responding to DMs). \
+            Format your response as a JSON object with 'summary' and 'actionable_suggestion' string keys.",
+            order_count, sales_amount
+        );
+
+        let mut report_json = json!({
+            "summary": format!("You made ${:.2} from {} orders this week.", sales_amount, order_count),
+            "actionable_suggestion": "We noticed some new customer trends. Want me to draft a new menu section?"
+        });
+
+        if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+            let client = crate::minimax::MinimaxClient::new(api_key);
+            if let Ok(resp) = client.generate_text(&prompt).await {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&resp) {
+                    if parsed.get("summary").is_some() && parsed.get("actionable_suggestion").is_some() {
+                        report_json = parsed;
+                    }
+                }
+            }
+        }
+
+        // Store the report in agent_kv_store
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value)
+                    VALUES ($1, 'weekly_health_report', $2)
+                    ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = EXCLUDED.kv_value, updated_at = CURRENT_TIMESTAMP
+                    "#
+                )
+                .bind(&tenant_id)
+                .bind(report_json.to_string())
+                .execute(&db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                    .bind(&task_id)
+                    .execute(&db.pool).await.map_err(|e| e.to_string())?;
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value)
+                    VALUES (?, 'weekly_health_report', ?)
+                    ON CONFLICT(tenant_id, kv_key) DO UPDATE SET kv_value = excluded.kv_value, updated_at = CURRENT_TIMESTAMP
+                    "#
+                )
+                .bind(&tenant_id)
+                .bind(report_json.to_string())
+                .execute(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                    .bind(&task_id)
+                    .execute(sqlite_pool).await.map_err(|e| e.to_string())?;
+            }
+        }
+
+        Ok(true)
+    }
+}
