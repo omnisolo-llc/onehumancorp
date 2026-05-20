@@ -351,7 +351,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       Icon(Icons.check_circle, size: 48, color: Color(0xFF34C759)),
                       SizedBox(height: 16),
                       Text(
-                        'Storefront Generated!',
+                        'Dashboard Ready!',
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 20,
@@ -360,14 +360,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Your AI agent has created a draft based on your business profile.',
+                        'Your platform is fully configured and ready to go.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                       SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: () {
-                          setState(() => _state = OnboardingState.draft);
+                          // In a real app this would navigate to the actual dashboard screen
+                          // For this prototype, we'll just log or show a snackbar
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Navigating to full dashboard...')),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF0066FF),
@@ -380,7 +384,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           elevation: 0,
                         ),
                         child: Text(
-                          'Preview Site',
+                          'Go to Dashboard',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 16,

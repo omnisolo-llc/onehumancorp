@@ -9,6 +9,7 @@ pub mod operations_agent;
 pub mod customer_success_agent;
 pub mod marketing_agent;
 pub mod sales_agent;
+pub mod booking_agent;
 pub mod throttling;
 #[cfg(test)]
 pub mod approvals_test;

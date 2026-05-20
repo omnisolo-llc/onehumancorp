@@ -492,3 +492,9 @@ mod tests {
     }
 }
 // Resolves #13871
+
+impl DepartmentOrchestrator {
+    pub fn get_db(&self) -> Arc<crate::db::DB> {
+        self.db.clone()
+    }
+}
