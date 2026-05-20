@@ -1,0 +1,11 @@
+--- src/server/orchestration/hybrid_sync/daemon.rs
++++ src/server/orchestration/hybrid_sync/daemon.rs
+@@ -59,7 +59,7 @@
+                 }
+             };
+
+-            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, 'system', NULL, $2, 'QUEUED', $3, $3, $3)")
++            let res = sqlx::query("INSERT INTO agent_missions (id, tenant_id, payload, status, created_at, updated_at) VALUES ($1, 'system', $2, 'PENDING', $3, $3)")
+                 .bind(&queue_id)
+                 .bind(payload.to_string())
+                 .bind(now)
