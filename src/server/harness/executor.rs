@@ -1,5 +1,7 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
+use std::time::Instant;
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
 
 pub struct LocalShellTask {
     manager: SandboxManager,
@@ -22,10 +24,29 @@ impl LocalShellTask {
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
         };
 
+        // The task_id and agent_id should be dynamic in reality, but for context we use defaults if not available here
+        let task_id = "unknown_task";
+        let agent_id = "unknown_agent";
+
+        record_bubblewrap_spawn(agent_id, task_id);
+        let start = Instant::now();
+
         // In a real execution, we would run `wrapped_cmd` using `tokio::process::Command`
         // For the scope of this harness executor logic, we just return the wrapped command
         // or execute it if needed. Let's return the wrapped command as a success placeholder
         // to show interception logic.
+
+        // Simulating the actual execution and trapping permission denied (just an example).
+        // Real implementation would spawn and wait, then check the exit status.
+        let mock_exit_code = 0; // Replace this with actual `process.wait().await?.code().unwrap_or(-1)` in reality
+
+        let latency = start.elapsed().as_secs_f64() * 1000.0;
+        record_bubblewrap_execution_latency(agent_id, task_id, latency);
+
+        if mock_exit_code == 13 || mock_exit_code == 126 { // Permission denied related exit codes
+            record_bubblewrap_violation(agent_id, task_id, "permission_denied");
+        }
+
         Ok(format!("Executing: {}", wrapped_cmd))
     }
 }
