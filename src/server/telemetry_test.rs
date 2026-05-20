@@ -35,6 +35,19 @@ mod tests {
     use ::server_telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
+    fn test_organization_id_not_redacted() {
+        let input = json!({
+            "organization_id": "tenant-123",
+            "safe_field": "ok"
+        });
+        let expected = json!({
+            "organization_id": "tenant-123",
+            "safe_field": "ok"
+        });
+        assert_eq!(redact_interface_pii(input), expected);
+    }
+
+    #[test]
     fn test_redact_pii_password() {
         let input = json!({
             "username": "maya",
