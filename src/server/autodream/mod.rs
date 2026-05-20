@@ -521,8 +521,74 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        debug!("AutoDreamWorker: stub for process_mesh_messages");
+    async fn process_mesh_messages(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let rows = sqlx::query("SELECT seq, tenant_id, agent_id, message_id, content FROM agent_inbox ORDER BY seq ASC LIMIT 100")
+            .fetch_all(&db.pool)
+            .await?;
+
+        let client = crate::minimax::LocalLLMClient::new();
+
+        for row in rows {
+            let seq: i32 = row.get("seq");
+            let tenant_id: String = row.get("tenant_id");
+            let agent_id: String = row.get("agent_id");
+            let message_id: String = row.get("message_id");
+            let content: String = row.get("content");
+
+            match client.generate_embedding(&content).await {
+                Ok(embedding) => {
+                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let mem_id = uuid::Uuid::new_v4().to_string();
+
+                    if db.is_sqlite() {
+                        if let Err(e) = sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                            .bind(&mem_id)
+                            .bind(&tenant_id)
+                            .bind(&agent_id)
+                            .bind(&content)
+                            .bind(&emb_str)
+                            .bind("MESH_MESSAGE")
+                            .execute(&db.pool)
+                            .await
+                        {
+                            debug!("AutoDreamWorker: failed to insert mesh message {}: {}", message_id, e);
+                            continue;
+                        }
+                    } else {
+                        if let Err(e) = sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                            .bind(&mem_id)
+                            .bind(&tenant_id)
+                            .bind(&agent_id)
+                            .bind(&content)
+                            .bind(&emb_str)
+                            .bind("MESH_MESSAGE")
+                            .execute(&db.pool)
+                            .await
+                        {
+                            debug!("AutoDreamWorker: failed to insert mesh message {}: {}", message_id, e);
+                            continue;
+                        }
+                    }
+
+                    let del_query = if db.is_sqlite() {
+                        "DELETE FROM agent_inbox WHERE seq = ?"
+                    } else {
+                        "DELETE FROM agent_inbox WHERE seq = $1"
+                    };
+
+                    if let Err(e) = sqlx::query(del_query)
+                        .bind(seq)
+                        .execute(&db.pool)
+                        .await
+                    {
+                        debug!("AutoDreamWorker: failed to delete mesh message {}: {}", message_id, e);
+                    }
+                }
+                Err(e) => {
+                    debug!("AutoDreamWorker: failed to embed mesh message {}: {}", message_id, e);
+                }
+            }
+        }
         Ok(())
     }
 }
