@@ -19,6 +19,22 @@ impl LocalShellTask {
     }
 
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
+        let task_id = format!("task-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        let worktree_path = format!("../.ohc-worktrees/{}", task_id);
+
+        let _status = tokio::process::Command::new("git")
+            .args(&["worktree", "add", &worktree_path, "-b", &task_id])
+            .status()
+            .await;
+
+        let _cleanup_status = tokio::process::Command::new("git")
+            .args(&["worktree", "remove", "--force", &worktree_path])
+            .status()
+            .await;
+        let _branch_cleanup_status = tokio::process::Command::new("git")
+            .args(&["branch", "-D", &task_id])
+            .status()
+            .await;
         let wrapped_cmd = match self.manager.wrap_command(cmd).await {
             Ok(c) => c,
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
