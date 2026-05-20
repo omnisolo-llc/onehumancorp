@@ -1724,6 +1724,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
+        .route("/api/v1/webhooks/manychat", axum::routing::post(crate::integrations::manychat::webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/calendly", axum::routing::post(crate::integrations::calendly::webhook::calendly_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()

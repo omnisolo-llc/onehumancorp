@@ -4,7 +4,7 @@ filegroup(
         "client.rs",
         "mod.rs",
         "provider.rs",
-        "routing.rs",
+        "webhook.rs",
     ],
     visibility = ["//src/server/integrations:__pkg__"],
 )
