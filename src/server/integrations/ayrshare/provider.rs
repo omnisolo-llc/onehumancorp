@@ -1,23 +1,23 @@
-use super::client::CalComClient;
+use super::client::AyrshareClient;
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-pub struct CalComProvider {
-    _client: Arc<CalComClient>,
+pub struct AyrshareProvider {
+    _client: Arc<AyrshareClient>,
     metadata: ProviderMetadata,
 }
 
-impl CalComProvider {
-    pub fn new(access_token: String) -> Self {
-        let client = CalComClient::new(access_token);
+impl AyrshareProvider {
+    pub fn new(api_key: String) -> Self {
+        let client = AyrshareClient::new(api_key);
 
         Self {
             _client: Arc::new(client),
             metadata: ProviderMetadata {
-                id: "cal_com".to_string(),
-                name: "Cal.com".to_string(),
-                category: "calendar".to_string(),
-                base_url: "https://api.cal.com/v1".to_string(),
+                id: "ayrshare".to_string(),
+                name: "Ayrshare".to_string(),
+                category: "social_media".to_string(),
+                base_url: "https://app.ayrshare.com/api".to_string(),
             },
         }
     }
@@ -34,8 +34,8 @@ impl CalComProvider {
     }
 }
 
-impl CalComProvider {
-    pub async fn get_booking_link(&self, event_type: &str) -> Result<String, String> {
-        self._client.get_booking_link(event_type).await
+impl AyrshareProvider {
+    pub async fn post_message(&self, message: &str, platforms: Vec<&str>) -> Result<(), String> {
+        self._client.post_message(message, platforms).await
     }
 }
