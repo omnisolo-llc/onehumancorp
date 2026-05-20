@@ -853,6 +853,7 @@ impl Agent {
         // --- EDGES ---
         graph.add_edge("tool_node", "llm_call");
 
+        // LangChain/LangGraph: conditional edges (if tool calls present -> route to `tool_node`; if absent -> route to `END`).
         graph.add_conditional_edges("llm_call", |state| {
             if state.get("has_tool_calls").and_then(|v| v.as_bool()).unwrap_or(false) {
                 "tool_node".to_string()
