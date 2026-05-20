@@ -27,7 +27,7 @@ pub use ::server_utils as utils;
 pub mod orchestration;
 pub mod storage;
 pub mod interop;
-#[cfg(test)]
+
 pub mod benchmarks;
 
 pub use ::server_config as config;

@@ -153,6 +153,7 @@ rust_binary(
     )
     for module in [
         "analytics",
+        "benchmarks",
         "db",
         "msgbus",
         "pipeline",
