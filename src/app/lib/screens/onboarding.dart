@@ -2,39 +2,49 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:go_router/go_router.dart';
+
 
 enum OnboardingState { idle, generating, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
+  final http.Client? client;
+  OnboardingScreen({this.client});
+
   @override
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _formKey = GlobalKey<FormState>();
+final _formKey = GlobalKey<FormState>();
+  String businessName = '';
+  String businessCategory = '';
   String bio = '';
+  int _currentStep = 0;
   OnboardingState _state = OnboardingState.idle;
 
-  Future<void> submit() async {
+Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       setState(() => _state = OnboardingState.generating);
 
       try {
-        final response = await http.post(
+        final client = widget.client ?? http.Client();
+        final response = await client.post(
           Uri.parse('http://localhost:8080/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'company_name': bio, // use bio as company name for now based on previous behavior
-            'business_type': 'Bakery',
-            'selling_categories': ['food', 'physical'],
+            'company_name': businessName.isEmpty ? bio : businessName,
+            'business_type': businessCategory.isEmpty ? 'General' : businessCategory,
+            'company_description': bio,
+            'selling_categories': ['physical', 'digital'],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
             'admin_name': 'Admin User',
             'admin_password': 'password123',
             'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
+            'first_product_name': 'First Item',
+            'first_product_price': '10.00',
             'domain_choice': 'subdomain',
             'price_type': 'fixed'
           }),
@@ -43,15 +53,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         if (response.statusCode == 200) {
           setState(() => _state = OnboardingState.draft);
         } else {
-          // If error occurs, go back to idle.
            setState(() => _state = OnboardingState.idle);
         }
       } catch (e) {
-        print('Error: \$e');
-         setState(() => _state = OnboardingState.idle);
+        print('Error: $e');
+        setState(() => _state = OnboardingState.idle);
       }
     }
   }
+
 
   void launchStore() {
     setState(() => _state = OnboardingState.live);
@@ -101,79 +111,92 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Widget _buildIdleState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'What do you do?',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1D1D1F),
-                letterSpacing: -0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Describe your business. We\'ll magically generate your storefront in seconds.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 32),
-            TextFormField(
-              decoration: InputDecoration(
-                hintText: 'e.g., I bake custom vegan cakes in Seattle.',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+Widget _buildIdleState() {
+    return Center(
+      child: Container(
+        width: 375,
+        padding: EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_currentStep == 0) ...[
+                Text(
+                  'Let\'s build your store',
+                  style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
+                  textAlign: TextAlign.center,
                 ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              maxLines: 4,
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
-            ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                SizedBox(height: 32),
+                TextFormField(
+                  decoration: InputDecoration(hintText: 'Business Name', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), contentPadding: EdgeInsets.all(20)),
+                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  onSaved: (value) => businessName = value!,
                 ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Build My Storefront',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                SizedBox(height: 16),
+                TextFormField(
+                  decoration: InputDecoration(hintText: 'Category (e.g. Retail, Consulting)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), contentPadding: EdgeInsets.all(20)),
+                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  onSaved: (value) => businessCategory = value!,
                 ),
-              ),
-            ),
-          ],
+                SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      _formKey.currentState!.save();
+                      setState(() => _currentStep = 1);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF0066FF), foregroundColor: Colors.white, padding: EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
+                  child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ] else ...[
+                Text(
+                  'Final Details',
+                  style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Describe your business. We\'ll magically generate your storefront in seconds.',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 32),
+                TextFormField(
+                  decoration: InputDecoration(hintText: 'e.g., I bake custom vegan cakes in Seattle.', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), contentPadding: EdgeInsets.all(20)),
+                  maxLines: 4,
+                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  onSaved: (value) => bio = value!,
+                ),
+                SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => setState(() => _currentStep = 0),
+                        child: Text('Back', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: submit,
+                        style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF0066FF), foregroundColor: Colors.white, padding: EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
+                        child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
+
 
   Widget _buildGeneratingState() {
     return Padding(
@@ -354,7 +377,9 @@ class StoreLiveScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: ElevatedButton(
-                        onPressed: () {},
+onPressed: () {
+                          context.go('/dashboard');
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey[100],
                           foregroundColor: Color(0xFF1D1D1F),

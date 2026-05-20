@@ -6,8 +6,8 @@ void main() {
   testWidgets('Onboarding Screen - Idle State UI components present', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: OnboardingScreen()));
 
-    expect(find.text('What do you do?'), findsOneWidget);
-    expect(find.byType(TextFormField), findsOneWidget);
-    expect(find.text('Build My Storefront'), findsOneWidget);
+    expect(find.text('Let\'s build your store'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2));
+    expect(find.text('Next'), findsOneWidget);
   });
 }

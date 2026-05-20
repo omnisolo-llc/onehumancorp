@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "entity",
+    srcs = ["entities.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/ohc/entity",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "entity_test",
+    srcs = ["entities_test.go"],
+    embed = [":entity"],
+)
