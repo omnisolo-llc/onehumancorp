@@ -333,15 +333,26 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn get_pending_approvals(&self, tenant_id: &str) -> Vec<ApprovalRequest> {
+    pub async fn get_pending_approvals(&self, tenant_id: &str, cursor: Option<String>, limit: usize) -> Vec<ApprovalRequest> {
         let mut results = Vec::new();
+        let limit = limit as i64;
 
         match &self.db.store {
             DbStore::Postgres => {
-                let fetch_res = sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING'")
-                    .bind(tenant_id)
-                    .fetch_all(&self.db.pool)
-                    .await;
+                let fetch_res = if let Some(ref c) = cursor {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING' AND id > $2 ORDER BY id ASC LIMIT $3")
+                        .bind(tenant_id)
+                        .bind(c)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
+                } else {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY id ASC LIMIT $2")
+                        .bind(tenant_id)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
+                };
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
                     for row in rows {
@@ -368,10 +379,20 @@ impl DepartmentOrchestrator {
                 }
             }
             DbStore::Sqlite(pool) => {
-                let fetch_res = sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING'")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await;
+                let fetch_res = if let Some(ref c) = cursor {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING' AND id > ? ORDER BY id ASC LIMIT ?")
+                        .bind(tenant_id)
+                        .bind(c)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                } else {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING' ORDER BY id ASC LIMIT ?")
+                        .bind(tenant_id)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                };
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
                     for row in rows {
