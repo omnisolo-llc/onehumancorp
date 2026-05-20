@@ -177,7 +177,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_ws_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let transport_clone = transport.clone();
 
         let app = Router::new()
@@ -244,7 +244,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_direct_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
 
         let app = Router::new()
             .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
