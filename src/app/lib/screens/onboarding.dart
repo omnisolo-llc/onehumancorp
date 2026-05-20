@@ -15,6 +15,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String bio = '';
   OnboardingState _state = OnboardingState.idle;
 
+  List<dynamic> generatedBlocks = [];
+  String? generatedDomain = null;
+
+
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
@@ -22,27 +26,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:8080/api/onboarding/start'),
+          Uri.parse('http://localhost:8080/api/v1/builder/generate'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'company_name': bio, // use bio as company name for now based on previous behavior
-            'business_type': 'Bakery',
-            'selling_categories': ['food', 'physical'],
-            'payment_pref': 'online',
-            'admin_email': 'admin@test.com',
-            'admin_name': 'Admin User',
-            'admin_password': 'password123',
-            'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
-            'domain_choice': 'subdomain',
-            'price_type': 'fixed'
+            'description': bio
           }),
         );
 
+
         if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['pages'] != null && data['pages'].isNotEmpty) {
+            generatedBlocks = data['pages'][0]['blocks'];
+          }
           setState(() => _state = OnboardingState.draft);
         } else {
+
           // If error occurs, go back to idle.
            setState(() => _state = OnboardingState.idle);
         }
@@ -53,9 +52,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void launchStore() {
-    setState(() => _state = OnboardingState.live);
+
+  Future<void> launchStore() async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/v1/builder/publish_draft'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'domain': null,
+          'draft': {
+            'domain': null,
+            'pages': [
+              {
+                'path': '/',
+                'title': 'Home',
+                'blocks': generatedBlocks,
+                'seo_metadata': {
+                  '@context': 'https://schema.org',
+                  '@type': 'LocalBusiness',
+                  'name': bio
+                }
+              }
+            ]
+          }
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _state = OnboardingState.live);
+      }
+    } catch (e) {
+      print('Error publishing: $e');
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -201,6 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+
   Widget _buildDraftState() {
     return Column(
       children: [
@@ -230,31 +260,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ],
           ),
         ),
-        // Fake Store Preview
+        // Dynamic Store Preview
         Expanded(
           child: Container(
             color: Colors.white,
             width: double.infinity,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.storefront, size: 80, color: Colors.grey[300]),
-                SizedBox(height: 16),
-                Text(
-                  'Your Beautiful Store',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            child: generatedBlocks.isEmpty
+                ? Center(child: Text("No blocks generated"))
+                : ReorderableListView.builder(
+                    itemCount: generatedBlocks.length,
+                    onReorder: (int oldIndex, int newIndex) {
+                      setState(() {
+                        if (oldIndex < newIndex) {
+                          newIndex -= 1;
+                        }
+                        final item = generatedBlocks.removeAt(oldIndex);
+                        generatedBlocks.insert(newIndex, item);
+                        // Update sort orders
+                        for (int i = 0; i < generatedBlocks.length; i++) {
+                          generatedBlocks[i]['sort_order'] = i;
+                        }
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final block = generatedBlocks[index];
+                      return _buildBlockWidget(block, index);
+                    },
                   ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Generated based on your bio.',
-                  style: TextStyle(color: Colors.grey[500]),
-                ),
-              ],
-            ),
           ),
         ),
         // Bottom Action Bar
@@ -296,7 +328,75 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ],
     );
   }
-}
+
+  Widget _buildBlockWidget(Map<String, dynamic> block, int index) {
+    final blockType = block['block_type'];
+    final content = block['content'] ?? {};
+
+    Widget blockContent;
+    if (blockType == 'HeroBlock') {
+      blockContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(content['headline'] ?? 'Hero', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text(content['subtitle'] ?? '', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+        ],
+      );
+    } else if (blockType == 'ProductGridBlock') {
+      List items = content['items'] ?? [];
+      blockContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Products', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('${items.length} items: ${items.join(", ")}', style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
+        ],
+      );
+    } else if (blockType == 'ServiceBookingBlock') {
+      List services = content['services'] ?? [];
+      blockContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Services', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('${services.length} services: ${services.join(", ")}', style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
+        ],
+      );
+    } else if (blockType == 'TestimonialBlock') {
+      List testimonials = content['testimonials'] ?? [];
+      blockContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Testimonials', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text(testimonials.join(" "), style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontStyle: FontStyle.italic)),
+        ],
+      );
+    } else {
+      blockContent = Text(blockType.toString());
+    }
+
+    return Container(
+      key: ValueKey(index),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: blockContent,
+    );
+  }
 
 class StoreLiveScreen extends StatelessWidget {
   @override
