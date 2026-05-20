@@ -5,19 +5,13 @@ use uuid::Uuid;
 use chrono::Utc;
 use std::str::FromStr;
 
-use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus, ActionRisk};
 use crate::db::DbStore;
 use ohc_builtin_agent::memory_store::VectorRepository;
 use opentelemetry::global;
 use opentelemetry::KeyValue;
 use crate::orchestration::mesh::TeammateMesh;
 use opentelemetry::metrics::Counter;
-
-#[derive(Clone, Copy)]
-pub enum ActionRisk {
-    AutoExecute,
-    DraftForReview,
-}
 
 pub enum AgentTriggerType {
     Scheduled,
@@ -99,7 +93,7 @@ impl Department for DummyDepartment {
                 ActionRisk::AutoExecute => ApprovalStatus::Approved,
                 ActionRisk::DraftForReview => ApprovalStatus::Pending,
             },
-            action_risk: risk_str.to_string(),
+            action_risk: risk.clone(),
         };
         self.orchestrator.add_approval_request(req.clone()).await;
         Ok(req)
@@ -272,7 +266,7 @@ impl DepartmentOrchestrator {
                     department,
                     description: format!("{} | Payload: {}", description, _action_payload.to_string()),
                     status: ApprovalStatus::Approved,
-                    action_risk: "LOW".to_string(),
+                    action_risk: ActionRisk::AutoExecute,
                 };
                 self.add_approval_request(req.clone()).await;
                 Ok(req.clone())
@@ -284,7 +278,7 @@ impl DepartmentOrchestrator {
                     department,
                     description: format!("{} | Payload: {}", description, _action_payload.to_string()),
                     status: ApprovalStatus::Pending,
-                    action_risk: "HIGH".to_string(),
+                    action_risk: ActionRisk::DraftForReview,
                 };
                 self.add_approval_request(req.clone()).await;
                 Ok(req.clone())
@@ -310,7 +304,7 @@ impl DepartmentOrchestrator {
                 .bind(req.department.to_string())
                 .bind(&req.description)
                 .bind(status_str)
-                .bind(&req.action_risk)
+                .bind(req.action_risk.to_string())
                 .bind(now)
                 .bind(now)
                 .execute(&self.db.pool)
@@ -325,7 +319,7 @@ impl DepartmentOrchestrator {
                 .bind(req.department.to_string())
                 .bind(&req.description)
                 .bind(status_str)
-                .bind(&req.action_risk)
+                .bind(req.action_risk.to_string())
                 .bind(now)
                 .bind(now)
                 .execute(pool)
@@ -355,13 +349,15 @@ impl DepartmentOrchestrator {
                             "REJECTED" => ApprovalStatus::Rejected,
                             _ => ApprovalStatus::Pending,
                         };
+                        let risk_str: String = row.get("action_risk");
+                        let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
                             description: row.get("description"),
                             status,
-                            action_risk: row.get("action_risk"),
+                            action_risk,
                         });
                     }
                 }
@@ -383,13 +379,15 @@ impl DepartmentOrchestrator {
                             "REJECTED" => ApprovalStatus::Rejected,
                             _ => ApprovalStatus::Pending,
                         };
+                        let risk_str: String = row.get("action_risk");
+                        let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
                             description: row.get("description"),
                             status,
-                            action_risk: row.get("action_risk"),
+                            action_risk,
                         });
                     }
                 }
