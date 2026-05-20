@@ -4,15 +4,32 @@ test('builder flow completes successfully', async ({ page }) => {
   // Use the baseURL from playwright config (or relative to it if Next is served there)
   await page.goto('/builder');
 
-  // 1. Onboarding Screen
+  // 1. Onboarding Screen - Step 1: Basics
+  await expect(page.getByText(/Let's build your store/i)).toBeVisible();
+
+  const nameInput = page.getByPlaceholder(/e.g. Acme Corp/i);
+  await nameInput.fill('My Awesome Store');
+
+  const categoryInput = page.getByPlaceholder(/e.g. Retail, Consulting, Tech/i);
+  await categoryInput.fill('Retail');
+
+  await page.getByRole('button', { name: /Next: Choose Vibe/i }).click();
+
+  // Step 2: Vibe
+  await expect(page.getByText(/Select Your Vibe/i)).toBeVisible();
+  await page.getByRole('button', { name: 'Friendly' }).click();
+  await page.getByRole('button', { name: /Next: Details/i }).click();
+
+  // Step 3: Final Details
+  await expect(page.getByText(/Final Details/i)).toBeVisible();
   const textarea = page.getByPlaceholder(/e.g. I run a mobile dog grooming service/i);
   await expect(textarea).toBeVisible();
 
-  // Fill the bio
-  await textarea.fill('I run a mobile dog grooming service');
+  // The bio should be pre-filled, but we can append or replace it
+  await textarea.fill('I run a friendly retail store selling amazing products');
 
   // Click Generate
-  const buildButton = page.getByRole('button', { name: /Build My Storefront/i });
+  const buildButton = page.getByRole('button', { name: /Build Store/i });
   await buildButton.click();
 
   // 2. Generating Screen
