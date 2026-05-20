@@ -24,7 +24,7 @@ impl Department for SalesAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         // Query memory context
-        let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
+        let query_embedding = vec![0.0; 1536];
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
 
         let risk = ActionRisk::DraftForReview;
@@ -46,7 +46,7 @@ impl Department for SalesAgent {
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
-        let embedding = vec![0.5, 0.5, 0.5];
+        let embedding = vec![0.0; 1536];
         // Note: We need a tenant_id here, but the trait signature doesn't provide one.
         // We'll pass a dummy one or extract it if available.
         self.orchestrator.query_long_term_memory("default_tenant", &embedding, 5).await
