@@ -11,17 +11,17 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify we are on the input screen
-    expect(find.text('Your Details'), findsOneWidget);
+    expect(find.text('Your Business'), findsOneWidget);
 
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required' for both fields
-    expect(find.text('Required'), findsNWidgets(2));
+    // Expect the validator message 'Required' for the field
+    expect(find.text('Required'), findsNWidgets(1));
 
     // Fill out the form
-    await tester.enterText(find.byType(TextFormField), "Maya's Custom Cakes");
+    await tester.enterText(find.byType(TextFormField), "I bake custom cakes in Chicago");
     await tester.pumpAndSettle();
 
     // Test that the form can be submitted when both fields are filled out properly.

@@ -12,8 +12,10 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
+  String businessDescription = '';
   String businessName = '';
   String? businessType;
+  List<dynamic> initialProducts = [];
   OnboardingState _state = OnboardingState.welcome;
 
   Future<void> submit() async {
@@ -22,20 +24,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _state = OnboardingState.generating);
 
       try {
+        // Step 1: Intake
+        final intakeResponse = await http.post(
+          Uri.parse('http://localhost:8080/api/onboarding/intake'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'description': businessDescription}),
+        );
+
+        if (intakeResponse.statusCode != 200) {
+           setState(() => _state = OnboardingState.input);
+           return;
+        }
+
+        final intakeData = jsonDecode(intakeResponse.body);
+        setState(() {
+          businessName = intakeData['business_name'] ?? 'My Business';
+          businessType = intakeData['business_type'];
+          initialProducts = intakeData['initial_products'] ?? [];
+        });
+
+        String firstProductName = '';
+        String firstProductPrice = '';
+        if (initialProducts.isNotEmpty) {
+          firstProductName = initialProducts[0]['name']?.toString() ?? '';
+          firstProductPrice = initialProducts[0]['price']?.toString() ?? '';
+        }
+
+        // Step 2: Start Onboarding
         final response = await http.post(
           Uri.parse('http://localhost:8080/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'company_name': businessName,
+            'company_description': businessDescription,
             'business_type': businessType,
-            'selling_categories': ['food', 'physical'],
+            'selling_categories': intakeData['categories'] ?? [],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
             'admin_name': 'Admin User',
             'admin_password': 'password123',
             'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
+            'first_product_name': firstProductName,
+            'first_product_price': firstProductPrice,
             'domain_choice': 'subdomain',
             'price_type': 'fixed'
           }),
@@ -174,7 +204,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Your Details',
+              'Your Business',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -186,7 +216,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Just a few details to get started.',
+              'What do you sell or do?',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -196,9 +226,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
+              maxLines: 4,
               decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Custom Cakes',
+                hintText: 'e.g., I bake custom cakes in Chicago',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -209,33 +239,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Business Type',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              items: ['Physical', 'Digital', 'Service', 'Food']
-                  .map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  businessType = value;
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessType = value!,
+              onSaved: (value) => businessDescription = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
