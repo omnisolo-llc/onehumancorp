@@ -348,6 +348,144 @@
         }
       ],
       "transparent": true
+    },
+    {
+      "title": "Sub-Agent Hybrid Observability",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "title": "Sub-Agent Queue Latency (P95) by Mode",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_sub_agent_queue_latency_seconds_bucket[5m])) by (le, mode))",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2
+          },
+          "unit": "s"
+        }
+      },
+      "transparent": true,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "title": "Sub-Agent Spawn Error Rate by Mode",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sub_agent_spawn_errors_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2
+          }
+        }
+      },
+      "transparent": true,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      }
+    },
+    {
+      "title": "Sub-Agent Lock Contention Rate by Mode",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sub_agent_lock_contention_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineWidth": 2
+          }
+        }
+      },
+      "transparent": true,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      }
     }
   ]
 }

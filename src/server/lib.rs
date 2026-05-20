@@ -1337,7 +1337,10 @@ impl HubService for MyHubService {
             &req.target_role,
             &req.instruction,
             &req.parent_thread_id,
-        ).await.map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| {
+            crate::telemetry::record_sub_agent_spawn_error(crate::telemetry::get_deployment_mode());
+            Status::internal(e)
+        })?;
         tracing::debug!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
 
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);

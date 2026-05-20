@@ -238,11 +238,19 @@ impl TaskQueue for PostgresTaskQueue {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
+
+        let query_start = std::time::Instant::now();
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+
+        let elapsed = query_start.elapsed();
+        if elapsed.as_millis() > 500 {
+            crate::telemetry::record_sub_agent_lock_contention(crate::telemetry::get_deployment_mode());
+        }
+
         tx.commit().await.map_err(|e| e.to_string())?;
             
         if let Some(row) = row {
@@ -253,6 +261,7 @@ impl TaskQueue for PostgresTaskQueue {
             let status: String = row.get("status");
             let scheduled_at: DateTime<Utc> = row.get("scheduled_at");
             
+            let created_at: DateTime<Utc> = row.get("created_at");
             let mut j = Job {
                 id,
                 tenant_id: tenant_id,
@@ -264,10 +273,13 @@ impl TaskQueue for PostgresTaskQueue {
                 max_attempts: 3,
                 run_after: scheduled_at,
                 locked_until: None,
-                created_at: Utc::now(),
+                created_at,
                 updated_at: Utc::now(),
             };
             
+            let latency_secs = (Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
+            crate::telemetry::record_sub_agent_queue_delay(latency_secs, crate::telemetry::get_deployment_mode());
+
             let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
             if let Some(role) = payload_map["agent_role"].as_str() {
                 j.agent_role = role.to_string();
@@ -520,13 +532,25 @@ impl QueueManager {
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+
+        let query_start = std::time::Instant::now();
         let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
             .bind(worker_id)
             .fetch_optional(&mut *tx)
             .await?;
+
+        let elapsed = query_start.elapsed();
+        if elapsed.as_millis() > 500 {
+            crate::telemetry::record_sub_agent_lock_contention(crate::telemetry::get_deployment_mode());
+        }
+
         tx.commit().await?;
             
         if let Some(row) = row {
+            let created_at: DateTime<Utc> = row.get("created_at");
+            let latency_secs = (Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
+            crate::telemetry::record_sub_agent_queue_delay(latency_secs, crate::telemetry::get_deployment_mode());
+
             let payload_str: String = row.get("payload");
             let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
             
@@ -622,6 +646,7 @@ impl QueueManager {
                                     }
                                     Err(e) => {
                                         tracing::error!("Job handler failed: {}, error: {}", job.id, e);
+                                        crate::telemetry::record_sub_agent_spawn_error(crate::telemetry::get_deployment_mode());
                                         if attempts < max_attempts {
                                             let mut retry_job = job.clone();
                                             retry_job.payload["attempts"] = serde_json::json!(attempts);

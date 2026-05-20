@@ -590,3 +590,18 @@ fn test_multi_tenant_pii_leakage_guardrail() {
     assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
     assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
 }
+
+#[tokio::test]
+async fn test_new_sub_agent_metrics_creation() {
+    let spawn_errors = ::server_telemetry::get_sub_agent_spawn_errors_total();
+    spawn_errors.add(1, &[]);
+
+    let contention = ::server_telemetry::get_sub_agent_lock_contention_total();
+    contention.add(1, &[]);
+
+    let delay = ::server_telemetry::get_sub_agent_queue_delay_histogram();
+    delay.record(1.5, &[]);
+
+    // Assert metric creation doesn't panic
+    assert!(true);
+}

@@ -11,6 +11,8 @@ use opentelemetry::metrics::UpDownCounter;
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+static SUB_AGENT_SPAWN_ERRORS_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static SUB_AGENT_LOCK_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -39,8 +41,26 @@ pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
 pub fn get_sub_agent_queue_delay_histogram() -> &'static Histogram<f64> {
     SUB_AGENT_QUEUE_DELAY_HISTOGRAM.get_or_init(|| {
         let meter = global::meter("ohc.sub_agent");
-        meter.f64_histogram("SubAgentQueueDelayHistogram")
+        meter.f64_histogram("ohc_sub_agent_queue_latency_seconds")
             .with_description("Measures time from job enqueue to dequeue")
+            .build()
+    })
+}
+
+pub fn get_sub_agent_spawn_errors_total() -> &'static UpDownCounter<i64> {
+    SUB_AGENT_SPAWN_ERRORS_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sub_agent");
+        meter.i64_up_down_counter("ohc_sub_agent_spawn_errors_total")
+            .with_description("Total sub-agent spawn errors")
+            .build()
+    })
+}
+
+pub fn get_sub_agent_lock_contention_total() -> &'static UpDownCounter<i64> {
+    SUB_AGENT_LOCK_CONTENTION_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sub_agent");
+        meter.i64_up_down_counter("ohc_sub_agent_lock_contention_total")
+            .with_description("Total delays caused by database lock contention")
             .build()
     })
 }
@@ -54,9 +74,19 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
     })
 }
 
-pub fn record_sub_agent_queue_delay(delay: f64) {
+pub fn record_sub_agent_queue_delay(delay: f64, mode: &str) {
     let histogram = get_sub_agent_queue_delay_histogram();
-    histogram.record(delay, &[]);
+    histogram.record(delay, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+}
+
+pub fn record_sub_agent_spawn_error(mode: &str) {
+    let counter = get_sub_agent_spawn_errors_total();
+    counter.add(1, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+}
+
+pub fn record_sub_agent_lock_contention(mode: &str) {
+    let counter = get_sub_agent_lock_contention_total();
+    counter.add(1, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
 }
 
 pub fn record_task_claim_contention(mode: &str) {

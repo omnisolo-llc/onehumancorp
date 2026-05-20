@@ -90,9 +90,18 @@ impl TaskQueue for PgTaskQueue {
             query = query.bind(role);
         }
 
+        let query_start = std::time::Instant::now();
         let job_opt = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
+        let elapsed = query_start.elapsed();
+        if elapsed.as_millis() > 500 {
+            crate::telemetry::record_sub_agent_lock_contention(crate::telemetry::get_deployment_mode());
+        }
+
         if let Some(row) = job_opt {
+            let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
+            let latency_secs = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
+            crate::telemetry::record_sub_agent_queue_delay(latency_secs, crate::telemetry::get_deployment_mode());
             let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
             let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
             let job = Job {
