@@ -45,6 +45,7 @@ rust_library(
         "json_rpc_server.rs",
         "agent.rs",
         "checkpointer.rs",
+        "tools_gating.rs",
         "departments.rs",
         "guardrails.rs",
         "harness.rs",
