@@ -796,6 +796,17 @@ impl Hub {
             db_ping > 0
         };
 
+        let mut checklist = Vec::new();
+        if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+            checklist.push("PostgreSQL Connected");
+        }
+        if std::env::var("REDIS_URL").is_ok() {
+            checklist.push("Redis Available");
+        }
+        if mode == "standalone" && (std::env::var("DATABASE_URL").is_err() || std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
+            checklist.push("SQLite Standalone Enabled");
+        }
+
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
@@ -805,6 +816,7 @@ impl Hub {
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
             "sync_error_count": sync_error_count,
+            "checklist": checklist,
         }))
     }
 }
