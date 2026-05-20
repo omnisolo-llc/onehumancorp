@@ -2249,7 +2249,8 @@ impl Agent {
             }
 
 
-            // Context Compaction Mechanic
+            // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
+            // Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. When approaching token limits, summarize history.
             // Use the input_tokens from the last request to determine the current context window size.
 
             if final_cfg.enable_context_compaction && turn_input_tokens > final_cfg.compaction_threshold_tokens {
