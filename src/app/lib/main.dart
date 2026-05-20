@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'screens/onboarding.dart';
 
 void main() {
@@ -12,6 +13,9 @@ class MyApp extends StatelessWidget {
       title: 'OHC Setup',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        textTheme: GoogleFonts.outfitTextTheme(
+          Theme.of(context).textTheme,
+        ),
       ),
       home: OnboardingScreen(),
     );
