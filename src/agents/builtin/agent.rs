@@ -406,52 +406,111 @@ impl Agent {
                 let session_tools_clone = session_tools.to_vec();
                 let messages_clone = messages.clone();
                 read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
-                    };
-                    (tc_clone, r)
+                    let mut retry_count = 0;
+                    let max_retries = 2; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    loop {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                            Ok(res) => return (tc_clone, Ok(res)),
+                            Err(crate::types::ToolError::Transient(msg)) => {
+                                if retry_count < max_retries {
+                                    retry_count += 1;
+                                    let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                    tokio::time::sleep(backoff).await;
+                                    continue;
+                                } else {
+                                    return (tc_clone, Err(crate::types::ToolError::Transient(msg)));
+                                }
+                            }
+                            Err(e) => return (tc_clone, Err(e)),
+                        }
+                    }
                 });
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
+            for (tc, res) in ro_results {
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
+                match res {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: r,
+                            error: String::new(),
+                        };
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: format!("Error: {}", msg),
+                            error: String::new(),
+                        };
+                    }
+                    Err(e) => {
+                        // UserFixable, Fatal, Unexpected
+                        return Err(e.to_string().into());
+                    }
+                }
             }
 
             if !mutating_calls.is_empty() {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
-                    Err(e) => format!("Error: {:?}", e),
-                };
+                let mut retry_count = 0;
+                let max_retries = 2; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let tool_output: String;
+
+                loop {
+                    match self.execute_tool(tc, session_tools, &messages).await {
+                        Ok(res) => {
+                            tool_output = res;
+                            break;
+                        }
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            if retry_count < max_retries {
+                                retry_count += 1;
+                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                tokio::time::sleep(backoff).await;
+                                continue;
+                            } else {
+                                return Err(msg.into());
+                            }
+                        }
+                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            tool_output = format!("Error: {}", msg);
+                            break;
+                        }
+                        Err(e) => {
+                            // UserFixable, Fatal, Unexpected
+                            return Err(e.to_string().into());
+                        }
+                    }
+                }
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
                 on_event(AgentEvent::ToolCall {
                     name: tc.name.clone(),
                     args_json: tc.arguments.to_string(),
-                    result: r.clone(),
+                    result: tool_output.clone(),
                     iteration: i as i32,
                 });
 
                 tool_results[idx] = crate::types::ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content: r,
+                    content: tool_output,
                     error: String::new(),
                 };
             }
