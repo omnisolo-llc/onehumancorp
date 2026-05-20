@@ -4,35 +4,6 @@ filegroup(
         "daemon.rs",
         "daemon_test.rs",
         "mod.rs",
-        "hybrid_sync.go",
-        "hybrid_sync_test.go",
     ],
     visibility = ["//src/server/orchestration:__pkg__"],
-)
-
-load("@rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "hybrid_sync",
-    srcs = ["hybrid_sync.go"],
-    importpath = "github.com/onehumancorp/hybrid_sync",
-    visibility = ["//visibility:public"],
-    target_compatible_with = select({
-        "@platforms//os:windows": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-go_test(
-    name = "hybrid_sync_test",
-    srcs = ["hybrid_sync_test.go"],
-    embed = [":hybrid_sync"],
-    deps = select({
-        "@platforms//os:windows": [],
-        "//conditions:default": ["@com_github_mattn_go_sqlite3//:go_default_library"],
-    }),
-    target_compatible_with = select({
-        "@platforms//os:windows": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
 )
