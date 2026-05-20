@@ -2638,34 +2638,51 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Meetings Screen -->
-                    <div id="meetings-screen" class="screen glass">
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #4ecca3; font-size: 2em; font-weight: bold;" 
+                    <div id="meetings-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
+                        <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
+                        </div>
+
+                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
                                 onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
-                            Meetings Schedule New Meeting
+                            + Schedule New Appointment
                         </button>
-                        <div class="card glass meeting">
-                            <h3>Next Item</h3>
+
+                        <div class="card glass meeting" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Next Item</h3>
                             <p>Team Sync - 14:00</p>
-                            <p>00:10:00</p>
-                            <button onclick="showScreen('meeting-room-screen')">Join Start</button>
-                            <button onclick="this.parentElement.innerHTML='<p>Canceled Cancelled</p>'">Cancel Delete</button>
+                            <p style="color: #FF9500; font-weight: 500;">In 10 mins</p>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
+                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
+                            </div>
                         </div>
-                        <div id="scheduler" class="card glass" style="display: none;">
-                            <h2>Plan Create</h2>
-                            <input type="text" placeholder="Meeting Title">
-                            <input type="date">
-                            <input type="time">
-                            <input type="email" placeholder="Participant Email">
-                            <button onclick="alert('Participant added')">Add</button>
-                            <button onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
+
+                        <div id="scheduler" class="card glass" style="display: none; border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h2 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Plan Create</h2>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <input type="text" placeholder="Meeting Title" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
+                                <input type="date" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
+                                <input type="time" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
+                                <input type="email" placeholder="Participant Email" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px;">
+                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
+                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1D1D1F; color: white; border: none; flex: 1;" onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
+                            </div>
                         </div>
-                        <div class="tabs">
-                            <button onclick="alert('History shown')">📜 View Log</button>
-                            <button onclick="alert('Records')">Past</button>
-                            <button onclick="alert('Calendar')">Calendar</button>
-                            <button onclick="alert('Archive')">Archive</button>
+
+                        <div class="tabs" style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 8px;">
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('History shown')">📜 View Log</button>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Records')">Past</button>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Calendar')">Calendar</button>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Archive')">Archive</button>
                         </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%;" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
                     <!-- Meeting Room Screen -->
