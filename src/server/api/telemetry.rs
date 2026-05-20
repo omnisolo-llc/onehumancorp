@@ -24,3 +24,7 @@ pub async fn sync_telemetry_handler(
 
     StatusCode::OK
 }
+
+pub fn router() -> axum::Router {
+    axum::Router::new().route("/sync", axum::routing::post(sync_telemetry_handler))
+}

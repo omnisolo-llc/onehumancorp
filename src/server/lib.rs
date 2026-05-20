@@ -1831,6 +1831,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/telemetry", api::telemetry::router())
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
