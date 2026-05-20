@@ -48,7 +48,7 @@ fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Resp
         .unwrap_or("");
 
     if spiffe_id.is_empty() {
-        let error_res = serde_json::json!({ "error": "missing x-spiffe-id header" });
+        let error_res = serde_json::json!({ "error": "unauthorized" });
         return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
     }
     Ok(spiffe_id.to_string())
@@ -244,7 +244,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_direct_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
 
         let app = Router::new()
             .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
@@ -287,7 +287,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_mailbox_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
 
         let app = Router::new()
             .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
