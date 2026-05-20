@@ -180,7 +180,7 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
 
     // Order: more deeply-nested files take precedence
     let mut combined = String::new();
-    for (i, content) in contents.iter().enumerate() {
+    for (i, content) in contents.iter().rev().enumerate() {
         if i > 0 {
             combined.push_str("\n\n---\n\n");
         }
@@ -225,21 +225,11 @@ impl HierarchicalPromptBuilder {
             tool_defs.pop(); // Remove trailing newline
         }
 
-        let mut end_idx = 32768;
-        if cfg.user_instructions.len() > 32768 {
-            while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-        } else {
-            end_idx = cfg.user_instructions.len();
-        }
-        let user_instr = cfg.user_instructions[..end_idx].to_string();
-
         Self {
             server_system_message: cfg.server_system_message.clone(),
             tool_definitions: tool_defs,
             developer_instructions: cfg.developer_instructions.clone(),
-            user_instructions: user_instr,
+            user_instructions: cfg.user_instructions.clone(),
         }
     }
 
@@ -2481,17 +2471,15 @@ mod tests {
 
         let combined = crate::agent::load_cascading_agents_md(&deep_dir).await;
 
-        // Since it loops from deep to root, the deeper files are collected first.
-        // The results should be: Deep -> Sub -> Root.
         assert!(combined.contains("Deep level instructions"));
         assert!(combined.contains("Sub level instructions"));
         assert!(combined.contains("Root level instructions"));
 
         let parts: Vec<&str> = combined.split("\n\n---\n\n").collect();
         assert_eq!(parts.len(), 3);
-        assert_eq!(parts[0], "Deep level instructions");
+        assert_eq!(parts[0], "Root level instructions");
         assert_eq!(parts[1], "Sub level instructions");
-        assert_eq!(parts[2], "Root level instructions");
+        assert_eq!(parts[2], "Deep level instructions");
     }
 
     #[tokio::test]
@@ -3932,11 +3920,11 @@ mod tests {
         // Add one more emoji to exceed the limit
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
-        // This should safely truncate without panicking
+        // Truncation is now strictly delegated to load_cascading_agents_md.
+        // The prompt builder itself no longer limits `user_instructions`.
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
-        // Check that the user instructions part is exactly 32768 bytes long
-        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
+        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32772);
     }
 
     #[test]
@@ -3951,8 +3939,8 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
-        // The truncation should back up to 32766 to avoid splitting the character.
-        assert_eq!(user_part.len(), 32766);
+        // Because the builder does no truncation anymore, the length is preserved exactly.
+        assert_eq!(user_part.len(), 32769);
     }
 
     #[tokio::test]
