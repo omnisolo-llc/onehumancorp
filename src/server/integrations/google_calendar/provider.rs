@@ -52,4 +52,8 @@ impl GoogleCalendarProvider {
     pub async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
         self.client.create_event(summary, start_time, end_time).await
     }
+
+    pub async fn generate_meet_link(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
+        self.client.generate_meet_link(summary, start_time, end_time).await
+    }
 }

@@ -4,6 +4,7 @@ use reqwest::Client;
 #[async_trait]
 pub trait MetaClientWrapper: Send + Sync {
     async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String>;
+    async fn get_messages(&self, platform: &str, since: Option<&str>) -> Result<String, String>;
 }
 
 pub struct RealMetaClient {
@@ -60,6 +61,25 @@ impl MetaClientWrapper for RealMetaClient {
             }
             Err(e) => Err(format!("Network error: {}", e)),
         }
+    }
+
+    async fn get_messages(&self, platform: &str, _since: Option<&str>) -> Result<String, String> {
+        let _url = match platform {
+            "whatsapp" => "https://graph.facebook.com/v19.0/me/conversations".to_string(),
+            _ => "https://graph.facebook.com/v19.0/me/conversations".to_string(), // Simplified URL mapping
+        };
+
+        // In a real implementation, we would query the Graph API for messages
+        // or process incoming webhooks. For now, we mock the response.
+
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            "unknown", // tenant context
+            &format!("{}_get_messages", platform),
+            0.01 // nominal meta cost
+        ).await;
+
+        Ok("[]".to_string())
     }
 }
 

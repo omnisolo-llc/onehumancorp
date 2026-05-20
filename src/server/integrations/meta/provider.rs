@@ -48,4 +48,8 @@ impl MetaProvider {
     pub async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
         self.client.send_message(platform, to, body).await
     }
+
+    pub async fn get_messages(&self, platform: &str, since: Option<&str>) -> Result<String, String> {
+        self.client.get_messages(platform, since).await
+    }
 }

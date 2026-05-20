@@ -32,4 +32,8 @@ impl ResendProvider {
             }
         }
     }
+
+    pub async fn send_email(&self, to: &str, from: &str, subject: &str, html: &str) -> Result<String, String> {
+        self.client.send_email(to, from, subject, html).await
+    }
 }

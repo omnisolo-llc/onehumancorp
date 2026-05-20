@@ -32,4 +32,8 @@ impl ShippoProvider {
             }
         }
     }
+
+    pub async fn create_shipping_label(&self, address_from: &str, address_to: &str, parcel_details: &str) -> Result<String, String> {
+        self.client.create_shipping_label(address_from, address_to, parcel_details).await
+    }
 }
