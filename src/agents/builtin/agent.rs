@@ -38,6 +38,7 @@ pub struct AgentRunConfig {
     pub temperature: f32,
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
+    pub max_token_budget: Option<i64>,
     pub confidence_threshold: f32,
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
@@ -88,6 +89,7 @@ impl Default for AgentRunConfig {
             temperature: 0.0,
             max_iterations: 100,
             max_task_tokens: 100_000,
+            max_token_budget: None,
             confidence_threshold: 0.0,
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
@@ -1504,7 +1506,19 @@ impl Agent {
             token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
             token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
 
-            // Enforce Server-side token budget strictly every turn
+            // The Orchestration Loop: Mechanically, it is a while loop executing the TAO (Thought-Action-Observation) cycle: Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat. Termination conditions are layered: model returns text with no tool calls, max turn limit exceeded, token budget exhausted, guardrail tripwire fires, or safety refusal.
+
+            // Layered Termination Condition: token budget exhausted (Agent SDK Token tracking)
+            let total_session_tokens = self.progress.token_count();
+            if let Some(budget) = final_cfg.max_token_budget {
+                if total_session_tokens >= budget {
+                    let err_msg = "Terminal condition reached: token budget exhausted.".to_string();
+                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(err_msg.into());
+                }
+            }
+
+            // Enforce Server-side token budget strictly every turn (billing max task tokens)
             if global_turn_tokens >= final_cfg.max_task_tokens {
                 let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                 on_event(AgentEvent::TextChunk { content: msg.clone() });
@@ -1528,8 +1542,8 @@ impl Agent {
             let stop_reason = resp.stop_reason.as_str();
 
             // Layered Termination Condition: Safety Refusal
-            if stop_reason == "content_filter" || stop_reason == "safety" {
-                let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
+            if stop_reason == "content_filter" || stop_reason == "safety" || stop_reason == "safety_refusal" {
+                let err_msg = "Terminal condition reached: safety refusal. The model halted execution due to content safety policy.".to_string();
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 return Err(err_msg.into());
             }
@@ -4520,6 +4534,50 @@ mod tests {
         assert!(result.is_ok());
         let msg = result.unwrap();
         assert!(msg.contains("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!"));
+    }
+
+    #[tokio::test]
+    async fn test_orchestration_loop_termination_conditions() {
+        let mut events_token = vec![];
+        let mut on_event_token = |e| { events_token.push(e); };
+
+        // Test 1: Token Budget Exhausted
+        let client_token = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("Lots of tokens"),
+                usage: Usage { input_tokens: 1000, output_tokens: 500, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+
+        let agent_token = Agent::new(client_token, vec![]);
+        let mut cfg_token = AgentRunConfig::default();
+        cfg_token.max_token_budget = Some(1000); // Set budget below usage
+
+        let res_token = agent_token.run(&cfg_token, "Hello", &mut on_event_token).await;
+        assert!(res_token.is_err());
+        assert!(res_token.unwrap_err().to_string().contains("token budget exhausted"));
+
+        // Test 2: Safety Refusal
+        let mut events_safety = vec![];
+        let mut on_event_safety = |e| { events_safety.push(e); };
+
+        let client_safety = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant(""),
+                usage: Usage::default(),
+                stop_reason: "safety_refusal".to_string(), // Triggers safety refusal
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+
+        let agent_safety = Agent::new(client_safety, vec![]);
+        let cfg_safety = AgentRunConfig::default(); // no token budget limit needed
+
+        let res_safety = agent_safety.run(&cfg_safety, "Write bad code", &mut on_event_safety).await;
+        assert!(res_safety.is_err());
+        assert!(res_safety.unwrap_err().to_string().contains("safety refusal"));
     }
 
     #[tokio::test]
