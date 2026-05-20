@@ -129,6 +129,43 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Referral Program */}
+         <section>
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Grow Together 🚀</h2>
+            <div className="p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #E0F2FE 0%, #EFF6FF 100%)', border: '1px solid #BAE6FD', borderRadius: '16px' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit mb-2" style={{ color: '#0369A1' }}>Give a month, get a month</h3>
+                    <p className="text-sm font-inter mb-4" style={{ color: '#0284C7' }}>
+                        Invite fellow business owners to OHC. They get their first month of Premium free, and you earn a free month when they launch.
+                    </p>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            className="flex-1 md:flex-none px-4 py-2 font-semibold text-sm rounded-lg shadow-sm active:scale-[0.98] transition-transform hover:bg-[#026296]"
+                            style={{ backgroundColor: '#0284C7', color: 'white' }}
+                            onClick={() => {
+                                navigator.clipboard.writeText("https://ohc.store/invite/AC123");
+                                alert("Invite link copied to clipboard!");
+                            }}
+                        >
+                            Share Invite Link
+                        </button>
+                        <button
+                            className="flex-1 md:flex-none px-4 py-2 font-semibold text-sm rounded-lg active:scale-[0.98] transition-transform hover:bg-gray-50"
+                            style={{ backgroundColor: 'white', color: '#0284C7', border: '1px solid #0284C7' }}
+                            onClick={() => {
+                                window.location.href = "mailto:?subject=Join me on One Human Corp!&body=Hey! I'm using One Human Corp to grow my business. Use my link to get your first month of Premium free: https://ohc.store/invite/AC123";
+                            }}
+                        >
+                            Email Invite
+                        </button>
+                    </div>
+                </div>
+                <div className="hidden md:flex w-24 h-24 bg-white rounded-full items-center justify-center shadow-inner" style={{ border: '4px solid #BAE6FD' }}>
+                    <span className="text-4xl">🎁</span>
+                </div>
+            </div>
+         </section>
+
          {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
