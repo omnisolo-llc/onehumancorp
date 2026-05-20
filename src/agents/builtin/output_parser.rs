@@ -287,7 +287,7 @@ mod tests {
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Failed to parse output as valid JSON"));
+            assert!(msg.contains("Failed to parse tool call arguments"));
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }
