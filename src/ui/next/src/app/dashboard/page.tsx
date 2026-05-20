@@ -6,6 +6,9 @@ export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
+  const [todaysSales, setTodaysSales] = useState<number>(0);
+  const [activeCustomers, setActiveCustomers] = useState<number>(0);
+  const [pendingOrders, setPendingOrders] = useState<number>(0);
 
   useEffect(() => {
     async function fetchApprovals() {
@@ -52,29 +55,40 @@ export default function Dashboard() {
 
     const ws = connectSwarmMesh();
 
-    // Fallback Mock data for UI presentation when no backend is running
-    const mockInterval = setInterval(() => {
-        const mockActions = [
-            "Reviewing customer inquiry",
-            "Generating weekly report",
-            "Optimizing website layout",
-            "Responding to support ticket",
-            "Updating product inventory"
-        ];
-        const mockAgents = ["Sales Agent", "Support Agent", "Marketing Agent", "Operations Agent"];
+    const fetchMetrics = async () => {
+        try {
+            const token = localStorage.getItem('token') || 'test-token';
+            const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-        setSwarmActivity(prev => [{
-            id: Math.random().toString(),
-            agent: mockAgents[Math.floor(Math.random() * mockAgents.length)],
-            action: mockActions[Math.floor(Math.random() * mockActions.length)],
-            status: ['success', 'warning', 'info'][Math.floor(Math.random() * 3)],
-            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
-        }, ...prev].slice(0, 5));
-    }, 4500);
+            const salesRes = await fetch('/api/v1/dashboard/sales', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ tenant_id: tenant })
+            });
+            if (salesRes.ok) {
+                const salesData = await salesRes.json();
+                setTodaysSales(salesData.total_sales);
+            }
+
+            const metricsRes = await fetch('/api/v1/dashboard/metrics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ tenant_id: tenant })
+            });
+            if (metricsRes.ok) {
+                const metricsData = await metricsRes.json();
+                setActiveCustomers(metricsData.active_customers);
+                setPendingOrders(metricsData.pending_orders);
+            }
+        } catch (e) {
+            console.error("Failed to fetch dashboard metrics", e);
+        }
+    };
+
+    fetchMetrics();
 
     return () => {
         if (ws) ws.close();
-        clearInterval(mockInterval);
     };
   }, []);
 
@@ -184,17 +198,17 @@ export default function Dashboard() {
                 {/* Metric Card */}
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>$0.00</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>12</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>3</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
             </div>

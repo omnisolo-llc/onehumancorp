@@ -229,6 +229,44 @@ struct HttpSalesResponse {
     total_sales: f64,
 }
 
+#[derive(serde::Serialize)]
+struct HttpMetricsResponse {
+    active_customers: i64,
+    pending_orders: i64,
+}
+
+async fn http_metrics_handler(
+    db: std::sync::Arc<db::DB>,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<HttpSalesRequest>,
+) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    if headers.get("authorization").is_none() {
+        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
+    }
+
+    let tenant_id = payload.tenant_id;
+    let active_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0);
+
+    let pending_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0);
+
+    (
+        StatusCode::OK,
+        axum::Json(HttpMetricsResponse { active_customers, pending_orders }),
+    )
+        .into_response()
+}
+
 async fn http_sales_handler(
     db: std::sync::Arc<db::DB>,
     headers: axum::http::HeaderMap,
@@ -1818,6 +1856,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             axum::routing::post({
                 let db = db_for_sales.clone();
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, headers, payload).await }
+            }),
+        )
+        .route(
+            "/api/v1/dashboard/metrics",
+            axum::routing::post({
+                let db = db_for_sales.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))

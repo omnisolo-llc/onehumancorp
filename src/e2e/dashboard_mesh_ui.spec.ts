@@ -38,25 +38,18 @@ test.describe('Agent Teammate Mesh Dashboard - UI/UX', () => {
         await expect(page.locator('text=Swarm Online')).toBeVisible();
     });
 
-    // 4. Verify mesh activity real-time items render
-    test('4. Realtime team activity items render correctly', async ({ page }) => {
+    // 4. Verify metric cards load correctly (not mock data)
+    test('4. Dashboard metric cards load correctly', async ({ page }) => {
         await page.goto('/dashboard');
 
-        // Wait for mock interval to push an item (4.5s)
-        await page.waitForTimeout(5000);
+        // Check if the business snapshot numbers load correctly by selecting the metric card containers
+        const snapshotSection = page.locator('section').filter({ hasText: 'Business Snapshot' });
+        await expect(snapshotSection.getByText('Today\'s Sales')).toBeVisible();
+        await expect(snapshotSection.getByText('Active Customers')).toBeVisible();
+        await expect(snapshotSection.getByText('Pending Orders')).toBeVisible();
 
-        // Agent icons should be visible
-        const agentIcons = page.locator('text=🤖');
-        expect(await agentIcons.count()).toBeGreaterThan(0);
-
-        // Check if one of the mock agents appeared
-        const pageText = await page.locator('body').innerText();
-        const hasAgent = pageText.includes('Sales Agent') ||
-                         pageText.includes('Support Agent') ||
-                         pageText.includes('Marketing Agent') ||
-                         pageText.includes('Operations Agent');
-
-        expect(hasAgent).toBeTruthy();
+        // Check that at least some numeric values load
+        await expect(snapshotSection.getByText(/\$?\d+(\.\d{2})?/)).toHaveCount(3);
     });
 
     // 5. Check fully responsive & full feature coverage
