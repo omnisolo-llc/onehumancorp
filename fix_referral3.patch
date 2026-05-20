@@ -1,0 +1,12 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -2663,7 +2663,8 @@
+                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
+                                     <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
+                                 </div>
+-                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
++                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Referral Logs</button>
++                                <button class="secondary" style="margin: 0; margin-left: 8px;" onclick="alert('Data exported')">Export Data</button>
+                             </div>
+                         </div>
+                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>

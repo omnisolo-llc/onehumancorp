@@ -1,0 +1,12 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -2620,6 +2620,9 @@
+                                 <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
+                                 <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
+                             </div>
++                            <div style="margin-top: 16px; position: relative; z-index: 1;">
++                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 8px; font-weight: bold;" onclick="alert('Invite message copied!'); document.body.insertAdjacentHTML('beforeend', '<div style=\'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#25D366;color:white;padding:12px 24px;border-radius:8px;z-index:9999;\'>Invite message copied!</div>');">Copy Invite Message</button>
++                            </div>
+                         </div>
+
+                         <!-- Progress Section -->

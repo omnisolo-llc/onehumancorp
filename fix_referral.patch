@@ -1,0 +1,26 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -2616,6 +2616,7 @@
+                             <p style="color: rgba(255,255,255,0.9); font-size: 16px; max-width: 400px; margin: 0 auto 24px; line-height: 1.5; position: relative; z-index: 1;">Invite other small business owners to OHC. When they launch, you both get a free month of OHC Pro. There's no limit!</p>
+
++                            <p style="color: white; font-weight: bold; margin-bottom: 8px;">Your Referral Link</p>
+                             <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
+                                 <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
+                                 <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
+                             </div>
++                            <div style="margin-top: 16px; position: relative; z-index: 1;">
++                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 16px; border-radius: 8px; font-weight: bold;" onclick="alert('Invite message copied!'); document.body.insertAdjacentHTML('beforeend', '<div style=\'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#25D366;color:white;padding:12px 24px;border-radius:8px;z-index:9999;\'>Invite message copied!</div>');">Copy Invite Message</button>
++                            </div>
+                         </div>
+
+                         <!-- Progress Section -->
+@@ -2663,7 +2664,8 @@
+                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
+                                     <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
+                                 </div>
+-                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
++                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Referral Logs</button>
++                                <button class="secondary" style="margin: 0; margin-left: 8px;" onclick="alert('Data exported')">Export Data</button>
+                             </div>
+                         </div>
+                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
