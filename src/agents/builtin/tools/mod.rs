@@ -16,6 +16,7 @@ pub mod sendmessage;
 pub mod todowrite;
 pub mod toolsearch;
 pub mod task;
+pub mod booking;
 pub mod agent_tool;
 pub mod sleep;
 pub mod marketing;
@@ -100,6 +101,10 @@ pub fn all_tools(
         grep::grep_tool(working_dir.clone()),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
+        booking::booking_get_services_tool(),
+        booking::booking_upsert_service_tool(),
+        booking::booking_list_appointments_tool(),
+        booking::booking_create_appointment_tool(),
         sendmessage::sendmessage_tool(mailbox.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),
