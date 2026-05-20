@@ -227,6 +227,8 @@ struct HttpSalesRequest {
 #[derive(serde::Serialize)]
 struct HttpSalesResponse {
     total_sales: f64,
+    active_customers: i64,
+    pending_orders: i64,
 }
 
 async fn http_sales_handler(
@@ -242,15 +244,50 @@ async fn http_sales_handler(
     }
 
     let tenant_id = payload.tenant_id;
-    let sales: f64 = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0.0);
+    let mut sales: f64 = 0.0;
+    let mut active_customers: i64 = 0;
+    let mut pending_orders: i64 = 0;
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            sales = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or(0.0);
+            active_customers = sqlx::query_scalar("SELECT COUNT(*) FROM customers WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or(0);
+            pending_orders = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or(0);
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sales = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?")
+                .bind(&tenant_id)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(0.0);
+            active_customers = sqlx::query_scalar("SELECT COUNT(*) FROM customers WHERE tenant_id = ?")
+                .bind(&tenant_id)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(0);
+            pending_orders = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'")
+                .bind(&tenant_id)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(0);
+        }
+    }
 
     (
         StatusCode::OK,
-        axum::Json(HttpSalesResponse { total_sales: sales }),
+        axum::Json(HttpSalesResponse { total_sales: sales, active_customers, pending_orders }),
     )
         .into_response()
 }
