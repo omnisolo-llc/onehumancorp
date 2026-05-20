@@ -10,6 +10,13 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.locator('nav')).toBeVisible();
     await expect(page.getByText("Today's Sales")).toBeVisible();
     await expect(page.getByText("$114.99")).toBeVisible({ timeout: 10000 });
+
+    // Assert real mock data is removed and actual seeded DB values show
+    await expect(page.getByText("Active Customers")).toBeVisible();
+    await expect(page.getByText("2", { exact: true })).toBeVisible({ timeout: 10000 });
+
+    await expect(page.getByText("Pending Orders")).toBeVisible();
+    await expect(page.getByText("1", { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('verify setup wizard starts and preserves real form state', async ({ page }) => {

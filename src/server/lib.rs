@@ -227,6 +227,8 @@ struct HttpSalesRequest {
 #[derive(serde::Serialize)]
 struct HttpSalesResponse {
     total_sales: f64,
+    active_customers: i64,
+    pending_orders: i64,
 }
 
 async fn http_sales_handler(
@@ -248,9 +250,25 @@ async fn http_sales_handler(
         .await
         .unwrap_or(0.0);
 
+    let active_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM customers WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0);
+
+    let pending_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0);
+
     (
         StatusCode::OK,
-        axum::Json(HttpSalesResponse { total_sales: sales }),
+        axum::Json(HttpSalesResponse {
+            total_sales: sales,
+            active_customers,
+            pending_orders,
+        }),
     )
         .into_response()
 }

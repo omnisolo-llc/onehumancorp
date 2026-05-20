@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState({ total_sales: 0.0, active_customers: 0, pending_orders: 0 });
 
   useEffect(() => {
     async function fetchApprovals() {
@@ -20,8 +21,29 @@ export default function Dashboard() {
     }
     fetchApprovals();
 
+    async function fetchSales() {
+        try {
+            const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
+            const res = await fetch('/api/v1/dashboard/sales', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                body: JSON.stringify({ tenant_id: tenant })
+            });
+            const data = await res.json();
+            if (data) {
+                setMetrics({
+                    total_sales: data.total_sales || 0.0,
+                    active_customers: data.active_customers || 0,
+                    pending_orders: data.pending_orders || 0
+                });
+            }
+        } catch (e) {
+            console.error("Failed to fetch sales", e);
+        }
+    }
+    fetchSales();
+
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
-    // Using a fake mock for UI tests if connection fails
     const connectSwarmMesh = () => {
         try {
             const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
@@ -51,29 +73,8 @@ export default function Dashboard() {
 
     const ws = connectSwarmMesh();
 
-    // Fallback Mock data for UI presentation when no backend is running
-    const mockInterval = setInterval(() => {
-        const mockActions = [
-            "Reviewing customer inquiry",
-            "Generating weekly report",
-            "Optimizing website layout",
-            "Responding to support ticket",
-            "Updating product inventory"
-        ];
-        const mockAgents = ["Sales Agent", "Support Agent", "Marketing Agent", "Operations Agent"];
-
-        setSwarmActivity(prev => [{
-            id: Math.random().toString(),
-            agent: mockAgents[Math.floor(Math.random() * mockAgents.length)],
-            action: mockActions[Math.floor(Math.random() * mockActions.length)],
-            status: ['success', 'warning', 'info'][Math.floor(Math.random() * 3)],
-            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
-        }, ...prev].slice(0, 5));
-    }, 4500);
-
     return () => {
         if (ws) ws.close();
-        clearInterval(mockInterval);
     };
   }, []);
 
@@ -113,17 +114,17 @@ export default function Dashboard() {
                 {/* Metric Card */}
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>$0.00</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${metrics.total_sales.toFixed(2)}</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>12</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{metrics.active_customers}</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>3</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{metrics.pending_orders}</div>
                 </div>
 
             </div>
