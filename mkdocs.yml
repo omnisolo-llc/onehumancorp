@@ -51,6 +51,8 @@ nav:
       - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
       - AutoDream CLI: walkthroughs/autodream_cli_guide.md
       - Teammate Mesh: walkthroughs/teammate_mesh_walkthrough.md
+      - Hybrid FS MCP Architecture Walkthrough: technical/walkthroughs/hybrid_fs_mcp_architecture.md
+      - Scribe Proactive MCP Walkthrough: technical/walkthroughs/scribe_proactive_mcp_walkthrough.md
   - Operations:
       - Operations: technical/operations/index.md
   - Business:
