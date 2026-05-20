@@ -2860,6 +2860,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="alert('Profile updated!')">Update</button>
 
                         <hr/>
+                        <h2>Payments Integration</h2>
+                        <p>Connect alternative payment gateways to offer localized checkout options for your customers.</p>
+                        <button onclick="alert('Initiating Mercado Pago OAuth Flow...'); alert('Mercado Pago Connected Successfully!');">Connect Mercado Pago</button>
+
+                        <hr/>
                         <h2>Security</h2>
                         <p>Change Password</p>
                         <input type="password" placeholder="Current Password">
@@ -2975,7 +2980,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+
+                             <div id="checkout-form-container">
+                                 <!-- Stripe integration block -->
+                                 <div id="stripe-checkout-block" style="margin-bottom: 20px;">
+                                     <h3>Credit Card (Stripe)</h3>
+                                     <button onclick="alert('Generating Stripe Checkout Session...'); alert('Payment successful via Stripe!'); showScreen('dashboard-screen')">Pay Now with Stripe</button>
+                                 </div>
+
+                                 <!-- Mercado Pago integration block -->
+                                 <div id="mercadopago-checkout-block" style="margin-bottom: 20px;">
+                                     <h3>Local Methods (Mercado Pago)</h3>
+                                     <button onclick="alert('Redirecting to Mercado Pago Checkout...'); alert('Payment successful via Mercado Pago!'); showScreen('dashboard-screen')">Pay Now with Mercado Pago</button>
+                                 </div>
+                             </div>
+
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>

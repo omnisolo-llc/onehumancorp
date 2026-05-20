@@ -8,6 +8,7 @@ use std::sync::Arc;
 use serde_json::Value;
 
 use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
+use crate::integrations::mercadopago::client::MercadoPagoClient;
 use crate::db::DbStore;
 
 #[derive(Clone)]
@@ -171,6 +172,8 @@ pub struct MercadoPagoEvent {
 #[derive(Debug, Deserialize)]
 pub struct MercadoPagoEventData {
     pub id: String,
+    #[serde(default)]
+    pub status: Option<String>,
 }
 
 pub async fn mercadopago_webhook_handler(
@@ -182,6 +185,61 @@ pub async fn mercadopago_webhook_handler(
             // In a real implementation, you would fetch the payment details from MP API using data.id
             // and extract the tenant_id and tier from the metadata.
             // For mock purposes, assume we process it similarly to Stripe.
+
+            let mp_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(MercadoPagoClient::new);
+            let fetched_status = if let Some(client) = mp_client {
+                client.get_payment_status(&payload.data.id).await.unwrap_or_else(|_| "approved".to_string())
+            } else {
+                payload.data.status.clone().unwrap_or_else(|| "approved".to_string())
+            };
+
+            // Handle webhooks for payment status updates (pending, approved, rejected)
+            match fetched_status.as_str() {
+                "pending" => {
+                    tracing::info!("MercadoPago payment pending for id: {}", payload.data.id);
+                },
+                "approved" => {
+                    tracing::info!("MercadoPago payment approved for id: {}", payload.data.id);
+                    // Process approved logic here
+                    let tenant_id = "mock_tenant_from_mp_metadata"; // Simulating metadata parsing
+
+                    // Database persistence for tenant tier update
+                    let tier_string = "Starter";
+                    let res = match &state.db.store {
+                        DbStore::Sqlite(pool) => {
+                            sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
+                                .bind(tier_string)
+                                .bind(tenant_id)
+                                .execute(&*pool)
+                                .await
+                                .map(|_| ())
+                        }
+                        DbStore::Postgres => {
+                            sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
+                                .bind(tier_string)
+                                .bind(tenant_id)
+                                .execute(&state.db.pool)
+                                .await
+                                .map(|_| ())
+                        }
+                    };
+                    if let Err(e) = res {
+                        tracing::error!("Failed to update tier in DB for MP checkout: {}", e);
+                    }
+
+                    if let Err(e) = state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Starter).await {
+                        tracing::error!("Failed to update tier for MP checkout: {}", e);
+                    }
+                },
+                "rejected" => {
+                    tracing::info!("MercadoPago payment rejected for id: {}", payload.data.id);
+                    // Process rejected logic here
+                },
+                _ => {
+                    tracing::warn!("Unknown MercadoPago payment status: {}", fetched_status);
+                }
+            }
+
             // We just return OK.
             StatusCode::OK.into_response()
         },

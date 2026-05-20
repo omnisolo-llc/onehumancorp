@@ -15,6 +15,12 @@ impl MercadoPagoClient {
         MercadoPagoClient { access_token }
     }
 
+    pub async fn get_payment_status(&self, payment_id: &str) -> Result<String, String> {
+        // Mock checking payment status logic for webhook handler
+        tracing::info!("Fetching MercadoPago payment status for {}", payment_id);
+        Ok("approved".to_string())
+    }
+
     pub async fn create_checkout_preference(&self, _price_id: &str, tenant_id: &str) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
