@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 
 class OnboardingScreen extends StatefulWidget {
   @override
@@ -12,6 +14,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String businessName = '';
   String businessCategory = 'Bakery';
   bool isGenerating = false;
+  Timer? _debounce;
+
+  void syncState() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      _formKey.currentState?.save();
+      try {
+        await http.post(
+          Uri.parse('http://localhost:8080/api/onboarding/state'),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': 'mobile-tenant',
+            'X-User-ID': 'mobile-user',
+          },
+          body: jsonEncode({
+            'step': 3, // Align roughly with web's company name step
+            'company_name': businessName,
+            'business_type': businessCategory,
+          }),
+        );
+      } catch (e) {
+        print('State sync error: \$e');
+      }
+    });
+  }
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
@@ -57,42 +84,64 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('Start Your Business')),
       body: Center(
-        child: Container(
-          width: 375, // Mobile viewport constraint
-          padding: EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Build your bakery in 3 minutes',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 32),
-                TextFormField(
-                  decoration: InputDecoration(
-                    labelText: 'Business Name',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
-                  onSaved: (value) => businessName = value!,
-                ),
-                SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(),
-                  ),
-                  value: businessCategory,
-                  items: ['Bakery', 'Handyman', 'Boutique', 'Tutor', 'Food Cart']
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (value) => setState(() => businessCategory = value!),
-                  onSaved: (value) => businessCategory = value!,
-                  validator: (value) => value == null ? 'Required' : null,
-                ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16.0),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            child: Container(
+              width: 375, // Mobile viewport constraint
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16.0),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color.fromRGBO(31, 38, 135, 0.3),
+                    blurRadius: 32.0,
+                    offset: Offset(0, 8),
+                  )
+                ]
+              ),
+              child: Form(
+                key: _formKey,
+                onChanged: syncState,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Build your bakery in 3 minutes',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 32),
+                    TextFormField(
+                      decoration: InputDecoration(
+                        labelText: 'Business Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) => value!.isEmpty ? 'Required' : null,
+                      onSaved: (value) => businessName = value ?? '',
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: 'Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: businessCategory,
+                      items: ['Bakery', 'Handyman', 'Boutique', 'Tutor', 'Food Cart']
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => businessCategory = value!);
+                        syncState();
+                      },
+                      onSaved: (value) => businessCategory = value!,
+                      validator: (value) => value == null ? 'Required' : null,
+                    ),
                 SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,

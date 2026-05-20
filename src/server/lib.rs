@@ -2412,21 +2412,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
 
         /* Premium Standard Overrides for Wizard */
-        #setup-screen.glass {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+        #setup-screen.glass, #setup-screen.glassmorphism {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 16px;
             max-width: 600px;
             margin: 40px auto;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.3);
         }
 
-        body.dark-theme #setup-screen.glass {
+        body.dark-theme #setup-screen.glass, body.dark-theme #setup-screen.glassmorphism {
             background: rgba(22, 22, 26, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
 
         #setup-screen > div {
