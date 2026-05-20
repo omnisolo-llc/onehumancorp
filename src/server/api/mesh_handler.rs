@@ -242,9 +242,11 @@ mod tests {
         assert!(found, "Did not receive the srv_test message");
     }
 
+    use ohc_builtin_agent::mesh::InProcessTransport;
+
     #[tokio::test]
     async fn test_mesh_direct_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
 
         let app = Router::new()
             .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
@@ -287,7 +289,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_mailbox_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
 
         let app = Router::new()
             .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))

@@ -2349,15 +2349,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
             max-width: 600px;
             margin: 40px auto;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
         }
 
         body.dark-theme #setup-screen.glass {
@@ -3009,8 +3009,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="What is your business called?" inputmode="text" autocomplete="organization" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" inputmode="text" autocomplete="organization" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
@@ -3027,8 +3027,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
+                            <input type="text" placeholder="What is the name of this product?" inputmode="text" />
+                            <input type="text" placeholder="0.00" inputmode="decimal" />
                             <button onclick="nextStep('generating')">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
@@ -3041,9 +3041,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
+                            <input type="text" placeholder="e.g. Maya Smith" inputmode="text" autocomplete="name" />
+                            <input type="email" placeholder="you@email.com" inputmode="email" autocomplete="email" />
+                            <input type="password" placeholder="Password" autocomplete="new-password" />
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" style="display: none;">
