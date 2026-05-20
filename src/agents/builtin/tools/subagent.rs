@@ -119,6 +119,57 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
+        } else if mode == "worktree" {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let branch_name = format!("subagent-{}", task_id);
+            let worktree_dir = format!(".agent-worktrees/{}", branch_name);
+
+            // Create git worktree
+            let output = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_dir], None, vec![]).await;
+            if let Err(e) = output {
+                return Err(ToolError::LlmRecoverable(format!("Failed to create git worktree: {}", e)));
+            } else if let Ok(out) = output {
+                if !out.status.success() {
+                    return Err(ToolError::LlmRecoverable(format!("git worktree add failed: {}", String::from_utf8_lossy(&out.stderr))));
+                }
+            }
+
+            let worktree_task = format!(
+                "You are a subagent running in an isolated git worktree (branch: {}). Your task is: {}\n\nCRITICAL INSTRUCTION: You MUST return a 1k-2k token condensed summary of your findings and actions. Do not return your full context loop.",
+                branch_name, task
+            );
+
+            let mut envs = vec![];
+            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
+                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
+            }
+
+            let pb = std::path::PathBuf::from(&worktree_dir);
+            let output = self.runner.run("ohc_builtin_agent", &["--task", &worktree_task], Some(pb.as_path()), envs).await;
+
+            let res = match output {
+                Ok(out) => {
+                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                    if out.status.success() {
+                        let mut summary = stdout;
+                        if summary.chars().count() > 8000 {
+                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
+                        }
+                        Ok(format!("[Subagent (Worktree: {})] Completed task. Summary: {}", branch_name, summary))
+                    } else {
+                        Err(format!("Process failed: {}", stderr))
+                    }
+                }
+                Err(e) => Err(format!("Runner failed: {}", e)),
+            };
+
+            // Note: We leave the worktree intact for the user or parent agent to inspect and merge.
+
+            match res {
+                Ok(msg) => Ok(msg),
+                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+            }
         } else if mode == "teammate" {
             let task_id = uuid::Uuid::new_v4().to_string();
             let mailbox_dir = format!(".agent-mailboxes/subagent-{}", task_id);
@@ -304,6 +355,28 @@ mod tests {
                 let _ = tokio::fs::remove_dir_all(parent_dir).await;
             });
         });
+    }
+
+    #[tokio::test]
+    async fn test_subagent_worktree_mode() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        // Mock successful git worktree add
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Preparing worktree", "")));
+        // Mock successful ohc_builtin_agent run
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "I completed the worktree task", "")));
+
+        let executor = SubagentExecutor { runner };
+        let args = json!({
+            "task": "Do this worktree task",
+            "mode": "worktree"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok for worktree mode");
+        let msg = result.unwrap();
+
+        assert!(msg.contains("[Subagent (Worktree: subagent-"), "Message should contain success notification");
+        assert!(msg.contains("Completed task. Summary: I completed the worktree task"), "Message should contain the agent output");
     }
 
     #[tokio::test]
