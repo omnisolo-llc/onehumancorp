@@ -78,18 +78,24 @@ impl LocalProxyClient {
                                     }
                                 }
                                 "fs_read" => {
-                                    match blob_provider.read_blob(&req.params).await {
+                                    let start = std::time::Instant::now();
+                                    let res = match blob_provider.read_blob(&req.params).await {
                                         Ok(content) => (true, content, "".to_string()),
                                         Err(e) => (false, "".to_string(), e.to_string()),
-                                    }
+                                    };
+                                    ::server_telemetry::record_harness_db_io_latency("fs_read", start.elapsed().as_secs_f64());
+                                    res
                                 }
                                 "fs_write" => {
                                     let parts: Vec<&str> = req.params.splitn(2, "||").collect();
                                     if parts.len() == 2 {
-                                        match blob_provider.write_blob(parts[0], parts[1]).await {
+                                        let start = std::time::Instant::now();
+                                        let res = match blob_provider.write_blob(parts[0], parts[1]).await {
                                             Ok(_) => (true, "Successfully wrote file".to_string(), "".to_string()),
                                             Err(e) => (false, "".to_string(), e.to_string()),
-                                        }
+                                        };
+                                        ::server_telemetry::record_harness_db_io_latency("fs_write", start.elapsed().as_secs_f64());
+                                        res
                                     } else {
                                         (false, "".to_string(), "Invalid params for fs_write".to_string())
                                     }
