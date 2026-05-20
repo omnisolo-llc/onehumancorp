@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
-use crate::guardrails::GuardrailConfig;
+use crate::guardrails::GuardrailRegistry;
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
@@ -53,7 +53,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
     pub visual_verification_command: String,
-    pub guardrails: Option<GuardrailConfig>,
+    pub guardrails: Option<GuardrailRegistry>,
     pub enable_state_checkpointing: bool,
     pub enable_git_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
@@ -1225,7 +1225,7 @@ impl Agent {
 
         // OpenAI Mechanic: Input Guardrails
         if let Some(guard_cfg) = &final_cfg.guardrails {
-            if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
+            if let Err(e) = guard_cfg.check_input(initial_message) {
                 on_event(AgentEvent::TaskError { error: e.clone() });
                 return Err(e.into());
             }
@@ -1630,7 +1630,7 @@ impl Agent {
 
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
-                    if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
+                    if let Err(e) = guard_cfg.check_output(&last_assistant_content) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into());
                     }
@@ -1683,7 +1683,7 @@ impl Agent {
             for tc in &read_only_calls {
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
-                    if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
+                    if let Err(e) = guard_cfg.check_tool(tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
@@ -1864,7 +1864,7 @@ impl Agent {
                 }
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
-                    if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
+                    if let Err(e) = guard_cfg.check_tool(&tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
@@ -3744,8 +3744,10 @@ mod tests {
         let agent = Agent::new(client, tools);
 
         let mut cfg = AgentRunConfig::default();
-        cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
-            blocked_keywords: vec!["banned".to_string(), "password".to_string(), "secret".to_string()],
+        cfg.guardrails = Some(crate::guardrails::GuardrailRegistry {
+            input_guardrails: vec![std::sync::Arc::new(crate::guardrails::KeywordGuardrail::new(vec!["banned".to_string(), "password".to_string(), "secret".to_string()]))],
+                output_guardrails: vec![std::sync::Arc::new(crate::guardrails::KeywordGuardrail::new(vec!["banned".to_string(), "password".to_string(), "secret".to_string()]))],
+                tool_guardrails: vec![std::sync::Arc::new(crate::guardrails::KeywordGuardrail::new(vec!["banned".to_string(), "password".to_string(), "secret".to_string()]))],
         });
 
         // Test Input Guardrail
