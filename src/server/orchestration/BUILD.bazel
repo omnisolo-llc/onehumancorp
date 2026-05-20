@@ -1,17 +1,21 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "orchestration",
-    srcs = ["autodream.go"],
-    importpath = "ohc/src/server/orchestration",
-    visibility = ["//visibility:public"],
-)
-
-go_test(
-    name = "orchestration_test",
-    srcs = ["autodream_test.go"],
-    embed = [":orchestration"],
-    deps = [
-        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+filegroup(
+    name = "srcs",
+    srcs = [
+        "chaos_test.rs",
+        "handoff.rs",
+        "health.rs",
+        "hierarchical.rs",
+        "hub.rs",
+        "mesh.rs",
+        "mod.rs",
+        "orchestration_test.rs",
+        "shared_tasks.rs",
+        "shared_tasks_test.rs",
+        "tasks.rs",
+        "autodream.rs",
+        "//src/server/orchestration/departments:srcs",        "//src/server/orchestration/queue:srcs",        "//src/server/orchestration/state:srcs",
+        "//src/server/orchestration/statemachine:srcs",
+        "//src/server/orchestration/hybrid_sync:srcs",
     ],
+    visibility = ["//src/server:__pkg__"],
 )

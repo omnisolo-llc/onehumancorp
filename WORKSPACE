@@ -123,10 +123,3 @@ go_repository(
     sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYK4Q=",
     version = "v1.8.4",
 )
-
-go_repository(
-    name = "com_github_data_dog_go_sqlmock",
-    importpath = "github.com/DATA-DOG/go-sqlmock",
-    version = "v1.5.2",
-    sum = "h1:2D5vAovmE4XJk+WlJ1yJd8U9O35o26Lq9bN4gYt+K6Q=",
-)
