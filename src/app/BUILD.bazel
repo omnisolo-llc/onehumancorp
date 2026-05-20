@@ -1,0 +1,8 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "flutter_tests",
+    srcs = ["run_flutter_tests.sh"],
+    data = glob(["**"]),
+    tags = ["no-sandbox", "local"],
+)
