@@ -713,7 +713,7 @@ impl Agent {
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > cfg_max_retries as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
+                                return Err(format!("FATAL_RETRIES:Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
                             }
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
@@ -722,19 +722,19 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
+                            return Err(format!("TRANSIENT_ERROR:{}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
                         Err(crate::types::ToolError::Fatal(msg)) => {
-                            return Err(format!("Fatal tool error: {}", msg));
+                            return Err(format!("FATAL_ERROR:{}", msg));
                         }
                         Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
+                            return Err(format!("UNEXPECTED_ERROR:{}", msg));
                         }
                         Err(crate::types::ToolError::HandoffRequested(target)) => {
-                            return Err(format!("Handoff requested to {}", target));
+                            return Err(format!("HANDOFF:{}", target));
                         }
                     }
                 }
@@ -788,7 +788,7 @@ impl Agent {
                                 let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > cfg_max_retries as u64 {
-                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                    return Err(format!("FATAL_RETRIES:Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
                                 }
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
@@ -797,19 +797,19 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::Transient(msg)) => {
-                                return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
+                                return Err(format!("TRANSIENT_ERROR:{}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
                             Err(crate::types::ToolError::Fatal(msg)) => {
-                                return Err(format!("Fatal tool error: {}", msg));
+                                return Err(format!("FATAL_ERROR:{}", msg));
                             }
                             Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
+                                return Err(format!("UNEXPECTED_ERROR:{}", msg));
                             }
                             Err(crate::types::ToolError::HandoffRequested(target)) => {
-                                return Err(format!("Handoff requested to {}", target));
+                                return Err(format!("HANDOFF:{}", target));
                             }
                         }
                     } else {
@@ -904,8 +904,33 @@ impl Agent {
                 if let Some(msg) = e.strip_prefix("USER_FIXABLE:") {
                     let err_msg = format!("User intervention required: {}", msg);
                     on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
-                    return Err(err_msg.into());
+                    return Err(Box::new(crate::types::ToolError::UserFixable(msg.to_string())));
                 }
+                if let Some(msg) = e.strip_prefix("TRANSIENT_ERROR:") {
+                    let err_msg = format!("Transient error after retries: {}", msg);
+                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(Box::new(crate::types::ToolError::Transient(msg.to_string())));
+                }
+                if let Some(msg) = e.strip_prefix("FATAL_ERROR:") {
+                    let err_msg = format!("Fatal tool error: {}", msg);
+                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(Box::new(crate::types::ToolError::Fatal(msg.to_string())));
+                }
+                if let Some(msg) = e.strip_prefix("FATAL_RETRIES:") {
+                    let err_msg = format!("Fatal tool error: {}", msg);
+                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(Box::new(crate::types::ToolError::Fatal(msg.to_string())));
+                }
+                if let Some(msg) = e.strip_prefix("UNEXPECTED_ERROR:") {
+                    let err_msg = format!("Unexpected tool error: {}", msg);
+                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                    return Err(Box::new(crate::types::ToolError::Unexpected(msg.to_string())));
+                }
+                if let Some(msg) = e.strip_prefix("HANDOFF:") {
+                    on_event(AgentEvent::Handoff { target_agent: msg.to_string() });
+                    return Err(Box::new(crate::types::ToolError::HandoffRequested(msg.to_string())));
+                }
+
                 let err_msg = format!("LangGraph Error: {}", e);
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 Err(err_msg.into())
