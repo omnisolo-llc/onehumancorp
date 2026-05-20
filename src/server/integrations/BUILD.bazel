@@ -24,6 +24,10 @@ filegroup(
         "//src/server/integrations/resend:srcs",
         "//src/server/integrations/shippo:srcs",
         "//src/server/integrations/zoom:srcs",
+        "//src/server/integrations/tiktok:srcs",
+        "//src/server/integrations/outlook:srcs",
+        "//src/server/integrations/alipay:srcs",
+        "//src/server/integrations/paytm:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

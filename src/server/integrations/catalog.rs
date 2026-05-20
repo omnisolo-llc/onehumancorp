@@ -63,5 +63,17 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
     catalog.push(mercadopago_provider.to_integration_provider());
 
+    let tiktok_provider = crate::integrations::tiktok::provider::TikTokProvider::new("dummy_token".to_string());
+    catalog.push(tiktok_provider.to_integration_provider());
+
+    let outlook_provider = crate::integrations::outlook::provider::OutlookCalendarProvider::new("dummy_token".to_string());
+    catalog.push(outlook_provider.to_integration_provider());
+
+    let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
+    catalog.push(alipay_provider.to_integration_provider());
+
+    let paytm_provider = crate::integrations::paytm::provider::PaytmProvider::new("dummy_token".to_string());
+    catalog.push(paytm_provider.to_integration_provider());
+
     catalog
 }

@@ -19,3 +19,7 @@ pub mod cal_com;
 pub mod resend;
 pub mod shippo;
 pub mod zoom;
+pub mod tiktok;
+pub mod outlook;
+pub mod alipay;
+pub mod paytm;
