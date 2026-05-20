@@ -6,7 +6,7 @@ import React from 'react';
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
 
 export function SmartBlock({ type, props }: { type: string; props: any }) {
-  if (type === "Hero") {
+  if (type === "HeroBlock") {
     return (
       <div className="relative w-full overflow-hidden bg-white">
         <div
@@ -23,7 +23,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     );
   }
 
-  if (type === "Catalog") {
+  if (type === "ProductGridBlock") {
     return (
       <div className="p-6 bg-gray-50 font-inter">
         <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900 border-b pb-2">Our Services</h2>
@@ -42,7 +42,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     );
   }
 
-  if (type === "Booking") {
+  if (type === "ServiceBookingBlock") {
     return (
       <div className="p-6 bg-white font-inter">
         <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl text-center">
@@ -56,7 +56,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     );
   }
 
-  if (type === "Contact") {
+  if (type === "ContactFormBlock") {
     return (
       <div className="p-6 bg-gray-900 text-white font-inter text-center">
         <h2 className="text-lg font-bold font-outfit mb-4">Get in Touch</h2>

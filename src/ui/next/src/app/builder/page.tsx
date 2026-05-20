@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SmartBlock } from "./components";
 
 export default function BuilderPage() {
@@ -12,19 +12,25 @@ export default function BuilderPage() {
   // Growth Loop: Soft Paywall State
   const [isPremium, setIsPremium] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  useEffect(() => {
+    if (blocks.length > 0) {
+      // Mock Auto-save: real implementation would send PUT /api/v1/builder/blocks/:id
+      console.log("Auto-saving blocks draft state...");
+    }
+  }, [blocks]);
 
   const handleGenerate = async () => {
     setStatus("generating");
 
     try {
-      const response = await fetch('/builder/api', {
+      const response = await fetch('/api/v1/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bio })
       });
 
       const data = await response.json();
-      setBlocks(data.blocks);
+      setBlocks(data.pages[0].blocks);
       setStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -32,7 +38,22 @@ export default function BuilderPage() {
     }
   };
 
-  const handleLaunch = () => {
+  const handleLaunch = async () => {
+    // 1. Call real publish_draft endpoint
+    const response = await fetch('/api/v1/builder/publish_draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        domain: null,
+        draft: {
+          pages: [{ path: '/', title: 'Home', blocks: blocks, seo_metadata: {} }]
+        }
+      })
+    });
+    if (!response.ok) {
+       console.error("Failed to publish");
+       return;
+    }
     // Simulate background provisioning of subdomain and SSL
     setTimeout(() => {
       setStatus("live");
@@ -130,7 +151,7 @@ export default function BuilderPage() {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
           {blocks.map((b, i) => (
-            <SmartBlock key={i} {...b} />
+            <SmartBlock key={i} type={b.block_type} props={b.content} />
           ))}
           {!isPremium && <SmartBlock type="PoweredBy" props={{}} />}
         </div>

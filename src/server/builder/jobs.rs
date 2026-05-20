@@ -35,13 +35,32 @@ async fn execute_publish_site_job(
     info!("Starting publish process for site {}", site_id);
 
     // 1. Fetch site and pages
-    let _pages = super::db::list_pages(pool, tenant_id, site_id).await?;
+    let pages = super::db::list_pages(pool, tenant_id, site_id).await?;
+
+    // publish all blocks to live state for each page
+    for page in &pages {
+        super::db::publish_blocks_to_live(pool, tenant_id, page.id).await?;
+    }
 
     // 2. Mock Site Compilation
     info!("Compiling site {} to static PWA/SSR...", site_id);
 
     // 3. Mock SEO Metadata Generation (via Marketing AI Agent)
     info!("Generating SEO metadata (JSON-LD) for site {}...", site_id);
+    for page in &pages {
+        // Mock SEO Generation
+        let mock_seo = serde_json::json!({
+            "title": format!("{} - {}", page.title, site_id),
+            "description": "Auto-generated description by Marketing Agent",
+            "keywords": ["storefront", "business"]
+        });
+        sqlx::query("UPDATE builder_pages SET seo_metadata = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+            .bind(mock_seo)
+            .bind(tenant_id)
+            .bind(page.id)
+            .execute(pool)
+            .await?;
+    }
 
     // 4. Update published_at timestamp
     sqlx::query(
