@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { SmartBlock } from "../builder/components";
-import { useWalkthrough } from "../../components/help";
 
 export default function WebsiteBuilderPage() {
   const [bio, setBio] = useState("");
@@ -13,7 +12,6 @@ export default function WebsiteBuilderPage() {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
-  const { startWalkthrough } = useWalkthrough();
 
   const handleGenerate = async (instantBio?: string) => {
     setStatus("generating");
