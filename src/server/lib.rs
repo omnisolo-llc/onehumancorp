@@ -1825,7 +1825,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
-        .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/agents/approvals", api::agents::mission::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string())))
             .merge(api::agents::mission::approvals::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string())))))
         .route_layer(axum::middleware::from_fn_with_state(

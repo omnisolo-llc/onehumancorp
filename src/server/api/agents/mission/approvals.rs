@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, State, Path, Query},
+    extract::{Extension, State, Path},
     response::IntoResponse,
     http::StatusCode,
     routing::{get, post},

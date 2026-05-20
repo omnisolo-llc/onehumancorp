@@ -1,10 +1,10 @@
 filegroup(
     name = "srcs",
     srcs = [
-        "approvals.rs",
         "hire.rs",
         "mission/mod.rs",
         "mission/handoff.rs",
+        "mission/approvals.rs",
         "mod.rs",
     ],
     visibility = ["//src/server/api:__pkg__"],
