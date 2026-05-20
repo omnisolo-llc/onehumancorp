@@ -54,6 +54,7 @@ rust_library(
         "json_store.rs",
         "memory_store.rs",
         "sqlite_memory.rs",
+        "output_parser.rs",
         "memory_exhaustive_tests.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
@@ -188,6 +189,7 @@ rust_binary(
         "guardrails",
         "harness",
         "memory_store",
+        "output_parser",
         "pubsub",
         "registry",
     ]
@@ -223,14 +225,3 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
-
-
-rust_test(
-    name = "output_parser_unit_test",
-    crate = ":core",
-    edition = "2024",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
