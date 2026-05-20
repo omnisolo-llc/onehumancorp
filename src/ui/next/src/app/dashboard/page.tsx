@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Tooltip } from "../../components/help";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -96,7 +97,8 @@ export default function Dashboard() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-         <div className="flex items-center gap-3">
+         <div className="flex items-center gap-4">
+             <a href="/changelog" className="text-sm font-medium text-blue-600 hover:underline">What&apos;s New</a>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
@@ -112,17 +114,23 @@ export default function Dashboard() {
 
                 {/* Metric Card */}
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
+                    <Tooltip id="dashboard-sales-tooltip" defaultText="Your total revenue for the current day.">
+                        <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today&apos;s Sales</div>
+                    </Tooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>$0.00</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
+                    <Tooltip id="dashboard-customers-tooltip" defaultText="The number of customers currently engaging with your store.">
+                        <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
+                    </Tooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>12</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                    <Tooltip id="dashboard-orders-tooltip" defaultText="Orders that have been placed but not yet fulfilled.">
+                        <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                    </Tooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>3</div>
                 </div>
 
@@ -132,11 +140,15 @@ export default function Dashboard() {
          {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2>
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
-                    <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
-                </div>
+                <Tooltip id="dashboard-activity-tooltip" defaultText="A live view of what your AI agents are currently working on.">
+                    <h2 className="text-xl font-semibold font-outfit inline-block" style={{ color: '#1D1D1F' }}>Team Activity</h2>
+                </Tooltip>
+                <Tooltip id="dashboard-swarm-tooltip" defaultText="Shows if your AI team is currently online and ready to help.">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
+                        <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
+                    </div>
+                </Tooltip>
             </div>
 
             <div className="shadow-sm overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>

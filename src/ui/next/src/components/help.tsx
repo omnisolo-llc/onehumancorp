@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
+import { useRouter } from 'next/navigation';
 
 // --- Tooltip Registry & Component ---
 type TooltipContextType = {
@@ -205,9 +206,11 @@ export function useWalkthrough() {
 
 // --- Help Widget System ---
 export function HelpWidget() {
+  const router = useRouter();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
+  const [searchQuery, setSearchQuery] = useState("");
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
@@ -274,47 +277,63 @@ export function HelpWidget() {
             {tab === "center" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
-                <input type="text" placeholder="Search for help..." className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input
+                  type="text"
+                  placeholder="Search for help..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
                 <div className="space-y-2 mb-4">
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Getting Started</h4>
-                    <p className="text-xs text-gray-500 mt-1">Learn the basics of setting up your store.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">My Store</h4>
-                    <p className="text-xs text-gray-500 mt-1">Manage your products and layout.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Payments</h4>
-                    <p className="text-xs text-gray-500 mt-1">Connect your bank and get paid.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">AI Agents</h4>
-                    <p className="text-xs text-gray-500 mt-1">Hire and manage your AI workforce.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Marketing</h4>
-                    <p className="text-xs text-gray-500 mt-1">Grow your audience and sales.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Account & Billing</h4>
-                    <p className="text-xs text-gray-500 mt-1">Manage your subscription.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <a href="/api-docs"><h4 className="font-bold text-gray-800 text-sm hover:underline">API Documentation (Advanced)</h4></a>
-                    <p className="text-xs text-gray-500 mt-1">Interactive API reference for integrations.</p>
+                  {[
+                    { title: "Getting Started", desc: "Learn the basics of setting up your store." },
+                    { title: "My Store", desc: "Manage your products and layout." },
+                    { title: "Payments", desc: "Connect your bank and get paid." },
+                    { title: "AI Agents", desc: "Hire and manage your AI workforce." },
+                    { title: "Marketing", desc: "Grow your audience and sales." },
+                    { title: "Account & Billing", desc: "Manage your subscription." }
+                  ].filter(item =>
+                    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.desc.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).map((item, idx) => (
+                    <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                      <h4 className="font-bold text-gray-800 text-sm">{item.title}</h4>
+                      <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+                    </div>
+                  ))}
+
+                  <hr className="my-4 border-gray-200" />
+
+                  <div className="bg-gray-100 opacity-80 p-4 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:border-blue-300 transition-colors">
+                    <a href="/api-docs" className="block"><h4 className="font-bold text-gray-700 text-sm hover:underline flex items-center justify-between">
+                      API Documentation (Advanced)
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                    </h4></a>
+                    <p className="text-xs text-gray-500 mt-1">Interactive API reference for custom integrations.</p>
                   </div>
                 </div>
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => {
+                    setOpen(false);
+                    router.push('/builder');
+                    setTimeout(() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }]), 500);
+                  }} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Connect your bank account here." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => {
+                    setOpen(false);
+                    router.push('/builder');
+                    setTimeout(() => startWalkthrough([{ targetId: "bio-input", message: "Connect your bank account here." }]), 500);
+                  }} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => {
+                    setOpen(false);
+                    router.push('/builder');
+                    setTimeout(() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }]), 500);
+                  }} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
                 </div>
@@ -358,12 +377,17 @@ export function HelpWidget() {
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
-                        <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2 z-10">
+                    <div key={v.id} className="aspect-[9/16] bg-black rounded-xl relative overflow-hidden flex flex-col group border border-gray-200">
+                      <video
+                        className="absolute inset-0 w-full h-full object-cover opacity-80"
+                        controls
+                        playsInline
+                        poster={`https://picsum.photos/seed/${v.id}/300/533`}
+                      >
+                        <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4" />
+                        Your browser does not support the video tag.
+                      </video>
+                      <div className="absolute top-0 inset-x-0 bg-gradient-to-b from-black/70 to-transparent p-2 z-10 pointer-events-none">
                         <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
                         <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
                       </div>
@@ -375,7 +399,7 @@ export function HelpWidget() {
 
             {tab === "whatsnew" && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-4 text-lg">What's New</h3>
+                <h3 className="font-bold text-gray-900 mb-4 text-lg">What&apos;s New</h3>
                 <div className="w-full aspect-video bg-gray-200 rounded-xl mb-4 relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
                    <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-200">
                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
