@@ -52,7 +52,7 @@ pub async fn handle_mcp_webhook(
     match tracker.get_task(payload.task_id).await {
         Ok(Some(task)) => {
             if let Err(e) = tracker.update_task_status(payload.task_id, &payload.status, payload.result).await {
-                tracing::error!("Failed to update MCP task {}: {}", payload.task_id, e);
+                tracing::error!("failed to update mcp task: {}", e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(McpWebhookResponse {
@@ -64,7 +64,7 @@ pub async fn handle_mcp_webhook(
 
             // In a real KAIROS implementation, this would trigger agent resumption via the orchestrator.
             // For now, we simulate reactivating the agent.
-            tracing::info!("KAIROS Hook: Reactivating agent {} for tenant {} (Task {})", task.agent_id, task.tenant_id, task.id);
+            tracing::info!("kairos hook: reactivating agent");
 
             (
                 StatusCode::OK,
@@ -84,7 +84,7 @@ pub async fn handle_mcp_webhook(
             )
         }
         Err(e) => {
-            tracing::error!("Database error fetching MCP task {}: {}", payload.task_id, e);
+            tracing::error!("database error fetching mcp task: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(McpWebhookResponse {
