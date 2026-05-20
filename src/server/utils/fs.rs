@@ -10,7 +10,7 @@ use std::os::unix::fs::PermissionsExt;
 
 /// WriteFileAtomic writes data to a file atomically by writing to a temporary file first
 /// and then renaming it to the final path. This prevents file corruption on process crash.
-pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], mode: u32) -> io::Result<()> {
+pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -> io::Result<()> {
     let filename = filename.as_ref();
     let dir = filename.parent().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid filename"))?;
     
@@ -31,7 +31,7 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], mode: u32) ->
     options.write(true).create_new(true);
 
     #[cfg(unix)]
-    options.mode(mode);
+    options.mode(_mode);
 
     let mut file = options.open(&tmp_name)?;
 
@@ -61,9 +61,9 @@ mod tests {
             .collect();
         let filename = format!("/tmp/test_atomic_write_{}.txt", random_suffix);
         let data = b"hello world";
-        let mode = 0o644;
+        let _mode = 0o644;
 
-        write_file_atomic(&filename, data, mode).unwrap();
+        write_file_atomic(&filename, data, _mode).unwrap();
 
         let mut file = fs::File::open(&filename).unwrap();
         let mut content = Vec::new();
@@ -74,7 +74,7 @@ mod tests {
         {
             let metadata = fs::metadata(&filename).unwrap();
             let perm = metadata.permissions();
-            assert_eq!(perm.mode() & 0o777, mode);
+            assert_eq!(perm.mode() & 0o777, _mode);
         }
 
         fs::remove_file(&filename).unwrap();

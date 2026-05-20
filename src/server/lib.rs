@@ -1631,7 +1631,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let cfg = crate::config::get();
-        let db_path = cfg.database_url.as_ref()
+        let _db_path = cfg.database_url.as_ref()
             .and_then(|url| url.strip_prefix("sqlite://"))
             .map(|s| s.split('?').next().unwrap_or("ohc-standalone.db"))
             .unwrap_or("ohc-standalone.db");
@@ -1646,7 +1646,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .write(true)
                 .create(true)
                 .mode(0o600)
-                .open(db_path)?;
+                .open(_db_path)?;
 
             let metadata = file.metadata()?;
             let mut perms = metadata.permissions();
