@@ -1007,6 +1007,10 @@ impl Agent {
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
+
+        let mut read_only_calls = vec![];
+        let mut mutating_calls = vec![];
+
         for (i, step) in plan.into_iter().enumerate() {
             let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
             let args = step.get("args").unwrap_or(&serde_json::Value::Null);
@@ -1017,22 +1021,106 @@ impl Agent {
                 arguments: args.clone(),
             };
 
+            let is_read_only = session_tools.iter().find(|t| t.name == dummy_tc.name).map(|t| t.is_read_only).unwrap_or(false);
+            if is_read_only {
+                read_only_calls.push((i, dummy_tc));
+            } else {
+                mutating_calls.push((i, dummy_tc));
+            }
+        }
+
+        let mut read_only_futures = Vec::new();
+        for (i, tc) in &read_only_calls {
+            let tc_clone = tc.clone();
+            let session_tools_clone = session_tools.to_vec();
+            let max_retries = cfg.max_retries;
+
+            let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
+            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
+                 return Err(Box::new(e));
+            }
+
+            read_only_futures.push(async move {
+                let mut retry_count = 0;
+                loop {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &[]).await {
+                        Ok(res) => break Ok(res),
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            if retry_count < max_retries {
+                                retry_count += 1;
+                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                tokio::time::sleep(backoff).await;
+                                continue;
+                            } else {
+                                break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
+                            }
+                        }
+                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
+                        }
+                        Err(e) => {
+                            break Err(e);
+                        }
+                    }
+                }
+            });
+        }
+
+        let results = futures::future::join_all(read_only_futures).await;
+        for (idx, (i, tc)) in read_only_calls.into_iter().enumerate() {
             on_event(AgentEvent::ToolCall {
-                name: tool_name.to_string(),
-                args_json: args.to_string(),
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
                 result: "Executing planned step...".to_string(),
                 iteration: i as i32,
             });
 
-            // Gating mechanics
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&dummy_tc, false, cfg) {
+            let res = match &results[idx] {
+                Ok(r) => r.clone(),
+                Err(crate::types::ToolError::UserFixable(msg)) => {
+                    let err = format!("USER_FIXABLE: {}", msg);
+                    on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                    return Err(err.into());
+                }
+                Err(crate::types::ToolError::Fatal(msg)) => {
+                    return Err(format!("Fatal tool error: {}", msg).into());
+                }
+                Err(crate::types::ToolError::Unexpected(msg)) => {
+                    return Err(format!("Unexpected tool error: {}", msg).into());
+                }
+                Err(e) => {
+                    return Err(format!("Fatal tool error: {:?}", e).into());
+                }
+            };
+
+            on_event(AgentEvent::ToolCall {
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
+                result: res.clone(),
+                iteration: i as i32,
+            });
+
+            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tc.name, tc.arguments, res));
+        }
+
+        // Execute mutating tools serially
+        for (i, tc) in mutating_calls {
+            on_event(AgentEvent::ToolCall {
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
+                result: "Executing planned step...".to_string(),
+                iteration: i as i32,
+            });
+
+            let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg) {
                  return Err(Box::new(e));
             }
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let result = loop {
-                match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                match self.execute_tool(&tc, session_tools, &[]).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -1045,8 +1133,6 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
-                        // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
                         break format!("Error executing planned step (LlmRecoverable): {}", msg);
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -1067,14 +1153,26 @@ impl Agent {
             };
 
             on_event(AgentEvent::ToolCall {
-                name: tool_name.to_string(),
-                args_json: args.to_string(),
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
                 result: result.clone(),
                 iteration: i as i32,
             });
 
-            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tool_name, args, result));
+            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tc.name, tc.arguments, result));
         }
+
+        // Sort executed steps to restore plan order
+        executed_steps.sort_by_key(|s| {
+            if let Some(prefix) = s.strip_prefix("Step ") {
+                if let Some(colon_idx) = prefix.find(':') {
+                    if let Ok(idx) = prefix[..colon_idx].parse::<usize>() {
+                        return idx;
+                    }
+                }
+            }
+            usize::MAX
+        });
 
         // Phase 3: Replier
         let replier_system = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();
