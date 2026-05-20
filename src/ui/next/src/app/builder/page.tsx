@@ -91,7 +91,7 @@ export default function BuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+        <div className="w-[375px] h-[812px] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-2xl overflow-hidden flex flex-col relative rounded-2xl">
           <div className="p-8 flex flex-col flex-1 justify-center">
             <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
             <p className="text-gray-500 text-sm mb-4 leading-relaxed">
@@ -211,7 +211,7 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden">
+      <div className="w-[375px] h-[812px] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-2xl flex flex-col relative rounded-2xl overflow-hidden">
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">

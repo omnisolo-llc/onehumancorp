@@ -2478,7 +2478,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Create an account</h1>
                         <p>Create an account to start your business</p>
                         <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
+                        <input type="password" placeholder="Password" style="border-radius: 8px;" />
                         <button onclick="handleSignup(this)">Sign Up</button>
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
@@ -3126,7 +3126,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glassmorphism">
+                    <div id="setup-screen" class="screen glassmorphism" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
                         <h1>OneHuman</h1>
                         <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
@@ -3136,7 +3136,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-2" class="hidden" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" />
+                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)">Next →</button>
                             <button class="secondary" onclick="setBusinessType('Online Store')">🛒 <span>Online Store</span></button>
                             <button class="secondary" onclick="setBusinessType('Service Business')">🛠️ <span>Service Business</span></button>
@@ -3147,8 +3147,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
+                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')">Generate Description</button>
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
@@ -3156,18 +3156,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-4" class="hidden" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%);"><input type="checkbox" style="width: auto; margin: 0; border-radius: 8px;"> 📦 Physical Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%);"><input type="checkbox" style="width: auto; margin: 0; border-radius: 8px;"> 📄 Digital Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%);"><input type="checkbox" style="width: auto; margin: 0; border-radius: 8px;"> 📅 Services / Appointments</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%);"><input type="checkbox" style="width: auto; margin: 0; border-radius: 8px;"> 🔁 Subscriptions</label>
                             </div>
                             <button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
+                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')">Generate AI Description</button>
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
@@ -3180,9 +3180,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
+                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
@@ -3225,7 +3225,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
+                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
@@ -3301,7 +3301,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="login-error" class="error">Oops! We couldn't sign you in. Please double-check your email and password, then try again.</div>
                         <input type="email" placeholder="Email or Username" />
                         <div class="password-row">
-                            <input type="password" placeholder="Password" />
+                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
                             <button type="button" class="secondary" onclick="const input = this.previousElementSibling; input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? 'Show' : 'Hide';">Show</button>
                         </div>
                         <button onclick="handleLogin(this)">Login Sign In</button>
@@ -3315,7 +3315,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         // LocalStorage State Management
                         function saveWizardState() {
                             const inputs = document.querySelectorAll('#setup-screen input');
-                            const state = {};
+                            const state = {
+                                currentStep: currentStep
+                            };
                             inputs.forEach((input, index) => {
                                 if (input.type === 'checkbox') {
                                     state['checkbox_' + index] = input.checked;
@@ -3346,6 +3348,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         input.addEventListener('change', saveWizardState);
                                         input.addEventListener('input', saveWizardState);
                                     });
+                                    if (state.currentStep) {
+                                        currentStep = state.currentStep;
+                                        nextStep(currentStep); // Resume step after populating DOM
+                                    }
                                 } catch (e) { console.error('Failed to parse wizard state', e); }
                             } else {
                                 const inputs = document.querySelectorAll('#setup-screen input');
@@ -3369,7 +3375,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = {};
+                                const state = {
+                                    currentStep: currentStep
+                                };
                                 inputs.forEach((input, index) => {
                                     if (input.type === 'checkbox') {
                                         state['checkbox_' + index] = input.checked;
@@ -3417,6 +3425,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                                 }
                                             }
                                         });
+                                        if (state.currentStep) {
+                                            currentStep = state.currentStep;
+                                            nextStep(currentStep); // Resume step after populating DOM
+                                        }
                                         return;
                                     }
                                 }
@@ -3440,6 +3452,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             }
                                         }
                                     });
+                                    if (state.currentStep) {
+                                        currentStep = state.currentStep;
+                                        nextStep(currentStep); // Resume step after populating DOM
+                                    }
                                 } catch (e) { console.error('Failed to parse wizard state', e); }
                             }
                         }
@@ -3911,20 +3927,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function validateInputs(stepId) {
                             if (stepId === 4 && currentStep === 3) {
-                                const inputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
-                                if (!valid) {
+                                const input1 = document.querySelectorAll('#step-3 input[type="text"]')[0];
+                                if (!input1 || input1.value.trim().length === 0) {
                                     alert('Please enter a business name');
                                     return false;
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
-                                const inputs = document.querySelectorAll('#step-5 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a product or service');
+                                const input1 = document.querySelectorAll('#step-5 input[type="text"]')[0];
+                                const input2 = document.querySelectorAll('#step-5 input[type="text"]')[1];
+                                if (!input1 || input1.value.trim().length === 0 || !input2 || input2.value.trim().length === 0) {
+                                    alert('Please enter a product or service name and price');
                                     return false;
                                 }
                             }
@@ -3968,6 +3981,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (typeof stepId === 'number' || !isNaN(stepId)) {
                                 currentStep = parseInt(stepId);
                             }
+                            saveWizardState();
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
