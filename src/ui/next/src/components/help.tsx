@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import DOMPurify from 'dompurify';
 
 // --- Tooltip Registry & Component ---
 type TooltipContextType = {
@@ -12,6 +13,13 @@ const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
 
 export function TooltipRegistryProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/tooltips")
+      .then(res => res.json())
+      .then(data => setTooltips(prev => ({ ...data, ...prev })))
+      .catch(() => {});
+  }, []);
 
   const registerTooltip = (id: string, text: string) => {
     setTooltips((prev) => ({ ...prev, [id]: text }));
@@ -197,12 +205,21 @@ export function useWalkthrough() {
 
 // --- Help Widget System ---
 export function HelpWidget() {
+  const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+
+  useEffect(() => {
+    fetch("/api/videos")
+      .then(res => res.json())
+      .then(data => setVideos(data))
+      .catch(() => {});
+  }, []);
 
   const handleChatSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && chatInput.trim()) {
@@ -258,15 +275,48 @@ export function HelpWidget() {
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
                 <input type="text" placeholder="Search for help..." className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <div className="space-y-2">
+                <div className="space-y-2 mb-4">
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                     <h4 className="font-bold text-gray-800 text-sm">Getting Started</h4>
                     <p className="text-xs text-gray-500 mt-1">Learn the basics of setting up your store.</p>
                   </div>
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Accepting Payments</h4>
+                    <h4 className="font-bold text-gray-800 text-sm">My Store</h4>
+                    <p className="text-xs text-gray-500 mt-1">Manage your products and layout.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">Payments</h4>
                     <p className="text-xs text-gray-500 mt-1">Connect your bank and get paid.</p>
                   </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">AI Agents</h4>
+                    <p className="text-xs text-gray-500 mt-1">Hire and manage your AI workforce.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">Marketing</h4>
+                    <p className="text-xs text-gray-500 mt-1">Grow your audience and sales.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">Account & Billing</h4>
+                    <p className="text-xs text-gray-500 mt-1">Manage your subscription.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <a href="/api-docs"><h4 className="font-bold text-gray-800 text-sm hover:underline">API Documentation (Advanced)</h4></a>
+                    <p className="text-xs text-gray-500 mt-1">Interactive API reference for integrations.</p>
+                  </div>
+                </div>
+
+                <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
+                <div className="space-y-2">
+                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                    <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
+                  </button>
+                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Connect your bank account here." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                    <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
+                  </button>
+                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                    <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -274,18 +324,18 @@ export function HelpWidget() {
             {tab === "chat" && (
               <div className="flex flex-col h-full">
                 <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
-                  {chatMessages.map((msg, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-2xl text-sm w-4/5 ${
-                        msg.role === "bot"
-                          ? "bg-blue-50 text-blue-900 rounded-tl-none"
-                          : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
-                  ))}
+                  {chatMessages.map((msg, idx) => {
+                    const className = `p-3 rounded-2xl text-sm w-4/5 ${
+                      msg.role === "bot"
+                        ? "bg-blue-50 text-blue-900 rounded-tl-none"
+                        : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
+                    }`;
+                    return msg.role === "bot" ? (
+                      <div key={idx} className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
+                    ) : (
+                      <div key={idx} className={className}>{msg.text}</div>
+                    );
+                  })}
                 </div>
                 <div className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
                   <input
@@ -306,12 +356,19 @@ export function HelpWidget() {
             {tab === "videos" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
-                <div className="aspect-video bg-gray-200 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all"></div>
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg z-10">
-                    <svg className="w-6 h-6 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                  </div>
-                  <p className="absolute bottom-2 left-3 text-white text-sm font-bold z-10 drop-shadow-md">Set up your store</p>
+                <div className="grid grid-cols-2 gap-4">
+                  {videos.map((v) => (
+                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
+                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
+                        <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2 z-10">
+                        <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
+                        <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -319,12 +376,17 @@ export function HelpWidget() {
             {tab === "whatsnew" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">What's New</h3>
+                <div className="w-full aspect-video bg-gray-200 rounded-xl mb-4 relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
+                   <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-200">
+                     <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                   </div>
+                </div>
                 <div className="border-l-2 border-blue-600 pl-4 mb-6">
                   <span className="text-xs font-bold text-blue-600 mb-1 block">TODAY</span>
                   <h4 className="font-bold text-gray-800 text-sm mb-1">New AI Store Builder</h4>
                   <p className="text-xs text-gray-600">You can now generate a complete storefront from just a short description of your business.</p>
                 </div>
-                <a href="#" className="text-blue-600 text-sm font-bold hover:underline">Read full changelog →</a>
+                <a href="/changelog" className="text-blue-600 text-sm font-bold hover:underline">Read full changelog →</a>
               </div>
             )}
           </div>
