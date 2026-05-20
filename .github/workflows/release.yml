@@ -32,17 +32,22 @@ jobs:
         include:
           - name: linux-x86_64
             runner: ubuntu-22.04
-            bazel_config: linux
+            bazel_config: linux_x86_64
             archive_name: ohc-x86_64-unknown-linux-gnu.tar.gz
             install_linux_deps: true
           - name: windows-x86_64
-            runner: ubuntu-22.04
-            bazel_config: windows
+            runner: ubuntu-24.04
+            bazel_config: windows_x86_64
             archive_name: ohc-x86_64-pc-windows-gnu.zip
             install_linux_deps: true
+          - name: windows-arm64
+            runner: windows-11-arm
+            bazel_config: windows_arm64
+            archive_name: ohc-aarch64-pc-windows-msvc.zip
+            install_linux_deps: false
           - name: macos-aarch64
             runner: macos-15
-            bazel_config: macos
+            bazel_config: macos_aarch64
             archive_name: ohc-aarch64-apple-darwin.tar.gz
             install_linux_deps: false
           - name: macos-x86_64
@@ -60,7 +65,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends --fix-missing \
             build-essential pkg-config libssl-dev \
-            ca-certificates curl git mingw-w64 rpm
+            ca-certificates curl git rpm
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -402,12 +407,12 @@ jobs:
             build --show_timestamps
 
       - name: Build server web image tarball
-        run: bazelisk build //deploy:server_web_image_tar --config=linux --output_groups=+tarball
+        run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
 
       - name: Collect server web image artifact
         run: |
           mkdir -p dist
-          bazelisk cquery --output=files //deploy:server_web_image_tar --config=linux > image-files.txt
+          bazelisk cquery --output=files //deploy:server_web_image_tar --config=linux_x86_64 > image-files.txt
           image_tar="$(grep -E '/tarball\.tar$' image-files.txt | head -n 1)"
           if [[ -z "$image_tar" || ! -f "$image_tar" ]]; then
             echo "No server web image tarball found" >&2
