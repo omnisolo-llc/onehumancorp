@@ -492,3 +492,113 @@ async fn test_task_decomposition_service_fail_task() {
     assert_eq!(payload["error"], "Test Error");
 
 }
+
+
+#[tokio::test]
+async fn test_mission_lifecycle_telemetry() {
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .expect("Failed to initialize database");
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+    let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
+
+    if let DbStore::Sqlite(ref pool) = db.store {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                mission_id TEXT NOT NULL,
+                parent_plan_id TEXT NOT NULL,
+                dependencies TEXT NOT NULL DEFAULT '[]',
+                title TEXT NOT NULL,
+                description TEXT,
+                assigned_agent_id TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                priority TEXT NOT NULL,
+                payload TEXT NOT NULL DEFAULT '{}',
+                locked_until TEXT,
+                ultraplan_phase TEXT,
+                deliberation_log TEXT NOT NULL DEFAULT '[]',
+                depth INT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                action_risk TEXT,
+                approval_status TEXT,
+                proposed_content TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                from_state TEXT NOT NULL,
+                to_state TEXT NOT NULL,
+                agent_id TEXT,
+                transitioned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            "#
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    struct DummyMesh {}
+    #[async_trait::async_trait]
+    impl TeammateMesh for DummyMesh {
+        async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Err("".to_string()) }
+        async fn request_reply(&self, _topic: &str, _payload: Vec<u8>, _timeout_ms: u64) -> Result<Vec<u8>, String> { Ok(vec![]) }
+        async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+        async fn get_teammate_status(&self, _agent_id: &str) -> Result<Option<String>, String> { Ok(None) }
+        async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+        async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+        async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+        async fn ping(&self) -> Result<(), String> { Ok(()) }
+        async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Err("".to_string()) }
+        async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+        async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Err("".to_string()) }
+    }
+
+    let svc = TaskDecompositionService::new(Arc::new(db), Arc::new(DummyMesh {}));
+
+    let t = SharedTask {
+        id: "task-telemetry-1".to_string(),
+        organization_id: "org-1".to_string(),
+        mission_id: "miss-1".to_string(),
+        parent_plan_id: "plan-1".to_string(),
+        dependencies: vec![],
+        title: "Quote Generation".to_string(),
+        description: None,
+        assigned_agent_id: None,
+        status: "PENDING".to_string(),
+        priority: "HIGH".to_string(),
+        payload: "{}".to_string(),
+        locked_until: None,
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: Some(1),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        action_risk: None,
+        approval_status: None,
+        proposed_content: None,
+    };
+
+    let res = svc.create_task(t).await;
+    assert!(res.is_ok(), "create_task should succeed");
+
+    let claimed = svc.claim_task("agent-1").await;
+    assert!(claimed.is_ok(), "claim_task should succeed");
+    assert!(claimed.unwrap().is_some(), "task should be claimed");
+
+    let updated = svc.update_status("task-telemetry-1", "COMPLETED", "agent-1").await;
+    assert!(updated.is_ok(), "update_status COMPLETED should succeed");
+
+    let updated_fail = svc.update_status("task-telemetry-1", "FAILED", "agent-1").await;
+    assert!(updated_fail.is_ok(), "update_status FAILED should succeed");
+}

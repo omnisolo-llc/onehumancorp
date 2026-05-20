@@ -138,6 +138,10 @@ impl TaskDecompositionService {
                     Some(r) => r,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                         return Ok(None);
                     }
                 };
@@ -166,6 +170,10 @@ impl TaskDecompositionService {
                     }
                     if !is_ready {
                         tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                         return Ok(None);
                     }
                 }
@@ -203,7 +211,14 @@ impl TaskDecompositionService {
 
                 let task = self.get_task_pg(&mut tx, &id).await?;
 
+                let latency = now.signed_duration_since(task.created_at).num_milliseconds() as f64;
+                crate::telemetry::record_mission_queued_latency(&task.organization_id, crate::telemetry::get_deployment_mode(), latency);
+
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
 
                 let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
@@ -250,6 +265,10 @@ impl TaskDecompositionService {
                     Some(r) => r,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                         return Ok(None);
                     }
                 };
@@ -273,7 +292,14 @@ impl TaskDecompositionService {
 
                 let task = self.get_task_sqlite(&mut tx, &id).await?;
 
+                let latency = now.signed_duration_since(task.created_at).num_milliseconds() as f64;
+                crate::telemetry::record_mission_queued_latency(&task.organization_id, crate::telemetry::get_deployment_mode(), latency);
+
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
 
                 let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
@@ -501,6 +527,10 @@ impl TaskDecompositionService {
                     Some(s) => s,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                         return Err("Task not found".to_string());
                     }
                 };
@@ -535,6 +565,10 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                 Ok(())
             },
             DbStore::Sqlite(pool) => {
@@ -552,6 +586,10 @@ impl TaskDecompositionService {
                     Some(s) => s,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                         return Err("Task not found".to_string());
                     }
                 };
@@ -586,6 +624,10 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                 Ok(())
             }
         }
@@ -609,9 +651,15 @@ impl TaskDecompositionService {
                     Some(s) => s,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                         return Err("Task not found".to_string());
                     }
                 };
+                let task = self.get_task_pg(&mut tx, id).await?;
+
 
                 sqlx::query(
                     "UPDATE shared_tasks_decomposition SET status = $1, updated_at = $2 WHERE id = $3"
@@ -643,7 +691,14 @@ impl TaskDecompositionService {
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
+
                 if new_status == "COMPLETED" {
+                    let latency = now.signed_duration_since(task.created_at).num_milliseconds() as f64;
+                    crate::telemetry::record_mission_execution_latency(&task.organization_id, crate::telemetry::get_deployment_mode(), latency);
+                    crate::telemetry::record_business_event(&task.organization_id, &task.title);
                     let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
                     let _ = autodream.consolidate_epoch().await;
                 }
@@ -664,9 +719,15 @@ impl TaskDecompositionService {
                     Some(s) => s,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
                         return Err("Task not found".to_string());
                     }
                 };
+                let task = self.get_task_sqlite(&mut tx, id).await?;
+
 
                 sqlx::query(
                     "UPDATE shared_tasks_decomposition SET status = ?, updated_at = ? WHERE id = ?"
@@ -698,7 +759,14 @@ impl TaskDecompositionService {
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
+                if new_status == "FAILED" {
+                    crate::telemetry::record_mission_failure(&task.organization_id, crate::telemetry::get_deployment_mode());
+                }
+
                 if new_status == "COMPLETED" {
+                    let latency = now.signed_duration_since(task.created_at).num_milliseconds() as f64;
+                    crate::telemetry::record_mission_execution_latency(&task.organization_id, crate::telemetry::get_deployment_mode(), latency);
+                    crate::telemetry::record_business_event(&task.organization_id, &task.title);
                     let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
                     let _ = autodream.consolidate_epoch().await;
                 }

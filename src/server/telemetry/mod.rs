@@ -16,6 +16,12 @@ static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 
+static MISSION_TIME_IN_QUEUE_HISTOGRAM: std::sync::OnceLock<opentelemetry::metrics::Histogram<f64>> = std::sync::OnceLock::new();
+static MISSION_EXECUTION_LATENCY_HISTOGRAM: std::sync::OnceLock<opentelemetry::metrics::Histogram<f64>> = std::sync::OnceLock::new();
+static BUSINESS_EVENT_TOTAL: std::sync::OnceLock<opentelemetry::metrics::UpDownCounter<i64>> = std::sync::OnceLock::new();
+static MISSION_FAILURE_TOTAL: std::sync::OnceLock<opentelemetry::metrics::UpDownCounter<i64>> = std::sync::OnceLock::new();
+
+
 
 pub fn get_deployment_mode() -> &'static str {
     static DEPLOYMENT_MODE: OnceLock<String> = OnceLock::new();
@@ -432,5 +438,75 @@ pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) 
         opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
         opentelemetry::KeyValue::new("task_id", task_id.to_string()),
         opentelemetry::KeyValue::new("reason", reason.to_string()),
+    ]);
+}
+
+
+
+pub fn get_mission_time_in_queue_histogram() -> &'static opentelemetry::metrics::Histogram<f64> {
+    MISSION_TIME_IN_QUEUE_HISTOGRAM.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.swarm.health");
+        meter.f64_histogram("MissionTimeInQueue")
+            .with_description("Time spent in queue before mission execution starts")
+            .build()
+    })
+}
+
+pub fn get_mission_execution_latency_histogram() -> &'static opentelemetry::metrics::Histogram<f64> {
+    MISSION_EXECUTION_LATENCY_HISTOGRAM.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.swarm.health");
+        meter.f64_histogram("MissionExecutionLatency")
+            .with_description("Execution latency of mission")
+            .build()
+    })
+}
+
+pub fn get_business_event_total() -> &'static opentelemetry::metrics::UpDownCounter<i64> {
+    BUSINESS_EVENT_TOTAL.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.swarm.health");
+        meter.i64_up_down_counter("BusinessEventCount")
+            .with_description("Total number of business events recorded")
+            .build()
+    })
+}
+
+pub fn get_mission_failure_total() -> &'static opentelemetry::metrics::UpDownCounter<i64> {
+    MISSION_FAILURE_TOTAL.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.swarm.health");
+        meter.i64_up_down_counter("MissionFailureRate")
+            .with_description("Total number of mission failures")
+            .build()
+    })
+}
+
+pub fn record_mission_queued_latency(tenant_id: &str, deployment_mode: &str, latency_ms: f64) {
+    let histogram = get_mission_time_in_queue_histogram();
+    histogram.record(latency_ms, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+    ]);
+}
+
+pub fn record_mission_execution_latency(tenant_id: &str, deployment_mode: &str, latency_ms: f64) {
+    let histogram = get_mission_execution_latency_histogram();
+    histogram.record(latency_ms, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+    ]);
+}
+
+pub fn record_business_event(tenant_id: &str, event_type: &str) {
+    let counter = get_business_event_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("event_type", event_type.to_string()),
+    ]);
+}
+
+pub fn record_mission_failure(tenant_id: &str, deployment_mode: &str) {
+    let counter = get_mission_failure_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
     ]);
 }
