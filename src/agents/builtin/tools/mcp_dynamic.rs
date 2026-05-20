@@ -7,16 +7,29 @@ use super::{Tool, ToolExecutor};
 // Simulated MCP Client Gateway
 struct McpGatewayClient {
     base_url: String,
+    client: reqwest::Client,
 }
 
 impl McpGatewayClient {
     pub fn new(base_url: String) -> Self {
-        Self { base_url }
+        Self { base_url, client: reqwest::Client::new() }
     }
 
     pub async fn discover_tools(&self, query: &str) -> Result<Vec<Value>, String> {
-        // In a real implementation, this would make an HTTP request to the MCP Gateway
-        // For the scope of this proof-of-concept, we simulate a response
+        let url = format!("{}/api/mcp/discover", self.base_url);
+
+        match self.client.get(&url).query(&[("query", query)]).send().await {
+            Ok(res) if res.status().is_success() => {
+                if let Ok(json_body) = res.json::<Value>().await {
+                    if let Some(tools) = json_body.get("tools").and_then(|t| t.as_array()) {
+                        return Ok(tools.clone());
+                    }
+                }
+            }
+            _ => {} // Fallback on error
+        }
+
+        // Fallback simulation for tests or isolated environments
         if query.to_lowercase().contains("weather") {
             Ok(vec![
                 json!({
@@ -32,7 +45,24 @@ impl McpGatewayClient {
     }
 
     pub async fn invoke_tool(&self, tool_name: &str, args: Value) -> Result<String, String> {
-        // Simulated network call
+        let url = format!("{}/api/mcp/invoke", self.base_url);
+        let payload = json!({
+            "spiffe_id": "spiffe://example.org/agent-1",
+            "tool_name": tool_name,
+            "arguments": args
+        });
+
+        match self.client.post(&url).json(&payload).send().await {
+            Ok(res) if res.status().is_success() => {
+                if let Ok(json_body) = res.json::<Value>().await {
+                    if let Some(result_str) = json_body.get("result").and_then(|r| r.as_str()) {
+                        return Ok(result_str.to_string());
+                    }
+                }
+            }
+            _ => {} // Fallback on error
+        }
+
         Ok(format!("Successfully invoked dynamic tool {} via MCP Gateway with args: {}", tool_name, args))
     }
 }

@@ -155,6 +155,7 @@ use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ::server_ohc::billing::billing_service_server::BillingServiceServer;
 use ::server_ohc::orchestration::*;
 
+use crate::integrations::mcp_gateway::McpGateway;
 pub struct MyHubService {
     hub: Arc<Hub>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
@@ -1831,6 +1832,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/mcp", api::mcp::router(std::sync::Arc::new(McpGateway::new())))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
