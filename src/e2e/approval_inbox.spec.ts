@@ -43,17 +43,24 @@ test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
 
   // "The Ambassador" has pending approvals indicator (e.g., a badge)
   const ambassadorCard = page.locator('text=The Ambassador').locator('..');
-  await expect(ambassadorCard.locator('text=1 item awaiting approval')).toBeVisible();
+  // Badge is a span with text '1' now
+  await expect(ambassadorCard.locator('span', { hasText: '1' }).first()).toBeVisible();
 
-  // 2. User taps "The Ambassador" department
-  await ambassadorCard.click();
-
-  // Verify approval inbox view for The Ambassador
+  // Verify approval inbox view for The Ambassador in the Action Feed
   await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).toBeVisible();
 
-  // 3. User approves the action (Swipe right / Approve button)
-  const approveBtn = page.locator('button', { hasText: 'Approve' }).first();
-  await approveBtn.click();
+  // 2. User filters to "The Ambassador" department
+  await ambassadorCard.click();
+
+  // 3. User clicks Edit, changes description, and approves
+  const editBtn = page.locator('button', { hasText: 'Edit' }).first();
+  await editBtn.click();
+
+  const textarea = page.locator('textarea');
+  await textarea.fill('Draft email for review: Maya ordered a delicious vegan cake');
+
+  const saveAndApproveBtn = page.locator('button', { hasText: 'Save & Approve' }).first();
+  await saveAndApproveBtn.click();
 
   // Wait for the action to be processed (mocking the UI removal)
   await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).not.toBeVisible();
