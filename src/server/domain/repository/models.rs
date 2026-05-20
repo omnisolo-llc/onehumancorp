@@ -20,3 +20,19 @@ pub struct TaskDependency {
     pub task_id: String,
     pub depends_on_task_id: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CatalogItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub organization_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub type_str: String,
+    pub price_cents: i64,
+    pub currency: String,
+    pub duration_minutes: Option<i32>,
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

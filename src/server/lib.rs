@@ -120,6 +120,8 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
     Ok(req)
 }
 
+use ::server_ohc::organization::catalog_service_server::CatalogServiceServer;
+
 pub mod proto {
     pub mod interop {
         pub use interop_proto::ohc::interop::*;
@@ -328,7 +330,14 @@ async fn http_login_handler(
         }
     };
 
-    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+    let db_for_context = db.clone();
+    let set_context_res = if matches!(db_for_context.store, crate::db::DbStore::Postgres) {
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+    } else {
+        Ok(())
+    };
+
+    if let Err(e) = set_context_res {
         tracing::error!("failed to set tenant context for login: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -787,7 +796,11 @@ impl HubService for MyHubService {
         let tenant_id = org_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        if let Some(db) = self.hub.db() {
+            if matches!(db.store, crate::db::DbStore::Postgres) {
+                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+            }
+        }
 
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
@@ -827,7 +840,11 @@ impl HubService for MyHubService {
         let tenant_id = org_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        if let Some(db) = self.hub.db() {
+            if matches!(db.store, crate::db::DbStore::Postgres) {
+                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+            }
+        }
 
         let row = sqlx::query(
             "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
@@ -874,7 +891,11 @@ impl HubService for MyHubService {
         let tenant_id = org_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+        if let Some(db) = self.hub.db() {
+            if matches!(db.store, crate::db::DbStore::Postgres) {
+                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+            }
+        }
 
         sqlx::query(
             "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
@@ -1995,6 +2016,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
+    let catalog_service = crate::services::org::catalog::MyCatalogService::new(db.clone(), hub.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
@@ -2003,6 +2025,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(CatalogServiceServer::with_interceptor(catalog_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 

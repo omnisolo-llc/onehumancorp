@@ -38,6 +38,30 @@ message OrganizationChart {
   repeated TeamMember members = 2;
 }
 
+enum CatalogType {
+  CATALOG_TYPE_PHYSICAL = 0;
+  CATALOG_TYPE_DIGITAL = 1;
+  CATALOG_TYPE_SERVICE = 2;
+}
+
+message CatalogItem {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  int64 price_cents = 5;
+  string currency = 6;
+  CatalogType type = 7;
+  int32 duration_minutes = 8; // Required for SERVICE
+  string metadata_json = 9;
+}
+
+message TenantCalendar {
+  string id = 1;
+  string organization_id = 2;
+  string timezone = 3;
+}
+
 message Product {
   string id = 1;
   string organization_id = 2;
@@ -47,6 +71,18 @@ message Product {
   string currency = 6;
   string fulfillment_strategy = 7;
   string metadata_json = 8;
+}
+
+message CreateCatalogItemRequest {
+  CatalogItem item = 1;
+}
+
+message ListCatalogItemsRequest {
+  string organization_id = 1;
+}
+
+message ListCatalogItemsResponse {
+  repeated CatalogItem items = 1;
 }
 
 message OnboardingRequest {
@@ -62,4 +98,19 @@ message OnboardingRequest {
 service OrganizationService {
   rpc CreateOrganization(Organization) returns (Organization);
   rpc GetOrganizationChart(Organization) returns (OrganizationChart);
+}
+
+message SuggestDescriptionRequest {
+  string name = 1;
+  CatalogType type = 2;
+}
+
+message SuggestDescriptionResponse {
+  string description = 1;
+}
+
+service CatalogService {
+  rpc CreateCatalogItem(CreateCatalogItemRequest) returns (CatalogItem);
+  rpc ListCatalogItems(ListCatalogItemsRequest) returns (ListCatalogItemsResponse);
+  rpc SuggestDescription(SuggestDescriptionRequest) returns (SuggestDescriptionResponse);
 }

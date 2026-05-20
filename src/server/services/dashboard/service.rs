@@ -87,7 +87,7 @@ impl DashboardService for MyDashboardService {
                     return Ok::<_, String>(products);
                 }
 
-                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
+                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, type, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM catalog_items WHERE organization_id = $1 LIMIT 10";
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
@@ -103,7 +103,7 @@ impl DashboardService for MyDashboardService {
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    fulfillment_strategy: r.try_get("type").unwrap_or_default(),
                                     metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
                                 };
                                 results.push(p);
@@ -122,7 +122,7 @@ impl DashboardService for MyDashboardService {
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    fulfillment_strategy: r.try_get("type").unwrap_or_default(),
                                     metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
                                 };
                                 results.push(p);
@@ -584,12 +584,12 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(database_url).await.unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS catalog_items (id TEXT, organization_id TEXT, name TEXT, description TEXT, type TEXT, price_cents INTEGER, currency TEXT, metadata JSONB)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
         // Add dummy data for tests
-        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'system', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO catalog_items (id, organization_id, name, type, price_cents) VALUES ('prod_1', 'system', 'Test Product', 'physical', 10000)").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'system', 50.0, 'completed')").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('system', 'System Org', 'free')").execute(&pool).await.unwrap();
 

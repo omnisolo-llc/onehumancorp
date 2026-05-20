@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/onboarding.dart';
+import 'screens/add_offering.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,6 +15,10 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: OnboardingScreen(),
+      routes: {
+        '/onboarding': (context) => OnboardingScreen(),
+        '/add-offering': (context) => AddOfferingScreen(),
+      },
     );
   }
 }

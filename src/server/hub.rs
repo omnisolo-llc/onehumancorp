@@ -53,6 +53,10 @@ impl Hub {
         *self.task_manager.db.write().unwrap() = Some(db);
     }
 
+    pub fn db(&self) -> Option<std::sync::Arc<crate::db::DB>> {
+        self.task_manager.db.read().unwrap().clone()
+    }
+
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);

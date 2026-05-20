@@ -164,6 +164,7 @@ rust_binary(
         "ultraplan",
         "orchestration",
         "interop",
+        "services::org::catalog".replace("::", "_"),
     ]
 ]
 

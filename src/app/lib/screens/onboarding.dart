@@ -354,7 +354,9 @@ class StoreLiveScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/add-offering');
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey[100],
                           foregroundColor: Color(0xFF1D1D1F),
@@ -366,7 +368,7 @@ class StoreLiveScreen extends StatelessWidget {
                           elevation: 0,
                         ),
                         child: Text(
-                          'Go to Dashboard',
+                          'Add My First Offering',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 16,
