@@ -1000,73 +1000,180 @@ impl Agent {
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
-        for (i, step) in plan.into_iter().enumerate() {
-            let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
-            let args = step.get("args").unwrap_or(&serde_json::Value::Null);
 
-            let dummy_tc = ToolCall {
-                id: format!("plan_step_{}", i),
-                name: tool_name.to_string(),
-                arguments: args.clone(),
-            };
+        let mut i = 0;
+        let plan_len = plan.len();
+        while i < plan_len {
+            let mut batch = Vec::new();
 
-            on_event(AgentEvent::ToolCall {
-                name: tool_name.to_string(),
-                args_json: args.to_string(),
-                result: "Executing planned step...".to_string(),
-                iteration: i as i32,
-            });
+            // Gather consecutive read-only tools
+            while i < plan_len {
+                let step = &plan[i];
+                let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
+                let is_read_only = session_tools.iter().find(|t| t.name == tool_name).map(|t| t.is_read_only).unwrap_or(false);
 
-            // Gating mechanics
-            if let Err(e) = Self::check_tool_gating(&dummy_tc, false, cfg) {
-                 return Err(Box::new(e));
+                if is_read_only {
+                    batch.push((i, step.clone()));
+                    i += 1;
+                } else {
+                    if batch.is_empty() {
+                        // Mutating tool
+                        batch.push((i, step.clone()));
+                        i += 1;
+                    }
+                    break;
+                }
             }
 
-            let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
-            let result = loop {
-                match self.execute_tool(&dummy_tc, session_tools, &[]).await {
-                    Ok(res) => break res,
-                    Err(crate::types::ToolError::Transient(msg)) => {
-                        if retry_count < max_retries {
-                            retry_count += 1;
-                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                            tokio::time::sleep(backoff).await;
-                            continue;
-                        } else {
-                            break format!("Error executing planned step: Transient error after retries: {}", msg);
-                        }
-                    }
-                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
-                        // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
-                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
-                    }
-                    Err(crate::types::ToolError::UserFixable(msg)) => {
-                        let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
-                    }
-                    Err(crate::types::ToolError::Fatal(msg)) => {
-                        return Err(format!("Fatal tool error: {}", msg).into());
-                    }
-                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                        return Err(format!("Unexpected tool error: {}", msg).into());
-                    }
-                    Err(e) => {
-                        return Err(format!("Fatal tool error: {:?}", e).into());
-                    }
-                }
-            };
-
-            on_event(AgentEvent::ToolCall {
-                name: tool_name.to_string(),
-                args_json: args.to_string(),
-                result: result.clone(),
-                iteration: i as i32,
+            let is_read_only_batch = batch.iter().all(|(_, step)| {
+                let name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
+                session_tools.iter().find(|t| t.name == name).map(|t| t.is_read_only).unwrap_or(false)
             });
 
-            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tool_name, args, result));
+            if is_read_only_batch && batch.len() > 1 {
+                // Execute read-only batch concurrently
+                let mut futures = Vec::new();
+                for (idx, step) in &batch {
+                    let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let args = step.get("args").unwrap_or(&serde_json::Value::Null).clone();
+
+                    let dummy_tc = ToolCall {
+                        id: format!("plan_step_{}", idx),
+                        name: tool_name.clone(),
+                        arguments: args.clone(),
+                    };
+
+                    let max_retries = cfg.max_retries;
+
+                    futures.push(async move {
+                        let mut retry_count = 0;
+                        let result = loop {
+                            // Safe to call without &mut self if execute_tool only requires &self.
+                            // But wait, execute_tool takes &self. It should be fine.
+                            match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                                Ok(res) => break Ok(res),
+                                Err(crate::types::ToolError::Transient(msg)) => {
+                                    if retry_count < max_retries {
+                                        retry_count += 1;
+                                        let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                        tokio::time::sleep(backoff).await;
+                                        continue;
+                                    } else {
+                                        break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
+                                    }
+                                }
+                                Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                    break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
+                                }
+                                Err(e) => {
+                                    break Err(e);
+                                }
+                            }
+                        };
+                        (*idx, tool_name, args, result)
+                    });
+                }
+
+                let results = futures::future::join_all(futures).await;
+                for (idx, tool_name, args, result) in results {
+                    let final_res = match result {
+                        Ok(res) => res,
+                        Err(crate::types::ToolError::UserFixable(msg)) => {
+                            let err = format!("USER_FIXABLE: {}", msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                            return Err(err.into());
+                        }
+                        Err(crate::types::ToolError::Fatal(msg)) => {
+                            return Err(format!("Fatal tool error: {}", msg).into());
+                        }
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
+                            return Err(format!("Unexpected tool error: {}", msg).into());
+                        }
+                        Err(e) => {
+                            return Err(format!("Fatal tool error: {:?}", e).into());
+                        }
+                    };
+
+                    on_event(AgentEvent::ToolCall {
+                        name: tool_name.clone(),
+                        args_json: args.to_string(),
+                        result: final_res.clone(),
+                        iteration: idx as i32,
+                    });
+
+                    executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", idx, tool_name, args, final_res));
+                }
+            } else {
+                // Execute serially (either mutating tool or a single read-only tool)
+                for (idx, step) in batch {
+                    let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
+                    let args = step.get("args").unwrap_or(&serde_json::Value::Null);
+
+                    let dummy_tc = ToolCall {
+                        id: format!("plan_step_{}", idx),
+                        name: tool_name.to_string(),
+                        arguments: args.clone(),
+                    };
+
+                    on_event(AgentEvent::ToolCall {
+                        name: tool_name.to_string(),
+                        args_json: args.to_string(),
+                        result: "Executing planned step...".to_string(),
+                        iteration: idx as i32,
+                    });
+
+                    // Gating mechanics
+                    if let Err(e) = Self::check_tool_gating(&dummy_tc, false, cfg) {
+                         return Err(Box::new(e));
+                    }
+
+                    let mut retry_count = 0;
+                    let max_retries = cfg.max_retries;
+                    let result = loop {
+                        match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                            Ok(res) => break res,
+                            Err(crate::types::ToolError::Transient(msg)) => {
+                                if retry_count < max_retries {
+                                    retry_count += 1;
+                                    let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                    tokio::time::sleep(backoff).await;
+                                    continue;
+                                } else {
+                                    break format!("Error executing planned step: Transient error after retries: {}", msg);
+                                }
+                            }
+                            Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
+                                // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
+                                break format!("Error executing planned step (LlmRecoverable): {}", msg);
+                            }
+                            Err(crate::types::ToolError::UserFixable(msg)) => {
+                                let err = format!("USER_FIXABLE: {}", msg);
+                                on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                                return Err(err.into());
+                            }
+                            Err(crate::types::ToolError::Fatal(msg)) => {
+                                return Err(format!("Fatal tool error: {}", msg).into());
+                            }
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
+                                return Err(format!("Unexpected tool error: {}", msg).into());
+                            }
+                            Err(e) => {
+                                return Err(format!("Fatal tool error: {:?}", e).into());
+                            }
+                        }
+                    };
+
+                    on_event(AgentEvent::ToolCall {
+                        name: tool_name.to_string(),
+                        args_json: args.to_string(),
+                        result: result.clone(),
+                        iteration: idx as i32,
+                    });
+
+                    executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", idx, tool_name, args, result));
+                }
+            }
         }
 
         // Phase 3: Replier
