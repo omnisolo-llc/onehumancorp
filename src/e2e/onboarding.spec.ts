@@ -20,10 +20,10 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.getByText('Preview Mode')).toBeVisible({ timeout: 15000 });
 
     // We expect some blocks to have been generated
-    await expect(page.getByRole('button', { name: /1-Tap Launch/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Launch Business/i })).toBeVisible();
 
     // Publish
-    await page.getByRole('button', { name: /1-Tap Launch/i }).click();
+    await page.getByRole('button', { name: /Launch Business/i }).click();
 
     // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });

@@ -11,21 +11,21 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify we are on the input screen
-    expect(find.text('Your Details'), findsOneWidget);
+    expect(find.text('What do you want to build today?'), findsOneWidget);
 
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
 
     // Expect the validator message 'Required' for both fields
-    expect(find.text('Required'), findsNWidgets(2));
+    expect(find.text('Required'), findsOneWidget);
 
     // Fill out the form
-    await tester.enterText(find.byType(TextFormField), "Maya's Custom Cakes");
+    await tester.enterText(find.byType(TextFormField), "I want to build a custom cakes store");
     await tester.pumpAndSettle();
 
     // Test that the form can be submitted when both fields are filled out properly.
-    // Note: Since we need to interact with a DropdownButtonFormField and simulate an HTTP request
+    // Note: Since we need to simulate an HTTP request
     // this test primarily asserts the UI validation and state transitions up to form submission.
   });
 }

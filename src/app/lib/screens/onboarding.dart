@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-enum OnboardingState { welcome, input, generating, dashboard, draft, live }
+enum OnboardingState { welcome, input, generating, launching, dashboard, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
   @override
@@ -12,8 +12,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
-  String businessName = '';
-  String? businessType;
+  String businessIntent = '';
   OnboardingState _state = OnboardingState.welcome;
 
   Future<void> submit() async {
@@ -26,8 +25,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Uri.parse('http://localhost:8080/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'company_name': businessName,
-            'business_type': businessType,
+            'business_intent': businessIntent,
             'selling_categories': ['food', 'physical'],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
@@ -42,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
 
         if (response.statusCode == 200) {
-          setState(() => _state = OnboardingState.dashboard);
+          setState(() => _state = OnboardingState.draft);
         } else {
           // If error occurs, go back to input.
            setState(() => _state = OnboardingState.input);
@@ -54,14 +52,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void launchStore() {
-    setState(() => _state = OnboardingState.live);
+  Future<void> launchStore() async {
+    setState(() => _state = OnboardingState.launching); // Show loading state during launch
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/onboarding/launch'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'status': 'live'}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() => _state = OnboardingState.live);
+      } else {
+        setState(() => _state = OnboardingState.draft);
+      }
+    } catch (e) {
+      print('Error launching store: $e');
+      setState(() => _state = OnboardingState.draft);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_state == OnboardingState.live) {
-      return StoreLiveScreen();
+      return StoreLiveScreen(onDashboardPressed: () {
+        setState(() => _state = OnboardingState.dashboard);
+      });
     }
 
     return Scaffold(
@@ -96,7 +113,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       case OnboardingState.input:
         return _buildInputState();
       case OnboardingState.generating:
-        return _buildGeneratingState();
+        return _buildGeneratingState(isLaunching: false);
+      case OnboardingState.launching:
+        return _buildGeneratingState(isLaunching: true);
       case OnboardingState.dashboard:
         return _buildDashboardState();
       case OnboardingState.draft:
@@ -174,7 +193,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Your Details',
+              'What do you want to build today?',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -186,7 +205,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Just a few details to get started.',
+              'Describe your business and AI will do the rest.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -196,9 +215,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
+              key: Key('bio-input'),
+              maxLines: 4,
               decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Custom Cakes',
+                labelText: 'Business Idea',
+                hintText: 'e.g., A custom cake shop',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -209,33 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Business Type',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              items: ['Physical', 'Digital', 'Service', 'Food']
-                  .map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  businessType = value;
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessType = value!,
+              onSaved: (value) => businessIntent = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
@@ -264,28 +259,52 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildGeneratingState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0066FF)),
-            strokeWidth: 3,
-          ),
-          SizedBox(height: 32),
-          Text(
-            'AI is building your storefront...',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D1D1F),
+  Widget _buildGeneratingState({required bool isLaunching}) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            color: Colors.white.withOpacity(0.2),
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0066FF)),
+                  strokeWidth: 3,
+                ),
+                SizedBox(height: 32),
+                Text(
+                  isLaunching ? 'Launching your business...' : 'Agents are working...',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D1D1F),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  isLaunching ? 'Provisioning infrastructure.' : 'Designing storefront and writing policies.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -314,7 +333,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                'Welcome, $businessName',
+                'Welcome to your new business',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16,
@@ -329,69 +348,130 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Container(
             color: Color(0xFFF5F5F7),
             width: double.infinity,
-            padding: EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.check_circle, size: 48, color: Color(0xFF34C759)),
-                      SizedBox(height: 16),
-                      Text(
-                        'Storefront Generated!',
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+            padding: EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Revenue Section
+                  Container(
+                    padding: EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: Offset(0, 5),
                         ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Your AI agent has created a draft based on your business profile.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                      SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() => _state = OnboardingState.draft);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF0066FF),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          minimumSize: Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Revenue',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
                         ),
-                        child: Text(
-                          'Preview Site',
+                        SizedBox(height: 8),
+                        Text(
+                          '\$0.00',
                           style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Outfit',
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1D1D1F),
                           ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          'Today',
+                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 16),
+                  // Pending Agent Approvals
+                  Container(
+                    padding: EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.smart_toy, color: Color(0xFF0066FF), size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Pending Agent Approvals',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No pending approvals.',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  // Recent Orders
+                  Container(
+                    padding: EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.receipt_long, color: Color(0xFF34C759), size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Recent Orders',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No orders yet.',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -433,25 +513,52 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Container(
             color: Colors.white,
             width: double.infinity,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.storefront, size: 80, color: Colors.grey[300]),
-                SizedBox(height: 16),
-                Text(
-                  'Your Beautiful Store',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(height: 48),
+                  Icon(Icons.storefront, size: 80, color: Colors.grey[300]),
+                  SizedBox(height: 16),
+                  Text(
+                    'Your Beautiful Store',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Generated based on your bio.',
-                  style: TextStyle(color: Colors.grey[500]),
-                ),
-              ],
+                  SizedBox(height: 8),
+                  Text(
+                    'Generated based on your bio.',
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                  SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: IconButton(
+                          icon: Icon(Icons.edit, color: Color(0xFF0066FF)),
+                          onPressed: () {},
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: IconButton(
+                          icon: Icon(Icons.tune, color: Color(0xFF0066FF)),
+                          onPressed: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 48),
+                ],
+              ),
             ),
           ),
         ),
@@ -478,7 +585,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '1-Tap Launch',
+                  'Launch Business',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 16,
@@ -497,6 +604,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class StoreLiveScreen extends StatelessWidget {
+  final VoidCallback onDashboardPressed;
+
+  const StoreLiveScreen({Key? key, required this.onDashboardPressed}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -552,7 +663,7 @@ class StoreLiveScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: onDashboardPressed,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey[100],
                           foregroundColor: Color(0xFF1D1D1F),

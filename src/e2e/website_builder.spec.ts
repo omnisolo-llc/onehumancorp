@@ -107,7 +107,7 @@ test.describe('Website Builder Full E2E', () => {
     await expect(page.locator('.builder-block, .glassmorphism').first()).toBeVisible({ timeout: 15000 });
 
     // Trigger publish which creates real DB records
-    await page.getByRole('button', { name: '1-Tap Launch' }).click();
+    await page.getByRole('button', { name: 'Launch Business' }).click();
 
     // Wait for the backend processing and UI update
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 10000 });
