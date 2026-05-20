@@ -2515,6 +2515,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
+
+                        /* Premium Glassmorphism Standards */
+                        .glassmorphism {
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border-radius: 16px;
+                            box-shadow: var(--shadow-md);
+                        }
+
+                        .dark-theme .glassmorphism, .glassmorphism-dark {
+                            background: rgba(22, 22, 26, 0.7);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 16px;
+                        }
                     </style>
                 </head>
                 <body>
@@ -3220,13 +3238,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glassmorphism">
                         <h1>OneHuman</h1>
-                        <div id="step-1">
+                        <div id="step-1" class="glassmorphism" style="padding: 24px; margin-bottom: 16px;">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-2" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" />
                             <button onclick="nextStep(3)">Next →</button>
@@ -3237,7 +3255,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-3" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>Give your business a name</h1>
                             <input type="text" placeholder="What is your business called?" />
                             <input type="text" placeholder="e.g. Maya's Cakes" />
@@ -3245,7 +3263,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)">Next →</button>
                             <button class="secondary" onclick="nextStep(2)">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-4" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -3256,7 +3274,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)">Next →</button>
                             <button class="secondary" onclick="nextStep(3)">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-5" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>Add your first product or service</h1>
                             <input type="text" placeholder="What is the name of this product?" />
                             <input type="text" placeholder="0.00" />
@@ -3264,20 +3282,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)">Next →</button>
                             <button class="secondary" onclick="nextStep(4)">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-6" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-7" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>Create your account</h1>
                             <input type="text" placeholder="e.g. Maya Smith" />
                             <input type="email" placeholder="you@email.com" />
                             <input type="password" placeholder="Password" />
                             <button onclick="nextStep(8)">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-8" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)">Bold</button>
@@ -3288,17 +3306,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-9" class="hidden glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)">🔗 Connect Custom Domain</button>
                             <button onclick="nextStep(10)">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none;">
+                        <div id="step-10" class="glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none;">
+                        <div id="step-100" class="glassmorphism" style="display: none; padding: 24px; margin-bottom: 16px;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
@@ -3875,10 +3893,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const categoryInputs = document.querySelectorAll('#step-4 input[type="checkbox"]');
                                 const sellingCategories = [];
                                 if (categoryInputs[0] && categoryInputs[0].checked) sellingCategories.push('physical');
-                                if (categoryInputs[1] && categoryInputs[1].checked) sellingCategories.push('physical');
-                                if (categoryInputs[2] && categoryInputs[2].checked) sellingCategories.push('digital');
-                                if (categoryInputs[3] && categoryInputs[3].checked) sellingCategories.push('services');
-                                if (categoryInputs[4] && categoryInputs[4].checked) sellingCategories.push('subscriptions');
+                                if (categoryInputs[1] && categoryInputs[1].checked) sellingCategories.push('digital');
+                                if (categoryInputs[2] && categoryInputs[2].checked) sellingCategories.push('services');
+                                if (categoryInputs[3] && categoryInputs[3].checked) sellingCategories.push('subscriptions');
+
 
                                 const firstProductName = document.querySelectorAll('#step-5 input[type="text"]')[0].value || '';
                                 const firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1].value || '';
