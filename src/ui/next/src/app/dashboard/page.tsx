@@ -21,15 +21,12 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
-    // Using a fake mock for UI tests if connection fails
     const connectSwarmMesh = () => {
         try {
             const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
 
             ws.onmessage = (event) => {
                 try {
-                    // Try to parse base64 proto message (mocking standard behavior)
-                    // For the sake of the UI, we'll just push simple text events
                     const payload = JSON.parse(event.data);
                     setSwarmActivity(prev => [{
                         id: Math.random().toString(),
@@ -51,29 +48,8 @@ export default function Dashboard() {
 
     const ws = connectSwarmMesh();
 
-    // Fallback Mock data for UI presentation when no backend is running
-    const mockInterval = setInterval(() => {
-        const mockActions = [
-            "Reviewing customer inquiry",
-            "Generating weekly report",
-            "Optimizing website layout",
-            "Responding to support ticket",
-            "Updating product inventory"
-        ];
-        const mockAgents = ["Sales Agent", "Support Agent", "Marketing Agent", "Operations Agent"];
-
-        setSwarmActivity(prev => [{
-            id: Math.random().toString(),
-            agent: mockAgents[Math.floor(Math.random() * mockAgents.length)],
-            action: mockActions[Math.floor(Math.random() * mockActions.length)],
-            status: ['success', 'warning', 'info'][Math.floor(Math.random() * 3)],
-            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
-        }, ...prev].slice(0, 5));
-    }, 4500);
-
     return () => {
         if (ws) ws.close();
-        clearInterval(mockInterval);
     };
   }, []);
 
