@@ -2791,9 +2791,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Calendly Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Calendly account to enable AI to auto-schedule appointments from the unified inbox.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Calendly</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -2925,21 +2925,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <!-- Buffer Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Brevo</h3>
+                                    <h3 style="margin: 0;">Manychat</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Customer Inbox. Manage all your messages and posts from one place.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Brevo...')">Connect</button>
+                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Manychat...')">Connect</button>
                             </div>
 
                             <!-- Acuity Scheduling Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Cal.com</h3>
+                                    <h3 style="margin: 0;">Calendly</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Booking. Let customers schedule appointments 24/7.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Calendly...')">Connect</button>
                             </div>
 
                             <!-- ActiveCampaign Integration -->
@@ -2975,21 +2975,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <!-- Alipay Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Stripe Connect</h3>
+                                    <h3 style="margin: 0;">Mercado Pago</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Stripe Connect...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
                             <!-- Microsoft Teams Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Daily.co</h3>
+                                    <h3 style="margin: 0;">Zoom</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🎥</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Instant Video Rooms. Host online meetings effortlessly.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Daily.co...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Zoom...')">Connect</button>
                             </div>
                         </div>
 
