@@ -193,7 +193,7 @@ export default function Dashboard() {
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 
                 {/* Metric Card */}
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
@@ -211,6 +211,25 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
+            </div>
+
+            {/* Billing Links */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <a href="/billing/my-plan" className="p-4 shadow-sm flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', textDecoration: 'none' }}>
+                    <span className="text-2xl mb-2">📋</span>
+                    <span className="font-semibold text-gray-900">My Plan</span>
+                    <span className="text-sm text-gray-500 mt-1">View usage & limits</span>
+                </a>
+                <a href="/billing/cost-dashboard" className="p-4 shadow-sm flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', textDecoration: 'none' }}>
+                    <span className="text-2xl mb-2">📊</span>
+                    <span className="font-semibold text-gray-900">Cost Transparency</span>
+                    <span className="text-sm text-gray-500 mt-1">Breakdown of infra costs</span>
+                </a>
+                <a href="/billing/pricing" className="p-4 shadow-sm flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', textDecoration: 'none' }}>
+                    <span className="text-2xl mb-2">💳</span>
+                    <span className="font-semibold text-gray-900">Upgrade Plan</span>
+                    <span className="text-sm text-gray-500 mt-1">View pricing tiers</span>
+                </a>
             </div>
          </section>
 

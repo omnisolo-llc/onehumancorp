@@ -24,7 +24,10 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router<S>(hub: Arc<Hub>) -> axum::Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
