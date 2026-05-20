@@ -77,13 +77,13 @@ test.describe('Website Builder Full E2E', () => {
     // Check initial state
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
 
-    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
+    const input = page.locator('#business-name-input');
 
-    // Try to build with too short a string
-    await textarea.fill('A');
+    // Try to build with empty string
+    await input.fill('   ');
 
-    // Button should be disabled
-    const btn = page.getByRole('button', { name: 'Build My Storefront' });
+    // Next Button should be disabled
+    const btn = page.locator('#next-step-1');
     await expect(btn).toBeDisabled();
   });
 
@@ -93,9 +93,18 @@ test.describe('Website Builder Full E2E', () => {
     // Check initial state
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
 
-    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
-    // Using a specific keyword that helps the LLM generate a known block
-    await textarea.fill('I am a baker');
+    // Step 1: Name
+    await page.locator('#business-name-input').fill('I am a baker');
+    await page.locator('#next-step-1').click();
+
+    // Step 2: Category
+    await expect(page.getByRole('heading', { name: 'Great name!' })).toBeVisible();
+    await page.locator('#category-select').selectOption('Baked Goods');
+    await page.locator('#next-step-2').click();
+
+    // Step 3: Style
+    await expect(page.getByRole('heading', { name: 'Almost there!' })).toBeVisible();
+    await page.locator('#style-select').selectOption('Modern');
 
     // Trigger real backend generation call
     await page.getByRole('button', { name: 'Build My Storefront' }).click();

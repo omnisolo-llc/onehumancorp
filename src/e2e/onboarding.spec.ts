@@ -10,10 +10,18 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
 
-    // Fill in the bio
-    await page.locator('#bio-input').fill("I bake custom vegan cakes in Seattle. Maya's Cakes.");
+    // Step 1: Business Name
+    await page.locator('#business-name-input').fill("Maya's Cakes");
+    await page.locator('#next-step-1').click();
 
-    // Click generate
+    // Step 2: Category
+    await expect(page.getByRole('heading', { name: 'Great name!' })).toBeVisible();
+    await page.locator('#category-select').selectOption('Baked Goods');
+    await page.locator('#next-step-2').click();
+
+    // Step 3: Style & Generate
+    await expect(page.getByRole('heading', { name: 'Almost there!' })).toBeVisible();
+    await page.locator('#style-select').selectOption('Modern');
     await page.getByRole('button', { name: /Build My Storefront/i }).click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate

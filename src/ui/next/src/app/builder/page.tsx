@@ -5,6 +5,10 @@ import { SmartBlock } from "./components";
 import { Tooltip, useWalkthrough } from "../../components/help";
 
 export default function BuilderPage() {
+  const [step, setStep] = useState(1);
+  const [businessName, setBusinessName] = useState("");
+  const [category, setCategory] = useState("Baked Goods");
+  const [style, setStyle] = useState("Modern");
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
@@ -16,13 +20,15 @@ export default function BuilderPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleGenerate = async () => {
+    const generatedBio = `${businessName} selling ${category} with a ${style} style.`;
+    setBio(generatedBio);
     setStatus("generating");
 
     try {
       const response = await fetch('/api/v1/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: bio })
+        body: JSON.stringify({ description: generatedBio })
       });
 
       const data = await response.json();
@@ -93,47 +99,111 @@ export default function BuilderPage() {
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
           <div className="p-8 flex flex-col flex-1 justify-center">
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
-            <p className="text-gray-500 text-sm mb-4 leading-relaxed">
-              Tell us about your business in a few words, and we'll magically generate your storefront in seconds.
-            </p>
+            {step === 1 && (
+              <div className="animate-fade-in">
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
+                <p className="text-gray-500 text-sm mb-6 leading-relaxed">Let's get your business online in minutes.</p>
 
-            <button
-              onClick={() => startWalkthrough([
-                { targetId: "bio-input", message: "Start by entering a description of your business. The more detail, the better the AI can build your store." },
-                { targetId: "generate-btn", message: "Click here when you're ready, and we will generate your store for you!" }
-              ])}
-              className="mb-8 text-blue-600 font-bold text-sm bg-blue-50 py-2 px-4 rounded-full self-start hover:bg-blue-100 transition-colors"
-            >
-              Take a tour
-            </button>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">What's the name of your business?</label>
+                <input
+                  id="business-name-input"
+                  className="w-full border border-gray-300 p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-800"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="e.g. Maya's Cakes"
+                />
 
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business</label>
-            <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
-              <textarea
-                id="bio-input"
-                className="w-full border border-gray-300 p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-gray-800"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="e.g. I run a mobile dog grooming service in Portland"
-                rows={4}
-              />
-            </Tooltip>
+                <button
+                  id="next-step-1"
+                  className={`w-full p-4 rounded-xl font-bold font-outfit text-lg transition-all ${
+                    businessName.trim().length > 0
+                      ? "bg-gray-900 text-white hover:bg-gray-800 shadow-md active:scale-[0.98]"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  }`}
+                  onClick={() => setStep(2)}
+                  disabled={businessName.trim().length === 0}
+                >
+                  Next
+                </button>
+              </div>
+            )}
 
-            <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
-              <button
-                id="generate-btn"
-                className={`w-full p-4 rounded-xl font-bold font-outfit text-lg transition-all ${
-                  bio.trim().length > 5
-                    ? "bg-gray-900 text-white hover:bg-gray-800 shadow-md active:scale-[0.98]"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-                onClick={handleGenerate}
-                disabled={bio.trim().length <= 5}
-              >
-                Build My Storefront
-              </button>
-            </Tooltip>
+            {step === 2 && (
+              <div className="animate-fade-in">
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Great name!</h1>
+                <p className="text-gray-500 text-sm mb-6 leading-relaxed">What do you sell?</p>
+
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
+                <select
+                  id="category-select"
+                  className="w-full border border-gray-300 p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-800 bg-white"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  <option value="Baked Goods">Baked Goods</option>
+                  <option value="Handyman Services">Handyman Services</option>
+                  <option value="Boutique / Retail">Boutique / Retail</option>
+                  <option value="Tutoring">Tutoring</option>
+                  <option value="Food Cart">Food Cart</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <div className="flex gap-3">
+                  <button
+                    className="w-1/3 p-4 rounded-xl font-bold font-outfit text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all"
+                    onClick={() => setStep(1)}
+                  >
+                    Back
+                  </button>
+                  <button
+                    id="next-step-2"
+                    className="w-2/3 p-4 rounded-xl font-bold font-outfit text-lg transition-all bg-gray-900 text-white hover:bg-gray-800 shadow-md active:scale-[0.98]"
+                    onClick={() => setStep(3)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="animate-fade-in">
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Almost there!</h1>
+                <p className="text-gray-500 text-sm mb-6 leading-relaxed">What's your preferred style?</p>
+
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Style</label>
+                <select
+                  id="style-select"
+                  className="w-full border border-gray-300 p-4 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-800 bg-white"
+                  value={style}
+                  onChange={(e) => setStyle(e.target.value)}
+                >
+                  <option value="Modern">Modern</option>
+                  <option value="Minimalist">Minimalist</option>
+                  <option value="Playful">Playful</option>
+                  <option value="Elegant">Elegant</option>
+                  <option value="Bold">Bold</option>
+                </select>
+
+                <div className="flex gap-3">
+                  <button
+                    className="w-1/3 p-4 rounded-xl font-bold font-outfit text-gray-600 bg-gray-100 hover:bg-gray-200 transition-all"
+                    onClick={() => setStep(2)}
+                  >
+                    Back
+                  </button>
+                  <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                    <button
+                      id="generate-btn"
+                      className="w-full p-4 rounded-xl font-bold font-outfit text-lg transition-all bg-gray-900 text-white hover:bg-gray-800 shadow-md active:scale-[0.98]"
+                      onClick={handleGenerate}
+                    >
+                      Build My Storefront
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
