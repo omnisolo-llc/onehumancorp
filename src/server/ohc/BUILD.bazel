@@ -17,3 +17,5 @@ rust_library(
         "//src/proto:organization_prost",
     ],
 )
+
+# Invalidate cache

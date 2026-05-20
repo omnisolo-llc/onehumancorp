@@ -215,3 +215,5 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+# Invalidate cache
