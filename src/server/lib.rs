@@ -1976,16 +1976,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <style>
                         :root {
                             color-scheme: light;
-                            --primary: #006fff;
+                            --primary: #0066FF;
                             --primary-hover: #005bd3;
                             --primary-soft: #e8f2ff;
-                            --accent-green: #15a46f;
-                            --accent-orange: #f59e0b;
+                            --accent-green: #34C759;
+                            --accent-orange: #FF9500;
                             --bg: #eef1f5;
                             --surface: rgba(255, 255, 255, 0.86);
                             --surface-strong: #ffffff;
                             --sidebar-bg: rgba(248, 250, 252, 0.92);
-                            --text: #111827;
+                            --text: #1D1D1F;
                             --text-secondary: #657083;
                             --text-tertiary: #8a94a6;
                             --border: rgba(16, 24, 40, 0.1);
@@ -1994,6 +1994,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --radius-sm: 8px;
                             --radius-container: 16px;
                             --radius-md: 10px;
+                        }
+                        body.dark-theme {
+                            --primary: #0066FF;
+                            --bg: #121214;
+                            --surface: rgba(30, 30, 34, 0.86);
+                            --text: #F5F5F7;
+                            --text-secondary: #a1a1aa;
                         }
                         * {
                             box-sizing: border-box;
@@ -2039,15 +2046,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: rgba(255, 255, 255, 0.65);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border-radius: 16px;
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2060,8 +2067,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -2100,7 +2107,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -2172,8 +2179,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--primary);
                             box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
                         }
+                        button.secondary.selected {
+                            background: #ffffff;
+                            border-color: var(--primary);
+                            color: var(--primary);
+                            box-shadow: 0 0 0 2px rgba(0, 111, 255, 0.2);
+                        }
                         button.danger {
-                            background: #dc2626;
+                            background: #FF3B30;
                         }
                         .error { color: #d93025; font-size: 13px; margin-bottom: 16px; display: none; }
                         
@@ -2205,8 +2218,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -2350,8 +2363,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 600px;
@@ -2363,6 +2376,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
         }
 
         #setup-screen > div {
