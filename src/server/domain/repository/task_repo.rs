@@ -105,17 +105,18 @@ impl TaskRepository {
                     UPDATE tasks
                     SET status = $1, updated_at = $2
                     WHERE id = $3 AND organization_id = $4
+                    RETURNING id
                     "#
                 )
                 .bind(new_status)
                 .bind(now)
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(&self.db.pool)
+                .fetch_optional(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if result.rows_affected() == 0 {
+                if result.is_none() {
                     return Err("Task not found or does not belong to organization".to_string());
                 }
             }
@@ -125,17 +126,18 @@ impl TaskRepository {
                     UPDATE tasks
                     SET status = ?, updated_at = ?
                     WHERE id = ? AND organization_id = ?
+                    RETURNING id
                     "#
                 )
                 .bind(new_status)
                 .bind(now)
                 .bind(task_id)
                 .bind(organization_id)
-                .execute(sqlite_pool)
+                .fetch_optional(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if result.rows_affected() == 0 {
+                if result.is_none() {
                     return Err("Task not found or does not belong to organization".to_string());
                 }
             }
