@@ -7,7 +7,7 @@ use tokio::time::{sleep, Duration};
 pub struct AutoDreamPipeline {
     db: Arc<DB>,
     llm_client: Arc<dyn LLMClient>,
-    pub cache: Option<Arc<::server_pricing::cache::LocalEmbeddingCache>>,
+    pub cache: Option<Arc<crate::pricing::cache::LocalEmbeddingCache>>,
 }
 
 impl AutoDreamPipeline {
@@ -15,7 +15,7 @@ impl AutoDreamPipeline {
         AutoDreamPipeline { db, llm_client, cache: None }
     }
 
-    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<::server_pricing::cache::LocalEmbeddingCache>) -> Self {
+    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Self {
         AutoDreamPipeline { db, llm_client, cache: Some(cache) }
     }
 
