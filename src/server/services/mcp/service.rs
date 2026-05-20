@@ -245,19 +245,6 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
-        let _permit = if is_standalone {
-            match crate::sip::get_sqlite_limiter().try_acquire() {
-                Ok(p) => Some(p),
-                Err(_) => {
-                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "delegate_mission_with_tx").await;
-                    Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
-                }
-            }
-        } else {
-            None
-        };
-
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
