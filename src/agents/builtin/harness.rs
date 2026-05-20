@@ -47,20 +47,6 @@ impl ProcessIsolationStrategy {
 impl IsolationStrategy for ProcessIsolationStrategy {
     async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String> {
         let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
-        let task_id = format!("task-{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
-        let worktree_path = format!("../.ohc-worktrees/{}", task_id);
-
-        // Provision workspace
-        let status = tokio::process::Command::new("git")
-            .args(&["worktree", "add", &worktree_path, "-b", &task_id])
-            .current_dir(worktree)
-            .status()
-            .await
-            .map_err(|e| format!("Failed to run git worktree add: {}", e))?;
-
-        if !status.success() {
-            return Err(format!("git worktree add failed with status: {}", status));
-        }
 
         let status_msg = serde_json::json!({
             "agent":    agent_type,
@@ -86,7 +72,7 @@ impl IsolationStrategy for ProcessIsolationStrategy {
         let mut child = tokio::process::Command::new("bash")
             .arg("-c")
             .arg(command)
-            .current_dir(&worktree_path)
+            .current_dir(worktree)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
@@ -133,18 +119,6 @@ impl IsolationStrategy for ProcessIsolationStrategy {
         let status = child.wait().await.map_err(|e| format!("Failed to wait on child: {}", e))?;
         let _ = stdout_handle.await;
         let _ = stderr_handle.await;
-
-        // Cleanup workspace
-        let _cleanup_status = tokio::process::Command::new("git")
-            .args(&["worktree", "remove", "--force", &worktree_path])
-            .current_dir(worktree)
-            .status()
-            .await;
-        let _branch_cleanup_status = tokio::process::Command::new("git")
-            .args(&["branch", "-D", &task_id])
-            .current_dir(worktree)
-            .status()
-            .await;
 
         let end_msg = serde_json::json!({
             "agent":  agent_type,
