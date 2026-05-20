@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@types/dompurify": "^3.0.5",
-    "dompurify": "^3.4.5",
+    "@types/marked": "^5.0.2",
+    "isomorphic-dompurify": "^3.14.0",
+    "marked": "^18.0.4",
     "next": "^14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

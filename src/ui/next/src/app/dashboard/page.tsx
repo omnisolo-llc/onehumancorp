@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Tooltip } from "../../components/help";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -112,17 +113,23 @@ export default function Dashboard() {
 
                 {/* Metric Card */}
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
+                    <Tooltip id="sales-tooltip" defaultText="Your total revenue for today. Updates in real-time as orders are paid.">
+                        <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
+                    </Tooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>$0.00</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
+                    <Tooltip id="customers-tooltip" defaultText="People who have visited your store and interacted with your products today.">
+                        <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
+                    </Tooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>12</div>
                 </div>
 
                 <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                    <Tooltip id="orders-tooltip" defaultText="Orders that have been placed but not yet fulfilled by you.">
+                        <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                    </Tooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>3</div>
                 </div>
 
