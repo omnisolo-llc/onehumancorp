@@ -114,7 +114,21 @@ impl OperationsWorker {
                     if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
                         let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
                             crate::db::DbStore::Postgres => {
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND organization_id = $2")
+                                let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .execute(&db.pool)
+                                    .await;
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND organization_id = $3")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .execute(&db.pool)
+                                    .await;
+
+                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(&db.pool)
@@ -131,8 +145,23 @@ impl OperationsWorker {
                                 }
                             },
                             crate::db::DbStore::Sqlite(pool) => {
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND organization_id = ?")
+                                let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(quantity)
                                     .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .execute(pool)
+                                    .await;
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND organization_id = ?")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .execute(pool)
+                                    .await;
+
+                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(pool)
                                     .await
@@ -666,20 +695,54 @@ impl CustomerSuccessWorker {
 
             let task_id = Uuid::new_v4().to_string();
 
+            // Simulate LLM confidence check
+            let mut confidence = "REVIEW".to_string();
+            if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+                if !api_key.is_empty() {
+                    let minimax = crate::minimax::MinimaxClient::new(api_key);
+                    let prompt = format!("Evaluate this customer message and the drafted reply. If the drafted reply perfectly and safely addresses the customer message, reply with exactly 'CONFIDENT'. Otherwise reply with 'REVIEW'. Message: '{}'. Draft: '{}'", payload.get("message").and_then(|m| m.as_str()).unwrap_or(""), drafted_msg);
+                    if let Ok(res) = minimax.reason(&prompt).await {
+                        if res.trim() == "CONFIDENT" {
+                            confidence = "CONFIDENT".to_string();
+                        }
+                    }
+                }
+            } else {
+                // If no API key, default to CONFIDENT for simple "OrderProcessed" events, else REVIEW for "CustomerMessageReceived"
+                if event_type == "OrderProcessed" {
+                    confidence = "CONFIDENT".to_string();
+                }
+            }
+
             match &db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query(
-                        r#"
-                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                        VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
-                        "#
-                    )
-                    .bind(&task_id)
-                    .bind(&tenant_id)
-                    .bind(&title)
-                    .bind(&drafted_msg)
-                    .execute(&db.pool)
-                    .await;
+                    if confidence == "REVIEW" {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&drafted_msg)
+                        .execute(&db.pool)
+                        .await;
+                    } else {
+                        // Insert directly to agent_inbox as an auto-reply
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content)
+                            VALUES ('customer_success', $1, $2, 'system', 'customer', 'auto_reply', $3)
+                            "#
+                        )
+                        .bind(&tenant_id)
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&drafted_msg)
+                        .execute(&db.pool)
+                        .await;
+                    }
 
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', payload = jsonb_set(payload, '{drafted_message}', $1), updated_at = CURRENT_TIMESTAMP WHERE id = $2")
                         .bind(&drafted_msg)
@@ -689,18 +752,33 @@ impl CustomerSuccessWorker {
                         .map_err(|e| e.to_string())?;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    let _ = sqlx::query(
-                        r#"
-                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                        VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
-                        "#
-                    )
-                    .bind(&task_id)
-                    .bind(&tenant_id)
-                    .bind(&title)
-                    .bind(&drafted_msg)
-                    .execute(sqlite_pool)
-                    .await;
+                    if confidence == "REVIEW" {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&drafted_msg)
+                        .execute(sqlite_pool)
+                        .await;
+                    } else {
+                        // Insert directly to agent_inbox as an auto-reply
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content)
+                            VALUES ('customer_success', ?, ?, 'system', 'customer', 'auto_reply', ?)
+                            "#
+                        )
+                        .bind(&tenant_id)
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&drafted_msg)
+                        .execute(sqlite_pool)
+                        .await;
+                    }
 
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', payload = json_patch(payload, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(json!({"drafted_message": drafted_msg}).to_string())
