@@ -139,7 +139,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="shadow-sm overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div className="shadow-sm overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', fontFamily: "'Outfit', 'Inter', sans-serif", border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>

@@ -8,6 +8,22 @@ use async_trait::async_trait;
 use opentelemetry::KeyValue;
 
 #[async_trait]
+pub trait MeshHub: Send + Sync {
+    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+}
+
+#[async_trait]
+impl MeshHub for CentrifugeNode {
+    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        TeammateMesh::publish(self, topic, payload).await
+    }
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        TeammateMesh::subscribe(self, topic, handler).await
+    }
+}
+
+#[async_trait]
 pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
@@ -209,11 +225,11 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.publish("system:state_handoff", payload).await
+        TeammateMesh::publish(self, "system:state_handoff", payload).await
     }
 
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe("system:state_handoff", handler).await
+        TeammateMesh::subscribe(self, "system:state_handoff", handler).await
     }
 }
 
@@ -232,13 +248,13 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
-        let _cancel = node.subscribe("test_topic", Box::new(move |msg: Message| {
+        let _cancel = TeammateMesh::subscribe(&node, "test_topic", Box::new(move |msg: Message| {
             if msg.payload == b"hello world" {
                 received_clone.store(true, Ordering::SeqCst);
             }
         })).await.unwrap();
 
-        node.publish("test_topic", b"hello world".to_vec()).await.unwrap();
+        TeammateMesh::publish(&node, "test_topic", b"hello world".to_vec()).await.unwrap();
 
         sleep(Duration::from_millis(50)).await;
 
