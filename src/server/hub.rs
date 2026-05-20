@@ -44,6 +44,7 @@ pub struct Hub {
     pub redis_client: Option<redis::Client>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
+    referral_tracker: Arc<crate::services::growth::referrals::ReferralTracker>,
 }
 
 impl Hub {
@@ -120,7 +121,12 @@ impl Hub {
             auto_cor_track: RwLock::new(std::collections::HashSet::new()),
             event_log_tx,
             redis_client,
+            referral_tracker: Arc::new(crate::services::growth::referrals::ReferralTracker::new()),
         }
+    }
+
+    pub fn referral_tracker(&self) -> Arc<crate::services::growth::referrals::ReferralTracker> {
+        self.referral_tracker.clone()
     }
 
     fn invalidate_agent_cache(&self) {
