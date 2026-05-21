@@ -1,3 +1,5 @@
+-- Migration: Add agent_role to sub_agent_queue
+
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sub_agent_queue' AND column_name='agent_role') THEN
