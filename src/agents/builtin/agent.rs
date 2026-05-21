@@ -484,7 +484,7 @@ impl Agent {
                 tool_results,
                 response_id: None,
                 previous_response_id: None,
-            });
+             refusal: None, });
         }
 
         // Final fallback if Verify phase didn't exit
@@ -594,7 +594,7 @@ impl Agent {
                         tool_results,
                         response_id: None,
                 previous_response_id: None,
-                    });
+                     refusal: None, });
                 }
 
                 let req = crate::types::ChatRequest {
@@ -1739,8 +1739,9 @@ impl Agent {
             let stop_reason = resp.stop_reason.as_str();
 
             // Layered Termination Condition: Safety Refusal
-            if stop_reason == "content_filter" || stop_reason == "safety" {
-                let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
+            if stop_reason == "content_filter" || stop_reason == "safety" || resp.message.refusal.is_some() {
+                let refusal_details = resp.message.refusal.clone().unwrap_or_else(|| "The model halted execution due to content safety policy.".to_string());
+                let err_msg = format!("Terminal condition reached: Safety refusal. {}", refusal_details);
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 return Err(err_msg.into());
             }
@@ -2323,7 +2324,7 @@ impl Agent {
                 tool_results,
                 response_id: None,
                 previous_response_id: last_response_id.clone(),
-            });
+             refusal: None, });
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
@@ -2564,7 +2565,7 @@ mod tests {
                     tool_results: vec![],
                     response_id: None,
                     previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
@@ -2914,7 +2915,7 @@ mod tests {
                             tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -2933,7 +2934,7 @@ mod tests {
                             tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3032,7 +3033,7 @@ mod tests {
                             tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3053,7 +3054,7 @@ mod tests {
                             tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3157,7 +3158,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3221,7 +3222,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3265,7 +3266,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3349,7 +3350,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3366,7 +3367,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3419,7 +3420,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3432,7 +3433,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3445,7 +3446,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3523,7 +3524,7 @@ mod tests {
                     tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3575,7 +3576,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3592,7 +3593,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3609,7 +3610,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3626,7 +3627,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3701,7 +3702,7 @@ mod tests {
                     tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3752,7 +3753,7 @@ mod tests {
                     tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3794,7 +3795,7 @@ mod tests {
                     tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3824,7 +3825,7 @@ mod tests {
                     tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3854,7 +3855,7 @@ mod tests {
                     tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3875,6 +3876,54 @@ mod tests {
         assert!(unexpected_handled);
     }
 
+
+
+    #[tokio::test]
+    async fn test_safety_refusal_mechanic() {
+        struct SafetyRefusalMockClient;
+        #[async_trait::async_trait]
+        impl LlmClient for SafetyRefusalMockClient {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                        refusal: Some("I cannot fulfill this request due to safety policies.".to_string()),
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "safety".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+
+        let client = Arc::new(SafetyRefusalMockClient);
+        let agent = Agent::new(client, vec![]);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Can you do something dangerous?", &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("Terminal condition reached: Safety refusal. I cannot fulfill this request due to safety policies."));
+
+        let found_task_error = events.iter().any(|e| {
+            if let AgentEvent::TaskError { error } = e {
+                error.contains("Terminal condition reached: Safety refusal. I cannot fulfill this request due to safety policies.")
+            } else {
+                false
+            }
+        });
+        assert!(found_task_error);
+    }
+
     #[tokio::test]
     async fn test_guardrail_tripwire() {
         let client = Arc::new(MockLlmClient {
@@ -3891,7 +3940,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3953,7 +4002,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4111,7 +4160,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4325,7 +4374,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4429,7 +4478,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4505,7 +4554,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4763,7 +4812,7 @@ mod tests {
                         tool_results: vec![],
                     response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4843,7 +4892,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -4889,7 +4938,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -4920,7 +4969,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -4971,7 +5020,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: None,
                 previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5081,7 +5130,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: Some("1".to_string()),
                         previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("1".to_string()),
@@ -5216,7 +5265,7 @@ mod stream_tests {
                             tool_results: vec![],
                             response_id: Some("r1".to_string()),
                             previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("r1".to_string()),
@@ -5231,7 +5280,7 @@ mod stream_tests {
                             tool_results: vec![],
                             response_id: Some("r2".to_string()),
                             previous_response_id: Some("r1".to_string()),
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some("r2".to_string()),
@@ -5257,7 +5306,7 @@ mod stream_tests {
                                 tool_results: vec![],
                                 response_id: Some("r2".to_string()),
                                 previous_response_id: Some("r1".to_string()),
-                            },
+                             refusal: None, },
                             usage: Usage::default(),
                             stop_reason: "tool_calls".to_string(),
                             response_id: Some("r2".to_string()),
@@ -5324,7 +5373,7 @@ mod stream_tests {
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: crate::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id1".to_string()),
@@ -5342,7 +5391,7 @@ mod stream_tests {
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: crate::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id2".to_string()),
@@ -5419,7 +5468,7 @@ mod stream_tests {
                             tool_results: vec![],
                             response_id: Some(id.clone()),
                             previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "tool_calls".to_string(),
                         response_id: Some(id),
@@ -5433,7 +5482,7 @@ mod stream_tests {
                             tool_results: vec![],
                             response_id: Some(id.clone()),
                             previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some(id),
@@ -5512,7 +5561,7 @@ mod stream_tests {
                     tool_results: vec![],
                     response_id: Some("id1".to_string()),
                     previous_response_id: None,
-                },
+                 refusal: None, },
                 usage: ohc_builtin_agent_core::types::Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("id1".to_string()),

@@ -62,6 +62,7 @@ mod tests {
                 ],
                 response_id: None,
                 previous_response_id: None,
+                refusal: None,
             },
             Message {
                 role: Role::Assistant,
@@ -70,6 +71,7 @@ mod tests {
                 tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
+                refusal: None,
             },
             Message {
                 role: Role::Tool,
@@ -84,6 +86,7 @@ mod tests {
                 ],
                 response_id: None,
                 previous_response_id: None,
+                refusal: None,
             },
         ];
 

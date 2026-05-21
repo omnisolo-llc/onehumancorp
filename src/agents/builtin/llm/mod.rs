@@ -163,7 +163,7 @@ mod tests {
                     ],
                     response_id: None,
                     previous_response_id: None,
-                }
+                 refusal: None, }
             ],
             tools: vec![],
             max_tokens: 100,
