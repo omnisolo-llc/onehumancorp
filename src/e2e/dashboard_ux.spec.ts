@@ -13,7 +13,7 @@ test.describe('Dashboard UX', () => {
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 
     // Wait for Dashboard to load
-    await page.waitForURL('**/*');
+    await page.waitForURL('**/dashboard');
 
     // Some apps navigate to '/' or '/dashboard', we will just wait for navigation
     // and verify the labels.
@@ -33,7 +33,7 @@ test('should display Quick Actions on mobile', async ({ page }) => {
   await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
   await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
   await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-  await page.waitForURL('**/*');
+  await page.waitForURL('**/dashboard');
 
   // Verify navigation actions
   await expect(page.locator('text=Store Tips')).toBeVisible();
@@ -87,7 +87,7 @@ test('should display Menu toggle on mobile and have expected links', async ({ pa
   await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
   await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
   await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-  await page.waitForURL('**/*');
+  await page.waitForURL('**/dashboard');
 
   // Verify navigation actions
   const menuBtn = page.locator('button:has-text("Menu")');
@@ -113,7 +113,7 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 
     // Wait for Dashboard to load
-    await page.waitForURL('**/*');
+    await page.waitForURL('**/dashboard');
 
     await expect(page.locator('text=My Business').filter({ visible: true }).first()).toBeVisible();
 
@@ -128,7 +128,7 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
+    await page.waitForURL('**/dashboard');
 
     const ordersBtn = page.locator('button:has-text("Orders")').filter({ visible: true }).first();
     await expect(ordersBtn).toBeVisible();
@@ -139,7 +139,7 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
+    await page.waitForURL('**/dashboard');
 
     const messagesBtn = page.locator('button:has-text("Chat")').filter({ visible: true }).first();
     await expect(messagesBtn).toBeVisible();
@@ -150,7 +150,7 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
+    await page.waitForURL('**/dashboard');
 
     const analyticsBtn = page.locator('button:has-text("Stats")').filter({ visible: true }).first();
     await expect(analyticsBtn).toBeVisible();
@@ -161,7 +161,7 @@ test.describe('Dashboard Flow Completeness UX', () => {
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
-    await page.waitForURL('**/*');
+    await page.waitForURL('**/dashboard');
 
     const shareBtn = page.locator('button:has-text("Share")').filter({ visible: true }).first();
     await expect(shareBtn).toBeVisible();

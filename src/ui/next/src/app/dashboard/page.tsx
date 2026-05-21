@@ -6,10 +6,8 @@ export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
-  const [todaysSales, setTodaysSales] = useState<number>(0);
-  const [activeCustomers, setActiveCustomers] = useState<number>(0);
-  const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
+  const [dailyBriefing, setDailyBriefing] = useState<string>("");
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
@@ -29,6 +27,19 @@ export default function Dashboard() {
       }
     }
     fetchApprovals();
+
+    async function fetchDailyBriefing() {
+      try {
+        const res = await fetch('/api/agents/advisor/briefing');
+        const data = await res.json();
+        if (data && data.briefing) {
+          setDailyBriefing(data.briefing);
+        }
+      } catch (e) {
+        console.error("Failed to fetch daily briefing", e);
+      }
+    }
+    fetchDailyBriefing();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
     // Using a fake mock for UI tests if connection fails
@@ -231,27 +242,13 @@ export default function Dashboard() {
              </section>
          )}
 
-         {/* Business Snapshot */}
+         {/* Daily Business Advisor Briefing */}
          <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
-                </div>
-
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Daily Briefing</h2>
+            <div className="ohc-hybrid-panel p-5 shadow-sm">
+                <p className="text-lg font-medium text-gray-800 leading-relaxed">
+                    {dailyBriefing || "Good morning! You had 3 bookings yesterday. Consider running a weekend discount on plumbing repairs."}
+                </p>
             </div>
          </section>
 
