@@ -1,3 +1,12 @@
+## v0.4.45 (Cloud) / v0.4.45+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implement AI Agent Department Architecture backend event routing and budgeting API.
+- Implement async fork subagents with context inheritance.
+
+### Privacy/Offline Improvements
+- Architect Distributed State Machine for zero-trust isolated environments.
+
 ## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
 
 ### Cloud Scaling Improvements
