@@ -5,6 +5,8 @@ import React, { useState } from 'react';
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
 
+import { useEffect } from 'react';
+
 export default function OnboardingWizard() {
   const [step, setStep] = useState(1);
   const [businessName, setBusinessName] = useState("");
@@ -16,6 +18,37 @@ export default function OnboardingWizard() {
   const [intakeData, setIntakeData] = useState<any>(null);
   const [startResult, setStartResult] = useState<any>(null);
 
+  useEffect(() => {
+    const savedStep = localStorage.getItem("ohc_onboarding_step");
+    if (savedStep) setStep(parseInt(savedStep, 10));
+    const savedName = localStorage.getItem("ohc_onboarding_name");
+    if (savedName) setBusinessName(savedName);
+    const savedCategory = localStorage.getItem("ohc_onboarding_category");
+    if (savedCategory) setBusinessCategory(savedCategory);
+    const savedStyle = localStorage.getItem("ohc_onboarding_style");
+    if (savedStyle) setPreferredStyle(savedStyle);
+  }, []);
+
+  const updateStep = (newStep: number) => {
+    setStep(newStep);
+    localStorage.setItem("ohc_onboarding_step", newStep.toString());
+  };
+
+  const updateBusinessName = (val: string) => {
+    setBusinessName(val);
+    localStorage.setItem("ohc_onboarding_name", val);
+  };
+
+  const updateBusinessCategory = (val: string) => {
+    setBusinessCategory(val);
+    localStorage.setItem("ohc_onboarding_category", val);
+  };
+
+  const updatePreferredStyle = (val: string) => {
+    setPreferredStyle(val);
+    localStorage.setItem("ohc_onboarding_style", val);
+  };
+
   const handleNext = () => {
     if (step === 1 && !businessName.trim()) {
       setError("Please enter your business name.");
@@ -26,7 +59,7 @@ export default function OnboardingWizard() {
       return;
     }
     setError("");
-    setStep(step + 1);
+    updateStep(step + 1);
   };
 
   const handleIntakeSubmit = async () => {
@@ -53,7 +86,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setIntakeData(data);
-      setStep(4);
+      updateStep(4);
     } catch (err: any) {
       setError(err.message || 'An error occurred during intake.');
     } finally {
@@ -94,7 +127,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setStartResult(data);
-      setStep(5);
+      updateStep(5);
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -104,7 +137,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter">
-      <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden"
+      <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden rounded-none sm:rounded-2xl"
            style={{
              background: 'rgba(255, 255, 255, 0.65)',
              backdropFilter: 'blur(30px) saturate(210%)',
@@ -122,7 +155,7 @@ export default function OnboardingWizard() {
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
               {error}
             </div>
           )}
@@ -134,14 +167,19 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                onChange={(e) => updateBusinessName(e.target.value)}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <button
                 onClick={handleNext}
-                className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                disabled={businessName.trim().length === 0}
+                className={`w-full text-white p-4 rounded-lg font-bold shadow-md transition-all ${
+                  businessName.trim().length > 0
+                    ? "bg-[#0066FF] hover:bg-blue-700 active:scale-[0.98]"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
               >
                 Next
               </button>
@@ -154,21 +192,26 @@ export default function OnboardingWizard() {
               <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
               <textarea
                 value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
+                onChange={(e) => updateBusinessCategory(e.target.value)}
                 placeholder="e.g. I bake custom wedding cakes and cupcakes."
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 min-h-[120px] bg-white/80 resize-none"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 min-h-[120px] bg-white/80 resize-none"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  onClick={() => updateStep(1)}
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                  disabled={businessCategory.trim().length === 0}
+                  className={`flex-1 text-white p-4 rounded-lg font-bold shadow-md transition-all ${
+                    businessCategory.trim().length > 0
+                      ? "bg-[#0066FF] hover:bg-blue-700 active:scale-[0.98]"
+                      : "bg-gray-400 cursor-not-allowed"
+                  }`}
                 >
                   Next
                 </button>
@@ -183,23 +226,27 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 value={preferredStyle}
-                onChange={(e) => setPreferredStyle(e.target.value)}
+                onChange={(e) => updatePreferredStyle(e.target.value)}
                 placeholder="e.g. Clean and modern with pastel colors"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  onClick={() => updateStep(2)}
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
                   Back
                 </button>
                 <button
                   onClick={handleIntakeSubmit}
-                  disabled={isLoading}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  disabled={isLoading || preferredStyle.trim().length === 0}
+                  className={`flex-1 text-white p-4 rounded-lg font-bold shadow-md transition-all flex justify-center items-center ${
+                    preferredStyle.trim().length > 0 && !isLoading
+                      ? "bg-[#0066FF] hover:bg-blue-700 active:scale-[0.98]"
+                      : "bg-gray-400 cursor-not-allowed"
+                  }`}
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -219,7 +266,7 @@ export default function OnboardingWizard() {
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center">Looks Great!</h2>
               <p className="text-gray-500 text-sm mb-6 text-center">Here is what our AI extracted. Ready to publish?</p>
 
-              <div className="bg-white/80 p-5 rounded-xl border border-gray-100 shadow-sm mb-6 space-y-3">
+              <div className="bg-white/80 p-5 rounded-2xl border border-gray-100 shadow-sm mb-6 space-y-3">
                 <div>
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Business Name</span>
                   <div className="font-medium text-gray-900">{intakeData.business_name}</div>
@@ -240,8 +287,8 @@ export default function OnboardingWizard() {
 
               <div className="flex gap-3 mt-auto">
                 <button
-                  onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  onClick={() => updateStep(3)}
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
                   Edit
@@ -249,7 +296,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="flex-1 bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-[#34C759] text-white p-4 rounded-lg font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -276,13 +323,13 @@ export default function OnboardingWizard() {
               <div className="w-full space-y-3 mt-auto">
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-xl font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
+                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-lg font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-xl font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-lg font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
