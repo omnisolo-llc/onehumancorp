@@ -2744,6 +2744,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
+                        <!-- Embeddable Storefront Widget -->
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h3 style="margin-bottom: 12px;">Embed on Your Website</h3>
+                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Showcase your OHC storefront directly on your existing blog or website to maximize reach.</p>
+                            <textarea id="embed-code" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">&lt;iframe src="https://mybusiness.ohc.store" width="100%" height="600px" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;</textarea>
+                            <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
+                        </div>
+
                         <div class="card glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
