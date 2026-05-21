@@ -18,13 +18,13 @@ impl TaskRepository {
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
-                        id, organization_id, parent_task_id, title, description,
+                        id, tenant_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     "#
                 )
                 .bind(&task.id)
-                .bind(&task.organization_id)
+                .bind(&task.tenant_id)
                 .bind(&task.parent_task_id)
                 .bind(&task.title)
                 .bind(&task.description)
@@ -40,13 +40,13 @@ impl TaskRepository {
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
-                        id, organization_id, parent_task_id, title, description,
+                        id, tenant_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&task.id)
-                .bind(&task.organization_id)
+                .bind(&task.tenant_id)
                 .bind(&task.parent_task_id)
                 .bind(&task.title)
                 .bind(&task.description)
@@ -62,18 +62,18 @@ impl TaskRepository {
         Ok(task)
     }
 
-    pub async fn get_tasks_by_org(&self, organization_id: &str) -> Result<Vec<Task>, String> {
+    pub async fn get_tasks_by_tenant(&self, tenant_id: &str) -> Result<Vec<Task>, String> {
         let tasks = match &self.db.store {
             DbStore::Postgres => {
                 sqlx::query_as::<_, Task>(
                     r#"
-                    SELECT id, organization_id, parent_task_id, title, description,
+                    SELECT id, tenant_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
-                    WHERE organization_id = $1
+                    WHERE tenant_id = $1
                     "#
                 )
-                .bind(organization_id)
+                .bind(tenant_id)
                 .fetch_all(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -81,13 +81,13 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, Task>(
                     r#"
-                    SELECT id, organization_id, parent_task_id, title, description,
+                    SELECT id, tenant_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
-                    WHERE organization_id = ?
+                    WHERE tenant_id = ?
                     "#
                 )
-                .bind(organization_id)
+                .bind(tenant_id)
                 .fetch_all(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -96,7 +96,7 @@ impl TaskRepository {
         Ok(tasks)
     }
 
-    pub async fn update_task_status(&self, organization_id: &str, task_id: &str, new_status: &str) -> Result<(), String> {
+    pub async fn update_task_status(&self, tenant_id: &str, task_id: &str, new_status: &str) -> Result<(), String> {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -104,20 +104,20 @@ impl TaskRepository {
                     r#"
                     UPDATE tasks
                     SET status = $1, updated_at = $2
-                    WHERE id = $3 AND organization_id = $4
+                    WHERE id = $3 AND tenant_id = $4
                     RETURNING id
                     "#
                 )
                 .bind(new_status)
                 .bind(now)
                 .bind(task_id)
-                .bind(organization_id)
+                .bind(tenant_id)
                 .fetch_optional(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 if result.is_none() {
-                    return Err("Task not found or does not belong to organization".to_string());
+                    return Err("Task not found or does not belong to tenant".to_string());
                 }
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -125,20 +125,20 @@ impl TaskRepository {
                     r#"
                     UPDATE tasks
                     SET status = ?, updated_at = ?
-                    WHERE id = ? AND organization_id = ?
+                    WHERE id = ? AND tenant_id = ?
                     RETURNING id
                     "#
                 )
                 .bind(new_status)
                 .bind(now)
                 .bind(task_id)
-                .bind(organization_id)
+                .bind(tenant_id)
                 .fetch_optional(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 if result.is_none() {
-                    return Err("Task not found or does not belong to organization".to_string());
+                    return Err("Task not found or does not belong to tenant".to_string());
                 }
             }
         }
@@ -161,11 +161,12 @@ mod tests {
             r#"
             CREATE TABLE tasks (
                 id TEXT PRIMARY KEY,
-                organization_id TEXT NOT NULL,
+                tenant_id TEXT NOT NULL,
                 parent_task_id TEXT,
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
                 status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+                priority TEXT DEFAULT 'P2',
                 assigned_agent_role VARCHAR(100),
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -192,11 +193,11 @@ mod tests {
         let db = setup_test_db().await;
         let repo = TaskRepository::new(db);
 
-        let org_id = "org_1".to_string();
+        let tenant_id = "tenant_1".to_string();
 
         let task = Task {
             id: "task_1".to_string(),
-            organization_id: org_id.clone(),
+            tenant_id: tenant_id.clone(),
             parent_task_id: None,
             title: "Test Task".to_string(),
             description: Some("Description".to_string()),
@@ -208,12 +209,12 @@ mod tests {
 
         repo.create_task(task.clone()).await.unwrap();
 
-        let tasks = repo.get_tasks_by_org(&org_id).await.unwrap();
+        let tasks = repo.get_tasks_by_tenant(&tenant_id).await.unwrap();
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].id, "task_1");
         assert_eq!(tasks[0].title, "Test Task");
 
-        let other_tasks = repo.get_tasks_by_org("org_2").await.unwrap();
+        let other_tasks = repo.get_tasks_by_tenant("tenant_2").await.unwrap();
         assert_eq!(other_tasks.len(), 0);
     }
 
@@ -222,11 +223,11 @@ mod tests {
         let db = setup_test_db().await;
         let repo = TaskRepository::new(db);
 
-        let org_id = "org_1".to_string();
+        let tenant_id = "tenant_1".to_string();
 
         let task = Task {
             id: "task_1".to_string(),
-            organization_id: org_id.clone(),
+            tenant_id: tenant_id.clone(),
             parent_task_id: None,
             title: "Test Task".to_string(),
             description: None,
@@ -238,15 +239,15 @@ mod tests {
 
         repo.create_task(task).await.unwrap();
 
-        repo.update_task_status(&org_id, "task_1", "IN_PROGRESS").await.unwrap();
+        repo.update_task_status(&tenant_id, "task_1", "IN_PROGRESS").await.unwrap();
 
-        let tasks = repo.get_tasks_by_org(&org_id).await.unwrap();
+        let tasks = repo.get_tasks_by_tenant(&tenant_id).await.unwrap();
         assert_eq!(tasks[0].status, "IN_PROGRESS");
 
-        let result = repo.update_task_status("wrong_org", "task_1", "COMPLETED").await;
+        let result = repo.update_task_status("wrong_tenant", "task_1", "COMPLETED").await;
         assert!(result.is_err());
 
-        let tasks_after = repo.get_tasks_by_org(&org_id).await.unwrap();
+        let tasks_after = repo.get_tasks_by_tenant(&tenant_id).await.unwrap();
         assert_eq!(tasks_after[0].status, "IN_PROGRESS");
     }
 }
