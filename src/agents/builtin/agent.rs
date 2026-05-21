@@ -2524,7 +2524,10 @@ impl Agent {
             if let Some(obj) = args.as_object_mut() {
                 if obj.get("mode").and_then(|v| v.as_str()) == Some("fork") {
                     if let Ok(context_json) = serde_json::to_string(current_messages) {
-                        obj.insert("parent_context_json".to_string(), serde_json::json!(context_json));
+                        let id = uuid::Uuid::new_v4().to_string();
+                        let file_path = format!(".ohc_fork_context_{}.json", id);
+                        let _ = std::fs::write(&file_path, &context_json);
+                        obj.insert("parent_context_file".to_string(), serde_json::json!(file_path));
                     }
                 }
             }
