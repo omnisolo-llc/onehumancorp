@@ -31,8 +31,6 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
-    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
-    google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -60,18 +58,20 @@ impl IntegrationsRegistry {
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+
+
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+
+
         }
     }
 
