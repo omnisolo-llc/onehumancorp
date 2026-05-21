@@ -38,10 +38,10 @@ build --@rules_rust//rust/toolchain/channel=stable
 # because asan explicitly needs to _not_ use the Nix toolchains
 # and Windows doesn't support LRE.
 build:asan --extra_toolchains=@rust_toolchains//:all
-build:windows --extra_toolchains=@rust_toolchains//:all
-build:windows --linkopt=-fuse-ld=bfd
-build:windows --host_linkopt=-fuse-ld=bfd
-build:windows --keep_going
+build:windows_x86_64 --extra_toolchains=@rust_toolchains//:all
+build:windows_x86_64 --linkopt=-fuse-ld=bfd
+build:windows_x86_64 --host_linkopt=-fuse-ld=bfd
+build:windows_x86_64 --keep_going
 
 # Nightly toolchain
 build:nightly --@rules_rust//rust/toolchain/channel=nightly
@@ -140,15 +140,26 @@ build:macos --platforms=//bazel/platforms:macos_aarch64
 build:macos_x86_64 --platforms=//bazel/platforms:macos_x86_64
 build:macos_aarch64 --platforms=//bazel/platforms:macos_aarch64
 build:windows_x86_64 --platforms=//bazel/platforms:windows_x86_64
+build:windows_arm64 --platforms=//bazel/platforms:windows_arm64
 build:windows_i686 --platforms=//bazel/platforms:windows_i686
 build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
 build:linux --config=linux_x86_64
 build:linux --linkopt=-fuse-ld=bfd
 build:linux --host_linkopt=-fuse-ld=bfd
-build:windows --action_env=CC_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-gcc
-build:windows --action_env=CXX_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-g++
-build:windows --action_env=AR_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ar
-build:windows --action_env=LD_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ld
+build:windows_x86_64 --action_env=CC_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-gcc
+build:windows_x86_64 --action_env=CXX_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-g++
+build:windows_x86_64 --action_env=AR_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ar
+build:windows_x86_64 --action_env=LD_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ld
 # Workaround to fix bazel analysis failure on Windows CI
-build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
+build:windows_x86_64 --build_tag_filters=-requires_x11,-requires_wayland,-e2e
+
+build:windows_arm64 --platforms=//bazel/platforms:windows_arm64
+build:windows_common --extra_toolchains=@rust_toolchains//:all --noenable_platform_specific_config --keep_going
+build:windows_arm64 --config=windows_common
+
+build:windows_arm64 --action_env=CC_aarch64_pc_windows_gnu=/usr/bin/aarch64-w64-mingw32-gcc
+build:windows_arm64 --action_env=CXX_aarch64_pc_windows_gnu=/usr/bin/aarch64-w64-mingw32-g++
+build:windows_arm64 --action_env=AR_aarch64_pc_windows_gnu=/usr/bin/aarch64-w64-mingw32-ar
+build:windows_arm64 --action_env=LD_aarch64_pc_windows_gnu=/usr/bin/aarch64-w64-mingw32-ld
+build:windows_arm64 --build_tag_filters=-requires_x11,-requires_wayland,-e2e

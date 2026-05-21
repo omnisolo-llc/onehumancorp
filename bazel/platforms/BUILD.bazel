@@ -89,3 +89,12 @@ platform(
     ],
     visibility = ["//visibility:public"],
 )
+
+platform(
+    name = "windows_arm64",
+    constraint_values = [
+        "@platforms//os:windows",
+        "@platforms//cpu:arm64",
+    ],
+    visibility = ["//visibility:public"],
+)

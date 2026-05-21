@@ -38,7 +38,7 @@ jobs:
             install_linux_deps: true
           # - name: windows-x86_64
           #   runner: ubuntu-24.04
-          #   bazel_config: windows
+          #   bazel_config: windows_x86_64
           #   install_linux_deps: true
           #- name: macos-aarch64
           #  runner: macos-latest
