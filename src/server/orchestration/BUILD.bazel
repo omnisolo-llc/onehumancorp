@@ -1,3 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = [
+        "sync_daemon.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/orchestration",
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = [
+        "sync_daemon_test.go",
+    ],
+    embed = [":orchestration"],
+    tags = ["manual"],
+    deps = [
+    ],
+)
+
 filegroup(
     name = "srcs",
     srcs = [
@@ -12,7 +36,9 @@ filegroup(
         "shared_tasks.rs",
         "shared_tasks_test.rs",
         "tasks.rs",
-        "//src/server/orchestration/departments:srcs",        "//src/server/orchestration/queue:srcs",        "//src/server/orchestration/state:srcs",
+        "//src/server/orchestration/departments:srcs",
+        "//src/server/orchestration/queue:srcs",
+        "//src/server/orchestration/state:srcs",
         "//src/server/orchestration/statemachine:srcs",
         "//src/server/orchestration/hybrid_sync:srcs",
     ],
