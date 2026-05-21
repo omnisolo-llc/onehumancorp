@@ -17,7 +17,7 @@ impl CalendlyProvider {
                 id: "calendly".to_string(),
                 name: "Calendly".to_string(),
                 category: "calendar".to_string(),
-                base_url: "https://placeholder.url".to_string(),
+                base_url: "https://api.calendly.com".to_string(),
             },
         }
     }

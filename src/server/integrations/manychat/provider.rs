@@ -17,7 +17,7 @@ impl ManychatProvider {
                 id: "manychat".to_string(),
                 name: "Manychat".to_string(),
                 category: "social_media".to_string(),
-                base_url: "https://placeholder.url".to_string(),
+                base_url: "https://api.manychat.com/fb".to_string(),
             },
         }
     }
