@@ -4379,6 +4379,73 @@
         "overrides": []
       },
       "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "PostgreSQL Job Queue Batch Size",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ohc_sync_daemon_batch_size_bucket[5m])))",
+          "legendFormat": "P95 Batch Size",
+          "refId": "A"
+        },
+        {
+          "expr": "ohc_sync_daemon_batch_size",
+          "legendFormat": "Batch Size",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "drawStyle": "line",
+            "axisPlacement": "auto"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 200
+      },
+      "id": 9991
+    },
+    {
+      "type": "timeseries",
+      "title": "Agent Execution Traces",
+      "targets": [
+        {
+          "expr": "sum by (agent_id, trace_type) (rate(ohc_agent_execution_traces_total[5m]))",
+          "legendFormat": "{{agent_id}} - {{trace_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "drawStyle": "line",
+            "axisPlacement": "auto"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 200
+      },
+      "id": 9992
     }
   ],
   "refresh": "",

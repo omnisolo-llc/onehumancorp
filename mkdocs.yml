@@ -61,7 +61,9 @@ nav:
   - Research:
       - Research: technical/research/index.md
   - Reports:
+      - SMB Platform Research Report: reports/ohc_smb_platform_research_report.md
       - Market Research Report: reports/ohc_market_research_report.md
+      - Market Dominance & AI Differentiation Strategic Report: reports/ohc_market_dominance_ai_differentiation_strategic_report.md
       - Tool Integration Research Report: reports/tool_integration_research_report.md
       - Scout Tool Integration Research Report (Q2 2024): reports/scout_tool_integration_research_report_q2_2024.md
       - Third-Party Integration Research Report (Q3): reports/third_party_integration_research_report_q3.md

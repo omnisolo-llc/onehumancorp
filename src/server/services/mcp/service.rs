@@ -6,6 +6,7 @@ use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
 use crate::tools::local_proxy::server::LocalProxyServer;
+use crate::tools::config_sync::server::ConfigSyncServer;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
@@ -13,6 +14,7 @@ pub struct MyMcpService {
     hub: Arc<crate::hub::Hub>,
     hybrid_fs_server: Arc<HybridFSMcpServer>,
     local_proxy_server: Arc<LocalProxyServer>,
+    config_sync_server: Arc<ConfigSyncServer>,
 }
 
 impl MyMcpService {
@@ -20,9 +22,10 @@ impl MyMcpService {
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
-            hub,
+            hub: hub.clone(),
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
             local_proxy_server: Arc::new(LocalProxyServer::new()),
+            config_sync_server: Arc::new(ConfigSyncServer::new(hub.pool.clone())),
         }
     }
 }
@@ -68,6 +71,8 @@ impl McpService for MyMcpService {
         let local_proxy_tools = self.local_proxy_server.get_tools();
         tools.extend(hybrid_fs_tools);
         tools.extend(local_proxy_tools);
+        let config_sync_tools = self.config_sync_server.get_tools();
+        tools.extend(config_sync_tools);
         Ok(Response::new(McpToolsResponse {
             tools,
         }))
@@ -199,9 +204,13 @@ impl McpService for MyMcpService {
                 let resp_payload = serde_json::to_string(&serde_json::json!({"value": "mock_value"})).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
-            "sync_config_to_cloud" => {
-                let resp_payload = serde_json::to_string(&serde_json::json!({"status": "success"})).unwrap();
-                Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
+            "sync_config_to_cloud" | "mcp_config_sync" => {
+                let mut modified_req = req.clone();
+                modified_req.tool_id = "mcp_config_sync".to_string(); // Normalize
+                match self.config_sync_server.invoke_tool(&modified_req).await {
+                    Ok(resp) => Ok(Response::new(resp)),
+                    Err(e) => Err(e),
+                }
             }
             "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" => {
                 match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {

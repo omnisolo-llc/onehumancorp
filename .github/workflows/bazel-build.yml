@@ -35,12 +35,12 @@ jobs:
           - name: linux-x86_64
             runner: ubuntu-latest
             bazel_config: linux_x86_64
-          # - name: windows-x86_64
-          #   runner: ubuntu-latest
-          #   bazel_config: windows_x86_64
-          # - name: windows-arm64
-          #   runner: windows-11-arm
-          #   bazel_config: windows_arm64
+          - name: windows-x86_64
+            runner: ubuntu-latest
+            bazel_config: windows_x86_64
+         # - name: windows-arm64
+          #  runner: windows-11-arm
+         #   bazel_config: windows_arm64
           #- name: macos-aarch64
           #  runner: macos-latest
           #  bazel_config: macos_aarch64
