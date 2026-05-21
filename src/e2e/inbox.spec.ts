@@ -3,7 +3,7 @@ import { judgeGeneratedOutput } from './ai-judge';
 
 test.describe('Customer Inbox', () => {
   test('drafts and sends a reply', async ({ page }, testInfo) => {
-    test.skip(!process.env.MINIMAX_API_KEY, 'MINIMAX_API_KEY is required for real AI draft generation and judging.');
+
     await page.goto('/inbox');
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
     await page.getByRole('button', { name: /AI Draft/ }).click();
