@@ -360,31 +360,46 @@ impl IntegrationsRegistry {
     }
 
     pub async fn get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
-        if integration_id == "google_calendar" {
-            let clients = self.google_calendar_clients.read().unwrap();
-            if let Some(client) = clients.get(integration_id) {
-                return client.get_free_busy(time_min, time_max).await;
+        let client = {
+            if integration_id == "google_calendar" {
+                let clients = self.google_calendar_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
             }
+        };
+        if let Some(c) = client {
+            return c.get_free_busy(time_min, time_max).await;
         }
         Err("integration not found or not supported".to_string())
     }
 
     pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
-        if integration_id == "google_calendar" {
-            let clients = self.google_calendar_clients.read().unwrap();
-            if let Some(client) = clients.get(integration_id) {
-                return client.create_event(summary, start_time, end_time).await;
+        let client = {
+            if integration_id == "google_calendar" {
+                let clients = self.google_calendar_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
             }
+        };
+        if let Some(c) = client {
+            return c.create_event(summary, start_time, end_time).await;
         }
         Err("integration not found or not supported".to_string())
     }
 
     pub async fn get_booking_link(&self, integration_id: &str, event_type: &str) -> Result<String, String> {
-        if integration_id == "cal_com" {
-            let clients = self.cal_com_clients.read().unwrap();
-            if let Some(client) = clients.get(integration_id) {
-                return client.get_booking_link(event_type).await;
+        let client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
             }
+        };
+        if let Some(c) = client {
+            return c.get_booking_link(event_type).await;
         }
         Err("integration not found or not supported".to_string())
     }
