@@ -36,6 +36,16 @@
           "legendFormat": "{{deployment_mode}} {{operation}} Latency (p95)"
         }
       ]
+    },
+    {
+      "title": "Harness Execution Latency (P95)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_execution_latency_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}} Execution Latency (p95)"
+        }
+      ]
     }
   ]
 }
