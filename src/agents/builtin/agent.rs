@@ -1856,19 +1856,20 @@ impl Agent {
 
                 // Inferential/Sensors (LLM-as-judge subagent)
                 if final_cfg.enable_llm_judge {
-                    let judge_req = ChatRequest {
-                        model: final_cfg.model.clone(),
-                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
-                        messages: vec![Message::user(format!("Evaluate this output:
-{}", last_assistant_content))],
-                        tools: vec![],
-                        max_tokens: 500,
-                        temperature: 0.0,
-                    };
+                    let judge_subagent = Agent::new(self.llm.clone(), vec![]);
+                    let mut judge_cfg = final_cfg.clone();
+                    judge_cfg.server_system_message = "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string();
+                    judge_cfg.max_tokens = 500;
+                    judge_cfg.temperature = 0.0;
+                    judge_cfg.enable_llm_judge = false; // Prevent infinite recursion
 
-                    match self.llm.chat(judge_req).await {
-                        Ok(judge_resp) => {
-                            let judge_text = judge_resp.message.content.trim();
+                    let judge_prompt = format!("Evaluate this output:
+{}", last_assistant_content);
+
+                    let mut dummy_on_event = |_| {};
+                    match judge_subagent.run(&judge_cfg, &judge_prompt, &mut dummy_on_event).await {
+                        Ok(judge_text) => {
+                            let judge_text = judge_text.trim();
                             if judge_text.starts_with("REJECT:") {
                                 let reason = judge_text.strip_prefix("REJECT:").unwrap_or(judge_text).trim();
                                 let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Please correct your work and use tools if necessary.", reason);
@@ -5621,5 +5622,60 @@ mod hierarchical_prompt_tests {
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
         assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"));
+    }
+
+    #[tokio::test]
+    async fn test_llm_as_judge_subagent_verification_loop() {
+        struct MockLlmJudge {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmJudge {
+            async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                // 1st call: initial agent request -> returns text
+                // 2nd call: judge subagent request -> returns REJECT
+                // 3rd call: agent request with rejection feedback -> returns corrected text
+                // 4th call: judge subagent request -> returns APPROVE
+
+                let content = if *count == 1 {
+                    "Here is my first attempt.".to_string()
+                } else if *count == 2 {
+                    "REJECT: Needs more cowbell.".to_string()
+                } else if *count == 3 {
+                    "Here is my corrected attempt with cowbell.".to_string()
+                } else {
+                    "APPROVE".to_string()
+                };
+
+                Ok(crate::types::ChatResponse {
+                    message: Message::assistant(content),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some(format!("id-{}", *count)),
+                })
+            }
+        }
+
+        let client = Arc::new(MockLlmJudge {
+            call_count: tokio::sync::Mutex::new(0),
+        });
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_llm_judge = true;
+        cfg.max_iterations = 5;
+
+        let agent = Agent::new(client, vec![]);
+        let mut events = vec![];
+        let mut on_event = |e: AgentEvent| {
+            events.push(e);
+        };
+
+        let result = agent.run(&cfg, "Do the task", &mut on_event).await.unwrap();
+
+        assert_eq!(result, "Here is my corrected attempt with cowbell.");
     }
 }
