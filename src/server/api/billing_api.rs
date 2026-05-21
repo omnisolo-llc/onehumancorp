@@ -64,9 +64,9 @@ pub async fn my_plan_handler(
 
     let next_bill_estimated = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => 0,
-        ::server_pricing::rate_limit::PlanTier::Starter => 9,
-        ::server_pricing::rate_limit::PlanTier::Pro => 29,
-        ::server_pricing::rate_limit::PlanTier::Business => 79,
+        ::server_pricing::rate_limit::PlanTier::Starter => 29,
+        ::server_pricing::rate_limit::PlanTier::Pro => 79,
+        ::server_pricing::rate_limit::PlanTier::Business => 299,
     };
 
     Json(MyPlanResponse {
