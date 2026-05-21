@@ -334,8 +334,6 @@ CREATE POLICY tenant_isolation_pages ON pages USING (tenant_id::text = current_s
 ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_memories ON memories USING (tenant_id::text = current_setting('app.current_tenant', true));
 
-ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_consolidated_memory ON consolidated_memory USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE agent_inbox ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_agent_inbox ON agent_inbox USING (tenant_id::text = current_setting('app.current_tenant', true));

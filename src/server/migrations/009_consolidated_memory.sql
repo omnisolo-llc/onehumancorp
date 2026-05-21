@@ -16,5 +16,8 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
     metadata JSONB
 );
 
+ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_consolidated_memory ON consolidated_memory USING (tenant_id::text = current_setting('app.current_tenant', true));
+
 -- +goose Down
 DROP TABLE IF EXISTS consolidated_memory;

@@ -20,7 +20,6 @@ BEGIN
             'state_machine_transitions',
             'pages',
             'memories',
-            'consolidated_memory',
             'agent_inbox',
             'meeting_rooms'
         ])
