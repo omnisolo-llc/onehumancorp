@@ -616,3 +616,45 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
 }
+#[test]
+fn test_hybrid_privacy_audit() {
+    // 1. Hybrid Privacy Audit: Contrast data handling in Cloud vs Standalone to ensure privacy-by-design in both.
+
+    // In Standalone mode, telemetry should be disabled by default (opt-in).
+    temp_env::with_vars(
+        [
+            ("OHC_STANDALONE", Some("true")),
+            ("STANDALONE_MODE", Some("true")),
+            ("DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+            ("OHC_SQLITE_KEY", Some("test-key")),
+        ],
+        || {
+            let config = ::server_config::load().unwrap();
+            assert_eq!(config.telemetry_enabled, false, "Standalone mode must default to NO telemetry");
+        },
+    );
+
+    // In Cloud (Multi-tenant) mode, telemetry can be enabled, but PII must be redacted.
+    temp_env::with_vars(
+        [
+            ("OHC_MULTITENANT", Some("true")),
+            ("OHC_STANDALONE", Some("false")),
+            ("STANDALONE_MODE", Some("false")),
+            ("OHC_TELEMETRY_ENABLED", Some("true")),
+        ],
+        || {
+            let config = ::server_config::load().unwrap();
+            // Telemetry is enabled in cloud mode
+            assert_eq!(config.telemetry_enabled, true, "Cloud mode should allow telemetry");
+
+            // Check redaction logic again for cloud context
+            let payload = serde_json::json!({
+                "tenant_id": "tenant-xyz",
+                "user_email": "sensitive@example.com",
+            });
+            let redacted = ::server_telemetry::redact_interface_pii(payload);
+            assert_eq!(redacted["user_email"], "[REDACTED]");
+            assert_eq!(redacted["tenant_id"], "tenant-xyz");
+        },
+    );
+}
