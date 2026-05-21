@@ -3078,7 +3078,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>5GB Storage Quota</li>
                                 <li>100 Products Limit</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter</button>
                         </div>
 
                         <div class="card glass">
@@ -3090,7 +3090,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>50GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro</button>
                         </div>
 
                         <div class="card glass">
@@ -3102,7 +3102,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>500GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
+                            <button onclick="showScreen('checkout-screen')">Upgrade to Business</button>
                         </div>
 
                         <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
@@ -3133,7 +3133,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('File chooser opened')">Upload Photo</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
+                        <button onclick="showScreen('pricing-screen')">Upgrade</button>
                         <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
                         <button class="secondary">Cancel Subscription</button>
                         <button class="secondary">Download Invoice</button>
