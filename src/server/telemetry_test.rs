@@ -274,7 +274,7 @@ mod tests {
         let mut violations = Vec::new();
 
         let mut search_dirs = vec![PathBuf::from(".")];
-        search_dirs.push(PathBuf::from("/app/src/server")); // Robust fallback
+        search_dirs.push(PathBuf::from("/app/src/server")); search_dirs.push(PathBuf::from("/app/src")); // Robust fallback
         if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
             search_dirs.push(PathBuf::from(runfiles_dir.clone()).join("ohc/src/server"));
             search_dirs.push(PathBuf::from(runfiles_dir).join("ohc/src"));
@@ -416,8 +416,7 @@ mod tests {
 
         let search_dirs_for_error = search_dirs.clone();
         if checked_files == 0 {
-            println!("Data compliance test skipped: Could not find any .rs files even in fallback. Search dirs: {:?}", search_dirs_for_error);
-            return;
+            panic!("Data compliance test skipped: Could not find any .rs files even in fallback. Search dirs: {:?}", search_dirs_for_error);
         }
         assert!(
             violations.is_empty(),
