@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useOnboardingStore } from './store';
+import { useEffect } from 'react';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
@@ -14,8 +15,13 @@ export default function OnboardingWizard() {
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
-    startResult, setStartResult
+    startResult, setStartResult,
+    loadState
   } = useOnboardingStore();
+
+  useEffect(() => {
+    loadState();
+  }, []);
 
   const handleNext = () => {
     if (step === 1 && !businessName.trim()) {
@@ -155,6 +161,8 @@ export default function OnboardingWizard() {
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
+                enterKeyHint="next"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
               />
               <button
                 onClick={handleNext}
@@ -176,6 +184,8 @@ export default function OnboardingWizard() {
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
+                enterKeyHint="done"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
               />
               <div className="flex gap-3">
                 <button

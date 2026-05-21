@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import '../lib/screens/onboarding.dart';
 
 void main() {
   testWidgets('Onboarding Screen - Full Flow Test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
     final client = MockClient((request) async {
-      if (request.url.path == '/api/onboarding/start') {
+      if (request.url.path == '/api/onboarding/state' || request.url.toString().contains('/api/onboarding/state')) {
+        return http.Response('{"step": 0}', 200);
+      } else if (request.url.path == '/api/onboarding/start' || request.url.toString().contains('/api/onboarding/start')) {
         return http.Response('{"status": "ok"}', 200);
-      } else if (request.url.path == '/api/onboarding/launch') {
+      } else if (request.url.path == '/api/onboarding/launch' || request.url.toString().contains('/api/onboarding/launch')) {
         return http.Response('{"status": "ok"}', 200);
       }
       return http.Response('Not Found', 404);
@@ -37,6 +41,8 @@ void main() {
 
     // Tap to build my storefront
     await tester.tap(find.text('Build My Storefront'));
+    await tester.pump(); // Start the async action
+    await tester.pump(const Duration(milliseconds: 500)); // allow the debounce/save timer to run
     await tester.pumpAndSettle();
 
     // Expect to be on Dashboard state

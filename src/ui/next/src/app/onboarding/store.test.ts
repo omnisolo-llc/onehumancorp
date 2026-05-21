@@ -1,7 +1,14 @@
 import { useOnboardingStore } from './store';
 import { describe, it, expect } from 'vitest';
 
+
+global.fetch = async () => ({
+  ok: true,
+  json: async () => ({})
+} as unknown as Response);
+
 describe('useOnboardingStore', () => {
+
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);

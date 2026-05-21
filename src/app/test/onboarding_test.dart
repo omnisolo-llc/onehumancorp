@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../lib/screens/onboarding.dart';
 
 void main() {
   testWidgets('Onboarding Screen - Welcome State UI components present', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(MaterialApp(home: OnboardingScreen()));
 
     expect(find.text('OneHumanCorp'), findsOneWidget);

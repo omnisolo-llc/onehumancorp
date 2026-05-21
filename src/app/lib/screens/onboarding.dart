@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'agent_dashboard.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
@@ -20,16 +22,89 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String bio = '';
   OnboardingState _state = OnboardingState.welcome;
   late final http.Client _client;
+  Timer? _debounceTimer;
+
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _client = widget.httpClient ?? http.Client();
+    _loadState();
   }
+
+  Future<void> _loadState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tenantId = prefs.getString('tenant_id') ?? 'default_tenant';
+    final userId = prefs.getString('user_id') ?? 'default_user';
+
+    try {
+      final response = await _client.get(
+        Uri.parse(const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080') + '/api/onboarding/state'),
+        headers: {
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data != null) {
+          setState(() {
+            if (data['businessName'] != null && data['businessName'] is String) {
+              bio = data['businessName'];
+            } else if (data['bio'] != null && data['bio'] is String) {
+              bio = data['bio'];
+            }
+            if (data['step'] != null && data['step'] is int) {
+               final stepIndex = data['step'] as int;
+               if (stepIndex >= 0 && stepIndex < OnboardingState.values.length) {
+                 _state = OnboardingState.values[stepIndex];
+               }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading state: $e');
+    }
+  }
+
+  Future<void> _saveState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tenantId = prefs.getString('tenant_id') ?? 'default_tenant';
+    final userId = prefs.getString('user_id') ?? 'default_user';
+    _formKey.currentState?.save(); // ensure bio is saved from form
+    try {
+      await _client.post(
+        Uri.parse(const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080') + '/api/onboarding/state'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: jsonEncode({
+          'bio': bio,
+          'businessName': bio,
+          'step': _state.index,
+        }),
+      );
+    } catch (e) {
+      print('Error saving state: $e');
+    }
+  }
+
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+      await _saveState();
       setState(() => _state = OnboardingState.generating);
 
       try {
@@ -243,6 +318,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               validator: (value) =>
                   value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => bio = value!,
+              onChanged: (value) {
+                bio = value;
+                if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+                _debounceTimer = Timer(Duration(milliseconds: 500), () {
+                  _saveState();
+                });
+              },
+              initialValue: bio,
             ),
             SizedBox(height: 32),
             ElevatedButton(
