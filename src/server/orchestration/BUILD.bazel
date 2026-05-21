@@ -6,6 +6,7 @@ filegroup(
         "health.rs",
         "hierarchical.rs",
         "hub.rs",
+        "locks.rs",
         "mesh.rs",
         "mod.rs",
         "orchestration_test.rs",

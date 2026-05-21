@@ -1,5 +1,6 @@
 pub mod tasks;
 pub mod shared_tasks;
+pub mod locks;
 #[cfg(test)]
 pub mod shared_tasks_test;
 #[cfg(test)]

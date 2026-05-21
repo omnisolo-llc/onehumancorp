@@ -49,6 +49,118 @@ pub struct DeliberationStateMachine {
     sqlite_mutex: Arc<Mutex<()>>,
 }
 
+use crate::orchestration::locks::DistributedLock;
+
+pub struct KairosStateMachine {
+    pub db: DbStore,
+    pub lock: Arc<dyn DistributedLock>,
+}
+
+impl KairosStateMachine {
+    pub fn new(db: DbStore, lock: Arc<dyn DistributedLock>) -> Self {
+        Self { db, lock }
+    }
+
+    pub async fn transition_to_ready(&self, task_id: &str) -> Result<(), String> {
+        self.apply_transition(task_id, "PENDING", "READY", None).await
+    }
+
+    pub async fn transition_to_in_progress(&self, task_id: &str, agent_id: &str) -> Result<(), String> {
+        self.apply_transition(task_id, "READY", "IN_PROGRESS", Some(agent_id)).await
+    }
+
+    pub async fn transition_to_blocked(&self, task_id: &str) -> Result<(), String> {
+        self.apply_transition(task_id, "IN_PROGRESS", "BLOCKED", None).await
+    }
+
+    pub async fn transition_to_completed(&self, task_id: &str) -> Result<(), String> {
+        self.apply_transition(task_id, "IN_PROGRESS", "COMPLETED", None).await
+    }
+
+    pub async fn apply_transition(
+        &self,
+        task_id: &str,
+        expected_status: &str,
+        new_status: &str,
+        agent_id: Option<&str>,
+    ) -> Result<(), String> {
+        let lock_key = format!("ohc:lock:task:{}", task_id);
+
+        let token = match self.lock.acquire(&lock_key, 10).await {
+            Ok(token) => token,
+            Err(_) => return Err(format!("Could not acquire lock for task {}", task_id)),
+        };
+
+        let is_ok_result: Result<bool, String> = async {
+            let is_ok = match &self.db {
+                DbStore::Postgres(pool) => {
+                    let mut query = String::from("UPDATE shared_tasks_v4 SET status = $1, updated_at = $2");
+                    if agent_id.is_some() {
+                        query.push_str(", agent_id = $3 WHERE id = $4 AND status = $5 RETURNING id");
+                        let res = sqlx::query(&query)
+                            .bind(new_status)
+                            .bind(Utc::now())
+                            .bind(agent_id.unwrap())
+                            .bind(task_id)
+                            .bind(expected_status)
+                            .fetch_optional(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                        res.is_some()
+                    } else {
+                        query.push_str(" WHERE id = $3 AND status = $4 RETURNING id");
+                        let res = sqlx::query(&query)
+                            .bind(new_status)
+                            .bind(Utc::now())
+                            .bind(task_id)
+                            .bind(expected_status)
+                            .fetch_optional(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                        res.is_some()
+                    }
+                }
+                DbStore::Sqlite(sqlite_pool) => {
+                    let mut query = String::from("UPDATE shared_tasks_v4 SET status = ?, updated_at = ?");
+                    if agent_id.is_some() {
+                        query.push_str(", agent_id = ? WHERE id = ? AND status = ? RETURNING id");
+                        let res = sqlx::query(&query)
+                            .bind(new_status)
+                            .bind(Utc::now().to_rfc3339())
+                            .bind(agent_id.unwrap())
+                            .bind(task_id)
+                            .bind(expected_status)
+                            .fetch_optional(sqlite_pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                        res.is_some()
+                    } else {
+                        query.push_str(" WHERE id = ? AND status = ? RETURNING id");
+                        let res = sqlx::query(&query)
+                            .bind(new_status)
+                            .bind(Utc::now().to_rfc3339())
+                            .bind(task_id)
+                            .bind(expected_status)
+                            .fetch_optional(sqlite_pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                        res.is_some()
+                    }
+                }
+            };
+            Ok(is_ok)
+        }.await;
+
+        let _ = self.lock.release(&lock_key, &token).await;
+
+        match is_ok_result {
+            Ok(true) => Ok(()),
+            Ok(false) => Err("Invalid state transition or task not found".to_string()),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 impl DeliberationStateMachine {
     pub fn new(db: DbStore) -> Self {
         Self {
@@ -541,5 +653,127 @@ mod tests {
         assert_eq!(DeliberationState::Claimed.as_ref(), "CLAIMED");
         assert_eq!(DeliberationState::Completed.as_ref(), "COMPLETED");
         assert_eq!(DeliberationState::Failed.as_ref(), "FAILED");
+    }
+
+    async fn setup_shared_tasks_db() -> sqlx::SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                agent_id TEXT,
+                priority TEXT NOT NULL DEFAULT 'P2',
+                payload TEXT,
+                parent_plan_id TEXT,
+                dependencies TEXT NOT NULL DEFAULT '[]',
+                locked_until TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            "#
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_kairos_state_machine_transitions() {
+        let pool = setup_shared_tasks_db().await;
+
+        sqlx::query(
+            "INSERT INTO shared_tasks_v4 (id, organization_id, title, status) VALUES ('task_1', 'org1', 'task 1', 'PENDING')"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let lock = Arc::new(crate::orchestration::locks::MutexLock::new());
+        let sm = KairosStateMachine::new(DbStore::Sqlite(pool.clone()), lock.clone());
+
+        // PENDING -> READY
+        sm.transition_to_ready("task_1").await.unwrap();
+        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks_v4 WHERE id = 'task_1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "READY");
+
+        // READY -> IN_PROGRESS
+        sm.transition_to_in_progress("task_1", "agent_alpha").await.unwrap();
+        let row: (String, String) = sqlx::query_as("SELECT status, agent_id FROM shared_tasks_v4 WHERE id = 'task_1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "IN_PROGRESS");
+        assert_eq!(row.1, "agent_alpha");
+
+        // Invalid transition: READY -> COMPLETED (should fail because expected status is IN_PROGRESS)
+        let res = sm.transition_to_completed("task_1").await;
+        // The apply_transition for COMPLETED expects IN_PROGRESS. We are IN_PROGRESS, so this succeeds.
+        // Wait, let's reset to test invalid.
+        sqlx::query("UPDATE shared_tasks_v4 SET status = 'READY' WHERE id = 'task_1'")
+            .execute(&pool).await.unwrap();
+
+        let res = sm.transition_to_completed("task_1").await;
+        assert!(res.is_err());
+
+        // Reset to IN_PROGRESS
+        sqlx::query("UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS' WHERE id = 'task_1'")
+            .execute(&pool).await.unwrap();
+
+        // IN_PROGRESS -> BLOCKED
+        sm.transition_to_blocked("task_1").await.unwrap();
+        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks_v4 WHERE id = 'task_1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "BLOCKED");
+    }
+
+    #[tokio::test]
+    async fn test_kairos_state_machine_concurrent_transitions() {
+        let pool = setup_shared_tasks_db().await;
+
+        sqlx::query(
+            "INSERT INTO shared_tasks_v4 (id, organization_id, title, status) VALUES ('task_concurrent', 'org1', 'task concurrent', 'PENDING')"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let lock = Arc::new(crate::orchestration::locks::MutexLock::new());
+        let sm = Arc::new(KairosStateMachine::new(DbStore::Sqlite(pool.clone()), lock.clone()));
+
+        // Spawn 10 tasks trying to transition PENDING -> READY at the same time
+        let mut handles = vec![];
+        for _ in 0..10 {
+            let sm_clone = sm.clone();
+            handles.push(tokio::spawn(async move {
+                sm_clone.transition_to_ready("task_concurrent").await
+            }));
+        }
+
+        let mut successes = 0;
+        let mut failures = 0;
+        for handle in handles {
+            match handle.await.unwrap() {
+                Ok(_) => successes += 1,
+                Err(_) => failures += 1,
+            }
+        }
+
+        // Only one should succeed because after the first, the status is no longer PENDING
+        assert_eq!(successes, 1);
+        assert_eq!(failures, 9);
+
+        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks_v4 WHERE id = 'task_concurrent'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "READY");
     }
 }

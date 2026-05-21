@@ -1,0 +1,77 @@
+<<<<<<< SEARCH
+            DbStore::Sqlite(sqlite_pool) => {
+                let mut query = String::from("UPDATE shared_tasks_v4 SET status = ?, updated_at = ?");
+                if agent_id.is_some() {
+                    query.push_str(", agent_id = ? WHERE id = ? AND status = ? RETURNING id");
+                    let res = sqlx::query(&query)
+                        .bind(new_status)
+                        .bind(Utc::now().to_rfc3339())
+                        .bind(agent_id.unwrap())
+                        .bind(task_id)
+                        .bind(expected_status)
+                        .fetch_optional(sqlite_pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    res.is_some()
+                } else {
+                    query.push_str(" WHERE id = ? AND status = ? RETURNING id");
+                    let res = sqlx::query(&query)
+                        .bind(new_status)
+                        .bind(Utc::now().to_rfc3339())
+                        .bind(task_id)
+                        .bind(expected_status)
+                        .fetch_optional(sqlite_pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    res.is_some()
+                }
+            }
+        };
+
+        if !is_ok {
+            return Err("Invalid state transition or task not found".to_string());
+        }
+
+        Ok(())
+    }
+=======
+            DbStore::Sqlite(sqlite_pool) => {
+                let mut query = String::from("UPDATE shared_tasks_v4 SET status = ?, updated_at = ?");
+                if agent_id.is_some() {
+                    query.push_str(", agent_id = ? WHERE id = ? AND status = ? RETURNING id");
+                    let res = sqlx::query(&query)
+                        .bind(new_status)
+                        .bind(Utc::now().to_rfc3339())
+                        .bind(agent_id.unwrap())
+                        .bind(task_id)
+                        .bind(expected_status)
+                        .fetch_optional(sqlite_pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    res.is_some()
+                } else {
+                    query.push_str(" WHERE id = ? AND status = ? RETURNING id");
+                    let res = sqlx::query(&query)
+                        .bind(new_status)
+                        .bind(Utc::now().to_rfc3339())
+                        .bind(task_id)
+                        .bind(expected_status)
+                        .fetch_optional(sqlite_pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    res.is_some()
+                }
+            }
+        };
+            Ok(is_ok)
+        }.await;
+
+        let _ = self.lock.release(&lock_key, &token).await;
+
+        match is_ok_result {
+            Ok(true) => Ok(()),
+            Ok(false) => Err("Invalid state transition or task not found".to_string()),
+            Err(e) => Err(e),
+        }
+    }
+>>>>>>> REPLACE

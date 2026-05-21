@@ -1,0 +1,18 @@
+<<<<<<< SEARCH
+        // Guarantee lock release via defer mechanism, even if the db queries early return err
+        let lock_guard = scopeguard::guard(token, |t| {
+            let lock_clone = self.lock.clone();
+            let key_clone = lock_key.clone();
+            tokio::spawn(async move {
+                let _ = lock_clone.release(&key_clone, &t).await;
+            });
+        });
+
+        let is_ok = match &self.db {
+=======
+        let token_clone = token.clone();
+
+        // Use an inner async block to catch the `?` returns
+        let is_ok_result: Result<bool, String> = async {
+            let is_ok = match &self.db {
+>>>>>>> REPLACE
