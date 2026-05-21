@@ -31,8 +31,6 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
-    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
-    google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -70,8 +68,6 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -258,14 +254,6 @@ impl IntegrationsRegistry {
         if integration_id == "jitsi" {
             let mut clients = self.jitsi_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "cal_com" {
-            let mut clients = self.cal_com_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "google_calendar" {
-            let mut clients = self.google_calendar_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
         }
 
         Ok(inst)
