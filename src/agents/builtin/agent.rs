@@ -1454,6 +1454,7 @@ impl Agent {
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
 
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut llm_recoverable_total_retries = 0;
         let mut malformed_retries = 0;
         let max_malformed_retries = 3;
 
@@ -1980,7 +1981,8 @@ impl Agent {
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
-                        if *count > final_cfg.max_retries {
+                        llm_recoverable_total_retries += 1;
+                        if *count > final_cfg.max_retries || llm_recoverable_total_retries > final_cfg.max_retries * 2 {
                             if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                 rewind_attempts_remaining -= 1;
                                 let _ = checkpoint_history.pop();
@@ -2164,7 +2166,8 @@ impl Agent {
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
-                            if *count > final_cfg.max_retries {
+                            llm_recoverable_total_retries += 1;
+                            if *count > final_cfg.max_retries || llm_recoverable_total_retries > final_cfg.max_retries * 2 {
                                 if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                     rewind_attempts_remaining -= 1;
                                     let _ = checkpoint_history.pop();
