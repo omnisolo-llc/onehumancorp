@@ -13,6 +13,8 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String bio = '';
+  String businessName = '';
+  String category = '';
   OnboardingState _state = OnboardingState.welcome;
 
   Future<void> submit() async {
@@ -26,9 +28,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'bio': bio,
-            'company_name': 'AI Generated Store',
+            'company_name': businessName,
             'business_type': 'Auto',
-            'selling_categories': ['food', 'physical'],
+            'selling_categories': [category],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
             'admin_name': 'Admin User',
@@ -42,10 +44,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
 
         if (response.statusCode == 200) {
-          setState(() => _state = OnboardingState.dashboard);
+          if (mounted) setState(() => _state = OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-           setState(() => _state = OnboardingState.input);
+          if (mounted) setState(() => _state = OnboardingState.input);
         }
       } catch (e) {
         print('Error: \$e');
@@ -172,10 +174,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: EdgeInsets.all(24),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             Text(
               'Welcome to OHC Smart Builder',
               style: TextStyle(
@@ -199,11 +202,47 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
+              key: Key('business-name-input'),
+              decoration: InputDecoration(
+                labelText: 'Business Name',
+                hintText: 'e.g., Maya\'s Cakes',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => businessName = value!,
+            ),
+            SizedBox(height: 16),
+            TextFormField(
+              key: Key('category-input'),
+              decoration: InputDecoration(
+                labelText: 'Category',
+                hintText: 'e.g., Bakery, Plumber, Tutor',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => category = value!,
+            ),
+            SizedBox(height: 16),
+            TextFormField(
               key: Key('bio-input'), // for testing or just semantics
               maxLines: 4,
               decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                labelText: 'Short Description',
+                hintText: 'e.g., I bake custom vegan cakes in Seattle.',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -238,6 +277,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

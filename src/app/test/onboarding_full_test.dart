@@ -14,16 +14,23 @@ void main() {
     expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
 
     // Tap without entering text to trigger validation
+    await tester.ensureVisible(find.text('Build My Storefront'));
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required' for the bio field
-    expect(find.text('Required'), findsOneWidget);
+    // Expect the validator message 'Required' for the fields
+    expect(find.text('Required'), findsNWidgets(3));
 
-    // Fill out the bio form
-    await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
+    // Fill out the form
+    await tester.enterText(find.byKey(Key('business-name-input')), "Maya's Cakes");
+    await tester.enterText(find.byKey(Key('category-input')), "Bakery");
+    await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle.");
     await tester.pumpAndSettle();
 
-    // Test that the form can be submitted. We just assert UI state here up to form submission.
+    await tester.ensureVisible(find.text('Build My Storefront'));
+    await tester.tap(find.text('Build My Storefront'));
+    await tester.pumpAndSettle();
+
+    // We just assert UI state here up to form submission.
   });
 }
