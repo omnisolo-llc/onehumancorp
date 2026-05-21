@@ -13,9 +13,9 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Connect Meta' })).toBeVisible();
-    await expect(page.getByText('Connect with Facebook/Instagram to route messages to your unified inbox.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect Meta' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Manychat' })).toBeVisible();
+    await expect(page.getByText('Unified Customer Inbox. Manage all your messages and posts from one place.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
   test('displays online booking integration card', async ({ page }) => {

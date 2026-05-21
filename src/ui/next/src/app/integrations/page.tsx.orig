@@ -12,7 +12,7 @@ export default function Integrations() {
     { id: "quickbooks", name: "QuickBooks Online", category: "finance", status: "connected", icon: "📊", description: "Automatically sync sales data and expenses for easier accounting." },
     { id: "stripe", name: "Stripe Advanced", category: "finance", status: "connected", icon: "💳", description: "Accept global payments and manage subscriptions seamlessly." },
     { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." },
-    { id: "meta", name: "Meta (Facebook & Instagram)", category: "marketing", status: "connected", icon: "♾️", description: "Connect with Facebook/Instagram to route messages to your unified inbox." },
+    { id: "manychat", name: "Manychat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
     { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated scheduling and calendar sync for service businesses." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚚", description: "Automated shipping rates and label printing for orders." },
