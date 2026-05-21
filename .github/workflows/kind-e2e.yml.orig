@@ -1,4 +1,4 @@
-name: Bazel Test
+name: Kind E2E
 
 on:
   push:
@@ -15,6 +15,9 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  KIND_VERSION: "v0.31.0"
+  KUBECTL_VERSION: "v1.36.1"
+  HELM_VERSION: "v3.20.2"
 
 permissions:
   contents: read
@@ -24,12 +27,10 @@ defaults:
     shell: bash
 
 jobs:
-  bazel-test:
+  kind-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6
-
       - name: Free runner disk space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -44,17 +45,48 @@ jobs:
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
           # Additional aggressive cleanup
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/local/lib/node_modules
-          sudo rm -rf /opt/hostedtoolcache
-          sudo rm -rf /usr/share/php
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf /usr/local/lib/node_modules || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/share/php || true
           sudo apt-get clean
-          sudo rm -rf /usr/local/lib/heroku
-          docker image prune -a -f || true
+          sudo rm -rf /usr/local/lib/heroku || true
+          docker image prune -a -f
           sudo swapoff -a || true
           sudo rm -f /swapfile || true
+      - uses: actions/checkout@v6
+
+      - name: Install Kubernetes tools
+        run: |
+          case "$(uname -m)" in
+            x86_64) CI_ARCH=amd64 ;;
+            aarch64|arm64) CI_ARCH=arm64 ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          echo "CI_ARCH=${CI_ARCH}" >> "${GITHUB_ENV}"
+
+          curl -fsSL -o /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
+          chmod +x /tmp/kind
+          sudo install /tmp/kind /usr/local/bin/kind
+
+          curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
+          chmod +x /tmp/kubectl
+          sudo install /tmp/kubectl /usr/local/bin/kubectl
+
+          curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
+          tar -C /tmp -xzf /tmp/helm.tar.gz
+          sudo install "/tmp/linux-${CI_ARCH}/helm" /usr/local/bin/helm
+
+          kind version
+          kubectl version --client=true
+          helm version --short
+
+      - name: Verify Docker is available
+        run: |
+          docker version
+          docker info
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -101,10 +133,21 @@ jobs:
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
-      - name: Test all targets
+      - name: Run Kind smoke test
         run: |
-          bazelisk test \
-            --test_output=errors \
+          command -v kind
+          command -v kubectl
+          command -v helm
+          command -v docker
+          command -v bazelisk
+          if [[ "${CI_ARCH}" == "arm64" ]]; then
+            BAZEL_PLATFORM_CONFIG=linux_arm64
+          else
+            BAZEL_PLATFORM_CONFIG=linux
+          fi
+          bazelisk test //deploy:kind_e2e_test \
+            --config="${BAZEL_PLATFORM_CONFIG}" \
+            --nocache_test_results \
+            --test_output=streamed \
             --test_summary=terse \
-            --test_timeout=300,600,900,1800 \
-            //...
+            --test_timeout=300,600,900,1800
