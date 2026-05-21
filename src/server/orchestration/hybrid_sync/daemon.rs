@@ -91,6 +91,8 @@ impl HybridSyncDaemon {
             .fetch_all(&self.sqlite_pool)
             .await?;
 
+        let mut success_count = 0;
+
         for row in rows {
             let id: String = row.get("memory_id");
             let context: String = row.get("context");
@@ -153,11 +155,22 @@ impl HybridSyncDaemon {
                         .execute(&self.sqlite_pool)
                         .await?;
                     info!("Successfully escalated memory_id: {} to cloud queue: {}", id, queue_id);
+                    success_count += 1;
+
+                    if let Err(e) = ::server_telemetry::record_rag_escalation(&self.pg_pool, "system", "").await {
+                        warn!("Failed to record RAG escalation telemetry: {}", e);
+                    }
                 }
                 Err(e) => {
                     let _ = tx.rollback().await;
                     warn!("Failed to escalate memory_id: {}, gracefully degrading (cloud unreachable). Error: {}", id, e);
                 }
+            }
+        }
+
+        if success_count > 0 {
+            if let Err(e) = ::server_telemetry::record_sync_escalation(&self.pg_pool, success_count as f32, ::server_telemetry::get_deployment_mode()).await {
+                warn!("Failed to record sync escalation telemetry: {}", e);
             }
         }
 
