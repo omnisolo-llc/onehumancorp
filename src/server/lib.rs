@@ -3202,7 +3202,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>5GB Storage Quota</li>
                                 <li>100 Products Limit</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
+                            <button onclick="handleStripeUpgrade('Starter')">Upgrade to Starter via Stripe</button>
                         </div>
 
                         <div class="card glass">
@@ -3214,7 +3214,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>50GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
+                            <button onclick="handleStripeUpgrade('Pro')">Upgrade to Pro via Stripe</button>
                         </div>
 
                         <div class="card glass">
@@ -3226,7 +3226,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>500GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
+                            <button onclick="handleStripeUpgrade('Business')">Upgrade to Business via Stripe</button>
                         </div>
 
                         <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
@@ -4362,6 +4362,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const content = `🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
                             document.getElementById('promo-content').innerHTML = content;
                             document.getElementById('promo-result').style.display = 'block';
+                        }
+
+                        async function handleStripeUpgrade(plan_id) {
+                            try {
+                                const response = await fetch('/api/v1/orchestration/select_plan', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ plan_id: plan_id })
+                                });
+                                const data = await response.json();
+                                if (data.checkout_url) {
+                                    window.location.href = data.checkout_url;
+                                } else {
+                                    alert('Failed to redirect to Stripe checkout for ' + plan_id + ' plan.');
+                                }
+                            } catch (error) {
+                                console.error('Error redirecting to Stripe checkout:', error);
+                                alert('Error redirecting to Stripe checkout for ' + plan_id + ' plan.');
+                            }
                         }
 
                         function showScreen(id) {

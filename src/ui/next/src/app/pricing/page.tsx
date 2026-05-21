@@ -6,8 +6,23 @@ import { useRouter } from 'next/navigation';
 export default function PricingPage() {
   const router = useRouter();
 
-  const handleUpgrade = (tier: string) => {
-    alert(`Redirecting to Stripe checkout for ${tier} plan...`);
+  const handleUpgrade = async (tier: string) => {
+    try {
+      const response = await fetch('/api/v1/orchestration/select_plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: tier })
+      });
+      const data = await response.json();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert(`Failed to redirect to Stripe checkout for ${tier} plan.`);
+      }
+    } catch (error) {
+      console.error("Error redirecting to Stripe checkout:", error);
+      alert(`Error redirecting to Stripe checkout for ${tier} plan.`);
+    }
   };
 
   return (
