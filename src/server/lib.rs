@@ -1776,6 +1776,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/website-builder", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
+        .route("/team", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
@@ -1869,6 +1870,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
+        .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()))
+        .route("/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
@@ -1876,6 +1879,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
@@ -2191,7 +2195,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: #ffffff;
                             box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
-                        button { 
+                        button {
+            min-height: 44px;
+            min-width: 44px;
                             min-height: 44px;
                             min-width: 44px;
                             padding: 10px 18px;
@@ -2306,6 +2312,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 border-radius: 12px;
                             }
                             #setup-screen button {
+            min-height: 44px;
+            min-width: 44px;
                                 width: 100%;
                                 margin-right: 0;
                             }
@@ -2520,7 +2528,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('agents-screen')">Agents</a>
+                        <a onclick="showScreen('team-screen')">Your Team</a>
                         <a onclick="showScreen('setup-screen')">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
@@ -2550,6 +2558,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
 
+                        <!-- Milestone Viral Share Loop Banner -->
+                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
+                            <div class="flex items-center gap-4">
+                                <span class="text-3xl" style="font-size: 32px;">🎉</span>
+                                <div>
+                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked: Your First Customers!</h3>
+                                    <p class="m-0 text-sm opacity-90" style="margin: 0; opacity: 0.9; color: white;">You've reached <span id="milestone-customers-count">0</span> active customers. Share your store's success to earn a free month of Pro!</p>
+                                </div>
+                            </div>
+                            <button
+                                onclick="const tenant = localStorage.getItem('tenant_id') || 'DEFAULT'; window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just reached ' + document.getElementById('milestone-customers-count').textContent + ' customers on my store! Start your own business today with One Human Corp: ohc://join?ref=' + tenant)}`, '_blank'); dismissMilestoneShareBanner();"
+                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold text-orange-500 shadow-sm transition-colors hover:bg-orange-50"
+                                style="background: white; color: #f97316; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
+                            >
+                                Share & Claim Reward
+                            </button>
+                        </div>
+
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
                             <h2 id="todays-sales" style="font-size: 48px; margin: 0; color: var(--primary);">$0.00</h2>
@@ -2563,7 +2589,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your AI assistants are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
-                            <button onclick="showScreen('agents-screen')">My AI Assistants</button>
+                            <button onclick="showScreen('team-screen')">Your Team</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
@@ -2594,7 +2620,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('agents-screen')">Manage AI Assistants</button>
+                            <button onclick="showScreen('team-screen')">Manage Your Team</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -2769,9 +2795,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Calendly Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Calendly account to enable AI to auto-schedule appointments from the unified inbox.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Calendly</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -2831,9 +2857,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Agents Page (My Staff) -->
-                    <div id="agents-screen" class="screen">
-                        <h1 class="outfit">My Staff</h1>
+                    <!-- Agents Page (Your Team) -->
+                    <div id="team-screen" class="screen">
+                        <h1 class="outfit">Your Team</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
@@ -2903,71 +2929,71 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <!-- Buffer Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Buffer</h3>
+                                    <h3 style="margin: 0;">Manychat</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Customer Inbox. Manage all your messages and posts from one place.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Buffer...')">Connect</button>
+                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Manychat...')">Connect</button>
                             </div>
 
                             <!-- Acuity Scheduling Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Acuity Scheduling</h3>
+                                    <h3 style="margin: 0;">Calendly</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Booking. Let customers schedule appointments 24/7.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Acuity...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Calendly...')">Connect</button>
                             </div>
 
                             <!-- ActiveCampaign Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">ActiveCampaign</h3>
+                                    <h3 style="margin: 0;">Mailchimp</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">✉️</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Newsletters. Keep your customers engaged easily.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up ActiveCampaign...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
                             </div>
 
                             <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">ShipStation</h3>
+                                    <h3 style="margin: 0;">Shippo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Labels & Tracking. Save time on fulfilling orders.</p>
-                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to ShipStation...')">Connect</button>
+                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to Shippo...')">Connect</button>
                             </div>
 
                             <!-- MessageBird Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">MessageBird</h3>
+                                    <h3 style="margin: 0;">Twilio</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Text Alerts. Send critical updates directly to phones.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to MessageBird...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
                             <!-- Alipay Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Alipay</h3>
+                                    <h3 style="margin: 0;">Mercado Pago</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Alipay...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
                             <!-- Microsoft Teams Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Microsoft Teams</h3>
+                                    <h3 style="margin: 0;">Zoom</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🎥</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Instant Video Rooms. Host online meetings effortlessly.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting Video Provider...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Zoom...')">Connect</button>
                             </div>
                         </div>
 
@@ -3218,32 +3244,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glassmorphism">
-                        <h1>OneHuman</h1>
-                        <div id="step-1">
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
+                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" class="hidden" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" />
-                            <button onclick="nextStep(3)">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)">Back</button>
+                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
+                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
+                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" />
-                            <button onclick="nextStep('generating')">Generate Description</button>
-                            <button onclick="nextStep(4)">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)">Back</button>
+                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
+                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-4" class="hidden" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
@@ -3253,73 +3279,73 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
                             </div>
-                            <button onclick="nextStep(5)">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)">Back</button>
+                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" />
-                            <input type="text" placeholder="0.00" />
-                            <button onclick="nextStep('generating')">Generate AI Description</button>
-                            <button onclick="nextStep(6)">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)">Back</button>
+                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
+                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-6" class="hidden" class="hidden" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)">Back</button>
+                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
+                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" />
-                            <input type="email" placeholder="you@email.com" />
-                            <input type="password" placeholder="Password" />
-                            <button onclick="nextStep(8)">Next →</button>
+                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
+                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)">Bold</button>
+                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
+                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
                             <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
                                 <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
                                 <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
-                                <button class="secondary" style="background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
+                                <button class="secondary" style="border-radius: 8px; background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
                             </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px;">Next →</button>
+                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-9" class="hidden" class="hidden" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)">Next →</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)"><span>Publish my business</span> <span>→</span></button>
+                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')">Launch My Business →</button>
+                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
                             <p>⬜ Add 3 more products</p>
                             <p>⬜ Connect Instagram</p>
                             <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')">Go to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." />
-                            <button onclick="generateAI()">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)">Back</button>
+                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
+                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
+                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-generating" class="hidden" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
@@ -3332,7 +3358,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-launch-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')">Continue to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
                     </div>
 
@@ -3424,10 +3450,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
 
                                 try {
-                                    await fetch('/api/wizard/state', {
+                                    await fetch('/api/onboarding/state', {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ state: JSON.stringify(state) })
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
+                                            'X-User-ID': localStorage.getItem('user_id') || 'test-user'
+                                        },
+                                        body: JSON.stringify(state)
                                     });
                                 } catch (e) {
                                     console.error('Failed to save state to server', e);
@@ -3444,11 +3474,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
 
                             try {
-                                const res = await fetch('/api/wizard/state');
+                                const res = await fetch('/api/onboarding/state', {
+                                    headers: {
+                                        'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
+                                        'X-User-ID': localStorage.getItem('user_id') || 'test-user'
+                                    }
+                                });
                                 if (res.ok) {
                                     const data = await res.json();
-                                    if (data && data.state) {
-                                        const state = JSON.parse(data.state);
+                                    if (data) {
+                                        const state = data;
                                         inputs.forEach((input, index) => {
                                             if (input.type === 'checkbox') {
                                                 if (state['checkbox_' + index] !== undefined) {
@@ -3748,6 +3783,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('milestone-card').style.display = 'none';
                         }
 
+                        function dismissMilestoneShareBanner() {
+                            const banner = document.getElementById('milestone-share-banner');
+                            if (banner) {
+                                banner.style.display = 'none';
+                                banner.classList.add('hidden');
+                            }
+                            localStorage.setItem('milestone_banner_dismissed', 'true');
+
+                            fetch('/api/v1/growth/referrals/click', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: localStorage.getItem('tenant_id') || 'DEFAULT' })
+                            }).catch(console.error);
+
+                            alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
+                        }
+
                         async function draftInboxReply(btn) {
                             const input = document.getElementById('reply-input');
                             btn.disabled = true;
@@ -3789,7 +3841,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
                             'my-plan-screen': '/my-plan',
-                            'agents-screen': '/agents',
+                            'team-screen': '/team',
                             'diagnostics-screen': '/diagnostics',
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
@@ -3973,6 +4025,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     return false;
                                 }
                             }
+                            if (stepId === 8 && currentStep === 7) {
+                                const emailInput = document.querySelector('#step-7 input[type="email"]');
+                                if (!emailInput || emailInput.value.trim().length === 0 || !emailInput.value.includes('@')) {
+                                    alert('Please enter a valid email address');
+                                    return false;
+                                }
+                            }
                             return true;
                         }
 
@@ -3982,13 +4041,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
                                 try {
-
                                     const stateData = { step: stepId };
                                     document.querySelectorAll('input').forEach(input => {
                                         if (input.placeholder && input.value) {
                                             stateData[input.placeholder] = input.value;
                                         }
                                     });
+                                    localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
+
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
                                     const userId = localStorage.getItem('user_id') || 'test-user';
                                     fetch('/api/onboarding/state', {
@@ -4204,6 +4264,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
                                 })
                                 .catch(err => console.error('Error fetching sales:', err));
+
+                                fetch('/api/v1/dashboard/metrics', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                    body: JSON.stringify({ tenant_id: tenant })
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    const banner = document.getElementById('milestone-share-banner');
+                                    const countEl = document.getElementById('milestone-customers-count');
+                                    const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
+                                    if (banner && countEl && !dismissed) {
+                                        if (data.active_customers > 0) {
+                                            banner.style.display = 'flex';
+                                            banner.classList.remove('hidden');
+                                            countEl.textContent = data.active_customers;
+                                        } else {
+                                            banner.style.display = 'none';
+                                            banner.classList.add('hidden');
+                                        }
+                                    }
+                                })
+                                .catch(err => console.error('Error fetching metrics:', err));
                             }
 
                             if (id === 'my-plan-screen') {
@@ -4235,7 +4318,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -4294,25 +4377,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (screenId === 'setup-screen') {
                                 try {
+                                    let stateData = null;
+                                    const localState = localStorage.getItem('ohc_wizard_state');
+                                    if (localState) {
+                                        try {
+                                            stateData = JSON.parse(localState);
+                                        } catch(e) {}
+                                    }
+
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
                                     const userId = localStorage.getItem('user_id') || 'test-user';
+
                                     const res = await fetch('/api/onboarding/state', {
                                         headers: {
                                             'X-Tenant-ID': tenantId,
                                             'X-User-ID': userId
                                         }
-                                    });
-                                    if (res.ok) {
+                                    }).catch(() => null);
+
+                                    if (res && res.ok) {
                                         const data = await res.json();
-                                        if (data.step && data.step > 1) {
-                                            // Restore form inputs
-                                            document.querySelectorAll('input').forEach(input => {
-                                                if (input.placeholder && data[input.placeholder]) {
-                                                    input.value = data[input.placeholder];
-                                                }
-                                            });
-                                            nextStep(data.step);
+                                        if (data && data.step) {
+                                            stateData = data;
                                         }
+                                    }
+
+                                    if (stateData && stateData.step && stateData.step > 1) {
+                                        // Restore form inputs
+                                        document.querySelectorAll('input').forEach(input => {
+                                            if (input.placeholder && stateData[input.placeholder]) {
+                                                input.value = stateData[input.placeholder];
+                                            }
+                                        });
+                                        nextStep(stateData.step);
                                     }
                                 } catch (e) {
                                     console.error('Failed to load state', e);

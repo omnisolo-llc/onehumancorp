@@ -1372,7 +1372,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1385,7 +1385,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_mesh_broadcast_total[5m])) by (deployment_mode)",
           "legendFormat": "{{deployment_mode}}",
@@ -1914,7 +1914,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1927,7 +1927,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
           "legendFormat": "{{deployment_mode}}",
@@ -1995,7 +1995,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -2008,7 +2008,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
           "legendFormat": "{{deployment_mode}}",

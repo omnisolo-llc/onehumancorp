@@ -35,6 +35,19 @@ mod tests {
     use ::server_telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
+    fn test_organization_id_not_redacted() {
+        let input = json!({
+            "organization_id": "tenant-123",
+            "safe_field": "ok"
+        });
+        let expected = json!({
+            "organization_id": "tenant-123",
+            "safe_field": "ok"
+        });
+        assert_eq!(redact_interface_pii(input), expected);
+    }
+
+    #[test]
     fn test_redact_pii_password() {
         let input = json!({
             "username": "maya",
@@ -589,4 +602,15 @@ fn test_multi_tenant_pii_leakage_guardrail() {
     assert_eq!(redacted["api_key"], "[REDACTED]", "api_key must be redacted");
     assert_eq!(redacted["data"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
     assert_eq!(redacted["data"]["safe_metric"], 42, "safe metrics should remain intact");
+}
+
+#[test]
+fn test_harness_telemetry_recording() {
+    // This test ensures the metric recording logic runs without panicking.
+    // It calls the `record_harness_init_latency` and `record_harness_db_io_latency` functions.
+    // In a real environment, opentelemetry global meter would capture these.
+
+    ::server_telemetry::record_harness_init_latency(1.23);
+    ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
+    ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
 }

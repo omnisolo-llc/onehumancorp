@@ -211,6 +211,7 @@ pub(crate) struct HierarchicalPromptBuilder {
     tool_definitions: String,
     developer_instructions: String,
     user_instructions: String,
+    enable_lost_in_the_middle_prevention: bool,
 }
 
 impl HierarchicalPromptBuilder {
@@ -240,6 +241,7 @@ impl HierarchicalPromptBuilder {
             tool_definitions: tool_defs,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
+            enable_lost_in_the_middle_prevention: cfg.enable_lost_in_the_middle_prevention,
         }
     }
 
@@ -277,6 +279,14 @@ impl HierarchicalPromptBuilder {
             }
             combined_system.push_str("[User Instructions]\n");
             combined_system.push_str(&self.user_instructions);
+        }
+
+        if self.enable_lost_in_the_middle_prevention && !self.server_system_message.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
+            combined_system.push_str(&self.server_system_message);
         }
 
         combined_system
@@ -405,9 +415,15 @@ impl Agent {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.to_vec();
                 let messages_clone = messages.clone();
+                let cfg_clone = cfg.clone();
                 read_only_futures.push(async move {
-                    let r = match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                        Ok(res) => res,
+                    // Anthropic Mechanic: 3-Stage Tool Gating
+                    let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
+                    let r = match gating_res {
+                        Ok(_) => match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                            Ok(res) => res,
+                            Err(e) => format!("Error: {:?}", e),
+                        },
                         Err(e) => format!("Error: {:?}", e),
                     };
                     (tc_clone, r)
@@ -435,8 +451,13 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                let r = match self.execute_tool(tc, session_tools, &messages).await {
-                    Ok(res) => res,
+                // Anthropic Mechanic: 3-Stage Tool Gating
+                let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
+                let r = match gating_res {
+                    Ok(_) => match self.execute_tool(tc, session_tools, &messages).await {
+                        Ok(res) => res,
+                        Err(e) => format!("Error: {:?}", e),
+                    },
                     Err(e) => format!("Error: {:?}", e),
                 };
 
@@ -504,7 +525,7 @@ impl Agent {
             initial_messages.push(Message::user(initial_message));
         }
 
-        let mut graph = crate::langgraph::StateGraph::new(std::sync::Arc::new(crate::langgraph::DefaultReducer));
+        let mut graph = crate::langgraph::StateGraph::<serde_json::Value>::new(std::sync::Arc::new(crate::langgraph::DefaultReducer));
 
         let llm = self.llm.clone();
         let tools_def: Vec<_> = session_tools.iter().map(|t| crate::types::ToolDefinition {
@@ -636,6 +657,7 @@ impl Agent {
         let cfg_max_retries = cfg.max_retries;
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
+            let cfg_arc_node = cfg_arc.clone();
             Box::pin(async move {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
@@ -660,10 +682,21 @@ impl Agent {
                 let mut read_only_futures = Vec::new();
                 for tc_val in read_only_calls {
                     let tt_clone = tt.clone();
+                    let cfg_arc_clone = cfg_arc_node.clone();
                     read_only_futures.push(async move {
                         let name = tc_val["name"].as_str().unwrap();
                         let args = tc_val["arguments"].clone();
                         let id = tc_val["id"].as_str().unwrap().to_string();
+
+                        let tc = crate::types::ToolCall {
+                            id: id.clone(),
+                            name: name.to_string(),
+                            arguments: args.clone(),
+                        };
+
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, true, &cfg_arc_clone) {
+                            return (id, Err(e));
+                        }
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
@@ -752,6 +785,38 @@ impl Agent {
                     let args = tc_val["arguments"].clone();
                     let id = tc_val["id"].as_str().unwrap();
                     let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+
+                    let tc = crate::types::ToolCall {
+                        id: id.to_string(),
+                        name: name.to_string(),
+                        arguments: args.clone(),
+                    };
+
+                    let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
+                    if let Err(e) = gating_err {
+                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+                        match final_res {
+                            Ok(_) => unreachable!(),
+                            Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                error_counts.insert(name.to_string(), serde_json::json!(count));
+                                if count > cfg_max_retries as u64 {
+                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                }
+                                tool_results_json[idx] = serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": "",
+                                    "error": msg
+                                });
+                            }
+                            Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error after retries: {}", msg)),
+                            Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
+                            Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
+                            Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
+                        }
+                        continue;
+                    }
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
@@ -843,6 +908,7 @@ impl Agent {
         // --- EDGES ---
         graph.add_edge("tool_node", "llm_call");
 
+        // LangChain/LangGraph: conditional edges (if tool calls present -> route to `tool_node`; if absent -> route to `END`).
         graph.add_conditional_edges("llm_call", |state| {
             if state.get("has_tool_calls").and_then(|v| v.as_bool()).unwrap_or(false) {
                 "tool_node".to_string()
@@ -1007,6 +1073,10 @@ impl Agent {
 
         // Phase 2: Execution
         let mut executed_steps = Vec::new();
+
+        let mut read_only_calls = vec![];
+        let mut mutating_calls = vec![];
+
         for (i, step) in plan.into_iter().enumerate() {
             let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
             let args = step.get("args").unwrap_or(&serde_json::Value::Null);
@@ -1017,22 +1087,106 @@ impl Agent {
                 arguments: args.clone(),
             };
 
+            let is_read_only = session_tools.iter().find(|t| t.name == dummy_tc.name).map(|t| t.is_read_only).unwrap_or(false);
+            if is_read_only {
+                read_only_calls.push((i, dummy_tc));
+            } else {
+                mutating_calls.push((i, dummy_tc));
+            }
+        }
+
+        let mut read_only_futures = Vec::new();
+        for (_, tc) in &read_only_calls {
+            let tc_clone = tc.clone();
+            let session_tools_clone = session_tools.to_vec();
+            let max_retries = cfg.max_retries;
+
+            let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
+            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
+                 return Err(Box::new(e));
+            }
+
+            read_only_futures.push(async move {
+                let mut retry_count = 0;
+                loop {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &[]).await {
+                        Ok(res) => break Ok(res),
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            if retry_count < max_retries {
+                                retry_count += 1;
+                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                tokio::time::sleep(backoff).await;
+                                continue;
+                            } else {
+                                break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
+                            }
+                        }
+                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
+                        }
+                        Err(e) => {
+                            break Err(e);
+                        }
+                    }
+                }
+            });
+        }
+
+        let results = futures::future::join_all(read_only_futures).await;
+        for (idx, (i, tc)) in read_only_calls.into_iter().enumerate() {
             on_event(AgentEvent::ToolCall {
-                name: tool_name.to_string(),
-                args_json: args.to_string(),
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
                 result: "Executing planned step...".to_string(),
                 iteration: i as i32,
             });
 
-            // Gating mechanics
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&dummy_tc, false, cfg) {
+            let res = match &results[idx] {
+                Ok(r) => r.clone(),
+                Err(crate::types::ToolError::UserFixable(msg)) => {
+                    let err = format!("USER_FIXABLE: {}", msg);
+                    on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                    return Err(err.into());
+                }
+                Err(crate::types::ToolError::Fatal(msg)) => {
+                    return Err(format!("Fatal tool error: {}", msg).into());
+                }
+                Err(crate::types::ToolError::Unexpected(msg)) => {
+                    return Err(format!("Unexpected tool error: {}", msg).into());
+                }
+                Err(e) => {
+                    return Err(format!("Fatal tool error: {:?}", e).into());
+                }
+            };
+
+            on_event(AgentEvent::ToolCall {
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
+                result: res.clone(),
+                iteration: i as i32,
+            });
+
+            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tc.name, tc.arguments, res));
+        }
+
+        // Execute mutating tools serially
+        for (i, tc) in mutating_calls {
+            on_event(AgentEvent::ToolCall {
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
+                result: "Executing planned step...".to_string(),
+                iteration: i as i32,
+            });
+
+            let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg) {
                  return Err(Box::new(e));
             }
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let result = loop {
-                match self.execute_tool(&dummy_tc, session_tools, &[]).await {
+                match self.execute_tool(&tc, session_tools, &[]).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -1045,8 +1199,6 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Since plan-and-execute can't immediately feed back to the LLM within the same loop easily,
-                        // we add it to the execution summary so the replier sees the error and can try to fix it or report it.
                         break format!("Error executing planned step (LlmRecoverable): {}", msg);
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -1067,14 +1219,26 @@ impl Agent {
             };
 
             on_event(AgentEvent::ToolCall {
-                name: tool_name.to_string(),
-                args_json: args.to_string(),
+                name: tc.name.clone(),
+                args_json: tc.arguments.to_string(),
                 result: result.clone(),
                 iteration: i as i32,
             });
 
-            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tool_name, args, result));
+            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tc.name, tc.arguments, result));
         }
+
+        // Sort executed steps to restore plan order
+        executed_steps.sort_by_key(|s| {
+            if let Some(prefix) = s.strip_prefix("Step ") {
+                if let Some(colon_idx) = prefix.find(':') {
+                    if let Ok(idx) = prefix[..colon_idx].parse::<usize>() {
+                        return idx;
+                    }
+                }
+            }
+            usize::MAX
+        });
 
         // Phase 3: Replier
         let replier_system = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();
@@ -1692,27 +1856,39 @@ impl Agent {
 
                 // Inferential/Sensors (LLM-as-judge subagent)
                 if final_cfg.enable_llm_judge {
+                    #[derive(serde::Deserialize)]
+                    struct JudgeEvaluation {
+                        status: String,
+                        reason: String,
+                        confidence: f32,
+                    }
                     let judge_req = ChatRequest {
                         model: final_cfg.model.clone(),
-                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
-                        messages: vec![Message::user(format!("Evaluate this output:
-{}", last_assistant_content))],
+                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.".to_string(),
+                        messages: vec![Message::user(format!("Evaluate this output:\n{}", last_assistant_content))],
                         tools: vec![],
                         max_tokens: 500,
                         temperature: 0.0,
                     };
 
-                    match self.llm.chat(judge_req).await {
-                        Ok(judge_resp) => {
-                            let judge_text = judge_resp.message.content.trim();
-                            if judge_text.starts_with("REJECT:") {
-                                let reason = judge_text.strip_prefix("REJECT:").unwrap_or(judge_text).trim();
-                                let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Please correct your work and use tools if necessary.", reason);
+                    struct ParserClientWrapper {
+                        llm: std::sync::Arc<dyn crate::llm::LlmClient>,
+                    }
+                    #[async_trait::async_trait]
+                    impl crate::output_parser::LlmClientForParser for ParserClientWrapper {
+                        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                            self.llm.chat(req).await
+                        }
+                    }
+                    let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> = std::sync::Arc::new(ParserClientWrapper { llm: self.llm.clone() });
+                    match crate::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, judge_req, 3).await {
+                        Ok(eval) => {
+                            if eval.status.to_uppercase() == "REJECT" {
+                                let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Confidence: {:.2}. Please correct your work and use tools if necessary.", eval.reason, eval.confidence);
                                 messages.push(Message::user(err_msg));
                                 continue;
                             }
-                            // If APPROVE or anything else, we proceed to output guardrails.
-                        }
+                        },
                         Err(e) => {
                             let err = format!("LLM Judge error: {}", e);
                             on_event(AgentEvent::TaskError { error: err.clone() });
@@ -2144,39 +2320,11 @@ impl Agent {
             }
 
             if final_cfg.enable_observation_masking {
-                // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
-                // but keep the `tool_calls` themselves visible so the model remembers what it did.
-                // Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
-                let msg_count = messages.len();
-                for i in 0..msg_count {
-                    if messages[i].role == Role::Tool {
-                        let age = msg_count - i;
-                        if age > final_cfg.observation_masking_threshold {
-                            for tr in &mut messages[i].tool_results {
-                                if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
-                                    let bytes = tr.content.len();
-                                    if bytes > final_cfg.observation_masking_size_limit {
-                                        let preview_chars = 100;
-                                        let char_count = tr.content.chars().count();
-                                        if char_count > preview_chars * 2 {
-                                            let start_preview: String = tr.content.chars().take(preview_chars).collect();
-                                            let end_preview: String = tr.content.chars().skip(char_count - preview_chars).collect();
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, start_preview, end_preview, tr.tool_call_id
-                                            );
-                                        } else {
-                                            tr.content = format!(
-                                                "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                                bytes, tr.tool_call_id
-                                            );
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                crate::observation_masking::apply_observation_masking(
+                    &mut messages,
+                    final_cfg.observation_masking_threshold,
+                    final_cfg.observation_masking_size_limit,
+                );
             }
 
             // Append tool results as a user turn.
@@ -2249,7 +2397,8 @@ impl Agent {
             }
 
 
-            // Context Compaction Mechanic
+            // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
+            // Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. When approaching token limits, summarize history.
             // Use the input_tokens from the last request to determine the current context window size.
 
             if final_cfg.enable_context_compaction && turn_input_tokens > final_cfg.compaction_threshold_tokens {
@@ -3868,6 +4017,7 @@ mod tests {
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
 
         let tool = crate::tools::Tool {
             name: "test_tool".to_string(),
@@ -3890,6 +4040,7 @@ mod tests {
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
@@ -3904,6 +4055,7 @@ mod tests {
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
@@ -4015,9 +4167,20 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: Message::assistant("REJECT: The answer is incomplete."),
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
@@ -4027,9 +4190,20 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: Message::assistant("APPROVE"),
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_2".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good.", "confidence": 0.95}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
             ]),
@@ -5445,3 +5619,41 @@ mod stream_tests {
         // We'll trust the trace and the logic. A more deterministic check is fine.
         assert!(elapsed >= 300, "Should take at least 300ms (100 concurrent + 100 serial + 100 serial)");
     }
+
+#[cfg(test)]
+mod hierarchical_prompt_tests {
+    use super::*;
+
+    #[test]
+    fn test_lost_in_the_middle_prevention() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
+        cfg.developer_instructions = "Use standard libraries.".to_string();
+        cfg.user_instructions = "Please calculate 2+2".to_string();
+        cfg.enable_lost_in_the_middle_prevention = true;
+
+        let tools = vec![];
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let prompt = builder.build();
+
+        assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
+        assert!(prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
+        assert!(prompt.ends_with("CRITICAL: Never delete the database."));
+    }
+
+    #[test]
+    fn test_lost_in_the_middle_prevention_disabled() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
+        cfg.developer_instructions = "Use standard libraries.".to_string();
+        cfg.user_instructions = "Please calculate 2+2".to_string();
+        cfg.enable_lost_in_the_middle_prevention = false;
+
+        let tools = vec![];
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let prompt = builder.build();
+
+        assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
+        assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"));
+    }
+}

@@ -7,7 +7,7 @@ use tokio::time::{sleep, Duration};
 pub struct AutoDreamPipeline {
     db: Arc<DB>,
     llm_client: Arc<dyn LLMClient>,
-    pub cache: Option<Arc<::server_pricing::cache::LocalEmbeddingCache>>,
+    pub cache: Option<Arc<crate::pricing::cache::LocalEmbeddingCache>>,
 }
 
 impl AutoDreamPipeline {
@@ -15,7 +15,7 @@ impl AutoDreamPipeline {
         AutoDreamPipeline { db, llm_client, cache: None }
     }
 
-    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<::server_pricing::cache::LocalEmbeddingCache>) -> Self {
+    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Self {
         AutoDreamPipeline { db, llm_client, cache: Some(cache) }
     }
 
@@ -175,7 +175,7 @@ mod tests {
         });
 
         // Clean up
-        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
@@ -189,7 +189,7 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE task_id = $1")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
             .bind(task_id)
             .fetch_one(&pool)
             .await

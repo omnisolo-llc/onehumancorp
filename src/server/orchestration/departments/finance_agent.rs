@@ -51,7 +51,7 @@ impl Department for FinanceAgent {
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
-        self.orchestrator.query_long_term_memory(_query, &vec![0.0; 1536], 10).await
+        Ok(vec![])
     }
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {

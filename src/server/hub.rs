@@ -77,6 +77,7 @@ impl Hub {
 
                 let labels = serde_json::json!({
                     "agent_id": event.agent_id,
+                    "organization_id": event.tenant_id,
                     "input_tokens": event.input_tokens,
                     "output_tokens": event.output_tokens,
                     "cached_input_tokens": event.cached_input_tokens,
@@ -628,8 +629,17 @@ impl Hub {
                     }
 
                     if hist.len() > 1 {
-                        let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                        let forecast = hist.last().unwrap() + (rate * 43200.0) as i64;
+                        let mut ema_rate = 0.0;
+                        let alpha = 0.3;
+                        for i in 1..hist.len() {
+                            let current_rate = (hist[i] - hist[i - 1]) as f64;
+                            if i == 1 {
+                                ema_rate = current_rate;
+                            } else {
+                                ema_rate = alpha * current_rate + (1.0 - alpha) * ema_rate;
+                            }
+                        }
+                        let forecast = hist.last().unwrap() + (ema_rate * 43200.0) as i64;
                         forecasts_to_record.push((org_id.clone(), forecast as f32));
                     }
                 } else {
@@ -786,6 +796,17 @@ impl Hub {
             db_ping > 0
         };
 
+        let mut checklist = Vec::new();
+        if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+            checklist.push("PostgreSQL Connected");
+        }
+        if std::env::var("REDIS_URL").is_ok() {
+            checklist.push("Redis Available");
+        }
+        if mode == "standalone" && (std::env::var("DATABASE_URL").is_err() || std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
+            checklist.push("SQLite Standalone Enabled");
+        }
+
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
@@ -795,6 +816,7 @@ impl Hub {
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
             "sync_error_count": sync_error_count,
+            "checklist": checklist,
         }))
     }
 }
