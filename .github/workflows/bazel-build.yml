@@ -35,9 +35,9 @@ jobs:
           - name: linux-x86_64
             runner: ubuntu-24.04
             bazel_config: linux_x86_64
-          # - name: windows-x86_64
-          #   runner: ubuntu-24.04
-          #   bazel_config: windows_x86_64
+          - name: windows-x86_64
+            runner: ubuntu-24.04
+            bazel_config: windows_x86_64
           # - name: windows-arm64
           #   runner: windows-11-arm
           #   bazel_config: windows_arm64
@@ -49,6 +49,15 @@ jobs:
           #  bazel_config: macos_x86_64
     steps:
       - uses: actions/checkout@v6
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "/usr/local/share/powershell"
+          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
+          docker image prune --all --force
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
