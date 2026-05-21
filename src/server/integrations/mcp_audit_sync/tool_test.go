@@ -251,6 +251,7 @@ func TestSyncAuditLogsToCloud_DBError(t *testing.T) {
     }
 }
 
+
 func TestExecute(t *testing.T) {
     db := setupTestDB(t)
     defer db.Close()

@@ -5,7 +5,6 @@ import (
     "database/sql"
     "fmt"
     "os"
-
     "time"
 
     "go.opentelemetry.io/otel"
