@@ -42,7 +42,8 @@ build:asan --extra_toolchains=@rust_toolchains//:all
 build:windows_common --extra_toolchains=@rust_toolchains//:all
 build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_amd64
 build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_arm64
-build:windows_common --@rules_rust//rust/settings:toolchain_linker_preference=rust
+build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=--cfg=windows_raw_dylib
+build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=-Clink-self-contained=yes
 build:windows_common --noenable_platform_specific_config
 build:windows_common --keep_going
 
@@ -62,8 +63,7 @@ test --build_tests_only
 # the Docker-backed Playwright E2E targets along with unit and integration tests.
 test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
-# Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
-test --local_test_jobs=1
+test --local_test_jobs=4
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
@@ -77,7 +77,7 @@ test:no-e2e --test_tag_filters=-e2e,-requires-docker
 # Useful with a remote executor/cache setup. Keep the default local test path
 # conservative so `bazel test //...` can include Docker-backed Playwright tests
 # without overwhelming the Bazel server or host.
-test:remote-jobs --jobs=200
+test:remote-jobs --jobs=50
 
 # ── Test environment pass-through ─────────────────────────────────────────────
 test --test_env=GEMINI_API_KEY
