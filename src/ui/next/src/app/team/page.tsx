@@ -34,7 +34,16 @@ export default function TeamPage() {
       const response = await fetch('/api/agents/approvals');
       if (response.ok) {
         const data = await response.json();
-        setApprovals(data.pending_approvals || []);
+        const mappedApprovals = (data.pending_approvals || []).map((a: ApprovalRequest) => {
+          let mappedDept = a.department;
+          if (mappedDept === 'customer_success' || mappedDept === 'CustomerSuccess') mappedDept = 'CustomerSuccess';
+          else if (mappedDept === 'business_advisory' || mappedDept === 'BusinessAdvisory') mappedDept = 'BusinessAdvisory';
+          else if (mappedDept) {
+            mappedDept = mappedDept.charAt(0).toUpperCase() + mappedDept.slice(1).toLowerCase();
+          }
+          return { ...a, department: mappedDept };
+        });
+        setApprovals(mappedApprovals);
       }
     } catch (error) {
       console.error("Failed to fetch approvals", error);

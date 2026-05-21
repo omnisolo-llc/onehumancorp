@@ -50,11 +50,11 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
               <div key={req.id} className="bg-white rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100">
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                    req.action_risk.toLowerCase() === 'high'
+                    req.action_risk === 'DraftForReview' || req.action_risk.toLowerCase() === 'high'
                       ? 'bg-orange-100 text-orange-700'
                       : 'bg-blue-100 text-blue-700'
                   }`}>
-                    {req.action_risk} Risk
+                    {req.action_risk === 'DraftForReview' ? 'High' : (req.action_risk === 'AutoExecute' ? 'Low' : req.action_risk)} Risk
                   </span>
                   <span className="text-xs text-gray-400 font-medium">{req.status}</span>
                 </div>
