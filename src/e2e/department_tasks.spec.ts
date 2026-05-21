@@ -319,3 +319,46 @@ test('UI: Proactive Tax & Legal Compliance Guardrails flow', async ({ page }) =>
   await expect(page.getByText('All Caught Up!')).toBeVisible();
   expect(postCalled).toBe(true);
 });
+
+test('UI: End-to-End CUJ - Order Placed event to Customer Success draft approval', async ({ page, request }) => {
+  // 1. Send the external webhook (simulated stripe order) to kick off backend routing
+  const response = await request.post('/api/agents/webhook', {
+    data: {
+      tenant_id: 'e2e-tenant',
+      source: 'stripe',
+      message: 'order_placed'
+    }
+  });
+  expect(response.ok()).toBeTruthy();
+
+  // Wait for the async backend event orchestration (Operations -> CustomerSuccess) to finish and create a draft
+  // We'll repeatedly check the UI to see if the item is populated, avoiding arbitrary timeouts.
+
+  // 2. User navigates to the Team dashboard
+  await page.goto('/team');
+
+  // Since async routing might take a moment, retry logic ensures we don't fail immediately
+  await expect(page.locator('button', { hasText: 'The Ambassador' })).toContainText('awaiting approval', { timeout: 10000 });
+
+  // 3. User sees an action item in "The Ambassador" (Customer Success)
+  const ambassadorCard = page.locator('button', { hasText: 'The Ambassador' });
+  // The exact number of pending approvals might fluctuate depending on parallel tests hitting the same tenant.
+  // Instead of strict "1 item", let's just ensure there's AT LEAST one item in the card.
+  await expect(ambassadorCard).toContainText('awaiting approval');
+  await ambassadorCard.click();
+
+  // 4. User views the draft. The operations agent triggers a "tenant.order.fulfillment_ready" event,
+  // which causes the CustomerSuccess agent to generate "Send personalized thank you & shipping ETA".
+  await expect(page.locator('h1')).toContainText('The Ambassador');
+
+  // Find the specific approval card for this flow and approve it.
+  const approvalCard = page.locator('div', { hasText: 'Send personalized thank you & shipping ETA' }).first();
+  await expect(approvalCard).toBeVisible();
+
+  // 5. User 1-tap approves the draft
+  await approvalCard.getByRole('button', { name: 'Approve' }).click();
+
+  // Wait a short time for network before verifying "All Caught Up!" to avoid flakiness
+  // 6. User sees success state
+  await expect(page.getByText('All Caught Up!')).toBeVisible({ timeout: 5000 });
+});
