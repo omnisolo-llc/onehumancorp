@@ -73,6 +73,18 @@ impl DB {
                                 tracing::error!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
                             }
+                            // Explicitly check and harden existing directory permissions
+                            if let Ok(metadata) = std::fs::metadata(parent) {
+                                use std::os::unix::fs::PermissionsExt;
+                                let mut perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o700 {
+                                    perms.set_mode(0o700);
+                                    if let Err(e) = std::fs::set_permissions(parent, perms) {
+                                        tracing::error!("Failed to securely update existing standalone DB directory permissions: {}", e);
+                                        return Err(e.into());
+                                    }
+                                }
+                            }
                         }
                         #[cfg(not(unix))]
                         {
@@ -753,14 +765,19 @@ impl DB {
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
-                .bind(id)
-                .bind(org_id)
-                .bind(task_id)
-                .bind(content)
-                .bind(embedding)
-                .execute(&self.pool)
-                .await?; }
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, org_id).await?;
+                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .execute(&mut *tx)
+                    .await?;
+                tx.commit().await?;
+            }
         };
 
         Ok(())
@@ -790,6 +807,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -798,8 +817,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -829,6 +849,8 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -837,8 +859,9 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())

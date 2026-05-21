@@ -100,11 +100,15 @@ impl KvMcpServer {
                                     .await
                             }
                             DbStore::Postgres => {
-                                sqlx::query_as("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = $2")
+                                let mut tx = self.db.pool.begin().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                let res = sqlx::query_as("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = $2")
                                     .bind(&tenant_id)
                                     .bind(key)
-                                    .fetch_one(&self.db.pool)
-                                    .await
+                                    .fetch_one(&mut *tx)
+                                    .await;
+                                tx.commit().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                res
                             }
                         };
 
@@ -144,13 +148,16 @@ impl KvMcpServer {
                                     .map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                             }
                             DbStore::Postgres => {
+                                let mut tx = self.db.pool.begin().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                                 sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = EXCLUDED.kv_value, updated_at = CURRENT_TIMESTAMP")
                                     .bind(&tenant_id)
                                     .bind(key)
                                     .bind(value)
-                                    .execute(&self.db.pool)
+                                    .execute(&mut *tx)
                                     .await
                                     .map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                tx.commit().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                             }
                         }
                         let resp = serde_json::json!({"status": "success"});
@@ -178,12 +185,15 @@ impl KvMcpServer {
                                     .map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                             }
                             DbStore::Postgres => {
+                                let mut tx = self.db.pool.begin().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                                 sqlx::query("DELETE FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = $2")
                                     .bind(&tenant_id)
                                     .bind(key)
-                                    .execute(&self.db.pool)
+                                    .execute(&mut *tx)
                                     .await
                                     .map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                tx.commit().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                             }
                         }
                         let resp = serde_json::json!({"status": "success"});
@@ -211,12 +221,16 @@ impl KvMcpServer {
                                     .await
                             }
                             DbStore::Postgres => {
+                                let mut tx = self.db.pool.begin().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                                 let like_pattern = format!("{}%", prefix);
-                                sqlx::query_as("SELECT kv_key FROM agent_kv_store WHERE tenant_id = $1 AND kv_key LIKE $2")
+                                let res = sqlx::query_as("SELECT kv_key FROM agent_kv_store WHERE tenant_id = $1 AND kv_key LIKE $2")
                                     .bind(&tenant_id)
                                     .bind(&like_pattern)
-                                    .fetch_all(&self.db.pool)
-                                    .await
+                                    .fetch_all(&mut *tx)
+                                    .await;
+                                tx.commit().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                res
                             }
                         };
 
