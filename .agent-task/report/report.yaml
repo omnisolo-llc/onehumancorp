@@ -1,0 +1,5 @@
+issue_category: feature
+debt_report:
+  description: "Architectural research for Universal Autonomous B2B Trading Engine"
+  impact: "high"
+  mitigation: "Generated issue brief and architecture document to guide implementers"
