@@ -319,9 +319,11 @@ export default function BuilderPage() {
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h1>
+          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-2">Publish Site</h1>
           <p className="text-gray-500 mb-6 text-sm">Your automated storefront is successfully published.</p>
 
+          <button className="w-full bg-blue-50 text-blue-700 font-bold p-3 rounded-xl border border-blue-200 mb-4 active:scale-[0.98] transition-all hover:bg-blue-100">Free OHC Subdomain</button>
+          <input type="text" placeholder="mybusiness" className="w-full bg-gray-50 p-3 rounded-xl border border-gray-200 mb-6" />
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
@@ -441,7 +443,7 @@ export default function BuilderPage() {
               className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
               onClick={handleLaunch}
             >
-              <span>1-Tap Launch</span>
+              <span>Publish Changes</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </button>
           </Tooltip>

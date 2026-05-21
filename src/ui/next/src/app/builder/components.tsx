@@ -100,14 +100,14 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "PoweredBy") {
     return (
-      <div className="py-6 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-100">
+      <div className="powered-by-footer py-6 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-100">
         <a
-          href="https://ohc.store"
+          href="ohc://join?ref=storefront"
           target="_blank"
           rel="noopener noreferrer"
           className="group flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
         >
-          <span className="font-inter">Powered by</span>
+          <span className="font-inter">⚡ Powered by</span>
           <span className="font-outfit font-bold tracking-tight">OHC</span>
           <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
