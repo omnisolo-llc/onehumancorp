@@ -42,7 +42,10 @@ index a34c88a..f61c5b7 100644
 +) !bool {
 +    if (mem.eql(u8, arg, "-nolibc") or
 +        mem.eql(u8, arg, "--unwindlib=none") or
-+        mem.eql(u8, arg, "-lmsvcrt"))
++        mem.eql(u8, arg, "-lmsvcrt") or
++        mem.eql(u8, arg, "compiler_rt.lib") or
++        mem.endsWith(u8, arg, "\\compiler_rt.lib") or
++        mem.endsWith(u8, arg, "/compiler_rt.lib"))
 +    {
 +        return true;
 +    }
@@ -75,13 +78,13 @@ index a34c88a..f61c5b7 100644
 +
 +    if (mem.startsWith(u8, arg, "/defaultlib:")) {
 +        const lib_name = arg["/defaultlib:".len..];
-+        if (!mem.eql(u8, lib_name, "msvcrt")) {
++        if (!mem.eql(u8, lib_name, "msvcrt") and !mem.eql(u8, lib_name, "compiler_rt")) {
 +            try appendLib(arena, args, lib_name);
 +        }
 +        return true;
 +    }
 +
-+    if (mem.endsWith(u8, arg, ".lib") and !hasPathSeparator(arg)) {
++    if (mem.endsWith(u8, arg, ".lib") and !hasPathSeparator(arg) and !mem.eql(u8, arg, "compiler_rt.lib")) {
 +        try appendLib(arena, args, arg[0 .. arg.len - ".lib".len]);
 +        return true;
 +    }

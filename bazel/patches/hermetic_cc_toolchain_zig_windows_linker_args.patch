@@ -25,7 +25,7 @@ index 8adbe7e..a34c88a 100644
 +    if (run_mode != RunMode.cc) return false;
 +
 +    return mem.eql(u8, arg, "-Wl,--disable-auto-image-base") or
-+        mem.eql(u8, arg, "--disable-auto-image-base");
++        mem.eql(u8, arg, "--disable-auto-image-base") or mem.eql(u8, arg, "compiler_rt.lib");
 +}
 +
  fn parseFatal(
