@@ -29,36 +29,75 @@ export default function TeamPage() {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchApprovals = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/agents/approvals');
-      if (response.ok) {
-        const data = await response.json();
+      const [approvalsRes, settingsRes] = await Promise.all([
+        fetch('/api/agents/approvals'),
+        fetch('/api/agents/settings')
+      ]);
+
+      if (approvalsRes.ok) {
+        const data = await approvalsRes.json();
         setApprovals(data.pending_approvals || []);
       }
+
+      if (settingsRes.ok) {
+        const data = await settingsRes.json();
+        setSettings(data.settings || {});
+      }
     } catch (error) {
-      console.error("Failed to fetch approvals", error);
+      console.error("Failed to fetch data", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchApprovals();
+    fetchData();
   }, []);
 
-  const handleApprove = async (id: string) => {
+  const handleToggleAutoExecute = async (deptId: string) => {
+    const nextState = !settings[deptId];
+
+    // Optimistic update
+    setSettings(prev => ({ ...prev, [deptId]: nextState }));
+
+    try {
+      const response = await fetch('/api/agents/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: deptId, autoExecute: nextState })
+      });
+
+      if (!response.ok) {
+        // Revert on failure
+        setSettings(prev => ({ ...prev, [deptId]: !nextState }));
+      }
+    } catch (error) {
+      console.error("Failed to update setting", error);
+      // Revert on failure
+      setSettings(prev => ({ ...prev, [deptId]: !nextState }));
+    }
+  };
+
+  const handleApprove = async (id: string, newDescription?: string) => {
     try {
       setApprovals(prev => prev.filter(a => a.id !== id));
+      const payload: any = { approved: true };
+      if (newDescription) {
+        payload.description = newDescription;
+      }
+
       const response = await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved: true })
+        body: JSON.stringify(payload)
       });
-      if (!response.ok) fetchApprovals();
+      if (!response.ok) fetchData();
     } catch (error) {
       console.error("Failed to approve", error);
-      fetchApprovals();
+      fetchData();
     }
   };
 
@@ -70,10 +109,10 @@ export default function TeamPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved: false })
       });
-      if (!response.ok) fetchApprovals();
+      if (!response.ok) fetchData();
     } catch (error) {
       console.error("Failed to reject", error);
-      fetchApprovals();
+      fetchData();
     }
   };
 
@@ -112,12 +151,18 @@ export default function TeamPage() {
           ) : (
             DEPARTMENTS.map(dept => {
               const pendingCount = approvals.filter(a => a.department === dept.id).length;
+              const isAutoExecute = settings[dept.id] || false;
               return (
                 <DepartmentCard
                   key={dept.id}
                   name={dept.name}
                   pendingCount={pendingCount}
+                  isAutoExecute={isAutoExecute}
                   onClick={() => setSelectedDepartment(dept.id)}
+                  onToggle={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    handleToggleAutoExecute(dept.id);
+                  }}
                 />
               );
             })

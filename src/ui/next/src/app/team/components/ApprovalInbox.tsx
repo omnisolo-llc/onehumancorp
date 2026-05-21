@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ApprovalRequest } from '../page';
 
 type Props = {
@@ -8,11 +8,36 @@ type Props = {
   departmentName: string;
   approvals: ApprovalRequest[];
   onBack: () => void;
-  onApprove: (id: string) => void;
+  onApprove: (id: string, newDescription?: string) => void;
   onReject: (id: string) => void;
 };
 
 export default function ApprovalInbox({ departmentName, approvals, onBack, onApprove, onReject }: Props) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [localApprovals, setLocalApprovals] = useState<ApprovalRequest[]>(approvals);
+
+  // Sync props when they change
+  React.useEffect(() => {
+    setLocalApprovals(approvals);
+  }, [approvals]);
+
+  const handleEditClick = (req: ApprovalRequest) => {
+    setEditingId(req.id);
+    setEditValue(req.description);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const handleSaveEdit = (id: string) => {
+    setLocalApprovals(prev => prev.map(a => a.id === id ? { ...a, description: editValue } : a));
+    setEditingId(null);
+    setEditValue('');
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
       <div className="w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
@@ -47,21 +72,46 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
             </div>
           ) : (
             approvals.map(req => (
-              <div key={req.id} className="bg-white rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                    req.action_risk.toLowerCase() === 'high'
-                      ? 'bg-orange-100 text-orange-700'
-                      : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {req.action_risk} Risk
-                  </span>
-                  <span className="text-xs text-gray-400 font-medium">{req.status}</span>
+              <div key={req.id} className="bg-white/70 backdrop-blur-[20px] saturate-[210%] rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-white/50 relative overflow-hidden">
+                {/* Persona Badge */}
+                <div className="flex items-center gap-3 mb-4 bg-gray-50/50 p-2 rounded-xl border border-gray-100/50 backdrop-blur-md">
+                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 flex items-center justify-center border border-blue-200/50 shadow-inner flex-shrink-0">
+                      <span className="text-sm font-bold text-blue-600 font-outfit">{departmentName.charAt(4)}</span>
+                   </div>
+                   <div>
+                     <p className="text-xs font-semibold text-gray-900 font-outfit">{departmentName}</p>
+                     <p className="text-[10px] text-gray-500 uppercase tracking-wider">Action Proposed</p>
+                   </div>
+                   <div className="ml-auto">
+                     <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                       req.action_risk.toLowerCase() === 'high'
+                         ? 'bg-orange-100 text-orange-700'
+                         : 'bg-blue-100 text-blue-700'
+                     }`}>
+                       {req.action_risk} Risk
+                     </span>
+                   </div>
                 </div>
 
-                <p className="text-gray-800 text-sm leading-relaxed mb-6 font-medium">
-                  {req.description}
-                </p>
+                {editingId === req.id ? (
+                  <div className="mb-6 flex flex-col gap-2">
+                    <textarea
+                      className="w-full text-sm leading-relaxed font-medium p-3 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none bg-white/90"
+                      rows={3}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button onClick={handleCancelEdit} className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1 font-semibold">Cancel</button>
+                      <button onClick={() => handleSaveEdit(req.id)} className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded font-semibold transition-colors">Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-800 text-sm leading-relaxed mb-6 font-medium">
+                    {localApprovals.find(a => a.id === req.id)?.description || req.description}
+                  </p>
+                )}
 
                 {req.feature_type === 'legal_compliance' && (
                   <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
@@ -114,14 +164,25 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
                 )}
 
                 <div className="flex gap-3">
+                  {editingId !== req.id && (
+                    <button
+                      onClick={() => handleEditClick(req)}
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all"
+                    >
+                      Edit
+                    </button>
+                  )}
                   <button
                     onClick={() => onReject(req.id)}
-                    className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all"
+                    className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-red-50 text-red-600 hover:bg-red-100 active:scale-[0.98] transition-all"
                   >
-                    Reject / Edit
+                    Reject
                   </button>
                   <button
-                    onClick={() => onApprove(req.id)}
+                    onClick={() => {
+                       const currentDesc = localApprovals.find(a => a.id === req.id)?.description;
+                       onApprove(req.id, currentDesc !== req.description ? currentDesc : undefined);
+                    }}
                     className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
                   >
                     Approve
