@@ -73,7 +73,7 @@ impl TaskQueue for SQLiteTaskQueue {
         let query_str = format!(
             "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
              FROM sub_agent_jobs
-             WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
+             WHERE status = 'QUEUED' AND agent_role IN ({})
              ORDER BY run_after ASC, created_at ASC
              LIMIT 1",
             role_placeholders

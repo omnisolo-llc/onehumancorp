@@ -156,7 +156,9 @@ mod tests {
             if self.should_fail_dequeue {
                 return Err("DB error".into());
             }
-            if self.job_count.fetch_sub(1, Ordering::SeqCst) > 0 {
+            let remaining = self.job_count.load(Ordering::SeqCst);
+            if remaining > 0 {
+                self.job_count.fetch_sub(1, Ordering::SeqCst);
                 Ok(Some(Job {
                     id: uuid::Uuid::new_v4().to_string(),
                     tenant_id: "t1".into(),

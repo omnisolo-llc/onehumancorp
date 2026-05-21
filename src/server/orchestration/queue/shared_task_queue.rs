@@ -116,7 +116,6 @@ impl TaskQueue for SharedTaskQueue {
                         SELECT id FROM shared_tasks_v4
                         WHERE status = 'PENDING'
                         AND agent_id IN ({})
-                        AND (payload->>'run_after' IS NULL OR (payload->>'run_after')::timestamptz <= CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
@@ -179,7 +178,6 @@ impl TaskQueue for SharedTaskQueue {
                     FROM shared_tasks_v4
                     WHERE status = 'PENDING'
                     AND agent_id IN ({})
-                    AND (json_extract(payload, '$.run_after') IS NULL OR json_extract(payload, '$.run_after') <= datetime('now'))
                     ORDER BY created_at ASC
                     LIMIT 1
                     "#,
