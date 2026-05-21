@@ -105,7 +105,6 @@ Chart.lock
 !/src/server/agents/sandbox/*.go
 !/src/server/agents/terminal/*.go
 
-
 # Rust build artifacts
 /target/
 site/
