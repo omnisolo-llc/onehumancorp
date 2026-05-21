@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'agent_feed.dart';
+import '../config/api.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
@@ -22,7 +24,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:8080/api/onboarding/start'),
+          Uri.parse('${ApiConfig.baseUrl}/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'bio': bio,
@@ -532,7 +534,12 @@ class StoreLiveScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24.0),
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => AgentFeedScreen()),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey[100],
                             foregroundColor: Color(0xFF1D1D1F),
