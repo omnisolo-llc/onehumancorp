@@ -29,6 +29,22 @@ message Order {
   int64 created_at_unix = 6;
 }
 
+message OrderDraft {
+  string id = 1;
+  string source_channel = 2; // WhatsApp, Instagram
+  string raw_message = 3;
+  int64 suggested_amount_cents = 4;
+  string status = 5; // PENDING, APPROVED, REJECTED
+}
+
+message InsightAction {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string action_label = 4;
+  string type = 5; // MARKETING, SALES, OPS
+}
+
 message DashboardSnapshot {
 
   ohc.organization.Organization organization = 1;
@@ -39,6 +55,9 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
+  repeated OrderDraft order_drafts = 9;
+  repeated InsightAction weekly_insights = 10;
+  repeated ohc.organization.UnifiedItem catalog_items = 11;
 }
 
 message GetDashboardRequest {

@@ -49,6 +49,18 @@ message Product {
   string metadata_json = 8;
 }
 
+message UnifiedItem {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  int64 price_cents = 5;
+  string type = 6; // PHYSICAL, DIGITAL, SERVICE
+  string status = 7; // ACTIVE, ARCHIVED
+  int32 duration_minutes = 8; // For services
+  string image_url = 9;
+}
+
 message OnboardingRequest {
   string organization_id = 1;
   string business_type = 2;

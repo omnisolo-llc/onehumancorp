@@ -73,6 +73,7 @@ where
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
+        .route("/order-ingestion/webhook", post(handle_order_ingestion))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -168,6 +169,33 @@ async fn handle_get_team_invites(
 
     match tracker.get_team_invites(&query.team_id).await {
         Ok(invites) => Ok(Json(TeamInvitesResponse { invites })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OrderIngestionRequest {
+    pub organization_id: String,
+    pub source: String,
+    pub raw_content: String,
+}
+
+async fn handle_order_ingestion(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<OrderIngestionRequest>,
+) -> Result<Json<()>, StatusCode> {
+    // Mock AI parsing logic: Extract amount and source
+    let amount_cents = if req.raw_content.contains("cupcakes") { 4000 } else { 2000 };
+
+    match sqlx::query("INSERT INTO order_drafts (organization_id, source_channel, raw_message, suggested_amount_cents) VALUES ($1, $2, $3, $4)")
+        .bind(uuid::Uuid::parse_str(&req.organization_id).unwrap_or_default())
+        .bind(&req.source)
+        .bind(&req.raw_content)
+        .bind(amount_cents)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(())),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

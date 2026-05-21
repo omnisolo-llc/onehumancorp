@@ -8,6 +8,9 @@ use std::sync::OnceLock;
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
+static CATALOG_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::UnifiedItem>>> = OnceLock::new();
+static DRAFTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::OrderDraft>>> = OnceLock::new();
+static INSIGHTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::InsightAction>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -62,9 +65,12 @@ impl DashboardService for MyDashboardService {
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
+        let hub_catalog = self.hub.clone();
+        let hub_drafts = self.hub.clone();
+        let hub_insights = self.hub.clone();
         let mobile_optimized = req.mobile_optimized;
 
-        let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
+        let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res, catalog_res, drafts_res, insights_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
                 Ok::<_, String>(hub1.get_agents())
             }),
@@ -260,6 +266,76 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(org)
+            }),
+            tokio::spawn(async move {
+                let org_id = org_id1;
+                let cache_key = format!("hub:catalog:{}", org_id);
+                let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(hub_catalog.redis_client.clone()));
+                if let Some(items) = cache.get(&cache_key).await { return Ok::<_, String>(items); }
+                use sqlx::Row;
+                let mut results = Vec::new();
+                let q = "SELECT id, organization_id, name, description, price_cents, type, status, duration_minutes, image_url FROM unified_items WHERE organization_id = $1";
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
+                    for r in rows {
+                        results.push(::server_ohc::organization::UnifiedItem {
+                            id: r.try_get::<uuid::Uuid, _>("id").unwrap_or_default().to_string(),
+                            organization_id: r.try_get::<uuid::Uuid, _>("organization_id").unwrap_or_default().to_string(),
+                            name: r.try_get("name").unwrap_or_default(),
+                            description: r.try_get("description").unwrap_or_default(),
+                            price_cents: r.try_get("price_cents").unwrap_or_default(),
+                            r#type: r.try_get("type").unwrap_or_default(),
+                            status: r.try_get("status").unwrap_or_default(),
+                            duration_minutes: r.try_get("duration_minutes").unwrap_or_default(),
+                            image_url: r.try_get("image_url").unwrap_or_default(),
+                        });
+                    }
+                }
+                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(300)).await;
+                Ok::<_, String>(results)
+            }),
+            tokio::spawn(async move {
+                let org_id = org_id2;
+                let cache_key = format!("hub:drafts:{}", org_id);
+                let cache = DRAFTS_CACHE.get_or_init(|| HybridCache::new(hub_drafts.redis_client.clone()));
+                if let Some(items) = cache.get(&cache_key).await { return Ok::<_, String>(items); }
+                use sqlx::Row;
+                let mut results = Vec::new();
+                let q = "SELECT id, source_channel, raw_message, suggested_amount_cents, status FROM order_drafts WHERE organization_id = $1 AND status = 'PENDING'";
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
+                    for r in rows {
+                        results.push(::server_ohc::app::OrderDraft {
+                            id: r.try_get::<uuid::Uuid, _>("id").unwrap_or_default().to_string(),
+                            source_channel: r.try_get("source_channel").unwrap_or_default(),
+                            raw_message: r.try_get("raw_message").unwrap_or_default(),
+                            suggested_amount_cents: r.try_get("suggested_amount_cents").unwrap_or_default(),
+                            status: r.try_get("status").unwrap_or_default(),
+                        });
+                    }
+                }
+                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(10)).await;
+                Ok::<_, String>(results)
+            }),
+            tokio::spawn(async move {
+                let org_id = org_id3;
+                let cache_key = format!("hub:insights:{}", org_id);
+                let cache = INSIGHTS_CACHE.get_or_init(|| HybridCache::new(hub_insights.redis_client.clone()));
+                if let Some(items) = cache.get(&cache_key).await { return Ok::<_, String>(items); }
+                use sqlx::Row;
+                let mut results = Vec::new();
+                let q = "SELECT id, title, description, action_label, type FROM weekly_insights WHERE organization_id = $1";
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db3.pool).await {
+                    for r in rows {
+                        results.push(::server_ohc::app::InsightAction {
+                            id: r.try_get::<uuid::Uuid, _>("id").unwrap_or_default().to_string(),
+                            title: r.try_get("title").unwrap_or_default(),
+                            description: r.try_get("description").unwrap_or_default(),
+                            action_label: r.try_get("action_label").unwrap_or_default(),
+                            r#type: r.try_get("type").unwrap_or_default(),
+                        });
+                    }
+                }
+                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
+                Ok::<_, String>(results)
             })
         );
 
@@ -280,6 +356,15 @@ impl DashboardService for MyDashboardService {
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let catalog_items = catalog_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let order_drafts = drafts_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let weekly_insights = insights_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -458,6 +543,9 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            order_drafts,
+            weekly_insights,
+            catalog_items,
         }))
     }
 
