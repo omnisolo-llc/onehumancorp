@@ -176,7 +176,7 @@ impl TaskQueue for SharedTaskQueue {
                     r#"
                     SELECT id, organization_id, agent_id, payload, status, parent_plan_id, created_at, updated_at
                     FROM shared_tasks_v4
-                    WHERE status = 'PENDING'
+                        WHERE status = 'PENDING'
                     AND agent_id IN ({})
                     ORDER BY created_at ASC
                     LIMIT 1
