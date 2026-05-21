@@ -18,9 +18,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: 'Modern' }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Connect Custom Domain/ }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
 
     const requestPromise = page.waitForRequest(request =>
       request.url().includes('/api/onboarding/start') && request.method() === 'POST'

@@ -2095,16 +2095,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
                             border: 1px solid rgba(255, 255, 255, 0.4);
-                            box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                            backdrop-filter: blur(40px) saturate(200%);
+                            -webkit-backdrop-filter: blur(40px) saturate(200%);
                             border-radius: 16px;
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(40px) saturate(200%);
+                            -webkit-backdrop-filter: blur(40px) saturate(200%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2117,8 +2117,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(40px) saturate(200%);
+                            -webkit-backdrop-filter: blur(40px) saturate(200%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -2157,7 +2157,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(40px) saturate(200%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -2167,8 +2167,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .card { 
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(40px) saturate(200%);
+                            -webkit-backdrop-filter: blur(40px) saturate(200%);
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
@@ -2256,8 +2256,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .glassmorphism {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(40px) saturate(200%);
+                            -webkit-backdrop-filter: blur(40px) saturate(200%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
@@ -2336,8 +2336,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(40px) saturate(200%);
+                            -webkit-backdrop-filter: blur(40px) saturate(200%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -2481,8 +2481,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 600px;
@@ -2493,11 +2493,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
         }
 
         #setup-screen > div {
@@ -3244,7 +3244,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
@@ -3285,7 +3285,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
                             <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="number" inputmode="decimal" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -3331,7 +3331,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
@@ -3908,11 +3908,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function setTemplate(template, btn) {
                             onboardingState.website_template = template;
                             selectWizardOption(btn);
+                            nextStep(9);
                         }
 
                         function setDomainChoice(choice, btn) {
                             onboardingState.domain_choice = choice;
                             selectWizardOption(btn);
+                            nextStep('launch-ai');
                         }
 
                         async function publishBusiness(btn) {
@@ -3984,7 +3986,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 clearTimeout(debounceTimer);
                                 debounceTimer = setTimeout(() => {
                                     try {
-                                        const stateData = { step: currentStep };
+                                        const stateData = { step: currentStep, ...onboardingState };
                                         document.querySelectorAll('input').forEach(input => {
                                             if (input.placeholder && input.value) {
                                                 stateData[input.placeholder] = input.value;
@@ -4041,7 +4043,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
                                 try {
-                                    const stateData = { step: stepId };
+                                    const stateData = { step: stepId, ...onboardingState };
                                     document.querySelectorAll('input').forEach(input => {
                                         if (input.placeholder && input.value) {
                                             stateData[input.placeholder] = input.value;
@@ -4400,6 +4402,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         if (data && data.step) {
                                             stateData = data;
                                         }
+                                    }
+
+                                    if (stateData) {
+                                        if (stateData.business_type) onboardingState.business_type = stateData.business_type;
+                                        if (stateData.payment_pref) onboardingState.payment_pref = stateData.payment_pref;
+                                        if (stateData.website_template) onboardingState.website_template = stateData.website_template;
+                                        if (stateData.domain_choice) onboardingState.domain_choice = stateData.domain_choice;
                                     }
 
                                     if (stateData && stateData.step && stateData.step > 1) {
