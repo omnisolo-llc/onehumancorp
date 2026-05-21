@@ -168,6 +168,12 @@ async fn handle_check_milestones(
             description: "Connect to a partner organization".to_string(),
             reached: false,
         },
+        Milestone {
+            id: "3".to_string(),
+            title: "🎉 10th Order!".to_string(),
+            description: "You've successfully processed your 10th order on OHC.".to_string(),
+            reached: true,
+        },
     ];
     Json(MilestonesResponse { milestones })
 }
