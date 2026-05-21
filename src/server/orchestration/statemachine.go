@@ -96,7 +96,5 @@ func (sm *StateMachine) transition(ctx context.Context, taskID string, newState 
 		return fmt.Errorf("failed to update task %s state to %s: %w", taskID, newState, err)
 	}
 
-	// Publish state change event to Teammate Mesh here (simplified for now)
-
 	return nil
 }

@@ -67,11 +67,9 @@ func (l *StandaloneLock) Acquire(ctx context.Context, taskID string) (func() err
 
 	return func() error {
 		taskMutex.Unlock()
-
 		l.mu.Lock()
 		delete(l.locks, taskID)
 		l.mu.Unlock()
-
 		return nil
 	}, nil
 }
