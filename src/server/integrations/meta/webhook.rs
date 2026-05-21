@@ -1,10 +1,10 @@
 use axum::{
-    extract::{Path, State},
+    extract::Path,
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct MetaWebhookPayload {
@@ -38,7 +38,7 @@ pub struct MetaMessageData {
 }
 
 pub async fn handle_meta_webhook(
-    Path(tenant_id): Path<String>,
+    Path(_tenant_id): Path<String>,
     Json(payload): Json<MetaWebhookPayload>,
 ) -> impl IntoResponse {
     if payload.object == "page" || payload.object == "instagram" || payload.object == "whatsapp_business_account" {
