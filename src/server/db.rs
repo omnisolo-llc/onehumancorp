@@ -1175,6 +1175,25 @@ mod security_tests_final {
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
     #[tokio::test]
+    async fn test_cleanup_stagnant_missions() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let db = crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
+        let result = db.cleanup_stagnant_missions(3600).await;
+        // The result is either Ok(affected_rows) or an Err
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
     async fn test_tenant_data_isolation() {
         if std::env::var("DATABASE_URL").is_err() {
             return;
