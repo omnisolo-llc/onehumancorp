@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Tooltip } from "../../components/help";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -117,6 +118,17 @@ export default function Dashboard() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+         <nav className="flex items-center gap-6">
+             <Tooltip id="nav-store" defaultText="This is where you manage what you sell. Add or edit products here.">
+                 <button className="text-sm font-semibold text-gray-700 hover:text-black">My Store</button>
+             </Tooltip>
+             <Tooltip id="nav-agents" defaultText="These are your digital employees. They can talk to customers and do tasks for you.">
+                 <button className="text-sm font-semibold text-gray-700 hover:text-black">AI Agents</button>
+             </Tooltip>
+             <Tooltip id="btn-new-product" defaultText="Click here to add something new to sell. You can add a photo and a price.">
+                 <button className="text-sm font-bold text-white bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700">Add Product</button>
+             </Tooltip>
+         </nav>
          <div className="flex items-center gap-3">
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
@@ -133,12 +145,22 @@ export default function Dashboard() {
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
-                        <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
-                        >
-                            <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
-                        </button>
+                        <Tooltip id="setting-multitenant" defaultText="Runs your app on our fast servers. This is best for most businesses.">
+                            <button
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
+                            >
+                                <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                            </button>
+                        </Tooltip>
+                        <span className="text-sm font-medium ml-4" style={{ color: '#86868B' }}>Standalone Mode</span>
+                        <Tooltip id="setting-standalone" defaultText="Runs entirely on your computer. Great if you don't have internet.">
+                            <button
+                                className={`w-10 h-6 rounded-full transition-colors duration-300 relative bg-gray-300`}
+                            >
+                                <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 translate-x-0`}></span>
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
                 <div className="flex flex-col gap-4">

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 
 // --- Tooltip Registry & Component ---
 type TooltipContextType = {
@@ -79,9 +80,9 @@ export function Tooltip({ id, defaultText, children }: { id?: string; defaultTex
     >
       {children}
       {visible && (
-        <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none text-center leading-tight">
+        <div className="absolute z-[100] top-full left-1/2 transform -translate-x-1/2 mt-2 w-max max-w-xs px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none text-center leading-tight">
           {displayText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
         </div>
       )}
     </div>
@@ -213,11 +214,19 @@ export function HelpWidget() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+  const [articles, setArticles] = useState<any[]>([]);
+  const [activeArticle, setActiveArticle] = useState<any | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/videos")
       .then(res => res.json())
       .then(data => setVideos(data))
+      .catch(() => {});
+
+    fetch("/api/help/articles")
+      .then(res => res.json())
+      .then(data => setArticles(data))
       .catch(() => {});
   }, []);
 
@@ -273,51 +282,56 @@ export function HelpWidget() {
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
             {tab === "center" && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
-                <input type="text" placeholder="Search for help..." className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <div className="space-y-2 mb-4">
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Getting Started</h4>
-                    <p className="text-xs text-gray-500 mt-1">Learn the basics of setting up your store.</p>
+                {activeArticle ? (
+                  <div>
+                    <button onClick={() => setActiveArticle(null)} className="text-blue-600 text-sm font-bold hover:underline mb-4 block">← Back</button>
+                    <h3 className="font-bold text-gray-900 mb-2 text-lg">{activeArticle.title}</h3>
+                    <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(activeArticle.content_markdown) as string) }} />
                   </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">My Store</h4>
-                    <p className="text-xs text-gray-500 mt-1">Manage your products and layout.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Payments</h4>
-                    <p className="text-xs text-gray-500 mt-1">Connect your bank and get paid.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">AI Agents</h4>
-                    <p className="text-xs text-gray-500 mt-1">Hire and manage your AI workforce.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Marketing</h4>
-                    <p className="text-xs text-gray-500 mt-1">Grow your audience and sales.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Account & Billing</h4>
-                    <p className="text-xs text-gray-500 mt-1">Manage your subscription.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <a href="/api-docs"><h4 className="font-bold text-gray-800 text-sm hover:underline">API Documentation (Advanced)</h4></a>
-                    <p className="text-xs text-gray-500 mt-1">Interactive API reference for integrations.</p>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
+                    <input
+                      type="text"
+                      placeholder="Search for help..."
+                      className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <div className="space-y-2 mb-4">
+                      {articles.filter(a =>
+                        !searchQuery ||
+                        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        a.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        a.content_markdown.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).map((article) => (
+                        <div key={article.id} onClick={() => setActiveArticle(article)} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                          <h4 className="font-bold text-gray-800 text-sm">{article.topic}</h4>
+                          <p className="text-xs text-gray-500 mt-1">{article.title}</p>
+                        </div>
+                      ))}
+                      {(!searchQuery || "API Documentation (Advanced)".toLowerCase().includes(searchQuery.toLowerCase())) && (
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                          <a href="/api-docs"><h4 className="font-bold text-gray-800 text-sm hover:underline">API Documentation (Advanced)</h4></a>
+                          <p className="text-xs text-gray-500 mt-1">Interactive API reference for integrations.</p>
+                        </div>
+                      )}
+                    </div>
 
-                <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
-                <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
-                  </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Connect your bank account here." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
-                  </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
-                  </button>
-                </div>
+                    <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
+                    <div className="space-y-2">
+                      <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                        <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
+                      </button>
+                      <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Connect your bank account here." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                        <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
+                      </button>
+                      <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                        <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -331,7 +345,7 @@ export function HelpWidget() {
                         : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
-                      <div key={idx} className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
+                      <div key={idx} className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.text) as string) }} />
                     ) : (
                       <div key={idx} className={className}>{msg.text}</div>
                     );
