@@ -68,6 +68,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/storefront/track", post(handle_track_visitor))
+        .route("/storefront/embed", get(handle_storefront_embed))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
@@ -152,21 +153,59 @@ async fn handle_track_visitor(
     Json(TrackVisitorResponse { tracked: true })
 }
 
+async fn handle_storefront_embed() -> impl IntoResponse {
+    let html = r##"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .card { border: 1px solid #eaeaea; border-radius: 8px; padding: 16px; max-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .title { font-size: 1.2rem; font-weight: bold; margin: 0 0 8px 0; }
+        .price { color: #555; font-size: 1rem; margin: 0 0 16px 0; }
+        .btn { display: block; width: 100%; text-align: center; background: #007bff; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+        .footer { text-align: center; margin-top: 16px; font-size: 0.85rem; }
+        .footer a { color: #333; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 class="title">Premium Product</h2>
+        <p class="price">$49.99</p>
+        <a href="#" class="btn">Buy Now</a>
+        <div class="footer">
+            <a href="ohc://join?ref=embed">⚡ Powered by OHC</a>
+        </div>
+    </div>
+</body>
+</html>
+"##;
+    axum::response::Html(html)
+}
+
 async fn handle_check_milestones(
     Extension(_state): Extension<GrowthState>,
 ) -> impl IntoResponse {
     let milestones = vec![
         Milestone {
             id: "1".to_string(),
-            title: "First Teammate".to_string(),
-            description: "Hire your first AI agent".to_string(),
+            title: String::from("First Teammate"),
+            description: String::from("Hire your first AI agent"),
             reached: true,
         },
         Milestone {
             id: "2".to_string(),
-            title: "Global Reach".to_string(),
-            description: "Connect to a partner organization".to_string(),
+            title: String::from("Global Reach"),
+            description: String::from("Connect to a partner organization"),
             reached: false,
+        },
+        Milestone {
+            id: "3".to_string(),
+            title: "🎉 10th Order!".to_string(),
+            description: "You've successfully processed your 10th order on OHC.".to_string(),
+            reached: true,
         },
     ];
     Json(MilestonesResponse { milestones })
