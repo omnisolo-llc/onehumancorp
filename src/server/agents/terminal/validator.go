@@ -64,35 +64,23 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 		}
 
 		if len(callExpr.Args) > 0 {
-			var cmdParts []string
-			for _, part := range callExpr.Args[0].Parts {
-				switch p := part.(type) {
+			cmdName := ""
+			if len(callExpr.Args[0].Parts) == 1 {
+				switch part := callExpr.Args[0].Parts[0].(type) {
 				case *syntax.Lit:
-					cmdParts = append(cmdParts, p.Value)
+					cmdName = part.Value
 				case *syntax.SglQuoted:
-					cmdParts = append(cmdParts, p.Value)
+					cmdName = part.Value
 				case *syntax.DblQuoted:
-					var dblParts []string
-					for _, dp := range p.Parts {
-						if dplit, ok := dp.(*syntax.Lit); ok {
-							dblParts = append(dblParts, dplit.Value)
+					if len(part.Parts) == 1 {
+						if lit, ok := part.Parts[0].(*syntax.Lit); ok {
+							cmdName = lit.Value
 						}
 					}
-					cmdParts = append(cmdParts, strings.Join(dblParts, ""))
-				}
-			}
-			cmdName := strings.Join(cmdParts, "")
-
-			// Fallback
-			if cmdName == "" && len(callExpr.Args[0].Parts) == 1 {
-				if lit, ok := callExpr.Args[0].Parts[0].(*syntax.Lit); ok {
-					cmdName = lit.Value
 				}
 			}
 
 			cmdName = strings.ReplaceAll(cmdName, "\\", "")
-			cmdName = strings.ReplaceAll(cmdName, "\"", "")
-			cmdName = strings.ReplaceAll(cmdName, "'", "")
 
 			// Check blocked commands
 			for _, blocked := range v.config.BlockedCommands {
@@ -108,32 +96,22 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 				hasRecursive := false
 				hasForce := false
 				for i := 1; i < len(callExpr.Args); i++ {
-					var argParts []string
-					for _, part := range callExpr.Args[i].Parts {
-						switch p := part.(type) {
+					argStr := ""
+					if len(callExpr.Args[i].Parts) == 1 {
+						switch part := callExpr.Args[i].Parts[0].(type) {
 						case *syntax.Lit:
-							argParts = append(argParts, p.Value)
+							argStr = part.Value
 						case *syntax.SglQuoted:
-							argParts = append(argParts, p.Value)
+							argStr = part.Value
 						case *syntax.DblQuoted:
-							var dblParts []string
-							for _, dp := range p.Parts {
-								if dplit, ok := dp.(*syntax.Lit); ok {
-									dblParts = append(dblParts, dplit.Value)
+							if len(part.Parts) == 1 {
+								if lit, ok := part.Parts[0].(*syntax.Lit); ok {
+									argStr = lit.Value
 								}
 							}
-							argParts = append(argParts, strings.Join(dblParts, ""))
-						}
-					}
-					argStr := strings.Join(argParts, "")
-					if argStr == "" && len(callExpr.Args[i].Parts) == 1 {
-						if lit, ok := callExpr.Args[i].Parts[0].(*syntax.Lit); ok {
-							argStr = lit.Value
 						}
 					}
 					argStr = strings.ReplaceAll(argStr, "\\", "")
-					argStr = strings.ReplaceAll(argStr, "\"", "")
-					argStr = strings.ReplaceAll(argStr, "'", "")
 
 					if argStr == "-r" || argStr == "-R" {
 						hasRecursive = true
