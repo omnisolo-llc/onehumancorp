@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [storageLimit, setStorageLimit] = useState<{used: number, limit: number | null}>({used: 0, limit: null});
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
@@ -83,6 +84,19 @@ export default function Dashboard() {
                 const metricsData = await metricsRes.json();
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
+            }
+
+            const billingRes = await fetch('/api/billing/my-plan', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (billingRes.ok) {
+                const billingData = await billingRes.json();
+                if (billingData.storage_limit_bytes !== null) {
+                    setStorageLimit({
+                        used: billingData.storage_used_bytes || 0,
+                        limit: billingData.storage_limit_bytes
+                    });
+                }
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -196,8 +210,15 @@ export default function Dashboard() {
 
          {/* Business Snapshot */}
          <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center justify-between mb-4">
+               <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Today</h2>
+            </div>
+
+            <div className="mb-6 p-4 rounded-xl shadow-sm border border-blue-100 bg-blue-50/50">
+                <p className="text-gray-800 font-medium">You have <strong className="text-blue-600">{pendingOrders}</strong> new orders and <strong className="text-blue-600">{activeCustomers}</strong> active customers today.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
@@ -216,6 +237,18 @@ export default function Dashboard() {
                 </div>
 
             </div>
+
+            {storageLimit.limit && (storageLimit.used / storageLimit.limit) > 0.8 && (
+                <div className="mt-6 p-4 rounded-xl border border-indigo-200 bg-indigo-50 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fade-in">
+                    <div>
+                        <h3 className="text-lg font-bold font-outfit text-indigo-900">You're growing!</h3>
+                        <p className="text-sm text-indigo-700">Get a custom domain to look even more professional. Upgrade to Starter.</p>
+                    </div>
+                    <button className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition-colors whitespace-nowrap text-sm">
+                        Upgrade Now
+                    </button>
+                </div>
+            )}
          </section>
 
          {/* Growth Loop: Referral Program Snapshot */}
@@ -256,7 +289,7 @@ export default function Dashboard() {
          {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2>
+                <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Actions</h2>
                 <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
                     <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
                     <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
