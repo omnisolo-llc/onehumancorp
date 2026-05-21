@@ -1068,4 +1068,56 @@ mod tests {
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
     }
+
+    #[tokio::test]
+    async fn test_fork_agent_state_match() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        hub.register_agent(Agent {
+            id: "parent_agent".to_string(),
+            name: "Parent".to_string(),
+            role: "Manager".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "openai".to_string(),
+        });
+
+        // Add some messages to the parent's inbox
+        hub.clone().publish(Message {
+            id: "msg1".to_string(),
+            from_agent: "sys".to_string(),
+            to_agent: "parent_agent".to_string(),
+            r#type: "test".to_string(),
+            content: "hello world".to_string(),
+            occurred_at_unix: 0,
+            meeting_id: "".to_string(),
+        }).unwrap();
+
+        let child_id = hub.clone().fork_agent("parent_agent", "do some work").unwrap();
+
+        assert!(child_id.starts_with("parent_agent-fork-"));
+
+        let agents = hub.get_agents();
+        let child_agent = agents.iter().find(|a| a.id == child_id).unwrap();
+        assert_eq!(child_agent.name, "Parent (Fork)");
+        assert_eq!(child_agent.role, "Manager");
+
+        let inbox = hub.inbox.read().unwrap();
+        let child_inbox = inbox.get(&child_id).unwrap();
+
+        // Should have 1 history message + 1 directive message
+        assert_eq!(child_inbox.len(), 2);
+        assert_eq!(child_inbox[0].content, "hello world");
+        assert!(child_inbox[1].content.contains("<task-notification>"));
+        assert!(child_inbox[1].content.contains("do some work"));
+    }
 }
