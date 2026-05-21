@@ -2953,46 +2953,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Two-way calendar sync for tutors and service businesses.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Google Calendar...')" style="width: 100%; background: #0071E3; border-radius: 8px;">Connect</button>
-                            </div>
-
-                            <!-- Stripe Terminal Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Stripe Terminal</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept in-person payments seamlessly with POS hardware.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Stripe Terminal...')">Connect</button>
-                            </div>
-
-                            <!-- Google Calendar Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Google Calendar</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Two-way calendar sync for tutors and service businesses.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Google Calendar...')">Connect</button>
-                            </div>
-
-                            <!-- Stripe Terminal Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Stripe Terminal</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept in-person payments seamlessly with POS hardware.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Stripe Terminal...')">Connect</button>
-                            </div>
-
-                            <!-- Google Calendar Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Google Calendar</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Two-way calendar sync for tutors and service businesses.</p>
                                 <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Google Calendar...')">Connect</button>
                             </div>
 
