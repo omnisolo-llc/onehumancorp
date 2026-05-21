@@ -1,7 +1,8 @@
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::sync_service_server::SyncService;
-use crate::sip::SipDB;
+use crate::orchestration::sip::SipDB;
+use std::sync::Arc;
 
 pub struct MySyncService {
     pool: sqlx::PgPool,
@@ -32,7 +33,8 @@ impl SyncService for MySyncService {
         }
 
         let mut synced_count = 0;
-        let sip_db = SipDB::new(self.pool.clone(), "system".to_string());
+        let db = Arc::new(crate::db::DB { pool: self.pool.clone(), store: crate::db::DbStore::Postgres });
+        let sip_db = SipDB::new(db);
 
         for p in payloads {
             if p.id.is_empty() {
@@ -49,7 +51,7 @@ impl SyncService for MySyncService {
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
 
-            match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
+            match sip_db.upsert_mission("system", &p.id, &status, &p.payload, force_local).await {
                 Ok(_) => {
                     synced_count += 1;
                 }

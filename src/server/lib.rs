@@ -14,7 +14,6 @@ pub mod scheduler;
 pub mod msgbus;
 pub mod pipeline;
 pub use ::server_oidc as oidc;
-pub mod sip;
 pub mod seeder;
 pub mod queue;
 pub mod domain;
@@ -1880,7 +1879,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
-        .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::orchestration::sip::SipDB::new(db.clone()))))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
@@ -1948,14 +1947,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
+    let db_for_sched = db.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
         let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(60));
         loop {
             tokio::select! {
                 _ = prune_interval.tick() => {
-                    let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
-                    if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
+                    let sip_db = crate::orchestration::sip::SipDB::new(db_for_sched.clone());
+                    if let Err(e) = sip_db.prune_stale_missions("system", chrono::Duration::days(7)).await {
                         tracing::error!("failed to prune stale missions: {}", e);
                     }
                 }

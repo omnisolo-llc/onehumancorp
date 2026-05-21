@@ -8,7 +8,7 @@ use axum::{
 };
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use crate::sip::SipDB;
+use crate::orchestration::sip::SipDB;
 use ::server_common::Claims;
 
 #[derive(Deserialize)]
@@ -33,10 +33,11 @@ where
 async fn handoff_mission_endpoint(
     State(sip_db): State<Arc<SipDB>>,
     Path(id): Path<String>,
-    Extension(_claims): Extension<Claims>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<HandoffRequest>,
 ) -> impl IntoResponse {
-    match sip_db.handoff_mission(&id, &payload.blockers).await {
+    let org_id = claims.organization_id.unwrap_or_else(|| "system".to_string());
+    match sip_db.handoff_mission(&org_id, &id, &payload.blockers).await {
         Ok(_) => (StatusCode::OK, Json(HandoffResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to handoff mission {}: {:?}", id, e);

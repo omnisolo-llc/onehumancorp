@@ -375,9 +375,10 @@ impl OpsService for MyOpsService {
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
 
 
-        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), org_id);
+        let db = Arc::new(crate::db::DB { pool: self.hub.pool.clone(), store: crate::db::DbStore::Postgres });
+        let sip_db = crate::orchestration::sip::SipDB::new(db);
 
-        match sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
+        match sip_db.prune_stale_missions(&org_id, chrono::Duration::days(7)).await {
             Ok(_) => Ok(Response::new(PruneMissionsResponse {
                 status: "success".to_string(),
                 message: "agent missions pruned".to_string(),

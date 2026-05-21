@@ -235,7 +235,8 @@ impl McpService for MyMcpService {
 
         let req = request.into_inner();
 
-        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
+        let db = Arc::new(crate::db::DB { pool: self.hub.pool.clone(), store: crate::db::DbStore::Postgres });
+        let sip_db = crate::orchestration::sip::SipDB::new(db);
         let ctx_root = std::env::var("CONTEXT_ROOT").ok();
         let sip_db = if let Some(root) = ctx_root {
             sip_db.with_context_root(root)
@@ -249,7 +250,7 @@ impl McpService for MyMcpService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for m in req.missions {
-            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
+            sip_db.delegate_mission_with_tx(&mut tx, &tenant_id, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
         }
@@ -274,7 +275,7 @@ impl McpService for MyMcpService {
         let req = request.into_inner();
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
-            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
+            Some(crate::orchestration::sip::get_sqlite_limiter().acquire().await.unwrap())
         } else {
             None
         };

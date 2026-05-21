@@ -11,6 +11,7 @@ filegroup(
         "orchestration_test.rs",
         "shared_tasks.rs",
         "shared_tasks_test.rs",
+        "sip.rs",
         "tasks.rs",
         "//src/server/orchestration/departments:srcs",        "//src/server/orchestration/queue:srcs",        "//src/server/orchestration/state:srcs",
         "//src/server/orchestration/statemachine:srcs",

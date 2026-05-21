@@ -10,7 +10,8 @@ impl ChaosEngine {
 mod tests {
     use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
-    use crate::sip::SipDB;
+    use std::sync::Arc;
+    use crate::orchestration::sip::SipDB;
 
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
@@ -21,19 +22,20 @@ mod tests {
             .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
-        let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let sip_db = SipDB::new(db);
         let threshold = chrono::Duration::hours(2);
 
         // When DB is down or connection times out, prune_stale_missions must fail gracefully instead of panic.
-        let result = sip_db.prune_stale_missions(threshold).await;
+        let result = sip_db.prune_stale_missions("test_org", threshold).await;
         assert!(result.is_err());
 
-        let upsert_res = sip_db.upsert_mission("test_mission", "PENDING", "data", true).await;
+        let upsert_res = sip_db.upsert_mission("test_org", "test_mission", "PENDING", "data", true).await;
         assert!(upsert_res.is_err(), "upsert_mission should fail gracefully without panic");
 
         let delegate_res = async {
             let mut tx = pool.begin().await?;
-            sip_db.delegate_mission_with_tx(&mut tx, "test_mission", "PENDING", "data", true, &None).await
+            sip_db.delegate_mission_with_tx(&mut tx, "test_org", "test_mission", "PENDING", "data", true, &None).await
         }.await;
         assert!(delegate_res.is_err(), "delegate_mission_with_tx should fail gracefully without panic");
     }
@@ -405,7 +407,7 @@ mod tests {
     async fn test_concurrent_load_stress_cloud_standalone() {
         use std::sync::Arc;
         use tokio::time::Instant;
-        use crate::sip::SipDB;
+        use crate::orchestration::sip::SipDB;
         use sqlx::sqlite::SqlitePoolOptions;
 
         // Shared SQLite for Standalone Stress
@@ -426,7 +428,8 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        let sip_db = Arc::new(SipDB::new(pg_pool, "system".to_string()));
+        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Postgres });
+        let sip_db = Arc::new(SipDB::new(db));
 
         // Cloud Mode Simulation (100 simultaneous business owners)
         let mut cloud_handles = vec![];

@@ -23,7 +23,6 @@ rust_library(
         "scheduler.rs",
         "seeder.rs",
         "settings.rs",
-        "sip.rs",
         "store.rs",
         "tasks.rs",
         "ultraplan.rs",
