@@ -6,24 +6,112 @@ import 'dart:convert';
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
+  final http.Client? client;
+  OnboardingScreen({this.client});
+
   @override
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  late final http.Client _client;
   final _formKey = GlobalKey<FormState>();
   String bio = '';
   OnboardingState _state = OnboardingState.welcome;
 
+  @override
+  void initState() {
+    super.initState();
+    _client = widget.client ?? http.Client();
+    _fetchState();
+  }
+
+  @override
+  void dispose() {
+    if (widget.client == null) {
+      _client.close();
+    }
+    super.dispose();
+  }
+
+  String get _apiUrl {
+    // Rely on an environment variable or default to same-origin if running in web/tauri
+    // or fallback to localhost if developing.
+    const String baseUrl = String.fromEnvironment('OHC_API_URL', defaultValue: 'http://127.0.0.1:18789');
+    return '$baseUrl/api/onboarding';
+  }
+
+  Future<void> _fetchState() async {
+    try {
+      final response = await _client.get(
+        Uri.parse('$_apiUrl/state'),
+        headers: {
+          'X-Tenant-ID': 'default_tenant',
+          'X-User-ID': 'default_user',
+        },
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['step'] != null && data['step'] is int) {
+          int step = data['step'] as int;
+          if (step >= 0 && step < OnboardingState.values.length) {
+            setState(() {
+              OnboardingState fetchedState = OnboardingState.values[step];
+              // If we were in generating state, reset to input so we don't get stuck
+              if (fetchedState == OnboardingState.generating) {
+                _state = OnboardingState.input;
+              } else {
+                _state = fetchedState;
+              }
+              if (data['bio'] != null) {
+                bio = data['bio'].toString();
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching state: $e');
+    }
+  }
+
+  Future<void> _saveState(OnboardingState newState) async {
+    if (!mounted) return;
+    setState(() {
+      _state = newState;
+    });
+    try {
+      await _client.post(
+        Uri.parse('$_apiUrl/state'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': 'default_tenant',
+          'X-User-ID': 'default_user',
+        },
+        body: jsonEncode({
+          'step': newState.index,
+          'bio': bio,
+        }),
+      );
+    } catch (e) {
+      print('Error saving state: $e');
+    }
+  }
+
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      setState(() => _state = OnboardingState.generating);
+      await _saveState(OnboardingState.generating);
 
       try {
-        final response = await http.post(
-          Uri.parse('http://localhost:8080/api/onboarding/start'),
-          headers: {'Content-Type': 'application/json'},
+        final response = await _client.post(
+          Uri.parse('$_apiUrl/start'),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': 'default_tenant',
+            'X-User-ID': 'default_user',
+          },
           body: jsonEncode({
             'bio': bio,
             'company_name': 'AI Generated Store',
@@ -42,20 +130,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
 
         if (response.statusCode == 200) {
-          setState(() => _state = OnboardingState.dashboard);
+          await _saveState(OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-           setState(() => _state = OnboardingState.input);
+           await _saveState(OnboardingState.input);
         }
       } catch (e) {
         print('Error: \$e');
-         setState(() => _state = OnboardingState.input);
+         await _saveState(OnboardingState.input);
       }
     }
   }
 
-  void launchStore() {
-    setState(() => _state = OnboardingState.live);
+  void launchStore() async {
+    await _saveState(OnboardingState.live);
   }
 
   @override
@@ -110,134 +198,163 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildWelcomeState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
-          SizedBox(height: 32),
-          Text(
-            'OneHumanCorp',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D1D1F),
-              letterSpacing: -0.5,
-            ),
-            textAlign: TextAlign.center,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.4)),
           ),
-          SizedBox(height: 16),
-          Text(
-            'The universal operating system for small business.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 48),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => _state = OnboardingState.input);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
+              SizedBox(height: 32),
+              Text(
+                'OneHumanCorp',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1D1D1F),
+                  letterSpacing: -0.5,
+                ),
+                textAlign: TextAlign.center,
               ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Start a Business',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+              SizedBox(height: 16),
+              Text(
+                'The universal operating system for small business.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
+              SizedBox(height: 48),
+              ElevatedButton(
+                onPressed: () async {
+                    await _saveState(OnboardingState.input);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Start a Business',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildInputState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Welcome to OHC Smart Builder',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1D1D1F),
-                letterSpacing: -0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Tell us about your business, and AI will build it.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 32),
-            TextFormField(
-              key: Key('bio-input'), // for testing or just semantics
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.4)),
+          ),
+          padding: EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Welcome to OHC Smart Builder',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D1D1F),
+                    letterSpacing: -0.5,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
-            ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                SizedBox(height: 16),
+                Text(
+                  'Tell us about your business, and AI will build it.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Build My Storefront',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                SizedBox(height: 32),
+                TextFormField(
+                  key: Key('bio-input'), // for testing or just semantics
+                  maxLines: 4,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => submit(),
+                  decoration: InputDecoration(
+                    labelText: 'Business Bio',
+                    hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                    ),
+                    contentPadding: EdgeInsets.all(20),
+                  ),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  onSaved: (value) => bio = value!,
                 ),
-              ),
+                SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Build My Storefront',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -345,8 +462,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       SizedBox(height: 24),
                       ElevatedButton(
-                        onPressed: () {
-                          setState(() => _state = OnboardingState.draft);
+                        onPressed: () async {
+                          await _saveState(OnboardingState.draft);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF0066FF),

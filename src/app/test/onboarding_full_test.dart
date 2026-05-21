@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../lib/screens/onboarding.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'dart:convert';
 
 void main() {
   testWidgets('Onboarding Screen - Full Flow Test', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(home: OnboardingScreen()));
+    final mockClient = MockClient((request) async {
+      if (request.method == 'GET' && request.url.path == '/api/onboarding/state') {
+        return http.Response(jsonEncode({'step': 0, 'bio': ''}), 200);
+      } else if (request.method == 'POST') {
+        return http.Response('', 200);
+      }
+      return http.Response('', 404);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(client: mockClient)));
+
+    // Wait for the initState to finish
+    await tester.pumpAndSettle();
 
     // Tap 'Start a Business' on the welcome screen
     await tester.tap(find.text('Start a Business'));
@@ -24,6 +39,11 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
     await tester.pumpAndSettle();
 
-    // Test that the form can be submitted. We just assert UI state here up to form submission.
+    // Submit form correctly and await for mock network processing.
+    await tester.tap(find.text('Build My Storefront'));
+    await tester.pumpAndSettle();
+
+    // We expect state transitioned to dashboard
+    expect(find.text('Dashboard'), findsOneWidget);
   });
 }
