@@ -26,7 +26,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
+                tenant_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at TIMESTAMP,
@@ -39,7 +39,7 @@ mod tests {
         sqlx::query(schema).execute(&pool).await.unwrap();
 
         // Insert a dummy mission
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, organization_id, _sync_status) VALUES (?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, _sync_status) VALUES (?, ?, ?, ?, ?)")
             .bind("dummy_mission_1")
             .bind("pending")
             .bind("{}")
@@ -91,7 +91,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
+                tenant_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -144,7 +144,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
+                tenant_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -217,7 +217,7 @@ mod tests {
                     "id": "cloud_mission_1",
                     "status": "COMPLETED",
                     "payload": "{\"data\":\"cloud\"}",
-                    "organization_id": "system",
+                    "tenant_id": "system",
                     "updated_at": chrono::Utc::now().to_rfc3339(),
                     "version": 2
                 }]).to_string();
@@ -269,7 +269,7 @@ mod tests {
         let orchestrator = PowerSyncOrchestrator::new(db, format!("http://{}", addr));
 
         // Part 1: Test Push (Offline local write reaches the cloud)
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, organization_id, _sync_status) VALUES (?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, _sync_status) VALUES (?, ?, ?, ?, ?)")
             .bind("local_mission_1")
             .bind("pending")
             .bind("{\"data\":\"local\"}")

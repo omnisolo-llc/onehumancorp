@@ -11,7 +11,7 @@ pub struct MissionPayload {
 #[derive(Debug, Clone)]
 pub struct LocalMission {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub status: String,
     pub payload: MissionPayload,
     pub created_at: DateTime<Utc>,
@@ -23,9 +23,9 @@ pub struct LocalMission {
 
 #[async_trait::async_trait]
 pub trait LocalRepository: Send + Sync {
-    async fn get_pending_sync(&self, organization_id: &str, limit: i32) -> Result<Vec<LocalMission>, String>;
-    async fn mark_synced(&self, organization_id: &str, local_id: &str, cloud_id: &str) -> Result<(), String>;
-    async fn mark_sync_error(&self, organization_id: &str, local_id: &str, sync_error: &str) -> Result<(), String>;
-    async fn get_active_escalations(&self, organization_id: &str) -> Result<Vec<LocalMission>, String>;
-    async fn update_local_status(&self, organization_id: &str, local_id: &str, new_status: &str) -> Result<(), String>;
+    async fn get_pending_sync(&self, tenant_id: &str, limit: i32) -> Result<Vec<LocalMission>, String>;
+    async fn mark_synced(&self, tenant_id: &str, local_id: &str, cloud_id: &str) -> Result<(), String>;
+    async fn mark_sync_error(&self, tenant_id: &str, local_id: &str, sync_error: &str) -> Result<(), String>;
+    async fn get_active_escalations(&self, tenant_id: &str) -> Result<Vec<LocalMission>, String>;
+    async fn update_local_status(&self, tenant_id: &str, local_id: &str, new_status: &str) -> Result<(), String>;
 }

@@ -41,7 +41,7 @@ impl PowerSyncOrchestrator {
         // For simplicity, we just sync agent_missions for now.
         // We look for rows that have been updated locally and need syncing.
         let rows = sqlx::query(
-            "SELECT id, status, payload, created_at, updated_at, organization_id, _sync_status, version
+            "SELECT id, status, payload, created_at, updated_at, tenant_id, _sync_status, version
              FROM agent_missions
              WHERE _sync_status = 'pending'"
         )
@@ -58,7 +58,7 @@ impl PowerSyncOrchestrator {
             let id: String = row.get("id");
             let status: String = row.get("status");
             let payload: String = row.get("payload");
-            let org_id: String = row.get("organization_id");
+            let org_id: String = row.get("tenant_id");
             let updated_at: String = row.try_get("updated_at").unwrap_or_else(|_| "".to_string());
             let version: i64 = row.try_get("version").unwrap_or(1);
 
@@ -67,7 +67,7 @@ impl PowerSyncOrchestrator {
                 "id": id,
                 "status": status,
                 "payload": payload,
-                "organization_id": org_id,
+                "tenant_id": org_id,
                 "updated_at": updated_at,
                 "version": version
             }));
@@ -147,7 +147,7 @@ impl PowerSyncOrchestrator {
                 let id = item["id"].as_str().unwrap_or("");
                 let status = item["status"].as_str().unwrap_or("PENDING");
                 let payload_data = item["payload"].as_str().unwrap_or("");
-                let org_id = item["organization_id"].as_str().unwrap_or("system");
+                let org_id = item["tenant_id"].as_str().unwrap_or("system");
                 let updated_at_str = item["updated_at"].as_str().unwrap_or("");
                 let version = item["version"].as_i64().unwrap_or(1);
 
@@ -156,12 +156,12 @@ impl PowerSyncOrchestrator {
                 }
 
                 let query = "
-                    INSERT INTO agent_missions (id, status, payload, organization_id, updated_at, _sync_status, version)
+                    INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at, _sync_status, version)
                     VALUES (?, ?, ?, ?, ?, 'synced', ?)
                     ON CONFLICT(id) DO UPDATE SET
                         status = excluded.status,
                         payload = excluded.payload,
-                        organization_id = excluded.organization_id,
+                        tenant_id = excluded.tenant_id,
                         updated_at = excluded.updated_at,
                         _sync_status = 'synced',
                         version = excluded.version

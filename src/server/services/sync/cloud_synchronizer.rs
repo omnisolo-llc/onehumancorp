@@ -75,8 +75,8 @@ impl CloudSynchronizerImpl {
         }
     }
 
-    pub async fn push_pending_missions(&self, organization_id: &str) -> Result<(), String> {
-        let pending = self.repo.get_pending_sync(organization_id, 50).await?;
+    pub async fn push_pending_missions(&self, tenant_id: &str) -> Result<(), String> {
+        let pending = self.repo.get_pending_sync(tenant_id, 50).await?;
 
         let batch_size = pending.len() as f32;
         let mode = if self.cloud_url.is_empty() { "Standalone" } else { "Cloud" };
@@ -143,7 +143,7 @@ impl CloudSynchronizerImpl {
                 Ok((status, json)) => {
                     if status >= 200 && status < 300 {
                         if let Some(cloud_id) = json.get("cloud_id").and_then(|v| v.as_str()) {
-                            let repo_res = self.repo.mark_synced(organization_id, &mission.id, cloud_id).await;
+                            let repo_res = self.repo.mark_synced(tenant_id, &mission.id, cloud_id).await;
                             if let Err(e) = repo_res {
                                 if let Some(pool) = &self.pool {
                                     let _ = record_sync_daemon_error_total(pool, 1.0, mode, "DB_ERROR").await;
@@ -155,14 +155,14 @@ impl CloudSynchronizerImpl {
                         if let Some(pool) = &self.pool {
                             let _ = record_sync_daemon_error_total(pool, 1.0, mode, "HTTP_ERROR").await;
                         }
-                        self.repo.mark_sync_error(organization_id, &mission.id, &format!("HTTP {}", status)).await?;
+                        self.repo.mark_sync_error(tenant_id, &mission.id, &format!("HTTP {}", status)).await?;
                     }
                 }
                 Err(e) => {
                     if let Some(pool) = &self.pool {
                         let _ = record_sync_daemon_error_total(pool, 1.0, mode, "API_TIMEOUT").await;
                     }
-                    self.repo.mark_sync_error(organization_id, &mission.id, &e).await?;
+                    self.repo.mark_sync_error(tenant_id, &mission.id, &e).await?;
                 }
             }
         }
@@ -170,8 +170,8 @@ impl CloudSynchronizerImpl {
         Ok(())
     }
 
-    pub async fn pull_mission_updates(&self, organization_id: &str) -> Result<(), String> {
-        let active = self.repo.get_active_escalations(organization_id).await?;
+    pub async fn pull_mission_updates(&self, tenant_id: &str) -> Result<(), String> {
+        let active = self.repo.get_active_escalations(tenant_id).await?;
 
         for mission in active {
             if let Some(cloud_id) = &mission.cloud_mission_id {
@@ -182,7 +182,7 @@ impl CloudSynchronizerImpl {
                 if let Ok((status, json)) = resp {
                     if status >= 200 && status < 300 {
                         if let Some(mission_status) = json.get("status").and_then(|v| v.as_str()) {
-                            self.repo.update_local_status(organization_id, &mission.id, mission_status).await?;
+                            self.repo.update_local_status(tenant_id, &mission.id, mission_status).await?;
                         }
                     }
                 }
@@ -195,18 +195,18 @@ impl CloudSynchronizerImpl {
 
 #[async_trait::async_trait]
 pub trait CloudSynchronizer: Send + Sync {
-    async fn push_pending_missions(&self, organization_id: &str) -> Result<(), String>;
-    async fn pull_mission_updates(&self, organization_id: &str) -> Result<(), String>;
+    async fn push_pending_missions(&self, tenant_id: &str) -> Result<(), String>;
+    async fn pull_mission_updates(&self, tenant_id: &str) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 impl CloudSynchronizer for CloudSynchronizerImpl {
-    async fn push_pending_missions(&self, organization_id: &str) -> Result<(), String> {
-        self.push_pending_missions(organization_id).await
+    async fn push_pending_missions(&self, tenant_id: &str) -> Result<(), String> {
+        self.push_pending_missions(tenant_id).await
     }
 
-    async fn pull_mission_updates(&self, organization_id: &str) -> Result<(), String> {
-        self.pull_mission_updates(organization_id).await
+    async fn pull_mission_updates(&self, tenant_id: &str) -> Result<(), String> {
+        self.pull_mission_updates(tenant_id).await
     }
 }
 
@@ -239,25 +239,25 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LocalRepository for MockLocalRepository {
-        async fn get_pending_sync(&self, _organization_id: &str, _limit: i32) -> Result<Vec<LocalMission>, String> {
+        async fn get_pending_sync(&self, _tenant_id: &str, _limit: i32) -> Result<Vec<LocalMission>, String> {
             Ok(self.pending.lock().unwrap().clone())
         }
 
-        async fn mark_synced(&self, _organization_id: &str, local_id: &str, cloud_id: &str) -> Result<(), String> {
+        async fn mark_synced(&self, _tenant_id: &str, local_id: &str, cloud_id: &str) -> Result<(), String> {
             self.synced.lock().unwrap().insert(local_id.to_string(), cloud_id.to_string());
             Ok(())
         }
 
-        async fn mark_sync_error(&self, _organization_id: &str, local_id: &str, sync_error: &str) -> Result<(), String> {
+        async fn mark_sync_error(&self, _tenant_id: &str, local_id: &str, sync_error: &str) -> Result<(), String> {
             self.errors.lock().unwrap().insert(local_id.to_string(), sync_error.to_string());
             Ok(())
         }
 
-        async fn get_active_escalations(&self, _organization_id: &str) -> Result<Vec<LocalMission>, String> {
+        async fn get_active_escalations(&self, _tenant_id: &str) -> Result<Vec<LocalMission>, String> {
             Ok(self.active.lock().unwrap().clone())
         }
 
-        async fn update_local_status(&self, _organization_id: &str, local_id: &str, new_status: &str) -> Result<(), String> {
+        async fn update_local_status(&self, _tenant_id: &str, local_id: &str, new_status: &str) -> Result<(), String> {
             self.status.lock().unwrap().insert(local_id.to_string(), new_status.to_string());
             Ok(())
         }
@@ -301,7 +301,7 @@ mod tests {
         let repo = Arc::new(MockLocalRepository::new());
         repo.pending.lock().unwrap().push(LocalMission {
             id: "local_1".to_string(),
-            organization_id: "test_org".to_string(),
+            tenant_id: "test_org".to_string(),
             status: "PENDING".to_string(),
             payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
             created_at: chrono::Utc::now(),
@@ -331,7 +331,7 @@ mod tests {
         let repo = Arc::new(MockLocalRepository::new());
         repo.pending.lock().unwrap().push(LocalMission {
             id: "local_1".to_string(),
-            organization_id: "test_org".to_string(),
+            tenant_id: "test_org".to_string(),
             status: "PENDING".to_string(),
             payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
             created_at: chrono::Utc::now(),
@@ -361,7 +361,7 @@ mod tests {
         let repo = Arc::new(MockLocalRepository::new());
         repo.pending.lock().unwrap().push(LocalMission {
             id: "local_1".to_string(),
-            organization_id: "test_org".to_string(),
+            tenant_id: "test_org".to_string(),
             status: "PENDING".to_string(),
             payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
             created_at: chrono::Utc::now(),
@@ -391,7 +391,7 @@ mod tests {
         let repo = Arc::new(MockLocalRepository::new());
         repo.active.lock().unwrap().push(LocalMission {
             id: "local_1".to_string(),
-            organization_id: "test_org".to_string(),
+            tenant_id: "test_org".to_string(),
             status: "PENDING".to_string(),
             payload: crate::services::sync::local_repository::MissionPayload { role: "SYSTEM".to_string(), task: "test".to_string(), context: None },
             created_at: chrono::Utc::now(),

@@ -106,7 +106,7 @@ impl SyncService for MySyncService {
                 let id = item["id"].as_str().unwrap_or("");
                 let status = item["status"].as_str().unwrap_or("PENDING");
                 let payload = item["payload"].as_str().unwrap_or("");
-                let org_id = item["organization_id"].as_str().unwrap_or(&tenant_id);
+                let org_id = item["tenant_id"].as_str().unwrap_or(&tenant_id);
                 let updated_at_str = item["updated_at"].as_str().unwrap_or("");
                 let version = item["version"].as_i64().unwrap_or(1);
 
@@ -119,12 +119,12 @@ impl SyncService for MySyncService {
                 }
 
                 let query = "
-                    INSERT INTO agent_missions (id, status, payload, organization_id, updated_at, _sync_status, version)
+                    INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at, _sync_status, version)
                     VALUES ($1, $2, $3, $4, $5, 'synced', $6)
                     ON CONFLICT(id) DO UPDATE SET
                         status = excluded.status,
                         payload = excluded.payload,
-                        organization_id = excluded.organization_id,
+                        tenant_id = excluded.tenant_id,
                         updated_at = excluded.updated_at,
                         _sync_status = 'synced',
                         version = excluded.version
@@ -172,7 +172,7 @@ impl SyncService for MySyncService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let rows = match sqlx::query(
-            "SELECT id, status, payload, organization_id, updated_at, version FROM agent_missions WHERE _sync_status = 'pending'"
+            "SELECT id, status, payload, tenant_id, updated_at, version FROM agent_missions WHERE _sync_status = 'pending'"
         )
         .fetch_all(&mut *tx)
         .await {
@@ -190,7 +190,7 @@ impl SyncService for MySyncService {
             let id: String = row.get("id");
             let status: String = row.get("status");
             let payload: String = row.get("payload");
-            let org_id: String = row.get("organization_id");
+            let org_id: String = row.get("tenant_id");
             let updated_at: chrono::DateTime<chrono::Utc> = row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
             let version: i32 = row.try_get("version").unwrap_or(1);
 
@@ -199,7 +199,7 @@ impl SyncService for MySyncService {
                 "id": id,
                 "status": status,
                 "payload": payload,
-                "organization_id": org_id,
+                "tenant_id": org_id,
                 "updated_at": updated_at.to_rfc3339(),
                 "version": version
             }));
@@ -416,7 +416,7 @@ mod tests {
             "id": mission_id,
             "status": "COMPLETED",
             "payload": "test data",
-            "organization_id": "system",
+            "tenant_id": "system",
             "updated_at": chrono::Utc::now().to_rfc3339(),
             "version": 2
         }]).to_string();
