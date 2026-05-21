@@ -1,39 +1,9 @@
 import { test, expect } from './fixtures';
 
 test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
-  // Mock the API for testing the UI specifically
-  await page.route('/api/agents/approvals', async (route) => {
-    const json = {
-      pending_approvals: [
-        {
-          id: 'e2e-approval-mock-1',
-          tenant_id: 'mock-tenant',
-          department: 'CustomerSuccess',
-          description: 'Draft email for review: Maya ordered a vegan cake',
-          status: 'Pending',
-          action_risk: 'High'
-        },
-        {
-          id: 'e2e-approval-mock-2',
-          tenant_id: 'mock-tenant',
-          department: 'Marketing',
-          description: 'Draft Instagram Post: New vegan cakes available!',
-          status: 'Pending',
-          action_risk: 'Low'
-        }
-      ]
-    };
-    await route.fulfill({ json });
-  });
-
-  await page.route('/api/agents/approvals/*', async (route) => {
-    await route.fulfill({ json: { success: true } });
-  });
-
   // 1. User opens the app, authenticates and navigates to the Team Dashboard
   await page.goto('/');
 
-  // Login via UI (from global-setup login structure)
   // Assuming the user is already logged in via global-setup.ts
   await page.goto('/team');
 
@@ -49,12 +19,12 @@ test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
   await ambassadorCard.click();
 
   // Verify approval inbox view for The Ambassador
-  await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).toBeVisible();
+  await expect(page.locator('text=Draft email for review')).toBeVisible();
 
   // 3. User approves the action (Swipe right / Approve button)
   const approveBtn = page.locator('button', { hasText: 'Approve' }).first();
   await approveBtn.click();
 
-  // Wait for the action to be processed (mocking the UI removal)
-  await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).not.toBeVisible();
+  // Wait for the action to be processed (removing from UI)
+  await expect(page.locator('text=Draft email for review')).not.toBeVisible();
 });
