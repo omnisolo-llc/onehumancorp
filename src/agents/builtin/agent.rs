@@ -2660,8 +2660,8 @@ mod tests {
         let combined = crate::agent::load_cascading_agents_md(root_path).await;
 
         // Verify the size is close to 32KiB + notice
-        assert!(combined.len() <= 32 * 1024 + 100); // 32768 + the length of the system notice
-        assert!(combined.ends_with("[System: AGENTS.md content truncated to 32KiB limit.]"));
+        assert!(combined.len() <= 32 * 1024 + 200);
+        assert!(combined.contains("...[System: AGENTS.md content truncated. Preserving start and end to combat 'Lost in the Middle']..."));
     }
 
 
