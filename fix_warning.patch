@@ -1,0 +1,10 @@
+--- src/server/hub.rs
++++ src/server/hub.rs
+@@ -743,7 +743,6 @@
+         };
+
+         // Spawn asynchronous background worker for the child agent (simulated via tokio::spawn)
+-        let child_id_clone = child_id.clone();
+         let hub_clone = self.clone();
+         tokio::spawn(async move {
+             let _ = hub_clone.publish(directive_msg);

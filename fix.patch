@@ -43,11 +43,3 @@
 
          Ok(child_id)
      }
-@@ -1118,5 +1125,7 @@
-         assert_eq!(child_inbox[0].content, "hello world");
-         assert!(child_inbox[1].content.contains("<task-notification>"));
-         assert!(child_inbox[1].content.contains("do some work"));
-+        assert!(child_inbox[1].content.contains("Context: ["));
-+        assert!(child_inbox[1].content.contains("hello world"));
-     }
- }

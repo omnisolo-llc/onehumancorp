@@ -743,7 +743,6 @@ impl Hub {
         };
         
         // Spawn asynchronous background worker for the child agent (simulated via tokio::spawn)
-        let child_id_clone = child_id.clone();
         let hub_clone = self.clone();
         tokio::spawn(async move {
             let _ = hub_clone.publish(directive_msg);
@@ -1126,6 +1125,10 @@ mod tests {
         assert_eq!(child_inbox[0].content, "hello world");
         assert!(child_inbox[1].content.contains("<task-notification>"));
         assert!(child_inbox[1].content.contains("do some work"));
+        assert!(child_inbox[1].content.contains("Context: ["));
+        assert!(child_inbox[1].content.contains("hello world"));
+        assert!(child_inbox[1].content.contains("Context: ["));
+        assert!(child_inbox[1].content.contains("hello world"));
         assert!(child_inbox[1].content.contains("Context: ["));
         assert!(child_inbox[1].content.contains("hello world"));
     }
