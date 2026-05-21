@@ -93,6 +93,16 @@ pub async fn create_block(pool: &PgPool, tenant_id: Uuid, page_id: Uuid, block_t
     .await
 }
 
+pub async fn get_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid) -> Result<Block, sqlx::Error> {
+    sqlx::query_as::<_, Block>(
+        "SELECT id, tenant_id, page_id, block_type, content, sort_order FROM builder_blocks WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(tenant_id)
+    .bind(block_id)
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn update_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid, content: Value) -> Result<Block, sqlx::Error> {
     sqlx::query_as::<_, Block>(
         "UPDATE builder_blocks SET content = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3 RETURNING id, tenant_id, page_id, block_type, content, sort_order",
