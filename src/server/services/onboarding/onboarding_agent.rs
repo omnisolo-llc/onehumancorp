@@ -2618,3 +2618,26 @@ mod tests {
         assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AIOnboardingProfile {
+    pub business_name: String,
+    pub business_type: String,
+    pub generated_tagline: String,
+    pub recommended_theme: String,
+}
+
+impl OnboardingAgent {
+    pub async fn instant_build(&self, user_prompt: &str) -> Result<AIOnboardingProfile, String> {
+        let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
+
+        let prompt = format!(
+            "Extract business details from the user prompt: '{}'. Return JSON matching AIOnboardingProfile.",
+            user_prompt
+        );
+
+        let response = minimax.chat_completion(&prompt).await.map_err(|e| e.to_string())?;
+
+        serde_json::from_str(&response).map_err(|_| "Failed to parse".to_string())
+    }
+}

@@ -258,3 +258,39 @@ mod tests {
         assert!(BookingService::prevent_double_booking(&existing, &overlapping_slot).is_err());
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutonomousBookingAgentResponse {
+    pub reply: String,
+    pub proposed_slots: Vec<BookingTimeSlot>,
+    pub requires_deposit: bool,
+}
+
+impl BookingService {
+    pub async fn process_chat_message(
+        _tenant_id: &str,
+        _customer_id: &str,
+        message: &str,
+        minimax: Option<&crate::minimax::MinimaxClient>,
+    ) -> Result<AutonomousBookingAgentResponse, String> {
+        let minimax = minimax.ok_or("MiniMax API key not configured")?;
+
+        let prompt = format!(
+            "You are an autonomous booking agent for service-based SMBs. A customer says: '{}'. \
+            Analyze intent. Return ONLY JSON matching AutonomousBookingAgentResponse (reply as string, proposed_slots array of objects with start_time and end_time as ISO 8601 strings, requires_deposit boolean).",
+            message
+        );
+
+        let response = minimax.chat_completion(&prompt).await.map_err(|e| e.to_string())?;
+
+        let parsed: AutonomousBookingAgentResponse = serde_json::from_str(&response).unwrap_or_else(|_| {
+            AutonomousBookingAgentResponse {
+                reply: "I can help with that. Can you provide more details?".to_string(),
+                proposed_slots: vec![],
+                requires_deposit: false,
+            }
+        });
+
+        Ok(parsed)
+    }
+}
