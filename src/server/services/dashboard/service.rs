@@ -62,6 +62,7 @@ impl DashboardService for MyDashboardService {
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
+        let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
@@ -78,16 +79,20 @@ impl DashboardService for MyDashboardService {
                     cost_auditor.get_agent_costs_snapshot(),
                 ))
             }),
-            async {
+            tokio::spawn(async move {
                 let org_id = org_id1;
-                let cache_key = format!("hub:products:{}", org_id);
+                let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
                 let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
 
                 if let Some(products) = cache.get(&cache_key).await {
                     return Ok::<_, String>(products);
                 }
 
-                let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
+                let q = if mobile_optimized {
+                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                } else {
+                    "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                };
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db1.store {
@@ -104,7 +109,14 @@ impl DashboardService for MyDashboardService {
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    metadata_json: if mobile_optimized {
+                                        "{}".to_string()
+                                    } else {
+                                        match r.try_get::<serde_json::Value, _>("metadata") {
+                                            Ok(v) => v.to_string(),
+                                            Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                        }
+                                    },
                                 };
                                 results.push(p);
                             }
@@ -123,7 +135,14 @@ impl DashboardService for MyDashboardService {
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})).to_string(),
+                                    metadata_json: if mobile_optimized {
+                                        "{}".to_string()
+                                    } else {
+                                        match r.try_get::<serde_json::Value, _>("metadata") {
+                                            Ok(v) => v.to_string(),
+                                            Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                        }
+                                    },
                                 };
                                 results.push(p);
                             }
@@ -133,17 +152,21 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(results)
-            },
-            async {
+            }),
+            tokio::spawn(async move {
                 let org_id = org_id2;
-                let cache_key = format!("hub:orders:{}", org_id);
+                let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
                 let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
 
                 if let Some(orders) = cache.get(&cache_key).await {
                     return Ok::<_, String>(orders);
                 }
 
-                let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
+                let q = if mobile_optimized {
+                    "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
+                } else {
+                    "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10"
+                };
                 use sqlx::Row;
                 let mut results = Vec::new();
                 match &db2.store {
@@ -183,17 +206,21 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(results)
-            },
-            async {
+            }),
+            tokio::spawn(async move {
                 let org_id = org_id3;
-                let cache_key = format!("hub:org:{}", org_id);
+                let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
                 let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
 
                 if let Some(org) = cache.get(&cache_key).await {
                     return Ok::<_, String>(org);
                 }
 
-                let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
+                let q = if mobile_optimized {
+                    "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+                } else {
+                    "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+                };
                 use sqlx::Row;
                 let mut org = None;
                 match &db3.store {
@@ -233,7 +260,7 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(org)
-            }
+            })
         );
 
         let agents = agents_res
@@ -246,9 +273,15 @@ impl DashboardService for MyDashboardService {
             cost_res
                 .map_err(|e| Status::internal(e.to_string()))?
                 .map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let products = if req.mobile_optimized {
             products
