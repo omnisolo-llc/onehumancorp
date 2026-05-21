@@ -281,7 +281,7 @@ impl BookingService {
             message
         );
 
-        let response = minimax.chat_completion(&prompt).await.map_err(|e| e.to_string())?;
+        let response = minimax.reason(&prompt).await.map_err(|e| e.to_string())?;
 
         let parsed: AutonomousBookingAgentResponse = serde_json::from_str(&response).unwrap_or_else(|_| {
             AutonomousBookingAgentResponse {

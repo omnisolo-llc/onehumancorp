@@ -2636,7 +2636,7 @@ impl OnboardingAgent {
             user_prompt
         );
 
-        let response = minimax.chat_completion(&prompt).await.map_err(|e| e.to_string())?;
+        let response = minimax.reason(&prompt).await.map_err(|e| e.to_string())?;
 
         serde_json::from_str(&response).map_err(|_| "Failed to parse".to_string())
     }
