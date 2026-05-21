@@ -227,13 +227,20 @@ export function HelpWidget() {
       setChatInput("");
       setChatMessages(prev => [...prev, { role: "user", text: val }]);
 
-      try {
-        const response = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: val }) });
-        const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply }]);
-      } catch (err) {
-        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
-      }
+      setTimeout(() => {
+        let responseText = "I found an article that might help.";
+
+        const lowerInput = val.toLowerCase();
+        if (lowerInput.includes('store') || lowerInput.includes('vibe')) {
+          responseText = "To change your store's appearance, click 'Change Vibe' at the bottom of the Builder page. This will let you pick new colors and fonts. <br/><br/><a href=\"/help\" class=\"text-blue-600 font-bold hover:underline\">Read the full article →</a>";
+        } else if (lowerInput.includes('payment') || lowerInput.includes('money')) {
+          responseText = "You can manage payments in the 'Payments' section of your dashboard. You'll need to connect a bank account first. <br/><br/><a href=\"/help\" class=\"text-blue-600 font-bold hover:underline\">Read the full article →</a>";
+        } else {
+          responseText = "I can help with that. Could you provide a bit more detail about what you're trying to achieve?";
+        }
+
+        setChatMessages(prev => [...prev, { role: "bot", text: responseText }]);
+      }, 800);
     }
   };
 
