@@ -53,9 +53,11 @@ SET username = EXCLUDED.username,
     tenant_id = EXCLUDED.tenant_id,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+ALTER TABLE IF EXISTS agent_approvals ADD COLUMN IF NOT EXISTS feature_type TEXT;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, feature_type, created_at, updated_at)
 VALUES
-('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;

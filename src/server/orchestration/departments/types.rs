@@ -92,6 +92,8 @@ pub struct ApprovalRequest {
     pub description: String,
     pub status: ApprovalStatus,
     pub action_risk: ActionRisk,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub feature_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
