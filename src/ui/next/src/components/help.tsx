@@ -297,7 +297,7 @@ export function HelpWidget() {
                     <p className="text-xs text-gray-500 mt-1">Grow your audience and sales.</p>
                   </div>
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                    <h4 className="font-bold text-gray-800 text-sm">Account & Billing</h4>
+                    <a href="/my-plan"><h4 className="font-bold text-gray-800 text-sm hover:underline">Account & Billing</h4></a>
                     <p className="text-xs text-gray-500 mt-1">Manage your subscription.</p>
                   </div>
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
