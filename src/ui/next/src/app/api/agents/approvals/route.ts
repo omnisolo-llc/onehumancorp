@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const approvals = [
+  const approvals = global.globalApprovals || [
     {
       id: "1",
       department: "CustomerSuccess",

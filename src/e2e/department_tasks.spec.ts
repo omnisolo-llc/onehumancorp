@@ -8,6 +8,35 @@ test('dashboard order milestone is visible after marking an order ready', async 
   await expect(page.locator('#milestone-card')).toContainText('First Sale!');
 });
 
+test('UI: Autonomy level configuration and routing (Draft vs Auto-Execute)', async ({ page }) => {
+  // 1. Visit Dashboard, click Test Trigger
+  await page.goto('/dashboard');
+
+  // Wait for activity panel to load
+  await expect(page.getByText('Team Activity')).toBeVisible();
+
+  // Click test trigger button (Operations is default Draft Only)
+  await page.getByRole('button', { name: 'Test Trigger' }).click();
+
+  // 2. Go to Team Page and check that it arrived as a pending approval for Operations
+  await page.goto('/team');
+  const managerCard = page.locator('div.bg-white\\/65', { hasText: 'The Manager' }).first();
+  await expect(managerCard).toContainText('awaiting approval');
+
+  // Change autonomy level to Auto-Execute (Full Autopilot)
+  await managerCard.locator('select').selectOption('Full Autopilot');
+  // Wait for request to finish
+  await page.waitForTimeout(500);
+
+  // 3. Go back to Dashboard, click Test Trigger again
+  await page.goto('/dashboard');
+  await page.getByRole('button', { name: 'Test Trigger' }).click();
+
+  // 4. Verify the activity directly logs to the dashboard without waiting for approval
+  // It should show up under "Simulated Order Processed"
+  await expect(page.getByText('Simulated Order Processed').first()).toBeVisible();
+});
+
 test('draft-to-approval flow for AI Agent Departments', async ({ page, request }) => {
   // Wait a bit to ensure the server is ready, just in case
   await page.waitForTimeout(1000);

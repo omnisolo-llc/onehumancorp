@@ -1,0 +1,20 @@
+--- src/e2e/department_tasks.spec.ts
++++ src/e2e/department_tasks.spec.ts
+@@ -8,7 +8,7 @@
+   await expect(page.locator('#milestone-card')).toContainText('First Sale!');
+ });
+
+-test('UI: Autonomy level configuration and routing (Draft vs Auto-Execute)', async ({ page, request }) => {
++test('UI: Autonomy level configuration and routing (Draft vs Auto-Execute)', async ({ page }) => {
+   // 1. Visit Dashboard, click Test Trigger
+   await page.goto('/dashboard');
+
+@@ -20,7 +20,7 @@
+
+   // 2. Go to Team Page and check that it arrived as a pending approval for Operations
+   await page.goto('/team');
+-  const managerCard = page.locator('div', { hasText: 'The Manager' }).first();
++  const managerCard = page.locator('div.bg-white\\/65', { hasText: 'The Manager' }).first();
+   await expect(managerCard).toContainText('awaiting approval');
+
+   // Change autonomy level to Auto-Execute (Full Autopilot)

@@ -26,12 +26,22 @@ const DEPARTMENTS = [
 
 export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [settings, setSettings] = useState<Record<string, string>>({});
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchApprovals = async () => {
     try {
-      const response = await fetch('/api/agents/approvals');
+      const [response, settingsResponse] = await Promise.all([
+        fetch('/api/agents/approvals'),
+        fetch('/api/agents/settings')
+      ]);
+
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        setSettings(settingsData.settings || {});
+      }
+
       if (response.ok) {
         const data = await response.json();
         setApprovals(data.pending_approvals || []);
@@ -77,6 +87,19 @@ export default function TeamPage() {
     }
   };
 
+  const handleAutonomyChange = async (department: string, level: string) => {
+    setSettings(prev => ({ ...prev, [department]: level }));
+    try {
+      await fetch('/api/agents/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department, autonomyLevel: level })
+      });
+    } catch (error) {
+      console.error("Failed to update settings", error);
+    }
+  };
+
   if (selectedDepartment) {
     const deptInfo = DEPARTMENTS.find(d => d.id === selectedDepartment);
     const deptApprovals = approvals.filter(a => a.department === selectedDepartment);
@@ -112,11 +135,14 @@ export default function TeamPage() {
           ) : (
             DEPARTMENTS.map(dept => {
               const pendingCount = approvals.filter(a => a.department === dept.id).length;
+              const currentLevel = settings[dept.id] || "Draft Only";
               return (
                 <DepartmentCard
                   key={dept.id}
                   name={dept.name}
                   pendingCount={pendingCount}
+                  autonomyLevel={currentLevel}
+                  onAutonomyChange={(level) => handleAutonomyChange(dept.id, level)}
                   onClick={() => setSelectedDepartment(dept.id)}
                 />
               );

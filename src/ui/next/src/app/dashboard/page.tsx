@@ -7,6 +7,28 @@ export default function Dashboard() {
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const response = await fetch('/api/agents/activity');
+        if (response.ok) {
+          const data = await response.json();
+          setSwarmActivity(prev => {
+            // Merge with existing but keep distinct by id
+            const existingIds = new Set(prev.map(a => a.id));
+            const newActivities = (data.activity || []).filter((a: any) => !existingIds.has(a.id));
+            return [...newActivities, ...prev].slice(0, 10);
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch activity", error);
+      }
+    };
+    fetchActivity();
+    const interval = setInterval(fetchActivity, 5000);
+    return () => clearInterval(interval);
+  }, []);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
@@ -294,9 +316,27 @@ export default function Dashboard() {
          <section>
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2>
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
-                    <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={async () => {
+                            await fetch('/api/agents/trigger', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    department: 'Operations',
+                                    action: 'Simulated Order Processed',
+                                    risk: 'Low'
+                                })
+                            });
+                        }}
+                        className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100 text-xs font-medium hover:bg-blue-100 transition-colors"
+                    >
+                        Test Trigger
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
+                        <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
+                    </div>
                 </div>
             </div>
 
