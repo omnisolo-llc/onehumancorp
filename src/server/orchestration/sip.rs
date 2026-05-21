@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
 use crate::db::{DB, DbStore};
-use sqlx::{SqlitePool};
+use sqlx::SqlitePool;
 
 static SQLITE_CONCURRENCY_LIMITER: OnceLock<Semaphore> = OnceLock::new();
 
