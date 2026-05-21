@@ -2024,6 +2024,8 @@ impl Agent {
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
+                        tracing::debug!("Tool {} encountered LLM-recoverable error (attempt {} of {})", tc.name, *count, final_cfg.max_retries + 1);
+
                         if *count > final_cfg.max_retries {
                             if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                 rewind_attempts_remaining -= 1;
@@ -2070,7 +2072,7 @@ impl Agent {
                                         on_event(AgentEvent::RewindOccurred {
                                             iteration,
                                             checkpoint_id: prev_id,
-                                            reason: format!("Tool '{}' failed 3 times", tc.name),
+                                            reason: format!("Tool '{}' failed {} times", tc.name, *count),
                                         });
                                         tool_error_counts.remove(&tc.name);
                                         continue;
@@ -2208,6 +2210,8 @@ impl Agent {
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
+                            tracing::debug!("Tool {} encountered LLM-recoverable error (attempt {} of {})", tc.name, *count, final_cfg.max_retries + 1);
+
                             if *count > final_cfg.max_retries {
                                 if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                     rewind_attempts_remaining -= 1;
@@ -2254,7 +2258,7 @@ impl Agent {
                                             on_event(AgentEvent::RewindOccurred {
                                                 iteration,
                                                 checkpoint_id: prev_id,
-                                                reason: format!("Tool '{}' failed 3 times", tc.name),
+                                                reason: format!("Tool '{}' failed {} times", tc.name, *count),
                                             });
                                             tool_error_counts.remove(&tc.name);
                                             continue;
