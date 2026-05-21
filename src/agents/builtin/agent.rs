@@ -349,6 +349,8 @@ impl Agent {
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_loop");
+
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let phases = ["Gather", "Act", "Verify"];
 
@@ -1003,6 +1005,8 @@ impl Agent {
             iteration: 0,
         });
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
+
         // Phase 1: Planning
         let planner_system = format!(
             "You are an expert planner. Create a strict JSON plan to solve the user's task using the available tools.\nYour output MUST be a valid JSON array of objects, where each object has:\n- `tool`: the exact name of the tool\n- `args`: a JSON object containing the arguments for the tool\n\nAvailable tools:\n{}\n\nReturn ONLY the JSON array. Do not include markdown formatting or any other text.",
@@ -1270,6 +1274,8 @@ impl Agent {
     ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "query");
+
         tokio::spawn(async move {
             let mut on_event = |event: AgentEvent| {
                 // We use an unbounded channel so send does not block or drop events if the consumer is slow.
@@ -1492,6 +1498,8 @@ impl Agent {
         }
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run");
 
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
