@@ -165,7 +165,25 @@ impl Provider for LocalProvider {
             }
         }
 
+        #[cfg(unix)]
+        let res = async {
+            let mut options = tokio::fs::OpenOptions::new();
+            options.write(true).create(true).truncate(true);
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                options.mode(0o600);
+            }
+
+            use tokio::io::AsyncWriteExt;
+            let mut file = options.open(&path).await?;
+            file.write_all(&final_data).await
+        }.await;
+
+        #[cfg(not(unix))]
         let res = tokio::fs::write(&path, final_data).await;
+
         if res.is_ok() {
             let _ = ::server_telemetry::record_storage_rw_cost(
                 &crate::db::get_pool(),
