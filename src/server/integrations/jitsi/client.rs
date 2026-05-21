@@ -1,10 +1,10 @@
 pub struct JitsiClient {
-    api_key: String,
+    _api_key: String,
 }
 
 impl JitsiClient {
     pub fn new(api_key: String) -> Self {
-        Self { api_key }
+        Self { _api_key: api_key }
     }
 }
 
