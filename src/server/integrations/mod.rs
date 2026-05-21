@@ -25,4 +25,5 @@ pub mod mailchimp;
 pub mod ayrshare;
 pub mod listmonk;
 pub mod easypost;
+pub mod karrio;
 pub mod jitsi;

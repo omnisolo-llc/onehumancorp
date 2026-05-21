@@ -30,6 +30,7 @@ filegroup(
         "//src/server/integrations/ayrshare:srcs",
         "//src/server/integrations/listmonk:srcs",
         "//src/server/integrations/easypost:srcs",
+        "//src/server/integrations/karrio:srcs",
         "//src/server/integrations/jitsi:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
