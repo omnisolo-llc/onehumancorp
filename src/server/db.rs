@@ -233,13 +233,7 @@ impl DB {
                     .await?;
 
                 let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                match migrator.run(&self.pool).await {
-                    Ok(_) => (),
-                    Err(sqlx::migrate::MigrateError::VersionMismatch(v)) => {
-                        tracing::warn!("Ignoring VersionMismatch({}) error during migration", v);
-                    }
-                    Err(e) => return Err(e.into()),
-                }
+                migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
