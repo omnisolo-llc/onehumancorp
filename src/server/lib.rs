@@ -2798,19 +2798,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
                         </div>
                         <div class="card glass">
-                            <h3>Facebook User</h3>
-                            <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
+                            <h3 style="display: flex; justify-content: space-between; align-items: center;">Facebook Comment <span style="font-size: 20px;">📘</span></h3>
+                            <p>Are you open on Sundays?</p>
+                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, we are open 10am-2pm!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
-                            <h3>Instagram User</h3>
-                            <p>Hello from Instagram!</p>
-                            <button onclick="alert('Configure Instagram')">Configure</button>
+                            <h3 style="display: flex; justify-content: space-between; align-items: center;">Instagram DM <span style="font-size: 20px;">📸</span></h3>
+                            <p>Can I order a custom cake?</p>
+                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Sure, please send details!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
-                            <h3>WhatsApp User</h3>
-                            <p>Hello from WhatsApp!</p>
-                            <button onclick="alert('Configure WhatsApp')">Configure</button>
+                            <h3 style="display: flex; justify-content: space-between; align-items: center;">WhatsApp <span style="font-size: 20px;">💬</span></h3>
+                            <p>Hello, do you deliver?</p>
+                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
@@ -2976,6 +2979,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Calendly...')">Connect</button>
                             </div>
 
+                            <!-- Cal.com Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Cal.com</h3>
+                                </div>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
+                            </div>
+
                             <!-- ActiveCampaign Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -2984,6 +2995,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Newsletters. Keep your customers engaged easily.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
+                            </div>
+
+                            <!-- Resend Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Resend</h3>
+                                </div>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Resend...')">Connect</button>
                             </div>
 
                             <!-- ShipStation Integration -->
@@ -3013,6 +3032,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
+                            </div>
+
+                            <!-- Mercado Pago Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Mercado Pago</h3>
+                                </div>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
@@ -3060,6 +3087,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
                         <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+
+                        <hr/>
+                        <button onclick="showScreen('inbox-screen')">Connect Meta</button>
 
                         <hr/>
                         <h2>Profile</h2>
