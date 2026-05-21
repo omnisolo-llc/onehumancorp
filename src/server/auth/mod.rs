@@ -124,6 +124,21 @@ pub struct Store {
 
 impl Store {
     pub fn new() -> Self {
+        let mut revoked = HashMap::new();
+        let revoked_path = std::path::Path::new(".ohc_revoked_tokens.json");
+        if revoked_path.exists() {
+            if let Ok(data) = std::fs::read_to_string(revoked_path) {
+                if let Ok(parsed) = serde_json::from_str::<HashMap<String, DateTime<Utc>>>(&data) {
+                    let now = Utc::now();
+                    for (k, v) in parsed {
+                        if v > now {
+                            revoked.insert(k, v);
+                        }
+                    }
+                }
+            }
+        }
+
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
@@ -203,7 +218,7 @@ impl Store {
             by_name: RwLock::new(HashMap::new()),
             by_email: RwLock::new(HashMap::new()),
             by_oidc: RwLock::new(HashMap::new()),
-            revoked: RwLock::new(HashMap::new()),
+            revoked: RwLock::new(revoked),
             secret,
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
@@ -413,11 +428,38 @@ impl Store {
     }
 
     pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
-        let mut revoked = self.revoked.write().unwrap();
-        revoked.insert(jti, exp);
+        let mut revoked_copy = HashMap::new();
+        {
+            let mut revoked = self.revoked.write().unwrap();
+            revoked.insert(jti, exp);
 
-        let now = Utc::now();
-        revoked.retain(|_, v| *v > now);
+            let now = Utc::now();
+            revoked.retain(|_, v| *v > now);
+            revoked_copy = revoked.clone();
+        }
+
+        if let Ok(json) = serde_json::to_string(&revoked_copy) {
+            let revoked_path = std::path::Path::new(".ohc_revoked_tokens.json");
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                use std::io::Write;
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .mode(0o600)
+                    .open(revoked_path)
+                {
+                    let _ = file.write_all(json.as_bytes());
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = std::fs::write(revoked_path, json);
+            }
+        }
     }
 
     pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {

@@ -230,9 +230,12 @@ impl AgentServiceImpl {
                 }
                 Ok(())
             }
-            AuthMode::Spiffe { .. } => {
-                // SPIFFE/mTLS check would be done at the transport layer.
-                // For simplicity we allow if TLS is used.
+            AuthMode::Spiffe { allowed_id } => {
+                let meta = req.metadata();
+                let spiffe_id_str = meta.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                if spiffe_id_str != allowed_id {
+                    return Err(Status::unauthenticated(format!("invalid SPIFFE ID: expected {}, got {}", allowed_id, spiffe_id_str)));
+                }
                 Ok(())
             }
         }
