@@ -688,7 +688,7 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
-                            let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res;
 
                             loop {
@@ -776,7 +776,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
-                        let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res;
 
                         loop {
@@ -1916,7 +1916,7 @@ impl Agent {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
@@ -1979,7 +1979,7 @@ impl Agent {
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
-                        if *count > final_cfg.max_retries {
+                        if *count > std::cmp::min(final_cfg.max_retries, 2) {
                             if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                 rewind_attempts_remaining -= 1;
                                 let _ = checkpoint_history.pop();
@@ -2123,7 +2123,7 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = final_cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
@@ -2163,7 +2163,7 @@ impl Agent {
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
-                            if *count > final_cfg.max_retries {
+                            if *count > std::cmp::min(final_cfg.max_retries, 2) {
                                 if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                     rewind_attempts_remaining -= 1;
                                     let _ = checkpoint_history.pop();
@@ -5577,4 +5577,77 @@ mod hierarchical_prompt_tests {
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
         assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"));
     }
+}
+
+#[tokio::test]
+async fn test_stripe_retry_limit() {
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+
+    struct FailingTool;
+    #[async_trait::async_trait]
+    impl ohc_builtin_agent_tools::ToolExecutor for FailingTool {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Err(ToolError::LlmRecoverable("I always fail".to_string()))
+        }
+    }
+
+    struct RetryMockClient {
+        call_count: tokio::sync::Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for RetryMockClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            // On every turn, the LLM tries to call the tool again
+            Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "Let me try that tool".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: format!("call_{}", *count),
+                        name: "failing_tool".to_string(),
+                        arguments: serde_json::json!({}),
+                    }],
+                    tool_results: vec![],
+                    response_id: Some(format!("resp_{}", *count)),
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some(format!("resp_{}", *count)),
+            })
+        }
+    }
+
+    let client = Arc::new(RetryMockClient { call_count: tokio::sync::Mutex::new(0) });
+    let tools = vec![
+        ohc_builtin_agent_tools::Tool {
+            name: "failing_tool".to_string(),
+            description: "Fails".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(FailingTool),
+        }
+    ];
+
+    let agent = Agent::new(client.clone(), tools);
+    let mut cfg = AgentRunConfig::default();
+    cfg.max_retries = 5; // Configure to 5, but our code should clamp to 2
+    cfg.max_iterations = 20;
+
+    let mut on_event = |_| {};
+
+    // The run should fail after exactly 2 retries on the tool call
+    let result = agent.run(&cfg, "Start", &mut on_event).await;
+
+    assert!(result.is_err(), "Run should fail due to retries exceeded");
+    let err_str = result.unwrap_err().to_string();
+    assert!(err_str.contains("failed consecutively beyond max_retries limit"), "Should fail because of retry limit");
+
+    let lock = client.call_count.lock().await;
+    // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
+    assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
 }
