@@ -43,6 +43,14 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
+          # Additional aggressive cleanup
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf /usr/local/lib/node_modules || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/share/php || true
+          sudo apt-get clean
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
