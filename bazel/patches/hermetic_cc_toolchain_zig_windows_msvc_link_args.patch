@@ -11,7 +11,7 @@ index a34c88a..f61c5b7 100644
      }
  
      // Add -target as the last parameter. The wrapper should overwrite
-@@ -261,3 +261,86 @@ fn shouldSkipArg(run_mode: RunMode, arg: []const u8) bool {
+@@ -261,3 +261,89 @@ fn shouldSkipArg(run_mode: RunMode, arg: []const u8) bool {
          mem.eql(u8, arg, "--disable-auto-image-base");
  }
  
@@ -40,8 +40,12 @@ index a34c88a..f61c5b7 100644
 +    args: *ArrayListUnmanaged([]const u8),
 +    arg: []const u8,
 +) !bool {
-+    if (mem.eql(u8, arg, "-nolibc") or
-+        mem.eql(u8, arg, "--unwindlib=none") or
++    if (mem.eql(u8, arg, "-nolibc")) {
++        try args.append(arena, "-nodefaultlibs");
++        return true;
++    }
++
++    if (mem.eql(u8, arg, "--unwindlib=none") or
 +        mem.eql(u8, arg, "-lmsvcrt"))
 +    {
 +        return true;
@@ -81,7 +85,10 @@ index a34c88a..f61c5b7 100644
 +        return true;
 +    }
 +
-+    if (mem.endsWith(u8, arg, ".lib") and !hasPathSeparator(arg)) {
++    if (mem.endsWith(u8, arg, ".lib") and
++        mem.indexOfScalar(u8, arg, '/') == null and
++        mem.indexOfScalar(u8, arg, '\\') == null)
++    {
 +        try appendLib(arena, args, arg[0 .. arg.len - ".lib".len]);
 +        return true;
 +    }
@@ -92,9 +99,5 @@ index a34c88a..f61c5b7 100644
 +fn appendLib(arena: mem.Allocator, args: *ArrayListUnmanaged([]const u8), name: []const u8) !void {
 +    const lib_name = if (mem.endsWith(u8, name, ".lib")) name[0 .. name.len - ".lib".len] else name;
 +    try args.append(arena, try std.fmt.allocPrint(arena, "-l{s}", .{lib_name}));
-+}
-+
-+fn hasPathSeparator(arg: []const u8) bool {
-+    return mem.indexOfScalar(u8, arg, '/') != null or mem.indexOfScalar(u8, arg, '\\') != null;
 +}
 +
