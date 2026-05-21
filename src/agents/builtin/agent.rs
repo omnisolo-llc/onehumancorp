@@ -1854,11 +1854,11 @@ impl Agent {
                     }
                 }
 
-                // Inferential/Sensors (LLM-as-judge subagent)
+                // Verification Loops (Quality x3): Giving the model ways to verify work. Mechanics: Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
                 if final_cfg.enable_llm_judge {
                     let judge_req = ChatRequest {
                         model: final_cfg.model.clone(),
-                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
+                        system: "You are a separate LLM-as-judge subagent. Evaluate the following output for correctness, completeness, and adherence to constraints. Output ONLY 'APPROVE' or 'REJECT: <reason>'.".to_string(),
                         messages: vec![Message::user(format!("Evaluate this output:
 {}", last_assistant_content))],
                         tools: vec![],
