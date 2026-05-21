@@ -25,6 +25,7 @@ ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAU
 CREATE TABLE IF NOT EXISTS agent_session_data (
     session_id TEXT PRIMARY KEY,
     agent_id TEXT NOT NULL,
+    tenant_id TEXT DEFAULT 'system',
     context_data TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -32,9 +33,12 @@ CREATE TABLE IF NOT EXISTS agent_session_data (
     _sync_status TEXT DEFAULT 'pending',
     version INTEGER DEFAULT 1
 );
+ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_agent_session_data ON agent_session_data USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
     memory_id TEXT PRIMARY KEY,
+    tenant_id TEXT DEFAULT 'system',
     context TEXT NOT NULL,
     embedding VECTOR(1536),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -42,6 +46,8 @@ CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
     _sync_status TEXT DEFAULT 'pending',
     version INTEGER DEFAULT 1
 );
+ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_swarm_truth_embeddings ON swarm_truth_embeddings USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
     id VARCHAR PRIMARY KEY,

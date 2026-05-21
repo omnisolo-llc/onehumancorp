@@ -66,12 +66,25 @@ impl DB {
                         #[cfg(unix)]
                         {
                             use std::os::unix::fs::DirBuilderExt;
+                            use std::os::unix::fs::PermissionsExt;
                             let mut builder = std::fs::DirBuilder::new();
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
                                 tracing::error!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
+                            }
+
+                            // Ensure the directory itself has strict permissions even if it already existed
+                            if let Ok(metadata) = std::fs::metadata(parent) {
+                                let mut perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o700 {
+                                    perms.set_mode(0o700);
+                                    if let Err(e) = std::fs::set_permissions(parent, perms) {
+                                        tracing::error!("Failed to securely update existing standalone DB directory permissions: {}", e);
+                                        return Err(e.into());
+                                    }
+                                }
                             }
                         }
                         #[cfg(not(unix))]
@@ -240,6 +253,7 @@ impl DB {
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         context_data TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -263,6 +277,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         context TEXT NOT NULL,
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

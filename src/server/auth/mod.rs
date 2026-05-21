@@ -309,8 +309,12 @@ impl Store {
             return Err("account disabled".to_string());
         }
 
-        if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && user_org != org_id {
+        if !org_id.is_empty() {
+            if let Some(ref user_org) = user.organization_id {
+                if user_org != org_id {
+                    return Err("invalid credentials".to_string());
+                }
+            } else {
                 return Err("invalid credentials".to_string());
             }
         }

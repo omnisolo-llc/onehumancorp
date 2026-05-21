@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_auth",
@@ -33,4 +33,9 @@ rust_library(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+)
+
+rust_test(
+    name = "server_auth_test",
+    crate = ":server_auth",
 )
