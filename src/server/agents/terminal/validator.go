@@ -92,6 +92,7 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 
 			cmdName = strings.ReplaceAll(cmdName, "\\", "")
 			cmdName = strings.ReplaceAll(cmdName, "\"", "")
+			cmdName = strings.ReplaceAll(cmdName, "'", "")
 
 			// Check blocked commands
 			for _, blocked := range v.config.BlockedCommands {
