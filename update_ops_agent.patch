@@ -1,0 +1,36 @@
+--- src/server/orchestration/departments/operations_agent.rs
++++ src/server/orchestration/departments/operations_agent.rs
+@@ -19,7 +19,10 @@
+     }
+
+     fn subscribed_events(&self) -> Vec<String> {
+-        vec!["tenant.quote.accepted".to_string()]
++        vec![
++            "tenant.quote.accepted".to_string(),
++            "tenant.order.created".to_string(),
++        ]
+     }
+
+     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+@@ -34,6 +37,21 @@
+             ActionRisk::DraftForReview
+         };
+
++        if event.event_type == "tenant.order.created" {
++            self.orchestrator.execute_action(
++                DepartmentType::Operations,
++                "Update inventory".to_string(),
++                event.tenant_id.clone(),
++                risk.clone(),
++                event.payload.clone(),
++            ).await?;
++
++            // The implementation prompt mentions "when a 'New Order' event occurs, the Operations Agent automatically updates inventory, and the Customer Success Agent drafts a confirmation message."
++            // Customer success should listen to tenant.order.created directly or be chained here.
++            // I will subscribe CustomerSuccessAgent to tenant.order.created as well, or chain it.
++            // For now, I'll let CustomerSuccessAgent listen to "tenant.order.created".
++        }
++
+         self.orchestrator.execute_action(
+             DepartmentType::Operations,
+             "Create order and booking".to_string(),

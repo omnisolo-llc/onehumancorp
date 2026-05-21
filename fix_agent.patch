@@ -1,0 +1,11 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -1096,7 +1096,7 @@
+         ];
+
+         let mut modified = false;
+-        for (i, tc) in &read_only_calls {
++        for (_i, tc) in &read_only_calls {
+             if content.contains(&tc.to_string()) {
+                 content = content.replace(&tc.to_string(), "NO_OP_DUE_TO_RO_MODE");
+                 modified = true;

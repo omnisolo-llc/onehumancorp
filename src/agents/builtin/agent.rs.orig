@@ -1096,7 +1096,7 @@ impl Agent {
         }
 
         let mut read_only_futures = Vec::new();
-        for (_i, tc) in &read_only_calls {
+        for (i, tc) in &read_only_calls {
             let tc_clone = tc.clone();
             let session_tools_clone = session_tools.to_vec();
             let max_retries = cfg.max_retries;

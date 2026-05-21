@@ -159,4 +159,70 @@ mod tests {
         }
         assert!(has_draft, "Should generate a draft for review");
     }
+
+
+    #[tokio::test]
+    async fn test_new_order_event_flow() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = std::sync::Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+
+        let orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(orchestrator.clone())));
+        let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(orchestrator.clone())));
+
+        orchestrator.register_department(ops_agent).await;
+        orchestrator.register_department(cs_agent).await;
+
+        let tenant_id = "test-tenant-order-flow".to_string();
+
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.order.created".to_string(),
+            payload: serde_json::json!({"order_id": "new_order_123"}),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_ops_update = false;
+        let mut has_cs_draft = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+            if pending.iter().any(|req| req.description.contains("Update inventory")) {
+                has_ops_update = true;
+            }
+            if pending.iter().any(|req| req.description.contains("Draft order confirmation message")) {
+                has_cs_draft = true;
+            }
+            if has_ops_update && has_cs_draft {
+                break;
+            }
+        }
+
+        assert!(has_ops_update, "Operations should update inventory on new order");
+        assert!(has_cs_draft, "Customer Success should draft confirmation message on new order");
+    }
 }

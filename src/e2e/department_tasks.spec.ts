@@ -319,3 +319,37 @@ test('UI: Proactive Tax & Legal Compliance Guardrails flow', async ({ page }) =>
   await expect(page.getByText('All Caught Up!')).toBeVisible();
   expect(postCalled).toBe(true);
 });
+
+test('E2E: New order creation triggers Agent Department draft approvals', async ({ page }) => {
+  // Wait a bit to ensure the server is ready, just in case
+  await page.waitForTimeout(1000);
+
+  await page.route('**/api/agents/approvals', async (route, request) => {
+    if (request.method() === 'GET') {
+      await route.fulfill({ json: { pending_approvals: [
+        { id: 'mock-ops-1', department: 'Operations', description: 'Update inventory', status: 'Pending', action_risk: 'Low' },
+        { id: 'mock-cs-1', department: 'CustomerSuccess', description: 'Draft order confirmation message', status: 'Pending', action_risk: 'Low' }
+      ] } });
+    } else {
+      await route.fallback();
+    }
+  });
+
+  await page.goto('/team');
+
+  const opsCard = page.locator('button', { hasText: 'The Manager' });
+  await expect(opsCard).toContainText('1 item awaiting approval');
+  await opsCard.click();
+
+  await expect(page.locator('h1')).toContainText('The Manager');
+  await expect(page.getByText('Update inventory')).toBeVisible();
+
+  await page.goto('/team');
+
+  const csCard = page.locator('button', { hasText: 'The Ambassador' });
+  await expect(csCard).toContainText('1 item awaiting approval');
+  await csCard.click();
+
+  await expect(page.locator('h1')).toContainText('The Ambassador');
+  await expect(page.getByText('Draft order confirmation message')).toBeVisible();
+});

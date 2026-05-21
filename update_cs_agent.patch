@@ -1,0 +1,28 @@
+--- src/server/orchestration/departments/customer_success_agent.rs
++++ src/server/orchestration/departments/customer_success_agent.rs
+@@ -23,6 +23,7 @@
+         vec![
+             "tenant.order.fulfillment_ready".to_string(),
+             "tenant.message.received".to_string(),
++            "tenant.order.created".to_string(),
+         ]
+     }
+
+@@ -69,6 +70,17 @@
+             return Ok(());
+         }
+
++        if event.event_type == "tenant.order.created" {
++            self.orchestrator.execute_action(
++                DepartmentType::CustomerSuccess,
++                "Draft order confirmation message".to_string(),
++                event.tenant_id.clone(),
++                risk,
++                event.payload.clone(),
++            ).await.map(|_| ())?;
++            return Ok(());
++        }
++
+         self.orchestrator.execute_action(
+             DepartmentType::CustomerSuccess,
+             "Send personalized thank you & shipping ETA".to_string(),

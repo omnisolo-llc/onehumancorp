@@ -27,7 +27,6 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
-            "tenant.order.created".to_string(),
         ]
     }
 
@@ -82,17 +81,6 @@ impl Department for CustomerSuccessAgent {
                 action_payload,
             ).await.map(|_| ())?;
 
-            return Ok(());
-        }
-
-        if event.event_type == "tenant.order.created" {
-            self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                "Draft order confirmation message".to_string(),
-                event.tenant_id.clone(),
-                risk,
-                event.payload.clone(),
-            ).await.map(|_| ())?;
             return Ok(());
         }
 
