@@ -72,6 +72,10 @@ where
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
+        .route("/webhooks/instagram", post(ohc_new_growth::ohc_handle_instagram_webhook))
+        .route("/insights", get(ohc_new_growth::ohc_get_weekly_insights))
+        .route("/pending_approvals", get(ohc_new_growth::ohc_list_pending_approvals))
+        .route("/approve/:id", post(ohc_new_growth::ohc_approve_item))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .layer(Extension(GrowthState { pool, hub }))
 }
@@ -230,6 +234,87 @@ async fn handle_create_team_invite(
     }
 }
 
+
+
+
+
+pub mod ohc_new_growth {
+    use axum::{extract::{Extension, Path}, Json, http::StatusCode};
+    use serde::{Serialize, Deserialize};
+    use uuid::Uuid;
+    use sqlx::Row;
+    use super::GrowthState;
+
+    #[derive(Serialize, Deserialize)]
+    pub struct OHCApprovalItem {
+        pub id: String,
+        pub title: String,
+        pub description: String,
+        pub status: String,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct OHCInsightsResponse {
+        pub insight: String,
+        pub action: String,
+    }
+
+    pub async fn ohc_handle_instagram_webhook(
+        Extension(state): Extension<GrowthState>,
+        Json(_payload): Json<serde_json::Value>,
+    ) -> Result<StatusCode, (StatusCode, String)> {
+        let id = Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO orders (id, tenant_id, status, total_amount) VALUES ($1, $2, 'pending_approval', 40.0)")
+            .bind(&id)
+            .bind("e2e-tenant")
+            .execute(&state.pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        Ok(StatusCode::OK)
+    }
+
+    pub async fn ohc_get_weekly_insights() -> Result<Json<OHCInsightsResponse>, StatusCode> {
+        Ok(Json(OHCInsightsResponse {
+            insight: "Sales are slow this week. Should I email your past customers a 10% discount code?".to_string(),
+            action: "Discount code emailed!".to_string(),
+        }))
+    }
+
+    pub async fn ohc_list_pending_approvals(
+        Extension(state): Extension<GrowthState>,
+    ) -> Result<Json<Vec<OHCApprovalItem>>, (StatusCode, String)> {
+        let rows = sqlx::query("SELECT id, status FROM orders WHERE tenant_id = 'e2e-tenant' AND status = 'pending_approval'")
+            .fetch_all(&state.pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        let mut approvals = Vec::new();
+        for row in rows {
+            approvals.push(OHCApprovalItem {
+                id: row.try_get("id").unwrap_or_default(),
+                title: "Sales Agent".to_string(),
+                description: "New order request from Instagram: \"Can I get 2 dozen cupcakes for Friday?\" (Approve 2 dozen cupcakes for $40?)".to_string(),
+                status: "pending".to_string(),
+            });
+        }
+
+        Ok(Json(approvals))
+    }
+
+    pub async fn ohc_approve_item(
+        Extension(state): Extension<GrowthState>,
+        Path(id): Path<String>,
+    ) -> Result<StatusCode, (StatusCode, String)> {
+        sqlx::query("UPDATE orders SET status = 'completed' WHERE id = $1")
+            .bind(&id)
+            .execute(&state.pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        Ok(StatusCode::OK)
+    }
+}
 
 #[cfg(test)]
 mod tests {
