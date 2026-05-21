@@ -19,7 +19,7 @@ pkg_tar(
 )
 
 pkg_tar(
-    name = "server_migrations_pkg",
+    name = "server_migrations_pkg_v2",
     srcs = ["//src/server/migrations:migrations"],
     package_dir = "/src/server/migrations",
     strip_prefix = "src/server/migrations",
@@ -33,7 +33,7 @@ oci_image(
     entrypoint = ["/usr/local/bin/server"],
     tars = [
         ":backend_pkg",
-        ":server_migrations_pkg",
+        ":server_migrations_pkg_v2",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -118,7 +118,7 @@ oci_image(
     entrypoint = ["/usr/local/bin/server"],
     tars = [
         ":agent_pkg",
-        ":server_migrations_pkg",
+        ":server_migrations_pkg_v2",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -145,7 +145,7 @@ oci_image(
     entrypoint = ["/usr/local/bin/server"],
     tars = [
         ":agent_pkg",
-        ":server_migrations_pkg",
+        ":server_migrations_pkg_v2",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
