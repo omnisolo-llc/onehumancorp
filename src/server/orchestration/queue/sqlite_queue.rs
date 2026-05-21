@@ -2,6 +2,7 @@ use super::queue::{Job, TaskQueue};
 use async_trait::async_trait;
 use sqlx::{SqlitePool, Row};
 use std::sync::Arc;
+use crate::telemetry as server_telemetry;
 
 pub struct SQLiteTaskQueue {
     pool: Arc<SqlitePool>,
@@ -41,6 +42,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
         query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
         tx.commit().await.map_err(|e| e.to_string())?;
+        server_telemetry::record_swarm_queue_depth(jobs.len() as i64, "primary");
         Ok(())
     }
 
@@ -59,6 +61,7 @@ impl TaskQueue for SQLiteTaskQueue {
         .await
         .map_err(|e| e.to_string())?;
 
+        server_telemetry::record_swarm_queue_depth(1, "primary");
         Ok(())
     }
 
@@ -79,12 +82,30 @@ impl TaskQueue for SQLiteTaskQueue {
             role_placeholders
         );
 
-        let mut query = sqlx::query(&query_str);
-        for role in &roles {
-            query = query.bind(role);
-        }
+        let mut job_opt: Option<sqlx::sqlite::SqliteRow> = None;
+        let mut retries = 0;
+        loop {
+            let mut query = sqlx::query(&query_str);
+            for role in &roles {
+                query = query.bind(role);
+            }
 
-        let job_opt: Option<sqlx::sqlite::SqliteRow> = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+            match query.fetch_optional(&mut *tx).await {
+                Ok(res) => {
+                    job_opt = res;
+                    break;
+                }
+                Err(sqlx::Error::Database(err)) if err.message().contains("database is locked") => {
+                    retries += 1;
+                    server_telemetry::record_task_claim_contention("Standalone");
+                    if retries > 3 {
+                        return Err(err.to_string());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                }
+                Err(e) => return Err(e.to_string()),
+            }
+        }
 
         if let Some(row) = job_opt {
             let job = Job {
@@ -109,6 +130,7 @@ impl TaskQueue for SQLiteTaskQueue {
                 .map_err(|e| e.to_string())?;
 
             tx.commit().await.map_err(|e| e.to_string())?;
+            server_telemetry::record_swarm_queue_depth(-1, "primary");
             return Ok(Some(job));
         }
 
@@ -117,11 +139,22 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let row = sqlx::query("SELECT created_at FROM sub_agent_jobs WHERE id = ?").bind(job_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        if let Some(r) = row {
+            if let Ok(created_at) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") {
+                let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64;
+                server_telemetry::record_swarm_job_latency(latency);
+            }
+        }
+
         sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
             .bind(job_id)
-            .execute(&*self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -147,6 +180,7 @@ impl TaskQueue for SQLiteTaskQueue {
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+                server_telemetry::record_swarm_queue_depth(1, "dead_letter");
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
@@ -157,6 +191,7 @@ impl TaskQueue for SQLiteTaskQueue {
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+                server_telemetry::record_swarm_queue_depth(1, "primary");
             }
         }
 

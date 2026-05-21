@@ -246,6 +246,21 @@ impl DepartmentOrchestrator {
 
     }
 
+    pub async fn get_queue_stats(&self) -> (i64, i64) {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let primary: (i64,) = sqlx::query_as("SELECT count(*) FROM sub_agent_jobs WHERE status = 'QUEUED'").fetch_one(&self.db.pool).await.unwrap_or((0,));
+                let dl: (i64,) = sqlx::query_as("SELECT count(*) FROM sub_agent_jobs WHERE status = 'FAILED'").fetch_one(&self.db.pool).await.unwrap_or((0,));
+                (primary.0, dl.0)
+            }
+            DbStore::Sqlite(pool) => {
+                let primary: (i64,) = sqlx::query_as("SELECT count(*) FROM sub_agent_jobs WHERE status = 'QUEUED'").fetch_one(pool).await.unwrap_or((0,));
+                let dl: (i64,) = sqlx::query_as("SELECT count(*) FROM sub_agent_jobs WHERE status = 'FAILED'").fetch_one(pool).await.unwrap_or((0,));
+                (primary.0, dl.0)
+            }
+        }
+    }
+
     pub async fn execute_action(
         &self,
         department: DepartmentType,

@@ -2,6 +2,7 @@ use super::queue::{Job, TaskQueue};
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use std::sync::Arc;
+use crate::telemetry as server_telemetry;
 
 pub struct PgTaskQueue {
     pool: Arc<PgPool>,
@@ -43,6 +44,7 @@ impl TaskQueue for PgTaskQueue {
 
         query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
         tx.commit().await.map_err(|e| e.to_string())?;
+        server_telemetry::record_swarm_queue_depth(jobs.len() as i64, "primary");
         Ok(())
     }
 
@@ -62,6 +64,7 @@ impl TaskQueue for PgTaskQueue {
         .await
         .map_err(|e| e.to_string())?;
 
+        server_telemetry::record_swarm_queue_depth(1, "primary");
         Ok(())
     }
 
@@ -111,6 +114,7 @@ impl TaskQueue for PgTaskQueue {
             };
 
             tx.commit().await.map_err(|e| e.to_string())?;
+            server_telemetry::record_swarm_queue_depth(-1, "primary");
             return Ok(Some(job));
         }
 
@@ -119,11 +123,22 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let row = sqlx::query("SELECT created_at FROM sub_agent_jobs WHERE id = $1").bind(job_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        if let Some(r) = row {
+            if let Ok(created_at) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") {
+                let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64;
+                server_telemetry::record_swarm_job_latency(latency);
+            }
+        }
+
         sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(job_id)
-            .execute(&*self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -149,6 +164,7 @@ impl TaskQueue for PgTaskQueue {
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+                server_telemetry::record_swarm_queue_depth(1, "dead_letter");
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
@@ -159,6 +175,7 @@ impl TaskQueue for PgTaskQueue {
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+                server_telemetry::record_swarm_queue_depth(1, "primary");
             }
         }
 

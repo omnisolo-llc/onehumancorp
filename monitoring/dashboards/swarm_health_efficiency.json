@@ -1,0 +1,39 @@
+{
+  "title": "Swarm Health & Efficiency",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Task Queue Depth",
+      "targets": [
+        {
+          "expr": "ohc_swarm_queue_depth{deployment_mode='Cloud'}",
+          "legendFormat": "Cloud - {{queue_type}}"
+        },
+        {
+          "expr": "ohc_swarm_queue_depth{deployment_mode='Standalone'}",
+          "legendFormat": "Standalone - {{queue_type}}"
+        }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "Swarm Job Processing Latency",
+      "targets": [
+        {
+          "expr": "rate(ohc_swarm_job_processing_latency_bucket[5m])",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Database Contention Events",
+      "targets": [
+        {
+          "expr": "rate(task_claim_contention_total{deployment_mode='Standalone'}[1m])",
+          "legendFormat": "Standalone Lock Retries"
+        }
+      ]
+    }
+  ]
+}

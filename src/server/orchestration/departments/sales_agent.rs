@@ -29,6 +29,8 @@ impl Department for SalesAgent {
 
         let risk = ActionRisk::DraftForReview;
 
+        crate::telemetry::record_business_event(&event.tenant_id, crate::telemetry::get_deployment_mode(), "quote_generated");
+
         self.orchestrator.execute_action(
             DepartmentType::Sales,
             "Quote generated for review".to_string(),

@@ -2,6 +2,7 @@ use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerTyp
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
 
+
 pub struct BusinessAdvisoryAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
@@ -34,12 +35,32 @@ impl Department for BusinessAdvisoryAgent {
             ActionRisk::DraftForReview
         };
 
+        let (primary, dl) = self.orchestrator.get_queue_stats().await;
+
+        let mut payload = event.payload.clone();
+        if let Some(payload_obj) = payload.as_object_mut() {
+            let status_msg = if primary > 50 {
+                "Your background agents are currently backlogged due to high task volume, but no action is needed."
+            } else {
+                "Your background agents are operating normally."
+            };
+
+            payload_obj.insert(
+                "queue_health_summary".to_string(),
+                serde_json::json!({
+                    "status": status_msg,
+                    "queue_depth_primary": primary,
+                    "queue_depth_dead_letter": dl
+                })
+            );
+        }
+
         self.orchestrator.execute_action(
             DepartmentType::BusinessAdvisory,
             "Draft weekly business health report and next-action suggestions".to_string(),
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            payload,
         ).await.map(|_| ())
     }
 
