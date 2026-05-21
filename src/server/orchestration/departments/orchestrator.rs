@@ -310,6 +310,13 @@ impl DepartmentOrchestrator {
                 .bind(now)
                 .execute(&self.db.pool)
                 .await;
+
+                let _ = crate::telemetry::record_agent_approval_request(
+                    Some(&self.db.pool),
+                    &req.tenant_id,
+                    &req.department.to_string(),
+                    &req.action_risk.to_string()
+                ).await;
             }
             DbStore::Sqlite(pool) => {
                 let _ = sqlx::query(
@@ -325,6 +332,13 @@ impl DepartmentOrchestrator {
                 .bind(now)
                 .execute(pool)
                 .await;
+
+                let _ = crate::telemetry::record_agent_approval_request(
+                    None,
+                    &req.tenant_id,
+                    &req.department.to_string(),
+                    &req.action_risk.to_string()
+                ).await;
             }
         }
     }
@@ -404,7 +418,7 @@ impl DepartmentOrchestrator {
 
         let opt_department = match &self.db.store {
             DbStore::Postgres => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, created_at")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -414,14 +428,27 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        let dep = r.get::<String, _>("department");
+                        let created_at = r.get::<chrono::DateTime<chrono::Utc>, _>("created_at");
+
+                        let _ = crate::telemetry::record_agent_approval_resolution(
+                            Some(&self.db.pool),
+                            tenant_id,
+                            &dep,
+                            if approved { "approved" } else { "rejected" }
+                        ).await;
+
+                        let latency = (now - created_at).num_milliseconds() as f64 / 1000.0;
+                        crate::telemetry::record_agent_approval_latency(tenant_id, &dep, latency);
+
+                        Some(dep)
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, created_at")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -431,7 +458,24 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        // For sqlite, created_at is stored as text
+                        let dep = r.get::<String, _>("department");
+
+                        let _ = crate::telemetry::record_agent_approval_resolution(
+                            None,
+                            tenant_id,
+                            &dep,
+                            if approved { "approved" } else { "rejected" }
+                        ).await;
+
+                        if let Ok(created_at_str) = r.try_get::<String, _>("created_at") {
+                            if let Ok(created_at) = created_at_str.parse::<chrono::DateTime<chrono::Utc>>() {
+                                let latency = (now - created_at).num_milliseconds() as f64 / 1000.0;
+                                crate::telemetry::record_agent_approval_latency(tenant_id, &dep, latency);
+                            }
+                        }
+
+                        Some(dep)
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),

@@ -6,17 +6,96 @@ use std::sync::OnceLock;
 use opentelemetry::global;
 
 use opentelemetry::metrics::Histogram;
+use opentelemetry::metrics::{UpDownCounter, Counter};
 
-use opentelemetry::metrics::UpDownCounter;
+use opentelemetry::metrics::Counter;
 
-static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<Counter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
-static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
-static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<Counter<i64>> = OnceLock::new();
+static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<Counter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
-static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<Counter<i64>> = OnceLock::new();
 static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+
+static AGENT_APPROVAL_REQUEST_TOTAL: OnceLock<Counter<i64>> = OnceLock::new();
+static AGENT_APPROVAL_RESOLUTION_TOTAL: OnceLock<Counter<i64>> = OnceLock::new();
+static AGENT_APPROVAL_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+
+pub fn get_agent_approval_request_total() -> &'static Counter<i64> {
+    AGENT_APPROVAL_REQUEST_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter.u64_counter("AgentApprovalRequestTotal")
+            .with_description("Total number of actions requiring human approval")
+            .build()
+    })
+}
+
+pub fn get_agent_approval_resolution_total() -> &'static Counter<i64> {
+    AGENT_APPROVAL_RESOLUTION_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter.u64_counter("AgentApprovalResolutionTotal")
+            .with_description("Total number of human approval resolutions")
+            .build()
+    })
+}
+
+pub fn get_agent_approval_latency() -> &'static Histogram<f64> {
+    AGENT_APPROVAL_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter.f64_histogram("AgentApprovalLatency")
+            .with_description("Latency of agent approval resolution in seconds")
+            .build()
+    })
+}
+
+pub async fn record_agent_approval_request(pool: Option<&PgPool>, tenant_id: &str, agent_id: &str, action_risk: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let counter = get_agent_approval_request_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("action_risk", action_risk.to_string()),
+    ]);
+
+    if let Some(p) = pool {
+        let payload = serde_json::json!({
+            "tenant_id": tenant_id,
+            "agent_id": agent_id,
+            "action_risk": action_risk
+        });
+        // We do NOT call redact_interface_pii here manually because buffer_metric already calls it internally.
+        buffer_metric(p, "agent_approval_request_total", "counter", 1.0, payload).await?;
+    }
+    Ok(())
+}
+
+pub async fn record_agent_approval_resolution(pool: Option<&PgPool>, tenant_id: &str, agent_id: &str, outcome: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let counter = get_agent_approval_resolution_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("outcome", outcome.to_string()),
+    ]);
+
+    if let Some(p) = pool {
+        let payload = serde_json::json!({
+            "tenant_id": tenant_id,
+            "agent_id": agent_id,
+            "outcome": outcome
+        });
+        buffer_metric(p, "agent_approval_resolution_total", "counter", 1.0, payload).await?;
+    }
+    Ok(())
+}
+
+pub fn record_agent_approval_latency(tenant_id: &str, agent_id: &str, latency_seconds: f64) {
+    let histogram = get_agent_approval_latency();
+    histogram.record(latency_seconds, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+    ]);
+}
 
 
 pub fn get_deployment_mode() -> &'static str {
@@ -29,7 +108,7 @@ pub fn get_deployment_mode() -> &'static str {
         }
     })
 }
-pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
+pub fn get_queue_length_gauge() -> &'static Counter<i64> {
     SUB_AGENT_QUEUE_LENGTH_GAUGE.get_or_init(|| {
         let meter = global::meter("ohc.sub_agent");
         meter.i64_up_down_counter("ohc.sub_agent.queue_length")
@@ -47,7 +126,7 @@ pub fn get_sub_agent_queue_delay_histogram() -> &'static Histogram<f64> {
     })
 }
 
-pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
+pub fn get_task_claim_contention_total() -> &'static Counter<i64> {
     TASK_CLAIM_CONTENTION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sub_agent");
         meter.i64_up_down_counter("TaskClaimContentionTotal")
@@ -306,6 +385,32 @@ mod tests {
     }
 
     #[test]
+
+    #[test]
+    fn test_record_agent_approval() {
+        // Just verify the non-async or db-independent parts if possible,
+        // or test PII redaction logic on the same structure.
+        let original_json = serde_json::json!({
+            "tenant_id": "tenant-123",
+            "agent_id": "agent-abc",
+            "outcome": "approved",
+            "email": "test@test.com"
+        });
+        let redacted = redact_interface_pii(original_json);
+        assert_eq!(redacted["tenant_id"], "tenant-123");
+        assert_eq!(redacted["agent_id"], "agent-abc");
+        assert_eq!(redacted["outcome"], "approved");
+        assert_eq!(redacted["email"], "[REDACTED]");
+
+        let gauge = get_agent_approval_request_total();
+        gauge.add(1, &[]);
+        let gauge2 = get_agent_approval_resolution_total();
+        gauge2.add(1, &[]);
+        let hist = get_agent_approval_latency();
+        hist.record(1.0, &[]);
+    }
+
+    #[test]
     fn test_redact_interface_pii() {
         let original_json = serde_json::json!({
             "safe_field": "safe_value",
@@ -384,7 +489,7 @@ pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
 }
 
 
-pub fn get_bubblewrap_spawn_total() -> &'static UpDownCounter<i64> {
+pub fn get_bubblewrap_spawn_total() -> &'static Counter<i64> {
     BUBBLEWRAP_SPAWN_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter.i64_up_down_counter("BubblewrapSpawnTotal")
@@ -402,7 +507,7 @@ pub fn get_bubblewrap_execution_latency() -> &'static Histogram<f64> {
     })
 }
 
-pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
+pub fn get_bubblewrap_violation_total() -> &'static Counter<i64> {
     BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter.i64_up_down_counter("BubblewrapViolationTotal")
