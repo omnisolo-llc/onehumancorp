@@ -31,7 +31,7 @@
       },
       "targets": [
         {
-          "expr": "rate(ohc_agent_cost_total[5m])",
+          "expr": "sum by(entity) (rate(ohc_agent_cost_total[5m]))",
           "legendFormat": "{{entity}}",
           "refId": "A"
         }
@@ -50,7 +50,7 @@
       },
       "targets": [
         {
-          "expr": "rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m]) / rate(ohc_swarm_job_latency_by_entity_seconds_count[5m])",
+          "expr": "sum by(entity) (rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m])) / sum by(entity) (rate(ohc_swarm_job_latency_by_entity_seconds_count[5m]))",
           "legendFormat": "{{entity}}",
           "refId": "A"
         }

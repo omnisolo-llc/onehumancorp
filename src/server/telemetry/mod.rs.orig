@@ -165,11 +165,6 @@ pub async fn record_api_call_cost(pool: &PgPool, organization_id: &str, entity: 
 }
 
 pub async fn record_swarm_job_latency_by_entity(pool: &PgPool, mode: &str, entity: &str, latency: f64) -> Result<(), Box<dyn std::error::Error>> {
-    get_swarm_job_latency_by_entity_histogram().record(latency, &[
-        opentelemetry::KeyValue::new("mode", mode.to_string()),
-        opentelemetry::KeyValue::new("entity", entity.to_string()),
-    ]);
-
     buffer_metric(
         pool,
         "ohc_swarm_job_latency_by_entity_seconds",
@@ -475,13 +470,4 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
         opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         opentelemetry::KeyValue::new("operation", operation.to_string()),
     ]);
-}
-
-pub fn get_swarm_job_latency_by_entity_histogram() -> &'static Histogram<f64> {
-    SWARM_JOB_LATENCY_BY_ENTITY_HISTOGRAM.get_or_init(|| {
-        let meter = global::meter("ohc.swarm");
-        meter.f64_histogram("ohc_swarm_job_latency_by_entity_seconds")
-            .with_description("Latency for Swarm Jobs by entity")
-            .build()
-    })
 }

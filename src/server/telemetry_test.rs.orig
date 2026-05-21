@@ -234,12 +234,6 @@ mod tests {
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
         assert_eq!(parsed["mode"], "cloud");
         assert_eq!(parsed["entity"], "test-entity-3");
-
-        // Verify the OpenTelemetry histogram was initialized
-        // Note: the otel export itself is tested in e2e metrics, but we assert get_swarm_job_latency_by_entity_histogram() builds correctly.
-        let histogram = ::server_telemetry::get_swarm_job_latency_by_entity_histogram();
-        // the histogram records internally, testing that calling it doesn't panic.
-        histogram.record(125.0, &[]);
     }
 
     #[test]
