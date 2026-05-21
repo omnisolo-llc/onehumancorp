@@ -17,7 +17,7 @@ impl MailchimpProvider {
                 id: "mailchimp".to_string(),
                 name: "Mailchimp".to_string(),
                 category: "email_marketing".to_string(),
-                base_url: "https://placeholder.url".to_string(),
+                base_url: "https://server.api.mailchimp.com/3.0".to_string(),
             },
         }
     }
