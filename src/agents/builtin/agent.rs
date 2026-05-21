@@ -1051,7 +1051,7 @@ impl Agent {
         }
 
         let mut read_only_futures = Vec::new();
-        for (i, tc) in &read_only_calls {
+        for (_i, tc) in &read_only_calls {
             let tc_clone = tc.clone();
             let session_tools_clone = session_tools.to_vec();
             let max_retries = cfg.max_retries;
@@ -1365,17 +1365,26 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         let mut self_with_memory = self;
-        let owned_agent;
-        if let Some(ltm) = &cfg.long_term_memory {
-            owned_agent = Agent {
+        let mut owned_agent = None;
+        let mut checkpointer = self.checkpointer.clone();
+
+        // State Management: Claude Code Git Commit Checkpointing Mechanic
+        if cfg.enable_state_checkpointing && checkpointer.is_none() {
+            let wp = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+            checkpointer = Some(std::sync::Arc::new(crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wp))) as std::sync::Arc<dyn crate::checkpointer::CheckpointSaver>);
+        }
+
+        if cfg.long_term_memory.is_some() || checkpointer.is_some() {
+            let ltm = cfg.long_term_memory.clone().or_else(|| self.memory_store.clone());
+            owned_agent = Some(Agent {
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
-                memory_store: Some(ltm.clone()),
-                checkpointer: self.checkpointer.clone(),
+                memory_store: ltm,
+                checkpointer,
                 observation_store: self.observation_store.clone(),
-            };
-            self_with_memory = &owned_agent;
+            });
+            self_with_memory = owned_agent.as_ref().unwrap();
         }
 
         let session_tools = self_with_memory.tools.clone();
@@ -1463,7 +1472,7 @@ impl Agent {
             return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
         }
 
-        if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
+        if let (Some(checkpointer), Some(thread_id)) = (&self_with_memory.checkpointer, &final_cfg.thread_id) {
             if let Some(resume_id) = &final_cfg.resume_from_checkpoint_id {
                 let cp = checkpointer.get_checkpoint(thread_id, resume_id).await
                     .map_err(|e| format!("Failed to fetch requested checkpoint {}: {}", resume_id, e))?
@@ -2282,7 +2291,7 @@ impl Agent {
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
-            if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
+            if let (Some(checkpointer), Some(thread_id)) = (&self_with_memory.checkpointer, &final_cfg.thread_id) {
                 let checkpoint_id = uuid::Uuid::new_v4().to_string();
                 let cp = crate::checkpointer::Checkpoint {
                     thread_id: thread_id.clone(),
