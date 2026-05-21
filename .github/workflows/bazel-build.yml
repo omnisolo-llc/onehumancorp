@@ -102,7 +102,7 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build all artifacts
-        run: bazelisk build //... --config=${{ matrix.bazel_config }}
+        run: bazelisk build //... --config=${{ matrix.bazel_config }} --keep_going=false
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'

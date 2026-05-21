@@ -164,6 +164,16 @@ build:windows --action_env=CC_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-
 build:windows --action_env=CXX_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-g++
 build:windows --action_env=AR_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ar
 build:windows --action_env=LD_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ld
+build:windows_arm64 --action_env=CC_aarch64_pc_windows_msvc=/usr/bin/aarch64-w64-mingw32-gcc
+build:windows_arm64 --action_env=CXX_aarch64_pc_windows_msvc=/usr/bin/aarch64-w64-mingw32-g++
+build:windows_arm64 --action_env=AR_aarch64_pc_windows_msvc=/usr/bin/aarch64-w64-mingw32-ar
+build:windows_arm64 --action_env=LD_aarch64_pc_windows_msvc=/usr/bin/aarch64-w64-mingw32-ld
 # Workaround to fix bazel analysis failure on Windows CI
-build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
+test:windows_common --test_tag_filters=-requires_x11,-requires_wayland,-e2e
+test:windows_arm64 --test_tag_filters=-requires_x11,-requires_wayland,-e2e
+test:windows_x86_64 --test_tag_filters=-requires_x11,-requires_wayland,-e2e
+test:windows --test_tag_filters=-requires_x11,-requires_wayland,-e2e
+build:windows_common --build_tag_filters=-requires_x11,-requires_wayland,-e2e
 build:windows_arm64 --build_tag_filters=-requires_x11,-requires_wayland,-e2e
+build:windows_x86_64 --build_tag_filters=-requires_x11,-requires_wayland,-e2e
+build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
