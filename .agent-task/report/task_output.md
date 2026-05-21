@@ -1,10 +1,3 @@
-issue_title: "Twilio WhatsApp Business Integration"
-issue_priority: "P1"
-issue_description: "Implement a WhatsApp notification module utilizing the Twilio API that allows small business owners to automatically notify their customers of key events."
-issue_todo_list:
-  - [ ] Add integration config page
-  - [ ] Add backend logic for whatsapp webhooks
-issue_label: ["research", "integration"]
 # Research Report: Twilio WhatsApp Business Integration for Customer Engagement & Order Notifications
 
 ## Title
@@ -51,3 +44,16 @@ P1
 
 ## Estimated Scope
 Medium
+
+---
+## Proposed Action
+
+```yaml
+issue_title: "[research] Build Twilio WhatsApp Business Integration"
+issue_priority: "P1"
+issue_description: "Implement a WhatsApp notification module utilizing the Twilio API that allows small business owners to automatically notify their customers of key events."
+issue_todo_list:
+  - [ ] Add integration config page
+  - [ ] Add backend logic for whatsapp webhooks
+issue_label: ["research", "integration"]
+```
