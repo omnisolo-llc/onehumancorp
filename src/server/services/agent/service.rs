@@ -31,13 +31,11 @@ impl MyAgentManagerService {
 
         let hub_cost = self.hub.clone();
         let (agents, meetings, cost_res) = tokio::join!(
-            async { self.hub.get_agents() },
+            async { std::sync::Arc::new(self.hub.get_agents_by_org(org_id)) },
             async { self.hub.get_meetings() },
             async {
-                tokio::task::spawn_blocking(move || {
-                    let cost_auditor = hub_cost.get_cost_auditor();
-                    (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-                }).await.unwrap_or((0.0, 0, vec![]))
+                let cost_auditor = hub_cost.get_cost_auditor();
+                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             }
         );
         let (total_cost, total_tokens, agent_costs_data) = cost_res;
