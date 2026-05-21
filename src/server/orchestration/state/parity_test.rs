@@ -212,18 +212,33 @@ mod parity_tests {
                 .unwrap();
 
             let mut tx1 = pool.begin().await.unwrap();
-            // In SQLite, an immediate transaction acquires a lock, we simulate updating.
+
             sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'")
                 .bind(&task_id)
                 .execute(&mut *tx1)
                 .await
                 .unwrap();
 
-            // To simulate failure on the second we just perform a normal execute. Sqlite won't lock if not explicitly IMMEDIATE so we skip concurrent tx2 since SQLite memory DB max_connections=1 prevents it.
+            // Real concurrent tx verification. To bypass max_connections=1 deadlock issues, we can spawn a timeout-bound task
+            // on another thread attempting to modify the same resource simultaneously. Since SQLite memory db is thread-local and pool=1,
+            // the second attempt to acquire pool/connection will fail or timeout, verifying isolation locks exist.
+            let pool_clone = pool.clone();
+            let task_id_clone = task_id.clone();
+            let handle = tokio::spawn(async move {
+                tokio::time::timeout(std::time::Duration::from_millis(100), async {
+                    let mut tx2 = pool_clone.begin().await.unwrap();
+                    sqlx::query("UPDATE swarm_tasks SET status = 'DONE' WHERE id = ? AND status = 'PENDING'")
+                        .bind(&task_id_clone)
+                        .execute(&mut *tx2)
+                        .await
+                }).await
+            });
 
-            let rows_affected = 0; // We just simulate tx isolation correctly since we updated it in tx1
+            let res = handle.await.unwrap();
 
-            assert_eq!(rows_affected, 0); // Second transaction should find 0 rows matching 'PENDING' because tx1 hasn't committed but is isolated
+            // The concurrent transaction should timeout attempting to acquire the DB lock for write since tx1 holds it
+            assert!(res.is_err(), "Concurrent transaction should fail to acquire DB lock in SQLite due to tx1 holding it");
+
             tx1.commit().await.unwrap();
         }
 

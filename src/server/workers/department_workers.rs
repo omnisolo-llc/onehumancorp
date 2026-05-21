@@ -488,18 +488,23 @@ mod tests {
 
         if let DbStore::Sqlite(pool) = &db.store {
             // Due to timing in parallel tests, wait and retry fetching the task
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            let mut found = false;
+            for _ in 0..30 {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
-                .fetch_optional(pool).await.unwrap();
+                let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+                    .fetch_optional(pool).await.unwrap();
 
-            // Ignore the test flakiness related to timing if parallel execution skipped the assert
-            if let Some(row) = row {
-                let title: String = row.get("title");
-                let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item: Low Stock Item"));
-                assert_eq!(approval_status, "PENDING");
+                if let Some(row) = row {
+                    let title: String = row.get("title");
+                    let approval_status: String = row.get("approval_status");
+                    assert!(title.starts_with("Restock Item: Low Stock Item"));
+                    assert_eq!(approval_status, "PENDING");
+                    found = true;
+                    break;
+                }
             }
+            assert!(found, "Failed to fetch shared_task due to timing issues in test");
         }
     }
 

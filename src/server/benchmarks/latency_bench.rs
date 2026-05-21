@@ -31,16 +31,12 @@ pub async fn bench_db_query_time() {
     tracing::info!("Benchmarking Database Query Time...");
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-    if database_url == "postgres://localhost/dummy" {
-        return;
-    }
 
     let iterations = 1000;
 
     // Cloud Mode (Postgres)
-    // Only run if the database URL actually points to postgres, otherwise skip
-    if database_url != "postgres://localhost/dummy" && database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+    // Safely attempt to connect to PostgreSQL without skipping the entire benchmark suite if it fails.
+    if let Ok(Ok(pg_pool)) = tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::postgres::PgPoolOptions::new().connect(&database_url)).await {
         let mut pg_times = Vec::new();
         for _ in 0..iterations {
             let start = Instant::now();
@@ -49,6 +45,8 @@ pub async fn bench_db_query_time() {
         }
         pg_times.sort();
         println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
+    } else {
+        println!("WARNING: Could not connect to PostgreSQL. Skipping Cloud Mode Database Query Time benchmark safely.");
     }
 
     // Standalone Mode (SQLite)
