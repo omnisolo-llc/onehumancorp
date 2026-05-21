@@ -1,5 +1,8 @@
 -- Migration 010: Data Model Evolution Refinement
 
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Harmonize tenant_id naming
 DO $$
 BEGIN
