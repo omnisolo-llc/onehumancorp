@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { TooltipRegistryProvider, WalkthroughProvider, HelpWidget } from '../components/help';
+import { TooltipProvider } from '../components/TooltipRegistry';
 
 export const metadata: Metadata = {
   title: 'OHC Builder',
@@ -15,12 +16,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <TooltipProvider>
         <TooltipRegistryProvider>
           <WalkthroughProvider>
             {children}
             <HelpWidget />
           </WalkthroughProvider>
         </TooltipRegistryProvider>
+        </TooltipProvider>
       </body>
     </html>
   );
