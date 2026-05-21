@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'user_management_screen.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
@@ -367,6 +368,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ),
                       ),
+                      SizedBox(height: 24),
+                      Material(
+                        child: GrowthReferralWidget(),
+                      ),
                     ],
                   ),
                 ),
@@ -552,6 +557,10 @@ class StoreLiveScreen extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ),
+                      SizedBox(height: 24),
+                      Material(
+                        child: GrowthReferralWidget(),
                       ),
                     ],
                   ),

@@ -60,6 +60,17 @@ pub struct MilestonesResponse {
     pub milestones: Vec<Milestone>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateReferralRequest {
+    pub user_id: String,
+    pub context_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateReferralResponse {
+    pub referral_link: String,
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -70,6 +81,7 @@ where
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
+        .route("/referrals/generate", post(handle_generate_referral_link))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -168,6 +180,15 @@ async fn handle_get_team_invites(
         Ok(invites) => Ok(Json(TeamInvitesResponse { invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn handle_generate_referral_link(
+    Extension(_state): Extension<GrowthState>,
+    Json(_req): Json<GenerateReferralRequest>,
+) -> impl IntoResponse {
+    Json(GenerateReferralResponse {
+        referral_link: format!("https://cloud.onehumancorp.com/invite/{}", uuid::Uuid::new_v4()),
+    })
 }
 
 async fn handle_referral_click(
