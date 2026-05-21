@@ -8,7 +8,6 @@ use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
-use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 #[derive(Deserialize)]
