@@ -1793,109 +1793,21 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                // Computational/Guides (feedforward verification)
-                if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.computational_guide_command).current_dir(wd);
-
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                                    final_cfg.computational_guide_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            }
+                // Verification Loops (Quality x3) via isolated robust architecture
+                let registry = crate::verification::default_verification_registry();
+                match registry.run_all(&final_cfg, &last_assistant_content, &mut messages, self.llm.clone()).await {
+                    Ok(passed) => {
+                        if !passed {
+                            continue; // Agent needs to fix the issues reported by verification
                         }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute computational guide command '{}': {}", final_cfg.computational_guide_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
+                    }
+                    Err(e) => {
+                        let err = format!("Verification loop error: {}", e);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(e);
                     }
                 }
 
-                // Visual Verification (screenshots via Playwright or Slint)
-                if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.visual_verification_command).current_dir(wd);
-
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                                    final_cfg.visual_verification_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            } else {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                if stdout.contains("REJECT") {
-                                    let err_msg = format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim());
-                                    messages.push(Message::user(err_msg));
-                                    continue;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute visual verification command '{}': {}", final_cfg.visual_verification_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
-                    }
-                }
-
-                // Inferential/Sensors (LLM-as-judge subagent)
-                if final_cfg.enable_llm_judge {
-                    #[derive(serde::Deserialize)]
-                    struct JudgeEvaluation {
-                        status: String,
-                        reason: String,
-                        confidence: f32,
-                    }
-                    let judge_req = ChatRequest {
-                        model: final_cfg.model.clone(),
-                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.".to_string(),
-                        messages: vec![Message::user(format!("Evaluate this output:\n{}", last_assistant_content))],
-                        tools: vec![],
-                        max_tokens: 500,
-                        temperature: 0.0,
-                    };
-
-                    struct ParserClientWrapper {
-                        llm: std::sync::Arc<dyn crate::llm::LlmClient>,
-                    }
-                    #[async_trait::async_trait]
-                    impl crate::output_parser::LlmClientForParser for ParserClientWrapper {
-                        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                            self.llm.chat(req).await
-                        }
-                    }
-                    let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> = std::sync::Arc::new(ParserClientWrapper { llm: self.llm.clone() });
-                    match crate::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, judge_req, 3).await {
-                        Ok(eval) => {
-                            if eval.status.to_uppercase() == "REJECT" {
-                                let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Confidence: {:.2}. Please correct your work and use tools if necessary.", eval.reason, eval.confidence);
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            }
-                        },
-                        Err(e) => {
-                            let err = format!("LLM Judge error: {}", e);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                    }
-                }
                 // In a production-grade agent, we might use a separate LLM pass
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
