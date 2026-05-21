@@ -103,7 +103,6 @@ Chart.lock
 # Golang is not allowed in this project
 
 
-
 # Rust build artifacts
 /target/
 site/
