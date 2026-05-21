@@ -19,6 +19,7 @@ pub struct IntegrationsRegistry {
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    stripe_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::stripe::provider::StripeProvider>>>,
     manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
@@ -52,8 +53,10 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            stripe_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            stripe_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -259,6 +262,31 @@ impl IntegrationsRegistry {
     pub fn pull_requests(&self, integration_id: &str) -> Vec<PullRequest> {
         let prs = self.pull_requests.read().unwrap();
         prs.get(integration_id).cloned().unwrap_or_default()
+    }
+
+    pub async fn get_stripe_provider(&self, tenant_id: &str) -> Result<std::sync::Arc<crate::integrations::stripe::provider::StripeProvider>, String> {
+        let clients = self.stripe_clients.read().unwrap();
+        if let Some(client) = clients.get(tenant_id) {
+            return Ok(client.clone());
+        }
+        drop(clients);
+
+        let creds_lock = self.credentials.read().unwrap();
+        let api_key = if let Some(creds) = creds_lock.get(tenant_id) {
+            creds.api_token.clone()
+        } else {
+            "".to_string()
+        };
+        drop(creds_lock);
+
+        if api_key.is_empty() { return Err("Stripe API key not configured".to_string()); }
+
+        let provider = crate::integrations::stripe::provider::StripeProvider::new(api_key);
+        let provider_arc = std::sync::Arc::new(provider);
+
+        let mut clients = self.stripe_clients.write().unwrap();
+        clients.insert(tenant_id.to_string(), provider_arc.clone());
+        Ok(provider_arc)
     }
 
     pub fn create_pull_request(&self, integration_id: &str, _repository: &str, title: &str, body: &str, source_branch: &str, target_branch: &str, created_by: &str) -> Result<PullRequest, String> {
