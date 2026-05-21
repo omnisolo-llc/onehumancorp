@@ -38,9 +38,6 @@ jobs:
           - name: windows-x86_64
             runner: ubuntu-latest
             bazel_config: windows_x86_64
-          - name: windows-arm64
-            runner: windows-11-arm
-            bazel_config: windows_arm64
           #- name: macos-aarch64
           #  runner: macos-latest
           #  bazel_config: macos_aarch64
@@ -48,6 +45,17 @@ jobs:
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
     steps:
+      - name: Free Disk Space (Ubuntu)
+        if: matrix.runner == 'ubuntu-latest'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - uses: actions/checkout@v6
 
       - name: Select Xcode
