@@ -1,8 +1,0 @@
-filegroup(
-    name = "srcs",
-    srcs = [
-        "tool.go",
-        "tool_test.go",
-    ],
-    visibility = ["//src/server/integrations:__pkg__"],
-)

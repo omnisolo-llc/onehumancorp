@@ -192,8 +192,20 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "sync_audit_logs_to_cloud" => {
-                let resp_payload = serde_json::to_string(&serde_json::json!({"status": "success"})).unwrap();
-                Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
+                let md = request.metadata().clone();
+                let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+
+                let params: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(&req.params)
+                    .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
+
+                let logger = crate::integrations::mcp_audit_sync::AuditLogger::new(self.hub.pool.clone());
+                match logger.execute(params, spiffe_id_str).await {
+                    Ok(res) => {
+                        let resp_payload = serde_json::to_string(&res).unwrap();
+                        Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
+                    }
+                    Err(e) => Err(Status::internal(e)),
+                }
             }
             "get_config" => {
                 let resp_payload = serde_json::to_string(&serde_json::json!({"value": "mock_value"})).unwrap();
