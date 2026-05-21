@@ -9,6 +9,7 @@ Use this section for guided narratives such as setup verification, orchestration
 - [Hybrid MCP RAG Protocol](./hybrid_mcp_rag_protocol.md)
 - [KAIROS AutoDream Walkthrough](./kairos_autodream_walkthrough.md)
 - [KAIROS Orchestration Walkthrough](./kairos_orchestration.md)
+- [Omni-Context Routing Walkthrough](./omni_context_routing.md)
 - [Sub-Agent Orchestration Walkthrough](./sub_agent_orchestration.md)
 - [Teammate Mesh Walkthrough](./teammate_mesh_walkthrough.md)
 - [Virtual Meeting Room Walkthrough](./virtual_meeting_room_walkthrough.md)
