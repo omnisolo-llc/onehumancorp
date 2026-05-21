@@ -1723,8 +1723,9 @@ impl Agent {
             // Telemetry: Record token usage
             let model_label = KeyValue::new("model", final_cfg.model.clone());
             let agent_label = KeyValue::new("agent_id", final_cfg.agent_id.clone());
-            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
-            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
+            let tool_label = KeyValue::new("tool_name", "llm_interaction");
+            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), tool_label.clone(), KeyValue::new("type", "input")]);
+            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), tool_label.clone(), KeyValue::new("type", "output")]);
 
             // Enforce Server-side token budget strictly every turn
             if global_turn_tokens >= final_cfg.max_task_tokens {
@@ -1744,7 +1745,7 @@ impl Agent {
             );
 
             if turn_cost > 0.0 {
-                cost_counter.add(turn_cost, &[model_label, agent_label]);
+                cost_counter.add(turn_cost, &[model_label, agent_label, tool_label]);
             }
 
             llm_span.record("input_tokens", &turn_input_tokens);
@@ -1977,10 +1978,6 @@ impl Agent {
                     "tool_execution",
                     agent_id = %final_cfg.agent_id,
                     tool_name = %tc_clone.name,
-                    input_tokens = 0,
-                    output_tokens = 0,
-                    total_tokens = 0,
-                    estimated_cost_usd = 0.0,
                 );
 
                 read_only_futures.push(async move {
@@ -2204,10 +2201,6 @@ impl Agent {
                         "tool_execution",
                         agent_id = %final_cfg.agent_id,
                         tool_name = %tc.name,
-                        input_tokens = 0,
-                        output_tokens = 0,
-                        total_tokens = 0,
-                        estimated_cost_usd = 0.0,
                     );
                     match self.execute_tool(&tc, &session_tools, &messages).instrument(tool_span).await {
                         Ok(r) => {
