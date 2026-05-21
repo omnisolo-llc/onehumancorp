@@ -15,7 +15,16 @@ export default function Dashboard() {
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
+  // Growth Loop: Embeddable Widget State
+  const [showWidgetCode, setShowWidgetCode] = useState<boolean>(false);
+  const [widgetCopied, setWidgetCopied] = useState<boolean>(false);
+  const [tenantId, setTenantId] = useState<string>("merchant-id");
+
   useEffect(() => {
+    // Simulate fetching the logged-in user's tenant ID
+    setTimeout(() => {
+      setTenantId("tenant_" + Math.random().toString(36).substring(2, 9));
+    }, 500);
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
       try {
@@ -288,6 +297,58 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
                 </div>
             </div>
+         </section>
+
+         {/* Growth Loop: Embed Widget Program Snapshot */}
+         <section className="mt-8 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Embed Storefront Widget</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">New Growth Channel</span>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setShowWidgetCode(!showWidgetCode)}
+                    className="px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-gray-800 transition-colors"
+                >
+                    {showWidgetCode ? 'Hide Code' : 'Get Embed Code'}
+                </button>
+            </div>
+
+            {showWidgetCode && (
+                <div className="ohc-hybrid-panel p-6 shadow-sm mb-6 border border-indigo-100 bg-indigo-50/30">
+                    <div className="flex flex-col md:flex-row gap-6">
+                        <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 mb-2">Embed on your existing website</h3>
+                            <p className="text-sm text-gray-600 mb-4">Copy and paste this snippet into your WordPress, Wix, or custom website's <code>&lt;body&gt;</code> tag to instantly add a floating "Shop Now" button.</p>
+
+                            <div className="relative">
+                                <div className="bg-gray-900 text-gray-100 p-4 rounded-xl text-xs font-mono overflow-x-auto">
+                                    <code>{`<script src="https://ohc.store/widget.js" data-tenant="${tenantId}"></script>`}</code>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`<script src="https://ohc.store/widget.js" data-tenant="${tenantId}"></script>`);
+                                        setWidgetCopied(true);
+                                        setTimeout(() => setWidgetCopied(false), 2000);
+                                    }}
+                                    className="absolute top-2 right-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold text-white transition-colors"
+                                >
+                                    {widgetCopied ? 'Copied!' : 'Copy'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="w-full md:w-64 bg-white rounded-xl border border-gray-200 p-4 flex flex-col items-center justify-center relative min-h-[160px]">
+                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-auto">Live Preview</span>
+                            <button className="absolute bottom-4 right-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-colors transform hover:scale-105">
+                                <span className="text-lg">🛒</span> Shop Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
          </section>
 
          {/* Swarm Observability / Team Activity Panel */}
