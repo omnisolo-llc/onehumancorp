@@ -1,0 +1,42 @@
+--- src/ui/next/src/app/onboarding/page.tsx
++++ src/ui/next/src/app/onboarding/page.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+
+-import React, { useState } from 'react';
++import React, { useState, useEffect } from 'react';
+
+ // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
+ // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
+@@ -15,6 +15,31 @@
+   const [intakeData, setIntakeData] = useState<any>(null);
+   const [startResult, setStartResult] = useState<any>(null);
+
++  useEffect(() => {
++    const savedStep = localStorage.getItem('ohc_onboarding_step');
++    if (savedStep) setStep(parseInt(savedStep, 10));
++    const savedName = localStorage.getItem('ohc_onboarding_name');
++    if (savedName) setBusinessName(savedName);
++    const savedCategory = localStorage.getItem('ohc_onboarding_category');
++    if (savedCategory) setBusinessCategory(savedCategory);
++    const savedStyle = localStorage.getItem('ohc_onboarding_style');
++    if (savedStyle) setPreferredStyle(savedStyle);
++    const savedIntake = localStorage.getItem('ohc_onboarding_intake');
++    if (savedIntake) setIntakeData(JSON.parse(savedIntake));
++    const savedResult = localStorage.getItem('ohc_onboarding_result');
++    if (savedResult) setStartResult(JSON.parse(savedResult));
++  }, []);
++
++  useEffect(() => {
++    localStorage.setItem('ohc_onboarding_step', step.toString());
++    localStorage.setItem('ohc_onboarding_name', businessName);
++    localStorage.setItem('ohc_onboarding_category', businessCategory);
++    localStorage.setItem('ohc_onboarding_style', preferredStyle);
++    if (intakeData) localStorage.setItem('ohc_onboarding_intake', JSON.stringify(intakeData));
++    if (startResult) localStorage.setItem('ohc_onboarding_result', JSON.stringify(startResult));
++  }, [step, businessName, businessCategory, preferredStyle, intakeData, startResult]);
++
++
+   const handleNext = () => {
+     if (step === 1 && !businessName.trim()) {
+       setError("Please enter your business name.");

@@ -28,7 +28,48 @@ export default function BuilderPage() {
   useEffect(() => {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
+
+    const savedBio = localStorage.getItem("ohc_builder_bio");
+    if (savedBio) setBio(savedBio);
+
+    const savedWizardStep = localStorage.getItem("ohc_builder_wizardStep");
+    if (savedWizardStep) setWizardStep(parseInt(savedWizardStep, 10));
+
+    const savedName = localStorage.getItem("ohc_builder_businessName");
+    if (savedName) setBusinessName(savedName);
+
+    const savedCategory = localStorage.getItem("ohc_builder_businessCategory");
+    if (savedCategory) setBusinessCategory(savedCategory);
+
+    const savedVibe = localStorage.getItem("ohc_builder_vibe");
+    if (savedVibe) setVibe(savedVibe);
+
+    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
+    if (savedStatus) setStatus(savedStatus);
+
+    const savedBlocks = localStorage.getItem("ohc_builder_blocks");
+    if (savedBlocks) {
+      try {
+        setBlocks(JSON.parse(savedBlocks));
+      } catch (e) {
+        console.error("Failed to parse saved blocks", e);
+      }
+    }
+
+    const savedLiveUrl = localStorage.getItem("ohc_builder_liveUrl");
+    if (savedLiveUrl) setLiveUrl(savedLiveUrl);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("ohc_builder_bio", bio);
+    localStorage.setItem("ohc_builder_wizardStep", wizardStep.toString());
+    localStorage.setItem("ohc_builder_businessName", businessName);
+    localStorage.setItem("ohc_builder_businessCategory", businessCategory);
+    localStorage.setItem("ohc_builder_vibe", vibe);
+    localStorage.setItem("ohc_builder_status", status);
+    if (blocks.length > 0) localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
+    if (liveUrl) localStorage.setItem("ohc_builder_liveUrl", liveUrl);
+  }, [bio, wizardStep, businessName, businessCategory, vibe, status, blocks, liveUrl]);
 
   const handleGeoAnalysis = async () => {
     try {
@@ -167,6 +208,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Business Name</label>
                 <input
                   type="text"
+                  aria-label="Business Name"
                   className="w-full border border-gray-300 p-4 mb-6 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
@@ -177,6 +219,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
                 <input
                   type="text"
+                  aria-label="Category"
                   className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
@@ -185,6 +228,7 @@ export default function BuilderPage() {
                 />
 
                 <button
+                  aria-label="Next Step"
                   className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
                     businessName.trim() && businessCategory.trim()
                       ? "text-white shadow-md active:scale-[0.98]"
@@ -211,6 +255,7 @@ export default function BuilderPage() {
                     <button
                       key={v}
                       onClick={() => setVibe(v)}
+                      aria-label={`Select ${v} Vibe`}
                       className={`p-4 border text-left transition-all font-semibold ${
                         vibe === v ? "border-[#0071E3] bg-blue-50 text-[#0071E3]" : "border-gray-200 text-gray-700 hover:border-gray-300"
                       }`}
@@ -223,6 +268,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
+                    aria-label="Previous Step"
                     className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(1)}
@@ -230,6 +276,7 @@ export default function BuilderPage() {
                     Back
                   </button>
                   <button
+                    aria-label="Next Step"
                     className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
                       vibe
                         ? "text-white shadow-md active:scale-[0.98]"
@@ -262,6 +309,7 @@ export default function BuilderPage() {
                 <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
+                    aria-label="Business Details"
                     className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
                     style={{ borderRadius: '8px' }}
                     value={bio}
@@ -273,6 +321,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
+                    aria-label="Previous Step"
                     className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(2)}
@@ -282,6 +331,7 @@ export default function BuilderPage() {
                   <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                     <button
                       id="generate-btn"
+                      aria-label="Build Store"
                       className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
                         bio.trim().length > 5
                           ? "text-white shadow-md active:scale-[0.98]"

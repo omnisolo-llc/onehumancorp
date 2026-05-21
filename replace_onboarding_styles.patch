@@ -1,0 +1,263 @@
+<<<<<<< SEARCH
+  const handleIntakeSubmit = async () => {
+    if (!preferredStyle.trim()) {
+      setError("Please describe your preferred style.");
+      return;
+    }
+=======
+  const handleIntakeSubmit = async () => {
+    if (!preferredStyle.trim()) {
+      setError("Please describe your preferred style.");
+      return;
+    }
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter">
+      <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden"
+           style={{
+             background: 'rgba(255, 255, 255, 0.65)',
+             backdropFilter: 'blur(30px) saturate(210%)',
+             border: '1px solid rgba(255, 255, 255, 0.4)'
+           }}
+      >
+=======
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+      `}} />
+      <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden"
+           style={{
+             background: 'rgba(255, 255, 255, 0.65)',
+             backdropFilter: 'blur(30px) saturate(210%)',
+             border: '1px solid rgba(255, 255, 255, 0.4)',
+             borderRadius: '16px'
+           }}
+      >
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+           <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
+           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
+             Step {Math.min(step, 4)} of 4
+           </div>
+=======
+           <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
+           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0071E3] rounded-full">
+             Step {Math.min(step, 4)} of 4
+           </div>
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. Maya's Cakes"
+                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                autoFocus
+              />
+              <button
+                onClick={handleNext}
+                className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+              >
+                Next
+              </button>
+=======
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. Maya's Cakes"
+                aria-label="Business Name"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0071E3] focus:ring-1 focus:ring-[#0071E3] outline-none transition-all text-lg mb-4 bg-white/80"
+                autoFocus
+              />
+              <button
+                onClick={handleNext}
+                aria-label="Next Step"
+                className="w-full bg-[#0071E3] text-white p-4 rounded-lg font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+              >
+                Next
+              </button>
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+              <textarea
+                value={businessCategory}
+                onChange={(e) => setBusinessCategory(e.target.value)}
+                placeholder="e.g. I bake custom wedding cakes and cupcakes."
+                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 min-h-[120px] bg-white/80 resize-none"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(1)}
+                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                >
+                  Next
+                </button>
+              </div>
+=======
+              <textarea
+                value={businessCategory}
+                onChange={(e) => setBusinessCategory(e.target.value)}
+                placeholder="e.g. I bake custom wedding cakes and cupcakes."
+                aria-label="Business Category"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0071E3] focus:ring-1 focus:ring-[#0071E3] outline-none transition-all text-lg mb-4 min-h-[120px] bg-white/80 resize-none"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(1)}
+                  aria-label="Previous Step"
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleNext}
+                  aria-label="Next Step"
+                  className="flex-1 bg-[#0071E3] text-white p-4 rounded-lg font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                >
+                  Next
+                </button>
+              </div>
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+              <input
+                type="text"
+                value={preferredStyle}
+                onChange={(e) => setPreferredStyle(e.target.value)}
+                placeholder="e.g. Clean and modern with pastel colors"
+                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(2)}
+                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  disabled={isLoading}
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleIntakeSubmit}
+                  disabled={isLoading}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                >
+=======
+              <input
+                type="text"
+                value={preferredStyle}
+                onChange={(e) => setPreferredStyle(e.target.value)}
+                placeholder="e.g. Clean and modern with pastel colors"
+                aria-label="Preferred Style"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0071E3] focus:ring-1 focus:ring-[#0071E3] outline-none transition-all text-lg mb-4 bg-white/80"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(2)}
+                  aria-label="Previous Step"
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  disabled={isLoading}
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleIntakeSubmit}
+                  disabled={isLoading}
+                  aria-label="Submit Intake"
+                  className="flex-1 bg-[#0071E3] text-white p-4 rounded-lg font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                >
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto">
+                <span className="text-3xl text-[#0066FF]">✨</span>
+              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center">Looks Great!</h2>
+              <p className="text-gray-500 text-sm mb-6 text-center">Here is what our AI extracted. Ready to publish?</p>
+
+              <div className="bg-white/80 p-5 rounded-xl border border-gray-100 shadow-sm mb-6 space-y-3">
+=======
+              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto">
+                <span className="text-3xl text-[#0071E3]">✨</span>
+              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center">Looks Great!</h2>
+              <p className="text-gray-500 text-sm mb-6 text-center">Here is what our AI extracted. Ready to publish?</p>
+
+              <div className="bg-white/80 p-5 rounded-lg border border-gray-100 shadow-sm mb-6 space-y-3">
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+              <div className="flex gap-3 mt-auto">
+                <button
+                  onClick={() => setStep(3)}
+                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  disabled={isLoading}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleStartOnboarding}
+                  disabled={isLoading}
+                  className="flex-1 bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                >
+=======
+              <div className="flex gap-3 mt-auto">
+                <button
+                  onClick={() => setStep(3)}
+                  aria-label="Edit Details"
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  disabled={isLoading}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleStartOnboarding}
+                  disabled={isLoading}
+                  aria-label="Publish Now"
+                  className="flex-1 bg-[#34C759] text-white p-4 rounded-lg font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                >
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+              <div className="w-full space-y-3 mt-auto">
+                <a
+                  href="/dashboard"
+                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-xl font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
+                >
+                  Go to Dashboard
+                </a>
+                <a
+                  href="/builder"
+                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-xl font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
+                >
+                  Preview Storefront
+                </a>
+              </div>
+=======
+              <div className="w-full space-y-3 mt-auto">
+                <a
+                  href="/dashboard"
+                  aria-label="Go to Dashboard"
+                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-lg font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
+                >
+                  Go to Dashboard
+                </a>
+                <a
+                  href="/builder"
+                  aria-label="Preview Storefront"
+                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-lg font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
+                >
+                  Preview Storefront
+                </a>
+              </div>
+>>>>>>> REPLACE

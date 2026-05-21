@@ -138,8 +138,9 @@ export default function WebsiteBuilderPage() {
                   id="bio-input"
                   enterKeyHint="done"
                   autoCapitalize="sentences"
+                  aria-label="Business Details"
                   className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
-                  style={{ borderRadius: '12px' }}
+                  style={{ borderRadius: '8px' }}
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
                   placeholder="e.g. I run a mobile dog grooming service in Portland"
@@ -151,12 +152,13 @@ export default function WebsiteBuilderPage() {
                 <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                   <button
                     id="generate-btn"
+                    aria-label="Build My Storefront"
                     className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
                       bio.trim().length > 5
                         ? "text-white shadow-md active:scale-[0.98]"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
-                    style={{ borderRadius: '12px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                     onClick={handleGenerate}
                     disabled={bio.trim().length <= 5}
                   >
@@ -231,8 +233,9 @@ export default function WebsiteBuilderPage() {
           <Tooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
-              style={{ borderRadius: '12px' }}
+              aria-label="1-Tap Launch"
+              className="w-full bg-[#0071E3] text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              style={{ borderRadius: '8px' }}
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
