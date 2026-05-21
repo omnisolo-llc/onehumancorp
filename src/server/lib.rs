@@ -3435,20 +3435,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function saveWizardState() {
                             clearTimeout(saveWizardStateTimeout);
+                            const inputs = document.querySelectorAll('#setup-screen input');
+                            const state = {};
+                            inputs.forEach((input, index) => {
+                                if (input.type === 'checkbox') {
+                                    state['checkbox_' + index] = input.checked;
+                                } else {
+                                    state['input_' + index] = input.value;
+                                }
+                            });
+
+                            // Ensure local storage is always up to date
+                            localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
+
                             saveWizardStateTimeout = setTimeout(async () => {
-                                const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = {};
-                                inputs.forEach((input, index) => {
-                                    if (input.type === 'checkbox') {
-                                        state['checkbox_' + index] = input.checked;
-                                    } else {
-                                        state['input_' + index] = input.value;
-                                    }
-                                });
-
-                                // Ensure local storage is always up to date
-                                localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
-
                                 try {
                                     await fetch('/api/onboarding/state', {
                                         method: 'POST',
@@ -4402,14 +4402,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         }
                                     }
 
-                                    if (stateData && stateData.step && stateData.step > 1) {
+                                    if (stateData) {
                                         // Restore form inputs
                                         document.querySelectorAll('input').forEach(input => {
                                             if (input.placeholder && stateData[input.placeholder]) {
                                                 input.value = stateData[input.placeholder];
                                             }
                                         });
-                                        nextStep(stateData.step);
+
+                                        if (stateData.step && stateData.step > 1) {
+                                            nextStep(stateData.step);
+                                        }
                                     }
                                 } catch (e) {
                                     console.error('Failed to load state', e);
