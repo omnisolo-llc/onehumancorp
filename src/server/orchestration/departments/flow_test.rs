@@ -83,6 +83,73 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_cuj_sales_agent_custom_cake() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let sales_agent = Arc::new(RwLock::new(SalesAgent::new(orchestrator.clone())));
+        let advisory_agent = Arc::new(RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(orchestrator.clone())));
+
+        orchestrator.register_department(sales_agent.clone()).await;
+        orchestrator.register_department(advisory_agent.clone()).await;
+
+        let tenant_id = "test-tenant-cuj".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.message.received".to_string(),
+            payload: serde_json::json!({"message": "I need a custom cake"}),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_sales_draft = false;
+        let mut has_advisor_summary = false;
+
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+            for req in pending {
+                if req.description.contains("Salesperson drafted a quote") {
+                    has_sales_draft = true;
+                }
+                if req.description.contains("Good morning Maya") {
+                    has_advisor_summary = true;
+                }
+            }
+            if has_sales_draft && has_advisor_summary {
+                break;
+            }
+        }
+
+        assert!(has_sales_draft, "CUJ: Salesperson should draft a custom cake quote");
+        assert!(has_advisor_summary, "CUJ: Advisor should summarize the quote");
+    }
+
+    #[tokio::test]
     async fn test_customer_success_message_handling() {
         use crate::orchestration::departments::orchestrator::Department;
         if std::env::var("DATABASE_URL").is_err() {

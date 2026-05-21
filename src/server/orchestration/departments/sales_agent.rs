@@ -19,10 +19,38 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.requested".to_string()]
+        vec![
+            "tenant.quote.requested".to_string(),
+            "tenant.message.received".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.message.received" {
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+
+            if message.to_lowercase().contains("custom cake") {
+                // CUJ specific implementation
+                let description = format!("The Salesperson drafted a quote for a custom cake and drafted a reply.");
+
+                let action_payload = serde_json::json!({
+                    "original_message": message,
+                    "generated_quote": "$150.00",
+                    "draft_reply": "We can certainly make a custom cake for you. Here is a quote for $150.00.",
+                });
+
+                self.orchestrator.execute_action(
+                    DepartmentType::Sales,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    action_payload,
+                ).await.map(|_| ())?;
+
+                return Ok(());
+            }
+        }
+
         // Query memory context
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;

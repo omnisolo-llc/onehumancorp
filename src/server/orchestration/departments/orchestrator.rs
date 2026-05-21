@@ -259,6 +259,22 @@ impl DepartmentOrchestrator {
             return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
         }
 
+        let draft_event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "department.action.drafted".to_string(),
+            payload: serde_json::json!({
+                "department": department.to_string(),
+                "description": description.clone(),
+                "risk": risk.to_string()
+            }),
+        };
+
+        // Notify other departments of action draft for chaining
+        if department != DepartmentType::BusinessAdvisory {
+            let _ = self.dispatch_event(draft_event).await;
+        }
+
         match risk {
             ActionRisk::AutoExecute => {
                 let req = ApprovalRequest {
@@ -310,6 +326,19 @@ impl DepartmentOrchestrator {
                 .bind(now)
                 .execute(&self.db.pool)
                 .await;
+
+                let _ = sqlx::query(
+                    "INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                )
+                .bind(req.department.to_string())
+                .bind(&req.tenant_id)
+                .bind(Uuid::new_v4().to_string())
+                .bind(req.department.to_string())
+                .bind("system")
+                .bind("approval_request_created")
+                .bind(&req.description)
+                .execute(&self.db.pool)
+                .await;
             }
             DbStore::Sqlite(pool) => {
                 let _ = sqlx::query(
@@ -323,6 +352,19 @@ impl DepartmentOrchestrator {
                 .bind(req.action_risk.to_string())
                 .bind(now)
                 .bind(now)
+                .execute(pool)
+                .await;
+
+                let _ = sqlx::query(
+                    "INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(req.department.to_string())
+                .bind(&req.tenant_id)
+                .bind(Uuid::new_v4().to_string())
+                .bind(req.department.to_string())
+                .bind("system")
+                .bind("approval_request_created")
+                .bind(&req.description)
                 .execute(pool)
                 .await;
             }

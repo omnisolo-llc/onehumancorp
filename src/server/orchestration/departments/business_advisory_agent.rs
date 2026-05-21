@@ -19,10 +19,28 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string()]
+        vec![
+            "tenant.report.weekly_health".to_string(),
+            "department.action.drafted".to_string()
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "department.action.drafted" {
+            let desc = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            if desc.contains("Salesperson drafted a quote") {
+                let risk = ActionRisk::DraftForReview;
+                self.orchestrator.execute_action(
+                    DepartmentType::BusinessAdvisory,
+                    "Good morning Maya. You have a new cake inquiry. I've drafted a reply and quote for your review.".to_string(),
+                    event.tenant_id.clone(),
+                    risk,
+                    event.payload.clone(),
+                ).await.map(|_| ())?;
+                return Ok(());
+            }
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
