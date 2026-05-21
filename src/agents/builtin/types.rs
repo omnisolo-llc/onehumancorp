@@ -35,6 +35,8 @@ pub struct Message {
     pub response_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub previous_response_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<String>,
 }
 
 impl Message {
@@ -46,6 +48,7 @@ impl Message {
             tool_results: vec![],
             response_id: None,
             previous_response_id: None,
+            refusal: None,
         }
     }
 
@@ -57,6 +60,7 @@ impl Message {
             tool_results: vec![],
             response_id: None,
             previous_response_id: None,
+            refusal: None,
         }
     }
 
@@ -68,6 +72,7 @@ impl Message {
             tool_results: vec![],
             response_id: None,
             previous_response_id: None,
+            refusal: None,
         }
     }
 }

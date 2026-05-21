@@ -541,7 +541,7 @@ impl LlmClient for OpenAIClient {
                 tool_results: vec![],
                 response_id: result.id.clone(),
                 previous_response_id: None,
-            },
+             refusal: None, },
             usage,
             stop_reason: finish_reason,
             response_id: result.id.clone(),

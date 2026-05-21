@@ -782,7 +782,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("id1".to_string()),

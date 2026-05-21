@@ -62,7 +62,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: Some("1".to_string()),
                         previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage {
                         input_tokens: 100, // This will trigger compaction for the next iteration
                         output_tokens: 10,
@@ -168,7 +168,7 @@ mod tests {
                         tool_results: vec![],
                         response_id: Some("1".to_string()),
                         previous_response_id: None,
-                    },
+                     refusal: None, },
                     usage: Usage {
                         input_tokens: 100, // Trigger compaction
                         output_tokens: 10,
@@ -279,7 +279,7 @@ mod tests {
                             tool_results: vec![],
                             response_id: Some("1".to_string()),
                             previous_response_id: None,
-                        },
+                         refusal: None, },
                         usage: Usage {
                             input_tokens: 100, // Trigger compaction
                             output_tokens: 10,
