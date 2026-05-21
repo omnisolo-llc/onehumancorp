@@ -1131,5 +1131,7 @@ mod tests {
         assert!(child_inbox[1].content.contains("hello world"));
         assert!(child_inbox[1].content.contains("Context: ["));
         assert!(child_inbox[1].content.contains("hello world"));
+        assert!(child_inbox[1].content.contains("Context: ["));
+        assert!(child_inbox[1].content.contains("hello world"));
     }
 }
