@@ -303,6 +303,22 @@ pub struct UpdateBlockRequest {
     pub content: Value,
 }
 
+fn merge_json(a: &mut Value, b: &Value) {
+    if let Value::Object(a) = a {
+        if let Value::Object(b) = b {
+            for (k, v) in b {
+                if v.is_null() {
+                    a.remove(k);
+                } else {
+                    merge_json(a.entry(k.clone()).or_insert(Value::Null), v);
+                }
+            }
+            return;
+        }
+    }
+    *a = b.clone();
+}
+
 async fn update_block(
     State(pool): State<PgPool>,
     Path(block_id): Path<Uuid>,
@@ -310,9 +326,19 @@ async fn update_block(
     Json(payload): Json<UpdateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let block = db::update_block(&pool, tenant_id, block_id, payload.content)
+
+    // Fetch current block
+    let mut current_block = db::get_block(&pool, tenant_id, block_id)
+        .await
+        .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
+
+    // Merge updates
+    merge_json(&mut current_block.content, &payload.content);
+
+    let block = db::update_block(&pool, tenant_id, block_id, current_block.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
