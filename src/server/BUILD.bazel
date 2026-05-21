@@ -308,3 +308,11 @@ rust_test(
         "@crates//:tokio-tungstenite",
     ],
 )
+
+rust_test(
+    name = "mcp_config_sync_unit_test",
+    args = ["--test", "mcp_config_sync"],
+    crate = ":server_lib",
+    tags = ["unit"],
+    deps = ["@crates//:tempfile"],
+)

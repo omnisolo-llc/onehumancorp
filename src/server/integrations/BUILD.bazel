@@ -16,6 +16,7 @@ filegroup(
         "//src/server/integrations/mercadopago:srcs",
         "//src/server/integrations/twilio:srcs",
         "//src/server/integrations/pubsub:srcs",
+        "//src/server/integrations/mcp_config_sync:srcs",
         "//src/server/integrations/task_scheduler:srcs",
         "//src/server/integrations/chromadb:srcs",
         "//src/server/integrations/meta:srcs",

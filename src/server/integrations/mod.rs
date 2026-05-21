@@ -11,6 +11,7 @@ pub mod nats;
 pub mod stripe;
 pub mod twilio;
 pub mod mcp_gateway;
+pub mod mcp_config_sync;
 pub mod mercadopago;
 pub mod chromadb;
 pub mod meta;

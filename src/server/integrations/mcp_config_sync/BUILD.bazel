@@ -1,0 +1,37 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "mcp_config_sync",
+    srcs = ["mod.rs", "tool.rs"],
+    crate_root = "mod.rs",
+    visibility = ["//src/server:__subpackages__"],
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+        "@crates//:opentelemetry",
+        "@crates//:uuid",
+
+    ],
+)
+
+rust_test(
+    name = "mcp_config_sync_test",
+    crate = ":mcp_config_sync",
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        "@crates//:tokio",
+    ],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "tool.rs",
+    ],
+    visibility = ["//src/server:__subpackages__"],
+)
