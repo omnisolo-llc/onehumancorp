@@ -19,7 +19,7 @@ impl Department for OperationsAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.accepted".to_string()]
+        vec!["OrderReceived".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {

@@ -53,7 +53,7 @@ mod tests {
         let event = DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
-            event_type: "tenant.quote.accepted".to_string(), // Operations agent subscribes to this
+            event_type: "OrderReceived".to_string(), // Operations agent subscribes to this
             payload: serde_json::json!({"order_id": "12345"}),
         };
 
