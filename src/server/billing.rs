@@ -194,8 +194,21 @@ impl Tracker {
         }
     }
 
+    pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
+        if let Some(ref auditor) = self.auditor {
+            auditor.get_tenant_tokens(tenant_id)
+        } else {
+            0
+        }
+    }
+
     pub fn summary(&self, _scope: &str) -> TokenSummary {
-        TokenSummary::default()
+        let total_tokens = if let Some(auditor) = &self.auditor {
+            auditor.get_total_tokens()
+        } else {
+            0
+        };
+        TokenSummary { total_tokens }
     }
 }
 
