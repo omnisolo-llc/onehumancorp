@@ -8,16 +8,16 @@ export default function Integrations() {
   const integrations = [
     { id: "social", name: "Social Media Auto-Poster", category: "marketing", status: "connected", icon: "📱", description: "Automatically post product updates to Facebook, Instagram, and Twitter." },
     { id: "shipping", name: "ShipStation Sync", category: "operations", status: "disconnected", icon: "📦", description: "Sync orders with ShipStation for automated label printing." },
-    { id: "mailchimp", name: "Mailchimp Automations", category: "marketing", status: "disconnected", icon: "📧", description: "Trigger email campaigns based on customer purchase behavior." },
+    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📧", description: "Embedded, no-jargon email campaigns." },
     { id: "quickbooks", name: "QuickBooks Online", category: "finance", status: "connected", icon: "📊", description: "Automatically sync sales data and expenses for easier accounting." },
     { id: "stripe", name: "Stripe Advanced", category: "finance", status: "connected", icon: "💳", description: "Accept global payments and manage subscriptions seamlessly." },
     { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." },
-    { id: "manychat", name: "Manychat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated scheduling and calendar sync for service businesses." },
+    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "💬", description: "Unified social media inbox and cross-posting." },
+    { id: "calcom", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-config booking and calendar sync." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚚", description: "Automated shipping rates and label printing for orders." },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "🚚", description: "Painless shipping labels and tracking." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automatically generate Zoom meeting links for booked online services." }
+    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-setup online lessons and video conferencing." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
