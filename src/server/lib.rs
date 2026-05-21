@@ -2172,8 +2172,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
-                            border: 1px solid var(--border);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-sm);
+                        }
+                        body.dark-theme .card {
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
