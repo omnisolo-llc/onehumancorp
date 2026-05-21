@@ -1,15 +1,15 @@
 pub struct ListmonkClient {
-    api_key: String,
+    _api_key: String,
 }
 
 impl ListmonkClient {
     pub fn new(api_key: String) -> Self {
-        Self { api_key }
+        Self { _api_key: api_key }
     }
 }
 
 impl ListmonkClient {
-    pub async fn send_campaign(&self, list_id: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
+    pub async fn send_campaign(&self, _list_id: &str, _template_id: &str, _subject: &str, _body: &str) -> Result<(), String> {
         // Mock send campaign
         Ok(())
     }
