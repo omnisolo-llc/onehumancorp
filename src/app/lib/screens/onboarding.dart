@@ -15,6 +15,53 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String bio = '';
   OnboardingState _state = OnboardingState.welcome;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8080/api/onboarding/state'),
+        headers: {'X-Tenant-ID': 'default_tenant'},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['step'] != null) {
+          int step = data['step'];
+          if (step == 1) {
+             setState(() => _state = OnboardingState.input);
+              _saveState(1);
+          } else if (step == 2) {
+             setState(() => _state = OnboardingState.dashboard);
+          _saveState(2);
+          }
+        }
+      }
+    } catch (e) {
+      print('Failed to load state: $e');
+    }
+  }
+
+  Future<void> _saveState(int step) async {
+    try {
+      await http.post(
+        Uri.parse('http://localhost:8080/api/onboarding/state'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': 'default_tenant',
+          'X-User-ID': 'default_user',
+        },
+        body: jsonEncode({'step': step}),
+      );
+    } catch (e) {
+      print('Failed to save state: $e');
+    }
+  }
+
+
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();

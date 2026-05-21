@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
@@ -16,6 +16,47 @@ export default function OnboardingWizard() {
   const [intakeData, setIntakeData] = useState<any>(null);
   const [startResult, setStartResult] = useState<any>(null);
 
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const response = await fetch('/api/onboarding/state');
+        if (response.ok) {
+          const state = await response.json();
+          if (state && state.step) {
+            setStep(state.step);
+            if (state.businessName) setBusinessName(state.businessName);
+            if (state.businessCategory) setBusinessCategory(state.businessCategory);
+            if (state.preferredStyle) setPreferredStyle(state.preferredStyle);
+            if (state.intakeData) setIntakeData(state.intakeData);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load state', err);
+      }
+    };
+    loadState();
+  }, []);
+
+  const saveState = async (newStep: number, extraData: any = {}) => {
+    try {
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: newStep,
+          businessName,
+          businessCategory,
+          preferredStyle,
+          intakeData,
+          ...extraData
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to save state', err);
+    }
+  };
+
+
   const handleNext = () => {
     if (step === 1 && !businessName.trim()) {
       setError("Please enter your business name.");
@@ -26,7 +67,9 @@ export default function OnboardingWizard() {
       return;
     }
     setError("");
-    setStep(step + 1);
+    const nextStep = step + 1;
+    setStep(nextStep);
+    saveState(nextStep, { step: nextStep });
   };
 
   const handleIntakeSubmit = async () => {
@@ -54,6 +97,7 @@ export default function OnboardingWizard() {
       const data = await response.json();
       setIntakeData(data);
       setStep(4);
+      saveState(4, { step: 4, intakeData: data });
     } catch (err: any) {
       setError(err.message || 'An error occurred during intake.');
     } finally {
@@ -95,6 +139,7 @@ export default function OnboardingWizard() {
       const data = await response.json();
       setStartResult(data);
       setStep(5);
+      saveState(5, { step: 5 });
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -161,7 +206,7 @@ export default function OnboardingWizard() {
               />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => { setStep(1); saveState(1, { step: 1 }); }}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
@@ -190,7 +235,7 @@ export default function OnboardingWizard() {
               />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => { setStep(2); saveState(2, { step: 2 }); }}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
@@ -240,7 +285,7 @@ export default function OnboardingWizard() {
 
               <div className="flex gap-3 mt-auto">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => { setStep(3); saveState(3, { step: 3 }); }}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
