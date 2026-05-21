@@ -1886,7 +1886,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             "/api/v1/ai/draft-reply",
             axum::routing::post({
                 let db = db.clone();
-                let store = std::sync::Arc::new(::server_auth::Store::new());
+                let store = std::sync::Arc::new(crate::auth::Store::new());
                 move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
                     draft_reply_handler(db, store, headers, payload).await
                 }
