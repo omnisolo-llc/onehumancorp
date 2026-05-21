@@ -1,3 +1,5 @@
+# Release Notes
+
 ## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
 
 ### Cloud Scaling Improvements
@@ -13,14 +15,6 @@
 
 ### Privacy/Offline Improvements
 - Enhance local offline telemetry privacy rules.
-
-## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Optimize multi-tenant scaling to enhance multi-environment promotion across Cloud staging.
-
-### Privacy/Offline Improvements
-- Enforce improved local offline usage and privacy for Standalone desktop beta builds.
 
 ## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
 
@@ -105,8 +99,6 @@
 - Improve UI jargon and testing for Login screen and Walkthrough (#3dc2, #6107)
 - Implement success milestones logic for offline tracking (#a755)
 
-
-# Release Notes
 
 ## v0.4.33 (Cloud) / v0.4.33+1 (Standalone)
 

@@ -1,3 +1,5 @@
+# OHC Hybrid Agentic OS - Changelog
+
 ## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
 
 ### Cloud Scaling Improvements
@@ -13,21 +15,6 @@
 
 ### Privacy/Offline Improvements
 - Enhance local offline telemetry privacy rules.
-
-## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Optimize multi-tenant scaling to enhance multi-environment promotion across Cloud staging.
-
-### Privacy/Offline Improvements
-- Enforce improved local offline usage and privacy for Standalone desktop beta builds.
-
-## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
-
-- Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
-- Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
-
-# OHC Hybrid Agentic OS - Changelog
 
 ## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
 
@@ -64,6 +51,10 @@
 ### Privacy/Offline Improvements
 - Bolster Standalone Wizard state test coverage for improved offline reliability and progressive disclosure validation.
 
+## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
+
+- Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
+- Privacy/Offline (Standalone): Ensured local agents leverage Teammate Mesh gracefully with local-only fallback and zero-trust isolated environments.
 
 ## v0.4.36 (Cloud) / v0.4.36+1 (Standalone)
 ### Cloud Scaling Improvements
