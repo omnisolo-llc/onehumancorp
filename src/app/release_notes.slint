@@ -6,7 +6,7 @@ export component ReleaseNotes inherits Window {
     min-width: 375px;
     title: "What's New";
     background: #f8fafc;
-    in-out property <string> current_version: "v0.3.4";
+    in-out property <string> current_version: "v0.4.44";
     in-out property <bool> show_latest_only: false;
 
     HorizontalBox {
@@ -27,6 +27,19 @@ export component ReleaseNotes inherits Window {
             ScrollView {
                 VerticalBox {
                     spacing: 24px;
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Version 0.4.44 (Cloud) / v0.4.44+1 (Standalone)"; font-weight: 700; font-size: 14px; color: #64748b; }
+                        Rectangle {
+                            background: white; border-radius: 8px;
+                            VerticalBox {
+                                padding: 16px; spacing: 12px;
+                                Text { text: "🎉 Cloud Staging and Standalone Beta Promotion"; font-weight: 700; font-size: 18px; color: #0f172a; }
+                                Text { text: "We've improved multi-environment promotions and enhanced local offline telemetry controls for better Standalone desktop privacy."; color: #475569; wrap: word-wrap; }
+                            }
+                        }
+                    }
 
                     VerticalBox {
                         spacing: 8px;
