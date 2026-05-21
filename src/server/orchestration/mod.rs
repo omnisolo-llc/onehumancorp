@@ -4,6 +4,8 @@ pub mod shared_tasks;
 pub mod shared_tasks_test;
 #[cfg(test)]
 pub mod orchestration_test;
+#[cfg(test)]
+pub mod autodream_test;
 pub mod departments;
 pub mod handoff;
 pub mod state;
@@ -13,3 +15,4 @@ pub mod hub;
 pub mod hierarchical;
 pub mod statemachine;
 pub mod hybrid_sync;
+pub mod autodream;

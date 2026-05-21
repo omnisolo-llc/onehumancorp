@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AutoDreamMemory from "./AutoDreamMemory";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -230,6 +231,9 @@ export default function Dashboard() {
                  </div>
              </section>
          )}
+
+         {/* AutoDream Memory Consolidation */}
+         <AutoDreamMemory />
 
          {/* Business Snapshot */}
          <section>
