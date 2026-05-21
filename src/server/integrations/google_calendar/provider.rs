@@ -52,4 +52,16 @@ impl GoogleCalendarProvider {
     pub async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
         self.client.create_event(summary, start_time, end_time).await
     }
+
+    pub async fn get_upcoming_appointments(&self) -> Result<Vec<String>, String> {
+        self.client.get_upcoming_appointments().await
+    }
+
+    pub async fn set_availability(&self, availability: &str) -> Result<(), String> {
+        self.client.set_availability(availability).await
+    }
+
+    pub async fn block_time_slot(&self, start_time: &str, end_time: &str) -> Result<(), String> {
+        self.client.block_time_slot(start_time, end_time).await
+    }
 }

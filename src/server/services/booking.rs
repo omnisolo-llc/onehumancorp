@@ -171,6 +171,20 @@ impl BookingService {
 
     pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
         let pool = get_pool();
+
+        let existing = Self::get_bookings(&booking.tenant_id).await?;
+        let existing_slots: Vec<BookingTimeSlot> = existing.into_iter().map(|b| BookingTimeSlot {
+            start_time: b.start_time,
+            end_time: b.end_time.unwrap_or(b.start_time + chrono::Duration::hours(1)),
+        }).collect();
+
+        let new_slot = BookingTimeSlot {
+            start_time: booking.start_time,
+            end_time: booking.end_time.unwrap_or(booking.start_time + chrono::Duration::hours(1)),
+        };
+
+        Self::prevent_double_booking(&existing_slots, &new_slot)?;
+
         sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, $7)"
@@ -185,6 +199,22 @@ impl BookingService {
         .execute(&pool)
         .await
         .map_err(|e| e.to_string())?;
+
+        let registry = crate::integrations::registry::IntegrationsRegistry::new();
+
+        // Ensure calendar integrations sync
+        if let Ok(cal_creds) = registry.get_credentials("cal_com", &booking.tenant_id) {
+            let cal_client = crate::integrations::cal_com::client::CalComClient::new(cal_creds.api_token);
+            let _ = cal_client.block_time_slot(&booking.start_time.to_rfc3339(), &booking.end_time.unwrap_or(booking.start_time + chrono::Duration::hours(1)).to_rfc3339()).await;
+        }
+
+        if let Ok(zoom_creds) = registry.get_credentials("zoom", &booking.tenant_id) {
+             let client = crate::integrations::zoom::client::ZoomClient::new(zoom_creds.api_token);
+             if let Ok(meeting_url) = client.create_meeting("Consultation", &booking.start_time.to_rfc3339(), 60).await {
+                 tracing::info!("Created Zoom meeting: {}", meeting_url);
+                 let _ = sqlx::query("UPDATE bookings SET meeting_url = $1 WHERE id = $2").bind(meeting_url).bind(&booking.id).execute(&pool).await;
+             }
+        }
 
         Ok(())
     }

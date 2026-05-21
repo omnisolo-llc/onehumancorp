@@ -32,4 +32,8 @@ impl ZoomProvider {
             }
         }
     }
+
+    pub async fn create_meeting(&self, topic: &str, start_time: &str, duration_mins: i32) -> Result<String, String> {
+        self._client.create_meeting(topic, start_time, duration_mins).await
+    }
 }

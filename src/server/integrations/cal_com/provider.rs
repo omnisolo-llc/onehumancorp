@@ -38,4 +38,16 @@ impl CalComProvider {
     pub async fn get_booking_link(&self, event_type: &str) -> Result<String, String> {
         self._client.get_booking_link(event_type).await
     }
+
+    pub async fn get_upcoming_appointments(&self) -> Result<Vec<String>, String> {
+        self._client.get_upcoming_appointments().await
+    }
+
+    pub async fn set_availability(&self, availability: &str) -> Result<(), String> {
+        self._client.set_availability(availability).await
+    }
+
+    pub async fn block_time_slot(&self, start_time: &str, end_time: &str) -> Result<(), String> {
+        self._client.block_time_slot(start_time, end_time).await
+    }
 }

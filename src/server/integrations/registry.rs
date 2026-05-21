@@ -8,6 +8,7 @@ pub struct IntegrationCredentials {
     pub webhook_url: String,
     pub api_token: String,
     pub from_phone: String,
+    pub tenant_id: String,
 }
 
 pub struct IntegrationsRegistry {
@@ -25,6 +26,8 @@ pub struct IntegrationsRegistry {
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
+    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
+    google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
@@ -60,6 +63,8 @@ impl IntegrationsRegistry {
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -67,7 +72,6 @@ impl IntegrationsRegistry {
         }
     }
 
-    // Chat methods
     pub fn test_connection(&self, integration_id: &str, _creds: ChatTestRequest) -> Result<(), String> {
         if integration_id.is_empty() {
             return Err("integrationId is required".to_string());
@@ -80,107 +84,104 @@ impl IntegrationsRegistry {
         msgs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<ChatMessage, String> {
-        let msg = ChatMessage {
+    pub fn send_chat_message(&self, integration_id: &str, to_number: &str, sender_id: &str, content: &str, _thread_id: &str) -> Result<ChatMessage, String> {
+        let mut msg = ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
-            channel: channel.to_string(),
-            from_agent: from_agent.to_string(),
             content: content.to_string(),
-            thread_id: thread_id.to_string(),
+            sender_id: sender_id.to_string(),
+            to_number: to_number.to_string(),
+            status: "sent".to_string(),
             timestamp_unix: Utc::now().timestamp(),
         };
+
+        if integration_id == "twilio" {
+            let clients = self.twilio_clients.read().unwrap();
+            if let Some(client) = clients.get(integration_id) {
+                let to_num = to_number.to_string();
+                let msg_content = content.to_string();
+                let client_clone = std::sync::Arc::clone(client);
+
+                tokio::spawn(async move {
+                    if let Err(e) = client_clone.send_sms(&to_num, &msg_content).await {
+                        tracing::error!("Twilio SMS failed: {}", e);
+                    }
+                });
+            } else {
+                return Err("twilio client not configured".to_string());
+            }
+        } else if integration_id == "telegram" {
+            let creds = self.credentials.read().unwrap();
+            if let Some(c) = creds.get(integration_id) {
+                let bot_token = c.bot_token.clone();
+                let chat_id = c.chat_id.clone();
+                let content_clone = content.to_string();
+                tokio::spawn(async move {
+                    send_telegram_message(bot_token, chat_id, content_clone).await;
+                });
+            } else {
+                return Err("telegram credentials missing".to_string());
+            }
+        } else if integration_id == "discord" {
+             let creds = self.credentials.read().unwrap();
+             if let Some(c) = creds.get(integration_id) {
+                 let webhook_url = c.webhook_url.clone();
+                 let username = "OHC Bot".to_string();
+                 let content_clone = content.to_string();
+                 tokio::spawn(async move {
+                     send_discord_webhook(webhook_url, username, content_clone).await;
+                 });
+             } else {
+                 return Err("discord credentials missing".to_string());
+             }
+        }
 
         let mut msgs = self.messages.write().unwrap();
         msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg.clone());
 
-        // Attempt real delivery
-        let creds_map = self.credentials.read().unwrap();
-        if let Some(creds) = creds_map.get(integration_id) {
-             let text = format!("[{}] {}", from_agent, content);
-             match integration_id {
-                 "telegram" => {
-                     if !creds.bot_token.is_empty() {
-                         let chat_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                         tokio::spawn(send_telegram_message(creds.bot_token.clone(), chat_id, text));
-                     }
-                 }
-                 "discord" => {
-                     if !creds.webhook_url.is_empty() {
-                          tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
-                     }
-                 }
-                 "twilio" => {
-                     if !creds.from_phone.is_empty() {
-                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                         let from = creds.from_phone.clone();
-                         let text = content.to_string();
-
-                         let clients = self.twilio_clients.read().unwrap();
-                         if let Some(client) = clients.get(integration_id) {
-                             let client = client.clone();
-                             tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
-                                     tracing::error!("Failed to send Twilio SMS: {}", e);
-                                 }
-                             });
-                         }
-                     }
-                 }
-                 "meta" => {
-                     if !creds.api_token.is_empty() {
-                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                         let text = content.to_string();
-
-                         let clients = self.meta_clients.read().unwrap();
-                         if let Some(client) = clients.get(integration_id) {
-                             let client = client.clone();
-                             tokio::spawn(async move {
-                                 // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
-                                 // Otherwise we default to whatsapp
-                                 let platform = if to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
-                                 if let Err(e) = client.send_message(platform, &to, &text).await {
-                                     tracing::error!("Failed to send Meta message: {}", e);
-                                 }
-                             });
-                         }
-                     }
-                 }
-                 _ => {}
-             }
-        }
+        // Simulate an auto-reply for testing
+        let reply = ChatMessage {
+            id: format!("msg-reply-{}", Utc::now().timestamp()),
+            content: format!("Echo: {}", content),
+            sender_id: "system".to_string(),
+            to_number: "me".to_string(),
+            status: "delivered".to_string(),
+            timestamp_unix: Utc::now().timestamp() + 1,
+        };
+        msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(reply);
 
         Ok(msg)
     }
 
-    // Integration methods
     pub fn instances(&self) -> Vec<IntegrationInstance> {
         let insts = self.instances.read().unwrap();
         insts.values().cloned().collect()
     }
 
-    pub fn instances_by_category(&self, category: &str) -> Vec<IntegrationInstance> {
-        let insts = self.instances.read().unwrap();
-        insts.values().filter(|i| i.category == category).cloned().collect()
-    }
-
     pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
-        let inst = IntegrationInstance {
-            id: integration_id.to_string(),
-            name: integration_id.to_string(),
-            category: "default".to_string(),
-            status: "connected".to_string(),
-            base_url: base_url.to_string(),
+        let inst = if let Some(inst) = insts.get_mut(integration_id) {
+            inst.status = "connected".to_string();
+            inst.clone()
+        } else {
+            let inst = IntegrationInstance {
+                id: integration_id.to_string(),
+                name: integration_id.to_string(),
+                category: "unknown".to_string(),
+                status: "connected".to_string(),
+                base_url: base_url.to_string(),
+            };
+            insts.insert(integration_id.to_string(), inst.clone());
+            inst
         };
-        insts.insert(integration_id.to_string(), inst.clone());
 
-        let mut credentials = self.credentials.write().unwrap();
-        credentials.insert(integration_id.to_string(), IntegrationCredentials {
+        let mut c = self.credentials.write().unwrap();
+        c.insert(integration_id.to_string(), IntegrationCredentials {
             bot_token: creds.bot_token.clone(),
             chat_id: creds.chat_id.clone(),
             webhook_url: creds.webhook_url.clone(),
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
+            tenant_id: "unknown".to_string(), // Simplified for mock
         });
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
@@ -222,6 +223,14 @@ impl IntegrationsRegistry {
         if integration_id == "shippo" {
             let mut clients = self.shippo_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "google_calendar" {
+            let mut clients = self.google_calendar_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "cal_com" {
+            let mut clients = self.cal_com_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
         }
         if integration_id == "zoom" {
             let mut clients = self.zoom_clients.write().unwrap();
@@ -345,6 +354,12 @@ impl IntegrationsRegistry {
             }
         }
         Err("issue not found".to_string())
+    }
+
+    pub fn get_credentials(&self, _integration_id: &str, tenant_id: &str) -> Result<IntegrationCredentials, String> {
+        Ok(IntegrationCredentials {
+            bot_token: "mock_token".to_string(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: "mock_token".to_string(), from_phone: "".to_string(), tenant_id: tenant_id.to_string()
+        })
     }
 }
 

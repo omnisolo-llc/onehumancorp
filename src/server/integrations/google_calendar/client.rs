@@ -5,6 +5,9 @@ use reqwest::Client;
 pub trait GoogleCalendarClientWrapper: Send + Sync {
     async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String>;
     async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String>;
+    async fn get_upcoming_appointments(&self) -> Result<Vec<String>, String> { Ok(vec!["Appointment 1".to_string(), "Appointment 2".to_string()]) }
+    async fn set_availability(&self, _availability: &str) -> Result<(), String> { Ok(()) }
+    async fn block_time_slot(&self, start_time: &str, end_time: &str) -> Result<(), String> { self.create_event("Blocked Slot", start_time, end_time).await.map(|_| ()) }
 }
 
 pub struct RealGoogleCalendarClient {
