@@ -9,9 +9,13 @@ export default function WebsiteBuilderPage() {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
+  const [tenantId, setTenantId] = useState("storefront");
   const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
+    const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
+    setTenantId(savedTenantId);
+
     const savedBio = localStorage.getItem("ohc_builder_bio");
     if (savedBio) setBio(savedBio);
 
@@ -218,7 +222,7 @@ export default function WebsiteBuilderPage() {
           {blocks.map((b, i) => (
             <SmartBlock key={i} {...b} />
           ))}
-          <SmartBlock type="PoweredBy" props={{}} />
+          <SmartBlock type="PoweredBy" props={{ tenantId }} />
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
