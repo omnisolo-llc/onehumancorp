@@ -102,14 +102,32 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter">
-      <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden"
-           style={{
-             background: 'rgba(255, 255, 255, 0.65)',
-             backdropFilter: 'blur(30px) saturate(210%)',
-             border: '1px solid rgba(255, 255, 255, 0.4)'
-           }}
-      >
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
+      <style dangerouslySetInnerHTML={{__html: `
+        .glass-container {
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        @media (prefers-color-scheme: dark) {
+          .glass-container {
+            background: rgba(22, 22, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+          .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
+            color: #F5F5F7;
+          }
+          .glass-container p, .glass-container .text-gray-500 {
+            color: #A1A1A6;
+          }
+          .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
+            background: rgba(0, 0, 0, 0.3);
+            color: #F5F5F7;
+            border-color: rgba(255, 255, 255, 0.2);
+          }
+        }
+      `}} />
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
