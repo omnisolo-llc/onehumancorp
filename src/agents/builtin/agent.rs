@@ -72,7 +72,6 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
-    pub manually_approved_tool_calls: Vec<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -122,7 +121,6 @@ enable_llmcompiler_plan_and_execute: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
-            manually_approved_tool_calls: vec![],
         }
     }
 }
@@ -2124,7 +2122,7 @@ impl Agent {
             }
             for tc in &mutating_calls {
                 if final_cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
+                    if !final_cfg.approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
                     }

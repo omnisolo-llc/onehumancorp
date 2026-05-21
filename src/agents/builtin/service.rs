@@ -550,6 +550,20 @@ impl AgentServiceImpl {
             0.0
         };
 
+        let mut project_trusted = true;
+        let mut high_risk_tools = vec![];
+        let mut approved_tool_calls = vec![];
+        let mut allowed_tools = None;
+
+        if let Some(rtc) = &req.runtime_config {
+            project_trusted = rtc.project_trusted;
+            high_risk_tools = rtc.high_risk_tools.clone();
+            approved_tool_calls = rtc.approved_tool_calls.clone();
+            if !rtc.allowed_tools.is_empty() {
+                allowed_tools = Some(rtc.allowed_tools.clone());
+            }
+        }
+
         AgentRunConfig {
             max_retries: 2,
             enable_single_agent_maximization: false,
@@ -572,10 +586,10 @@ impl AgentServiceImpl {
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
             enable_lost_in_the_middle_prevention: true,
-            project_trusted: true,
-            allowed_tools: None,
-            high_risk_tools: vec![],
-            approved_tool_calls: vec![],
+            project_trusted,
+            allowed_tools,
+            high_risk_tools,
+            approved_tool_calls,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
             guardrails: None,
@@ -979,10 +993,10 @@ impl AgentService for AgentServiceImpl {
                 observation_masking_threshold: 3,
                 observation_masking_size_limit: 512,
                 enable_lost_in_the_middle_prevention: true,
-            project_trusted: true,
-            allowed_tools: None,
-            high_risk_tools: vec![],
-            approved_tool_calls: vec![],
+                project_trusted: sub_req.runtime_config.as_ref().map(|rtc| rtc.project_trusted).unwrap_or(true),
+                allowed_tools: sub_req.runtime_config.as_ref().and_then(|rtc| if rtc.allowed_tools.is_empty() { None } else { Some(rtc.allowed_tools.clone()) }),
+                high_risk_tools: sub_req.runtime_config.as_ref().map(|rtc| rtc.high_risk_tools.clone()).unwrap_or_default(),
+                approved_tool_calls: sub_req.runtime_config.as_ref().map(|rtc| rtc.approved_tool_calls.clone()).unwrap_or_default(),
                 enable_context_compaction: true,
                 compaction_threshold_tokens: 60_000,
                 guardrails: None,

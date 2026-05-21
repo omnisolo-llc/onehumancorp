@@ -195,6 +195,7 @@ rust_binary(
         "output_parser",
         "pubsub",
         "registry",
+        "tools_gating",
     ]
 ]
 
