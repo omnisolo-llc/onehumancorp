@@ -107,7 +107,7 @@ test('UI: Autonomous Global Localization flow', async ({ page }) => {
   await page.route('**/api/agents/approvals', async (route, request) => {
     if (request.method() === 'GET') {
       await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-mkt-1', department: 'Marketing', description: 'Autonomous Global Localization: Translate storefront to Spanish and localize currency for LATAM visitors?', status: 'Pending', action_risk: 'Medium', feature_type: 'global_localization' }
+        { id: 'mock-mkt-1', department: 'Marketing', description: 'Global Reach: Translate your storefront to Spanish and show local currency for customers in Latin America?', status: 'Pending', action_risk: 'Medium', feature_type: 'global_localization' }
       ] } });
     } else {
       await route.fallback();
@@ -126,10 +126,10 @@ test('UI: Autonomous Global Localization flow', async ({ page }) => {
   await promoterCard.click();
 
   await expect(page.locator('h1')).toContainText('The Promoter');
-  await expect(page.getByText('Autonomous Global Localization: Translate storefront to Spanish and localize currency for LATAM visitors?')).toBeVisible();
+  await expect(page.getByText('Global Reach: Translate your storefront to Spanish and show local currency for customers in Latin America?')).toBeVisible();
 
   // Assert the specific UI widget elements are visible
-  await expect(page.getByText('Localization Preview')).toBeVisible();
+  await expect(page.getByText('Global Reach Preview')).toBeVisible();
   await expect(page.getByText('Original (EN)')).toBeVisible();
   await expect(page.getByText('Preview (ES)')).toBeVisible();
   await expect(page.getByText('Pastel Vegano')).toBeVisible();
@@ -146,7 +146,7 @@ test('UI: AI Visibility & GEO flow', async ({ page }) => {
   await page.route('**/api/agents/approvals', async (route, request) => {
     if (request.method() === 'GET') {
       await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-mkt-2', department: 'Marketing', description: 'AI Visibility & GEO: Apply automated Generative Engine Optimization for LLM crawlers?', status: 'Pending', action_risk: 'Low', feature_type: 'ai_geo' }
+        { id: 'mock-mkt-2', department: 'Marketing', description: 'Smart Search Setup: Make your store more visible to customers using AI search tools?', status: 'Pending', action_risk: 'Low', feature_type: 'ai_geo' }
       ] } });
     } else {
       await route.fallback();
@@ -165,10 +165,10 @@ test('UI: AI Visibility & GEO flow', async ({ page }) => {
   await promoterCard.click();
 
   await expect(page.locator('h1')).toContainText('The Promoter');
-  await expect(page.getByText('AI Visibility & GEO: Apply automated Generative Engine Optimization for LLM crawlers?')).toBeVisible();
+  await expect(page.getByText('Smart Search Setup: Make your store more visible to customers using AI search tools?')).toBeVisible();
 
   // Assert the specific UI widget elements are visible
-  await expect(page.getByText('Generative Engine Optimization')).toBeVisible();
+  await expect(page.getByText('Smart Search Setup')).toBeVisible();
   await expect(page.getByText('Smart Formatting')).toBeVisible();
   await expect(page.getByText('Search Engine Data')).toBeVisible();
   await expect(page.getByText('Answer Formatting')).toBeVisible();
@@ -215,7 +215,7 @@ test('UI: Proactive Tax & Legal Compliance Guardrails rejection flow', async ({ 
   await page.route('**/api/agents/approvals', async (route, request) => {
     if (request.method() === 'GET') {
       await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-legal-2', department: 'Legal', description: 'Generate and apply compliance policies?', status: 'Pending', action_risk: 'High', feature_type: 'legal_compliance' }
+        { id: 'mock-legal-2', department: 'Legal', description: 'Action Required: Your sales are approaching the EU tax limit. Should we update your tax and privacy policies to keep you compliant?', status: 'Pending', action_risk: 'High', feature_type: 'legal_compliance' }
       ] } });
     } else {
       await route.fallback();
@@ -230,11 +230,11 @@ test('UI: Proactive Tax & Legal Compliance Guardrails rejection flow', async ({ 
   await page.goto('/team');
   await page.locator('button', { hasText: 'The Protector' }).click();
 
-  await expect(page.getByText('Generate and apply compliance policies?')).toBeVisible();
+  await expect(page.getByText('Action Required: Your sales are approaching the EU tax limit. Should we update your tax and privacy policies to keep you compliant?')).toBeVisible();
 
   // Assert the specific UI widget elements are visible
   await expect(page.getByText('Compliance Warning')).toBeVisible();
-  await expect(page.getByText('Projected revenue exceeds €10,000 threshold. VAT registration and updated Privacy Policy required.')).toBeVisible();
+  await expect(page.getByText('Sales are approaching €10,000. New tax rules require an updated Privacy Policy.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Reject / Edit' }).click();
 
@@ -289,7 +289,7 @@ test('UI: Proactive Tax & Legal Compliance Guardrails flow', async ({ page }) =>
   await page.route('**/api/agents/approvals', async (route, request) => {
     if (request.method() === 'GET') {
       await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-legal-1', department: 'Legal', description: 'ACTION REQUIRED: Revenue approaching EU VAT threshold. Generate and apply compliance policies?', status: 'Pending', action_risk: 'High', feature_type: 'legal_compliance' }
+        { id: 'mock-legal-1', department: 'Legal', description: 'Action Required: Your sales are approaching the EU tax limit. Should we update your tax and privacy policies to keep you compliant?', status: 'Pending', action_risk: 'High', feature_type: 'legal_compliance' }
       ] } });
     } else {
       await route.fallback();
@@ -308,11 +308,11 @@ test('UI: Proactive Tax & Legal Compliance Guardrails flow', async ({ page }) =>
   await protectorCard.click();
 
   await expect(page.locator('h1')).toContainText('The Protector');
-  await expect(page.getByText('ACTION REQUIRED: Revenue approaching EU VAT threshold. Generate and apply compliance policies?')).toBeVisible();
+  await expect(page.getByText('Action Required: Your sales are approaching the EU tax limit. Should we update your tax and privacy policies to keep you compliant?')).toBeVisible();
 
   // Assert the specific UI widget elements are visible
   await expect(page.getByText('Compliance Warning')).toBeVisible();
-  await expect(page.getByText('Projected revenue exceeds €10,000 threshold. VAT registration and updated Privacy Policy required.')).toBeVisible();
+  await expect(page.getByText('Sales are approaching €10,000. New tax rules require an updated Privacy Policy.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Approve' }).click();
 
