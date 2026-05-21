@@ -134,4 +134,37 @@ impl IntegrationService for MyIntegrationService {
             Err(e) => Err(Status::not_found(e)),
         }
     }
+
+    async fn get_free_busy(
+        &self,
+        request: Request<GetFreeBusyRequest>,
+    ) -> Result<Response<GetFreeBusyResponse>, Status> {
+        let req = request.into_inner();
+        match self.registry.get_free_busy(&req.integration_id, &req.time_min, &req.time_max).await {
+            Ok(free_busy_data) => Ok(Response::new(GetFreeBusyResponse { free_busy_data })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
+    async fn create_event(
+        &self,
+        request: Request<CreateEventRequest>,
+    ) -> Result<Response<CreateEventResponse>, Status> {
+        let req = request.into_inner();
+        match self.registry.create_event(&req.integration_id, &req.summary, &req.start_time, &req.end_time).await {
+            Ok(event_id) => Ok(Response::new(CreateEventResponse { event_id })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
+    async fn get_booking_link(
+        &self,
+        request: Request<GetBookingLinkRequest>,
+    ) -> Result<Response<GetBookingLinkResponse>, Status> {
+        let req = request.into_inner();
+        match self.registry.get_booking_link(&req.integration_id, &req.event_type).await {
+            Ok(link) => Ok(Response::new(GetBookingLinkResponse { link })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
 }
