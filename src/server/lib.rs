@@ -3244,11 +3244,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <style>
-                        #setup-screen button:not(.secondary) { background: #0066FF; color: white; border-radius: 8px; border: none; }
-                        #setup-screen input { border-radius: 8px; }
-                        #setup-screen .card.glass, #setup-screen > div[id^="step-"] { border-radius: 16px; }
-                    </style>
                     <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
@@ -4192,39 +4187,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         }));
                                     }
 
-                                    // Normally, the admin credentials would be fetched securely or extrapolated
-                                    // without hitting the frontend, but for parity with the existing wizard:
-                                    const userEmail = "admin@example.com";
-                                    const adminPassword = "password123";
-                                    const payload = {
-                                        business_type: "AI Generated",
-                                        company_name: description.substring(0, 30) || "AI Business",
-                                        company_description: description,
-                                        selling_categories: ["digital"],
-                                        payment_pref: "online",
-                                        admin_email: userEmail,
-                                        admin_name: "Founder",
-                                        admin_password: adminPassword,
-                                        website_template: "modern",
-                                        first_product_name: "Consultation",
-                                        first_product_price: "99",
-                                        domain_choice: "auto",
-                                        price_type: "fixed"
-                                    };
-
-                                    await fetch('/api/onboarding/start', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(payload)
-                                    });
-
-                                    // Show success screen directly
+                                    // Show builder screen directly
                                     setTimeout(() => {
-                                        document.getElementById('step-generating').style.display = 'none';
-                                        document.getElementById('step-100').style.display = 'block';
-                                        // Need to also un-hide it by removing the class if present
-                                        document.getElementById('step-100').classList.remove('hidden');
-                                        currentStep = 100;
+                                        showScreen('storefront-builder-screen');
+                                        renderStorefrontPreview();
                                     }, 2000); // Wait for the "generating" animation
                                 } else {
                                     setTimeout(() => nextStep('launch-ai'), 2000);
