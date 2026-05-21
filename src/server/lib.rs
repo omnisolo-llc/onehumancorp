@@ -2626,6 +2626,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
@@ -2689,6 +2690,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                        </div>
+                    </div>
+
+                    <!-- Seasonal Promos Generator -->
+                    <div id="seasonal-promo-screen" class="screen glass" style="margin-bottom: 80px;">
+                        <h1>Seasonal Promotion Generator ✨</h1>
+                        <p>Generate highly-converting, AI-styled seasonal campaigns for your business instantly.</p>
+
+                        <div class="card glass">
+                            <label for="promo-occasion" style="display: block; margin-bottom: 8px; font-weight: 500;">Occasion / Season</label>
+                            <input type="text" id="promo-occasion" placeholder="e.g., Summer Sale, Back to School, Halloween" style="width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+
+                            <label for="promo-discount" style="display: block; margin-bottom: 8px; font-weight: 500;">Discount Percentage</label>
+                            <input type="number" id="promo-discount" placeholder="20" style="width: 100%; margin-bottom: 24px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+
+                            <button class="primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="generateSeasonalPromo()">Generate Campaign</button>
+                        </div>
+
+                        <div id="promo-result" class="card glass" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
+                            <h3 style="color: var(--primary); margin-top: 0;">Generated Campaign</h3>
+                            <div id="promo-content" style="font-size: 16px; line-height: 1.6; color: #333;"></div>
                         </div>
                     </div>
 
@@ -3852,6 +3874,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
+                            'seasonal-promo-screen': '/seasonal-promos',
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
@@ -4216,6 +4239,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
+                        function generateSeasonalPromo() {
+                            const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
+                            const discountInput = document.getElementById('promo-discount').value || '10';
+
+                            // Sanitize inputs to prevent XSS
+                            const occasion = occasionInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const discount = discountInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                            const code = occasionInput.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) + discountInput.replace(/[^0-9]/g, '');
+
+                            const content = `🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
+                            document.getElementById('promo-content').innerHTML = content;
+                            document.getElementById('promo-result').style.display = 'block';
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -4318,7 +4356,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
