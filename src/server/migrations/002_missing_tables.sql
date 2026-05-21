@@ -260,20 +260,6 @@ CREATE TABLE IF NOT EXISTS memories (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS consolidated_memory (
-    id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
-    agent_id TEXT,
-    content TEXT NOT NULL,
-    embedding VECTOR(1536),
-    source_type TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    reference_count INTEGER DEFAULT 0,
-    reliability_score INTEGER DEFAULT 50,
-    owner_override BOOLEAN DEFAULT FALSE,
-    metadata JSONB
-);
 
 CREATE TABLE IF NOT EXISTS agent_inbox (
     seq SERIAL PRIMARY KEY,
