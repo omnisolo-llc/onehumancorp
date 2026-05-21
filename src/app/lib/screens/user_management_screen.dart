@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
@@ -38,8 +41,30 @@ class GrowthReferralWidget extends StatelessWidget {
               ),
               SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
-                  // TODO: Implement referral generation via API
+                onPressed: () async {
+                  try {
+                    final prefs = await SharedPreferences.getInstance();
+                    final token = prefs.getString('auth_token') ?? '';
+                    final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.ohc.app');
+
+                    final response = await http.post(
+                      Uri.parse('$baseUrl/referrals/generate'),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer $token'
+                      },
+                    );
+                    if (response.statusCode == 200) {
+                      final data = jsonDecode(response.body);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Link: ${data["referral_link"]}')),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error generating link')),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF0066FF),
