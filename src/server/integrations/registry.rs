@@ -31,12 +31,6 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
-    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
-    google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
-}
-
-impl IntegrationsRegistry {
-    pub fn new() -> Self {
         let mut instances = std::collections::HashMap::new();
         for provider in crate::integrations::catalog::get_catalog() {
             let id = provider.metadata.id.clone();
@@ -70,13 +64,7 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
-    }
-
-    // Chat methods
-    pub fn test_connection(&self, integration_id: &str, _creds: ChatTestRequest) -> Result<(), String> {
         if integration_id.is_empty() {
             return Err("integrationId is required".to_string());
         }
@@ -263,36 +251,12 @@ impl IntegrationsRegistry {
             let mut clients = self.cal_com_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
         }
-        if integration_id == "google_calendar" {
-            let mut clients = self.google_calendar_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
-        }
-
-        Ok(inst)
-    }
-
     pub fn disconnect(&self, integration_id: &str) -> Result<IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         if let Some(inst) = insts.get_mut(integration_id) {
             inst.status = "disconnected".to_string();
-            return Ok(inst.clone());
-        }
-        Err("integration not found".to_string())
     }
 
-    pub fn pull_requests(&self, integration_id: &str) -> Vec<PullRequest> {
-        let prs = self.pull_requests.read().unwrap();
-        prs.get(integration_id).cloned().unwrap_or_default()
-    }
-
-    pub fn create_pull_request(&self, integration_id: &str, _repository: &str, title: &str, body: &str, source_branch: &str, target_branch: &str, created_by: &str) -> Result<PullRequest, String> {
-        let pr = PullRequest {
-            id: format!("pr-{}", Utc::now().timestamp()),
-            title: title.to_string(),
-            body: body.to_string(),
-            source_branch: source_branch.to_string(),
-            target_branch: target_branch.to_string(),
-            status: "open".to_string(),
             created_by: created_by.to_string(),
             created_at_unix: Utc::now().timestamp(),
         };
