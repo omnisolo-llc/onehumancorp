@@ -1,9 +1,5 @@
 # Bazel configuration for MCP Any
 
-# Keep this checkout's output base away from stale root-owned runfiles that can
-# be left behind by Docker-backed Playwright tests in Bazel's default cache.
-startup --output_user_root=~/.cache/bazel/bazel-output-ohc
-
 build --color=yes
 build --config=remote
 build:remote --config=buildbuddy
@@ -46,6 +42,7 @@ build:asan --extra_toolchains=@rust_toolchains//:all
 build:windows_common --extra_toolchains=@rust_toolchains//:all
 build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_amd64
 build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_arm64
+build:windows_common --@rules_rust//rust/settings:toolchain_linker_preference=rust
 build:windows_common --noenable_platform_specific_config
 build:windows_common --keep_going
 
