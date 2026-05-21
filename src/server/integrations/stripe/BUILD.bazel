@@ -3,6 +3,7 @@ filegroup(
     srcs = [
         "client.rs",
         "mod.rs",
+        "provider.rs",
         "routing.rs",
     ],
     visibility = ["//src/server/integrations:__pkg__"],
