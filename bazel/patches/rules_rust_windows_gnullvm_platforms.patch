@@ -30,3 +30,103 @@ index 5cd0b45..6119613 100644
          ],
      )
  
+diff --git a/rust/private/rustc.bzl b/rust/private/rustc.bzl
+index 9cb9148..12da7db 100644
+--- a/rust/private/rustc.bzl
++++ b/rust/private/rustc.bzl
+@@ -473,7 +473,12 @@ def get_linker_and_args(ctx, crate_type, toolchain, cc_toolchain, feature_config
+         )
+         ld_is_direct_driver = False
+ 
+-    if not ld or toolchain.linker_preference == "rust":
++    target_prefers_rust_lld = (
++        toolchain.linker_preference != "cc" and
++        toolchain.linker_type == "direct" and
++        toolchain.target_flag_value.endswith("-pc-windows-gnullvm")
++    )
++    if not ld or toolchain.linker_preference == "rust" or target_prefers_rust_lld:
+         ld = toolchain.linker.path
+         ld_is_direct_driver = toolchain.linker_type == "direct"
+ 
+diff --git a/rust/private/repository_utils.bzl b/rust/private/repository_utils.bzl
+index 2188a25..f15799b 100644
+--- a/rust/private/repository_utils.bzl
++++ b/rust/private/repository_utils.bzl
+@@ -770,6 +770,20 @@ def load_rust_stdlib(ctx, target_triple, version, iso_date = None):
+ 
+     return BUILD_for_stdlib(target_triple), sha256
+ 
++def load_rust_mingw(ctx, target_triple, version, iso_date = None):
++    """Loads the Rust MinGW platform libraries for Windows GNU LLVM targets."""
++
++    sha256 = load_arbitrary_tool(
++        ctx,
++        iso_date = iso_date,
++        target_triple = target_triple,
++        tool_name = "rust-mingw",
++        tool_subdirectories = ["rust-mingw"],
++        version = version,
++    )
++
++    return sha256
++
+ def load_rustc_dev_nightly(ctx, target_triple, version, iso_date = None):
+     """Loads the nightly rustc dev component
+ 
+diff --git a/rust/repositories.bzl b/rust/repositories.bzl
+index 3420603..36d2952 100644
+--- a/rust/repositories.bzl
++++ b/rust/repositories.bzl
+@@ -25,6 +25,7 @@ load(
+     "load_rust_compiler",
+     "load_rust_src",
+     "load_rust_stdlib",
++    "load_rust_mingw",
+     "load_rustc_dev_nightly",
+     "load_rustfmt",
+     "select_rust_version",
+@@ -576,6 +577,15 @@ def _rust_toolchain_tools_repository_impl(ctx):
+     build_components.append(rust_stdlib_content)
+     sha256s.update(rust_stdlib_sha256)
+ 
++    if target_triple.system == "windows" and target_triple.abi == "gnullvm":
++        rust_mingw_sha256 = load_rust_mingw(
++            ctx = ctx,
++            target_triple = target_triple,
++            version = version,
++            iso_date = iso_date,
++        )
++        sha256s.update(rust_mingw_sha256)
++
+     stdlib_linkflags = None
+     if "BAZEL_RUST_STDLIB_LINKFLAGS" in ctx.os.environ:
+         stdlib_linkflags = ctx.os.environ["BAZEL_RUST_STDLIB_LINKFLAGS"].split(":")
+diff --git a/rust/toolchain.bzl b/rust/toolchain.bzl
+index b22c0b7..7102d4e 100644
+--- a/rust/toolchain.bzl
++++ b/rust/toolchain.bzl
+@@ -330,6 +330,24 @@ def _generate_sysroot(
+         # Made available to support $(location) expansion in stdlib_linkflags and extra_rustc_flags.
+         transitive_file_sets.append(depset(ctx.files.rust_std))
+ 
++    if ctx.attr.target_triple.endswith("-pc-windows-gnullvm"):
++        # rust-mingw provides the CRT, startup objects, unwind library, and
++        # the usual MinGW import archives. rustc still emits a few additional
++        # Windows library names that are resolved by raw-dylib imports, so
++        # provide empty archive placeholders to keep rust-lld hermetic.
++        for lib in [
++            "advapi32",
++            "bcrypt",
++            "secur32",
++        ]:
++            import_lib = ctx.actions.declare_file("{}/lib/rustlib/{}/lib/self-contained/lib{}.a".format(
++                name,
++                ctx.attr.target_triple,
++                lib,
++            ))
++            ctx.actions.write(output = import_lib, content = "!<arch>\n")
++            direct_files.append(import_lib)
++
+     # Declare a file in the root of the sysroot to make locating the sysroot easy
+     sysroot_anchor = ctx.actions.declare_file("{}/rust.sysroot".format(name))
+     ctx.actions.write(
