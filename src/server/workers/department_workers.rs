@@ -824,9 +824,9 @@ impl PromoterWorker {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
 
-                            let prompt = format!("Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Ensure the drafts include emojis and ask questions to drive engagement. Be professional but exciting.", product_name);
+                            let prompt = format!("Generate a 3-part social media campaign (Teaser, Launch, Follow-up) for our new product: '{}'. Include catchy captions, emojis, and specific image generation prompts for each post. Ensure it is professional but exciting.", product_name);
 
-                            let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+                            let mut drafted_post = format!("Teaser: Coming soon! {} 🚀\nLaunch: It's here! Get your {} today! 🎉\nFollow-up: Did you get your {} yet? 🛒", product_name, product_name, product_name);
 
                             if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                 let reason_req = ::server_ohc::orchestration::ReasonRequest {
@@ -839,34 +839,48 @@ impl PromoterWorker {
                             }
 
                             let task_id = Uuid::new_v4().to_string();
-                            let title = format!("7-Day Social Calendar: {}", product_name);
+                            let title = format!("3-Part Social Campaign: {}", product_name);
+                            let description = format!("The Promoter drafted a 3-part social media campaign for your review. | Payload: {}", serde_json::json!({"drafted_post": drafted_post}));
+
+                            let now = chrono::Utc::now();
+                            let status = "PENDING";
+                            let risk = "HIGH";
+                            let department = "marketing";
 
                             match &db_social.store {
                                 crate::db::DbStore::Postgres => {
                                     let _ = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+                                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(org_id)
-                                    .bind(&title)
-                                    .bind(&drafted_post)
+                                    .bind(department)
+                                    .bind(&description)
+                                    .bind(status)
+                                    .bind(risk)
+                                    .bind(now)
+                                    .bind(now)
                                     .execute(&db_social.pool)
                                     .await;
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
                                     let _ = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(org_id)
-                                    .bind(&title)
-                                    .bind(&drafted_post)
+                                    .bind(department)
+                                    .bind(&description)
+                                    .bind(status)
+                                    .bind(risk)
+                                    .bind(now)
+                                    .bind(now)
                                     .execute(pool)
                                     .await;
                                 }
