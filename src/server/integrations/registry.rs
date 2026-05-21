@@ -158,7 +158,7 @@ impl IntegrationsRegistry {
                          let to = channel.to_string();
                          let text = content.to_string();
                          tokio::spawn(async move {
-                             if let Err(e) = client.send_message(&to, &text).await {
+                             if let Err(e) = client.send_message("manychat", &to, &text).await {
                                  tracing::error!("Failed to send Manychat message: {}", e);
                              }
                          });
