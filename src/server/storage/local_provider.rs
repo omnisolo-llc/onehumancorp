@@ -172,7 +172,7 @@ impl Provider for LocalProvider {
 
             #[cfg(unix)]
             {
-                use std::os::unix::fs::OpenOptionsExt;
+
                 options.mode(0o600);
             }
 
