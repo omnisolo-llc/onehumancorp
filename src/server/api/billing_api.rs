@@ -24,10 +24,27 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+#[derive(serde::Serialize)]
+pub struct PricingTier {
+    pub name: String,
+    pub price_monthly: f64,
+    pub agents_limit: String,
+    pub ai_actions_limit: String,
+    pub storage_quota: String,
+    pub products_limit: String,
+    pub suggested_for: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct PricingTiersResponse {
+    pub tiers: Vec<PricingTier>,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/pricing-tiers", axum::routing::get(pricing_tiers_handler))
         .with_state(hub)
 }
 
@@ -121,4 +138,50 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
     })
+}
+
+pub async fn pricing_tiers_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+) -> Json<PricingTiersResponse> {
+    let tiers = vec![
+        PricingTier {
+            name: "Free".to_string(),
+            price_monthly: 0.0,
+            agents_limit: "1".to_string(),
+            ai_actions_limit: "100".to_string(),
+            storage_quota: "500MB".to_string(),
+            products_limit: "10".to_string(),
+            suggested_for: None,
+        },
+        PricingTier {
+            name: "Starter".to_string(),
+            price_monthly: 29.0,
+            agents_limit: "3".to_string(),
+            ai_actions_limit: "1,000".to_string(),
+            storage_quota: "5GB".to_string(),
+            products_limit: "100".to_string(),
+            suggested_for: Some("Suggested for growing stores".to_string()),
+        },
+        PricingTier {
+            name: "Pro".to_string(),
+            price_monthly: 79.0,
+            agents_limit: "10".to_string(),
+            ai_actions_limit: "Unlimited".to_string(),
+            storage_quota: "50GB".to_string(),
+            products_limit: "Unlimited".to_string(),
+            suggested_for: None,
+        },
+        PricingTier {
+            name: "Business".to_string(),
+            price_monthly: 299.0,
+            agents_limit: "Unlimited".to_string(),
+            ai_actions_limit: "Unlimited".to_string(),
+            storage_quota: "500GB".to_string(),
+            products_limit: "Unlimited".to_string(),
+            suggested_for: None,
+        },
+    ];
+
+    Json(PricingTiersResponse { tiers })
 }

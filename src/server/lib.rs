@@ -3056,53 +3056,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
 
-                        <div class="card glass">
-                            <h3>Free</h3>
-                            <p>$0 / month</p>
-                            <ul>
-                                <li>1 Agent Limit</li>
-                                <li>100 AI actions / month</li>
-                                <li>500MB Storage Quota</li>
-                                <li>10 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('dashboard-screen')">Current Plan</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Starter</h3>
-                            <p>$29 / month</p>
-                            <p>Suggested for growing stores</p>
-                            <ul>
-                                <li>3 Agents Limit</li>
-                                <li>1,000 AI actions / month</li>
-                                <li>5GB Storage Quota</li>
-                                <li>100 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Pro</h3>
-                            <p>$79 / month</p>
-                            <ul>
-                                <li>10 Agents Limit</li>
-                                <li>Unlimited AI actions</li>
-                                <li>50GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Business</h3>
-                            <p>$299 / month</p>
-                            <ul>
-                                <li>Unlimited Agents</li>
-                                <li>Unlimited AI actions</li>
-                                <li>500GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
+                        <div id="pricing-tiers-container">
+                            <!-- Populated dynamically via JS -->
+                            <p>Loading pricing plans...</p>
                         </div>
 
                         <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
@@ -4316,6 +4272,40 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
                                     })
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
+                            }
+
+
+                            if (id === 'pricing-screen') {
+                                fetch('/api/billing/pricing-tiers')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        const container = document.getElementById('pricing-tiers-container');
+                                        if (container) {
+                                            container.innerHTML = '';
+                                            data.tiers.forEach(tier => {
+                                                const card = document.createElement('div');
+                                                card.className = 'card glass';
+                                                let suggestedHtml = tier.suggested_for ? `<p>${tier.suggested_for}</p>` : '';
+                                                let btnAction = tier.name === 'Free' ? `showScreen('dashboard-screen')` : `showScreen('checkout-screen')`;
+                                                let btnText = tier.name === 'Free' ? `Current Plan` : `Upgrade to ${tier.name} via Stripe`;
+
+                                                card.innerHTML = `
+                                                    <h3>${tier.name}</h3>
+                                                    <p>$${tier.price_monthly} / month</p>
+                                                    ${suggestedHtml}
+                                                    <ul>
+                                                        <li>${tier.agents_limit} Agents Limit</li>
+                                                        <li>${tier.ai_actions_limit} AI actions / month</li>
+                                                        <li>${tier.storage_quota} Storage Quota</li>
+                                                        <li>${tier.products_limit} Products Limit</li>
+                                                    </ul>
+                                                    <button onclick="${btnAction}">${btnText}</button>
+                                                `;
+                                                container.appendChild(card);
+                                            });
+                                        }
+                                    })
+                                    .catch(err => console.error('Error fetching pricing tiers:', err));
                             }
 
                             if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
