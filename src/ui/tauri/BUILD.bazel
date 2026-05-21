@@ -74,7 +74,7 @@ pub fn tauri_context() -> Context<tauri::Wry> {
     let assets = TauriAssets {};
     let package_info = tauri::PackageInfo {
         name: "OHC".into(),
-        version: "0.4.42".parse().expect("invalid version"),
+        version: "0.4.44".parse().expect("invalid version"),
         authors: "",
         description: "",
         crate_name: "app",
