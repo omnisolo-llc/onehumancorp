@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub use ::server_harness as harness;
 pub mod api;
 pub mod db;
