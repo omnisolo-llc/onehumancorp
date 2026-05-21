@@ -1,37 +1,3 @@
-# OHC Scout: Tool Integration Research Report - Shippo
-
-## Phase 1: Dynamic Integration & Market Need Discovery
-**Ecosystem Scraping & Community Mining**
-Through analysis of eCommerce platform app stores (Shopify, Wix, WooCommerce) and small business communities, a recurring, high-friction pain point emerged: shipping logistics. Small business owners (like Leo, selling physical goods) frequently struggle with:
-1. Negotiating competitive shipping rates across multiple carriers (USPS, FedEx, UPS).
-2. Manually entering tracking numbers and managing returns.
-3. Managing disjointed multi-platform fulfillment (printing a label on USPS.com, copying tracking to their website, emailing the customer).
-
-**Identified Target:** **Shippo (goshippo.com)**
-Shippo stood out as a leader in democratizing enterprise-grade logistics for SMBs. It offers a unified API and web app to compare rates across 40+ carriers and print labels at highly discounted rates, abstracting away the complex carrier negotiation process.
-
----
-
-## Phase 2: Deep Dive Evaluation (Shippo)
-**User-First Value Mapping**
-For a non-technical user, Shippo acts as an automated post office. Instead of driving to USPS or maintaining a separate FedEx account, the merchant connects Shippo to their OHC dashboard. When an order arrives, they click "Print Label" and immediately get the cheapest rate possible, with tracking instantly synced. This saves hours of manual data entry per week and reduces shipping costs by up to 90% off retail rates.
-
-**Capabilities & Limits**
-- **Core APIs:** Address validation, rate shopping, label generation, package tracking, and automated return label generation.
-- **Reliability:** Processes over 200M+ shipments annually for 4.6M+ customers. API is RESTful and well-documented with high uptime.
-- **OAuth & Webhooks:** Supports OAuth 2.0 for secure account connection and webhooks for real-time tracking updates (e.g., package scanned, out for delivery).
-
-**SaaS Viability & Pricing**
-- **SMB Friendly:** Shippo offers a "Pay As You Go" tier that is perfect for small businesses. It charges no monthly subscription fees; users only pay $0.05 per label plus postage.
-- **Platform/API Pricing:** For platform providers (like OHC acting as a hub), API access for label generation can be integrated efficiently.
-- **Hybrid Support:**
-  - *Cloud (Multi-tenant):* Can utilize Shippo’s platform/OAuth APIs to manage multiple tenant connections securely.
-  - *Standalone (Local/Private):* The API architecture supports standard API key authentication, allowing a local desktop client to securely broker its own connection directly with Shippo.
-
----
-
-## Phase 3: Synthesis & Brief
-
 # Title: Multi-carrier Shipping and Label Printing Integration via Shippo
 
 ## Problem Statement
