@@ -359,7 +359,7 @@ impl IntegrationsRegistry {
 
 
 
-    pub async fn send_campaign(&self, integration_id: &str, list_id: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
+    pub async fn send_campaign(&self, integration_id: &str, _list_id: &str, _template_id: &str, _subject: &str, _body: &str) -> Result<(), String> {
         if integration_id == "listmonk" {
             let clients = self.listmonk_clients.read().unwrap();
             if let Some(_client) = clients.get(integration_id) {
@@ -370,7 +370,7 @@ impl IntegrationsRegistry {
         Err("Integration not found or unsupported".to_string())
     }
 
-    pub async fn create_payment_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
+    pub async fn create_payment_preference(&self, integration_id: &str, _price_id: &str, _tenant_id: &str) -> Result<String, String> {
         if integration_id == "mercadopago" {
             let clients = self.mercadopago_clients.read().unwrap();
             if let Some(_client) = clients.get(integration_id) {
@@ -403,10 +403,10 @@ impl IntegrationsRegistry {
         Err("Integration not found or unsupported".to_string())
     }
 
-    pub async fn get_shipping_rates(&self, integration_id: &str, order_id: &str) -> Result<String, String> {
+    pub async fn get_shipping_rates(&self, integration_id: &str, _order_id: &str) -> Result<String, String> {
         if integration_id == "karrio" {
             let clients = self.karrio_clients.read().unwrap();
-            if let Some(client) = clients.get(integration_id) {
+            if let Some(_client) = clients.get(integration_id) {
                 // Since our `KarrioProvider` isn't fully built out to expose the inner client,
                 // in a real scenario we'd do:
                 // return client.get_rates(order_id).await;

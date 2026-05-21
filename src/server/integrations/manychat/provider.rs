@@ -32,4 +32,8 @@ impl ManychatProvider {
             }
         }
     }
+
+    pub async fn send_message(&self, to: &str, text: &str) -> Result<(), String> {
+        self._client.send_message("manychat", to, text).await
+    }
 }
