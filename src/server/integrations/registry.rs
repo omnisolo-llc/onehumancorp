@@ -255,14 +255,6 @@ impl IntegrationsRegistry {
             let mut clients = self.jitsi_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
         }
-        if integration_id == "cal_com" {
-            let mut clients = self.cal_com_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "google_calendar" {
-            let mut clients = self.google_calendar_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
-        }
 
         Ok(inst)
     }
