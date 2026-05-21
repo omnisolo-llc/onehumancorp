@@ -59,6 +59,9 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut tx = self.db.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
         // Find tasks that are COMPLETED but not yet in consolidated_memory
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
@@ -69,7 +72,7 @@ impl AutoDreamPipeline {
         ";
 
         let tasks = sqlx::query(query)
-            .fetch_all(&self.db.pool)
+            .fetch_all(&mut *tx)
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
@@ -125,7 +128,7 @@ impl AutoDreamPipeline {
                             .bind(&emb_str)
                             .bind("TASK_SUMMARY")
                             .bind(&task_id)
-                            .execute(&self.db.pool)
+                            .execute(&mut *tx)
                             .await
                             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                     }
@@ -136,6 +139,7 @@ impl AutoDreamPipeline {
             }
             tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
         }
+        tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         Ok(())
     }
@@ -174,26 +178,37 @@ mod tests {
             embedding: vec![0.1, 0.2, 0.3],
         });
 
+        // Run migrations for the test DB
+        use crate::db::DB;
+        let mut db_obj = DB { pool: pool.clone(), store: DbStore::Postgres };
+        db_obj.run_migrations().await.unwrap();
+
         // Clean up
-        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        sqlx::query("DELETE FROM consolidated_memory").execute(&mut *tx).await.unwrap();
+        sqlx::query("DELETE FROM shared_tasks").execute(&mut *tx).await.unwrap();
 
         let task_id = "test-task-1";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
+        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
             .bind(task_id)
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
             .unwrap();
+        tx.commit().await.unwrap();
 
         let pipeline = AutoDreamPipeline::new(db.clone(), mock_llm);
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
+        let mut tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.unwrap();
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE task_id = $1")
             .bind(task_id)
-            .fetch_one(&pool)
+            .fetch_one(&mut *tx)
             .await
             .unwrap();
+        tx.commit().await.unwrap();
 
         assert_eq!(count.0, 1);
     }

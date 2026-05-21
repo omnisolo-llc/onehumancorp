@@ -15,3 +15,22 @@ impl LLMClient for MockLLMClient {
         Ok(self.embedding.clone())
     }
 }
+
+pub struct RealLLMClient {
+    inner: crate::minimax::LocalLLMClient,
+}
+
+impl RealLLMClient {
+    pub fn new() -> Self {
+        RealLLMClient {
+            inner: crate::minimax::LocalLLMClient::new(),
+        }
+    }
+}
+
+#[async_trait]
+impl LLMClient for RealLLMClient {
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
+        self.inner.generate_embedding(text).await
+    }
+}
