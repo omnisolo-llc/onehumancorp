@@ -1,31 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import '../lib/screens/onboarding.dart';
 
 void main() {
   testWidgets('Onboarding Screen - Full Flow Test', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(home: OnboardingScreen()));
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/onboarding/start') {
+        return http.Response('{"status": "ok"}', 200);
+      } else if (request.url.path == '/api/onboarding/launch') {
+        return http.Response('{"status": "ok"}', 200);
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
 
     // Tap 'Start a Business' on the welcome screen
     await tester.tap(find.text('Start a Business'));
     await tester.pumpAndSettle();
 
     // Verify we are on the input screen
-    expect(find.text('Your Details'), findsOneWidget);
+    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
 
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required' for both fields
-    expect(find.text('Required'), findsNWidgets(2));
+    // Expect the validator message 'Required' for the bio field
+    expect(find.text('Required'), findsOneWidget);
 
-    // Fill out the form
-    await tester.enterText(find.byType(TextFormField), "Maya's Custom Cakes");
+    // Fill out the bio form
+    await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
     await tester.pumpAndSettle();
 
-    // Test that the form can be submitted when both fields are filled out properly.
-    // Note: Since we need to interact with a DropdownButtonFormField and simulate an HTTP request
-    // this test primarily asserts the UI validation and state transitions up to form submission.
+    // Tap to build my storefront
+    await tester.tap(find.text('Build My Storefront'));
+    await tester.pumpAndSettle();
+
+    // Expect to be on Dashboard state
+    expect(find.text('Storefront Generated!'), findsOneWidget);
+
+    // Go to draft preview
+    await tester.tap(find.text('Preview Site'));
+    await tester.pumpAndSettle();
+
+    // Expect to be on Draft state
+    expect(find.text('Preview Mode'), findsOneWidget);
+    expect(find.text('1-Tap Launch'), findsOneWidget);
+
+    // Verify touch target for edit
+    expect(find.byIcon(Icons.edit), findsOneWidget);
+
+    // Launch store
+    await tester.tap(find.text('1-Tap Launch'));
+    await tester.pumpAndSettle();
+
+    // Expect to be on Live state
+    expect(find.text("You're Live!"), findsOneWidget);
   });
 }

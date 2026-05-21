@@ -1,15 +1,17 @@
 # Bazel configuration for MCP Any
 
-# Keep this checkout's output base away from stale root-owned runfiles that can
-# be left behind by Docker-backed Playwright tests in Bazel's default cache.
-startup --output_user_root=~/.cache/bazel/bazel-output-ohc
-
 build --color=yes
 build --config=remote
 build:remote --config=buildbuddy
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=8
+# Keep local CPU slots low so large local Rust actions do not oversubscribe RAM.
+build --local_resources=cpu=HOST_CPUS*.8
+build --local_resources=memory=HOST_CPUS*.8
+# Apply host OS-specific rc fragments for plain `bazel build //...` and
+# `bazel test //...` invocations.
+build --enable_platform_specific_config
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -27,7 +29,7 @@ build --incompatible_strict_action_env
 build --announce_rc
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
-build --linkopt=-fuse-ld=bfd
+build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 # TODO: Revisit hermetic LLVM once toolchains_llvm analysis/linking is stable.
 # build --extra_toolchains=@llvm_toolchain//:cc-toolchain-x86_64-linux
 # ── Rust toolchains ─────────────────────────────────────────────────────────────
@@ -35,13 +37,15 @@ build --linkopt=-fuse-ld=bfd
 build --@rules_rust//rust/toolchain/channel=stable
 
 # Use rust_toolchains for asan and windows builds (like nativelink)
-# because asan explicitly needs to _not_ use the Nix toolchains
-# and Windows doesn't support LRE.
+# because asan explicitly needs to _not_ use the Nix toolchains.
 build:asan --extra_toolchains=@rust_toolchains//:all
-build:windows --extra_toolchains=@rust_toolchains//:all
-build:windows --linkopt=-fuse-ld=bfd
-build:windows --host_linkopt=-fuse-ld=bfd
-build:windows --keep_going
+build:windows_common --extra_toolchains=@rust_toolchains//:all
+build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_amd64
+build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_arm64
+build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=--cfg=windows_raw_dylib
+build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=-Clink-self-contained=yes
+build:windows_common --noenable_platform_specific_config
+build:windows_common --keep_going
 
 # Nightly toolchain
 build:nightly --@rules_rust//rust/toolchain/channel=nightly
@@ -59,8 +63,7 @@ test --build_tests_only
 # the Docker-backed Playwright E2E targets along with unit and integration tests.
 test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
-# Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
-test --local_test_jobs=1
+test --local_test_jobs=4
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
@@ -74,7 +77,7 @@ test:no-e2e --test_tag_filters=-e2e,-requires-docker
 # Useful with a remote executor/cache setup. Keep the default local test path
 # conservative so `bazel test //...` can include Docker-backed Playwright tests
 # without overwhelming the Bazel server or host.
-test:remote-jobs --jobs=200
+test:remote-jobs --jobs=50
 
 # ── Test environment pass-through ─────────────────────────────────────────────
 test --test_env=GEMINI_API_KEY
@@ -127,7 +130,11 @@ build:local --spawn_strategy=sandboxed,local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
+build:linux --linkopt=-fuse-ld=bfd
+build:linux --host_linkopt=-fuse-ld=bfd
 build:linux_x86_64 --platforms=//bazel/platforms:linux_x86_64
+build:linux_x86_64 --linkopt=-fuse-ld=bfd
+build:linux_x86_64 --host_linkopt=-fuse-ld=bfd
 build:linux_arm64 --platforms=//bazel/platforms:linux_arm64
 build:linux_arm64 --extra_execution_platforms=//bazel/platforms:linux_arm64
 build:linux_aarch64 --platforms=//bazel/platforms:linux_aarch64
@@ -136,19 +143,19 @@ build:linux_aarch64 --extra_execution_platforms=//bazel/platforms:linux_aarch64
 # build:linux_llvm --extra_execution_platforms=@toolchains_llvm//platforms:linux-x86_64
 build:android --platforms=//bazel/platforms:android_aarch64
 build:ios --platforms=//bazel/platforms:ios_aarch64
-build:macos --platforms=//bazel/platforms:macos_aarch64
+build:macos --announce_rc
 build:macos_x86_64 --platforms=//bazel/platforms:macos_x86_64
 build:macos_aarch64 --platforms=//bazel/platforms:macos_aarch64
+build:windows_x86_64 --config=windows_common
 build:windows_x86_64 --platforms=//bazel/platforms:windows_x86_64
+build:windows_arm64 --config=windows_common
+build:windows_arm64 --platforms=//bazel/platforms:windows_arm64
+build:windows_i686 --config=windows_common
 build:windows_i686 --platforms=//bazel/platforms:windows_i686
 build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
 build:linux --config=linux_x86_64
 build:linux --linkopt=-fuse-ld=bfd
 build:linux --host_linkopt=-fuse-ld=bfd
-build:windows --action_env=CC_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-gcc
-build:windows --action_env=CXX_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-g++
-build:windows --action_env=AR_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ar
-build:windows --action_env=LD_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ld
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e

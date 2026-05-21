@@ -2,19 +2,30 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'agent_dashboard.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
+  final http.Client? httpClient;
+
+  const OnboardingScreen({Key? key, this.httpClient}) : super(key: key);
+
   @override
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
-  String businessName = '';
-  String? businessType;
+  String bio = '';
   OnboardingState _state = OnboardingState.welcome;
+  late final http.Client _client;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = widget.httpClient ?? http.Client();
+  }
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
@@ -22,12 +33,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _state = OnboardingState.generating);
 
       try {
-        final response = await http.post(
+        final response = await _client.post(
           Uri.parse('http://localhost:8080/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'company_name': businessName,
-            'business_type': businessType,
+            'bio': bio,
+            'company_name': 'AI Generated Store',
+            'business_type': 'Auto',
             'selling_categories': ['food', 'physical'],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
@@ -37,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'first_product_name': 'Custom Cake Deposit',
             'first_product_price': '25.00',
             'domain_choice': 'subdomain',
-            'price_type': 'fixed'
+            'price_type': 'fixed',
           }),
         );
 
@@ -45,17 +57,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           setState(() => _state = OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-           setState(() => _state = OnboardingState.input);
+          setState(() => _state = OnboardingState.input);
         }
       } catch (e) {
         print('Error: \$e');
-         setState(() => _state = OnboardingState.input);
+        setState(() => _state = OnboardingState.input);
       }
     }
   }
 
-  void launchStore() {
-    setState(() => _state = OnboardingState.live);
+  Future<void> launchStore() async {
+    try {
+      final response = await _client.post(
+        Uri.parse('http://localhost:8080/api/onboarding/launch'),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _state = OnboardingState.live);
+      }
+    } catch (e) {
+      print('Error launching: \$e');
+    }
   }
 
   @override
@@ -67,20 +88,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7), // Light background
       body: Center(
-        child: Container(
-          width: 375, // Mobile viewport constraint
-          height: 812, // Standard mobile height
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.65),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 500),
+          child: Container(
+            height: MediaQuery.of(
+              context,
+            ).size.height, // Takes up screen height gracefully
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.65),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: _buildContent(),
                 ),
-                child: _buildContent(),
               ),
             ),
           ),
@@ -174,7 +203,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Your Details',
+              'Welcome to OHC Smart Builder',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -186,7 +215,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Just a few details to get started.',
+              'Tell us about your business, and AI will build it.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -196,9 +225,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
+              key: Key('bio-input'), // for testing or just semantics
+              maxLines: 4,
               decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Custom Cakes',
+                labelText: 'Business Bio',
+                hintText:
+                    'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -208,34 +240,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Business Type',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              items: ['Physical', 'Digital', 'Service', 'Food']
-                  .map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  businessType = value;
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessType = value!,
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => bio = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
@@ -314,7 +321,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                'Welcome, $businessName',
+                'Welcome, your store is ready',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16,
@@ -348,7 +355,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.check_circle, size: 48, color: Color(0xFF34C759)),
+                      Icon(
+                        Icons.check_circle,
+                        size: 48,
+                        color: Color(0xFF34C759),
+                      ),
                       SizedBox(height: 16),
                       Text(
                         'Storefront Generated!',
@@ -412,7 +423,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               Text(
                 'Preview Mode',
-                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -450,6 +465,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Text(
                   'Generated based on your bio.',
                   style: TextStyle(color: Colors.grey[500]),
+                ),
+                SizedBox(height: 24),
+                ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: 44, minHeight: 44),
+                  child: IconButton(
+                    icon: Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () {},
+                    tooltip: 'Edit Preview',
+                  ),
                 ),
               ],
             ),
@@ -502,78 +526,91 @@ class StoreLiveScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7),
       body: Center(
-        child: Container(
-          width: 375,
-          height: 812,
-          padding: EdgeInsets.all(24),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.65),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Color(0xFF34C759).withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.check_circle, size: 64, color: Color(0xFF34C759)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 500),
+          child: Container(
+            height: MediaQuery.of(context).size.height,
+            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.65),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 1,
                     ),
-                    SizedBox(height: 32),
-                    Text(
-                      'You\'re Live!',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1D1D1F),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Your automated storefront is successfully published.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 48),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[100],
-                          foregroundColor: Color(0xFF1D1D1F),
-                          padding: EdgeInsets.symmetric(vertical: 18),
-                          minimumSize: Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF34C759).withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                        child: Text(
-                          'Go to Dashboard',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Icon(
+                          Icons.check_circle,
+                          size: 64,
+                          color: Color(0xFF34C759),
                         ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 32),
+                      Text(
+                        'You\'re Live!',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1D1D1F),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Your automated storefront is successfully published.',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 48),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => AgentDashboard()),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey[100],
+                            foregroundColor: Color(0xFF1D1D1F),
+                            padding: EdgeInsets.symmetric(vertical: 18),
+                            minimumSize: Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Go to Dashboard',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

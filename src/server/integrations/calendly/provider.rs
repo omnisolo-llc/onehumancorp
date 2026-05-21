@@ -17,7 +17,7 @@ impl CalendlyProvider {
                 id: "calendly".to_string(),
                 name: "Calendly".to_string(),
                 category: "calendar".to_string(),
-                base_url: "https://placeholder.url".to_string(),
+                base_url: "https://api.calendly.com".to_string(),
             },
         }
     }
@@ -31,5 +31,28 @@ impl CalendlyProvider {
                 base_url: self.metadata.base_url.clone(),
             }
         }
+    }
+
+    pub async fn fetch_event_types(&self) -> Result<Vec<String>, String> {
+        self._client.fetch_event_types().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calendly_provider_new() {
+        let provider = CalendlyProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "calendly");
+        assert_eq!(provider.metadata.category, "calendar");
+    }
+
+    #[test]
+    fn test_calendly_provider_into() {
+        let provider = CalendlyProvider::new("test_token".to_string());
+        let integration = provider.to_integration_provider();
+        assert_eq!(integration.metadata.id, "calendly");
     }
 }

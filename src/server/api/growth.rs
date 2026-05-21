@@ -70,9 +70,11 @@ where
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
+        .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
+        .route("/referrals/generate", post(handle_referral_generate))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -85,6 +87,19 @@ pub struct ReferralIdRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InviteIdRequest {
     pub id: String,
+}
+
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralGenerateResponse {
+    pub referral_link: String,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TeamInvitesMetricsResponse {
+    pub total_invites: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -170,6 +185,19 @@ async fn handle_get_team_invites(
     }
 }
 
+async fn handle_team_invites_metrics(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
+) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.get_team_invites_count(&query.team_id).await {
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
 async fn handle_referral_click(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
@@ -179,7 +207,10 @@ async fn handle_referral_click(
         .execute(&state.pool)
         .await
     {
-        Ok(_) => {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return Err(StatusCode::NOT_FOUND);
+            }
             state.hub.referral_tracker().record_click(&req.id);
             Ok(Json(()))
         }
@@ -196,10 +227,38 @@ async fn handle_referral_convert(
         .execute(&state.pool)
         .await
     {
-        Ok(_) => {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return Err(StatusCode::NOT_FOUND);
+            }
             state.hub.referral_tracker().record_conversion(&req.id);
             Ok(Json(()))
         }
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+
+async fn handle_referral_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
+    let ref_code = uuid::Uuid::new_v4().to_string();
+    let ref_id = uuid::Uuid::new_v4().to_string();
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+
+    match sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
+        .bind(&ref_id)
+        .bind(&auth_info.org_id)
+        .bind(&auth_info.agent_id)
+        .bind(&ref_code)
+        .bind(now)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(ReferralGenerateResponse {
+            referral_link: format!("https://ohc.app/ref/{}", ref_code),
+        })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -213,6 +272,7 @@ async fn handle_team_invite_accept(
 
     match tracker.accept_invite(&req.id).await {
         Ok(_) => Ok(Json(())),
+        Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -298,6 +358,15 @@ mod tests {
         };
         let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
         assert!(accept_res.is_ok());
+
+        // Call metrics handler directly
+        let metrics_query = GetTeamInvitesQuery {
+            team_id: "team-test-direct".to_string(),
+        };
+        let metrics_res = handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
+        assert!(metrics_res.is_ok());
+        let metrics_res_json = metrics_res.unwrap().0;
+        assert_eq!(metrics_res_json.total_invites, 1);
     }
 
     #[tokio::test]
@@ -312,6 +381,12 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
+        // Insert dummy referral
+        let ref_id = "ref-code-123";
+        sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, 'org1', 'user1', 'code1', 0, 0, 0) ON CONFLICT DO NOTHING")
+            .bind(ref_id)
+            .execute(&pool).await.unwrap();
+
         let click_req = ReferralIdRequest {
             id: "ref-code-123".to_string(),
         };
@@ -323,6 +398,21 @@ mod tests {
         };
         let res = handle_referral_convert(Extension(state.clone()), Json(convert_req)).await;
         assert!(res.is_ok());
+
+        // Test missing referral
+        let click_req_not_found = ReferralIdRequest {
+            id: "ref-code-123-not-found".to_string(),
+        };
+        let res_not_found = handle_referral_click(Extension(state.clone()), Json(click_req_not_found)).await;
+        assert!(res_not_found.is_err());
+        assert_eq!(res_not_found.unwrap_err(), StatusCode::NOT_FOUND);
+
+        let convert_req_not_found = ReferralIdRequest {
+            id: "ref-code-123-not-found".to_string(),
+        };
+        let res2_not_found = handle_referral_convert(Extension(state.clone()), Json(convert_req_not_found)).await;
+        assert!(res2_not_found.is_err());
+        assert_eq!(res2_not_found.unwrap_err(), StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
@@ -365,6 +455,34 @@ mod tests {
         assert_eq!(conversions, 1);
     }
 
+
+    #[tokio::test]
+    async fn test_referral_generate() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: "test-org".to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
+        let ref_link = res.0.referral_link;
+        assert!(ref_link.starts_with("https://ohc.app/ref/"));
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE organization_id = 'test-org' AND user_id = 'test-agent'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count, 1);
+    }
+
     #[tokio::test]
     async fn test_team_invite_accept() {
         let pool = setup_db().await;
@@ -392,5 +510,11 @@ mod tests {
             .bind(invite_id)
             .fetch_one(&pool).await.unwrap();
         assert_eq!(status, "ACCEPTED");
+
+        // Test missing invite
+        let missing_req = InviteIdRequest { id: "missing-invite-404".to_string() };
+        let res_missing = handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
+        assert!(res_missing.is_err());
+        assert_eq!(res_missing.unwrap_err(), StatusCode::NOT_FOUND);
     }
 }
