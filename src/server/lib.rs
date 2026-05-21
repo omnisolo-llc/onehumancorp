@@ -2536,8 +2536,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                        <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add</button>
-                        <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
+                        <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
+                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
                         <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
@@ -2685,7 +2685,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
+                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
