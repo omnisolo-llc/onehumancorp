@@ -10,23 +10,12 @@ use crate::db::DB;
 
 #[tokio::test]
 async fn test_stripe_webhook_handler_completed() {
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-
-    // Only run if redis is available
-    let client = match redis::Client::open(redis_url) {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
+    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
 
     let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
-    let db = match DB::new().await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
+    let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let db = DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool) };
+    db.run_migrations().await.unwrap();
 
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
@@ -37,7 +26,7 @@ async fn test_stripe_webhook_handler_completed() {
     // Seed the database with a test tenant
     if sqlx::query("INSERT INTO tenants (tenant_id, tier) VALUES ('test_tenant', 'Starter') ON CONFLICT DO NOTHING")
         .execute(&db.pool).await.is_err() {
-        return; // Skip if we can't seed the database
+        panic!("Could not seed DB");
     }
 
     let app = Router::new()
@@ -82,23 +71,12 @@ async fn test_stripe_webhook_handler_completed() {
 
 #[tokio::test]
 async fn test_stripe_webhook_handler_deleted() {
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-
-    // Only run if redis is available
-    let client = match redis::Client::open(redis_url) {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
+    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
 
     let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
-    let db = match DB::new().await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
+    let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let db = DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool) };
+    db.run_migrations().await.unwrap();
 
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
@@ -109,7 +87,7 @@ async fn test_stripe_webhook_handler_deleted() {
     // Seed the database with a test tenant
     if sqlx::query("INSERT INTO tenants (tenant_id, tier) VALUES ('test_tenant', 'Pro') ON CONFLICT DO NOTHING")
         .execute(&db.pool).await.is_err() {
-        return; // Skip if we can't seed the database
+        panic!("Could not seed DB");
     }
 
     let app = Router::new()
@@ -161,20 +139,12 @@ async fn test_mercadopago_webhook_handler_payment_created() {
     use crate::api::billing_webhook::{mercadopago_webhook_handler, WebhookState, MercadoPagoEvent, MercadoPagoEventData};
     use std::sync::Arc;
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    let client = match redis::Client::open(redis_url) {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
+    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
 
     let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
-    let db = match crate::db::DB::new().await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
+    let pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let db = DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool) };
+    db.run_migrations().await.unwrap();
 
     let state = WebhookState {
         rate_limiter,

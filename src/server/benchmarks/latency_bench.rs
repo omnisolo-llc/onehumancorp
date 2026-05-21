@@ -353,7 +353,7 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(60);
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(65)).await;
             Ok::<(), String>(())
         }).await;
 
@@ -366,10 +366,12 @@ mod tests {
         let start = std::time::Instant::now();
         let slow_network = async {
             tokio::task::yield_now().await;
-            tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(65)).await;
             "data"
         };
-        let result = tokio::time::timeout(std::time::Duration::from_millis(2000), slow_network).await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), slow_network).await;
+        assert!(result.is_err());
+        assert!(start.elapsed() >= std::time::Duration::from_millis(60));
         assert!(result.is_err());
         assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
