@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SmartBlock } from "./components";
 import { Tooltip, useWalkthrough } from "../../components/help";
 
@@ -14,6 +14,74 @@ export default function BuilderPage() {
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
   const { startWalkthrough } = useWalkthrough();
+
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    async function loadState() {
+      const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+      const userId = localStorage.getItem('user_id') || 'test-user';
+      try {
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.wizardStep) {
+            setWizardStep(data.wizardStep || 1);
+            setBusinessName(data.businessName || "");
+            setBusinessCategory(data.businessCategory || "");
+            setVibe(data.vibe || "");
+            setBio(data.bio || "");
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load state from server', e);
+      }
+
+      const localState = localStorage.getItem('ohc_builder_wizard_state');
+      if (localState) {
+        try {
+          const data = JSON.parse(localState);
+          if (data.wizardStep) setWizardStep(data.wizardStep);
+          if (data.businessName) setBusinessName(data.businessName);
+          if (data.businessCategory) setBusinessCategory(data.businessCategory);
+          if (data.vibe) setVibe(data.vibe);
+          if (data.bio) setBio(data.bio);
+        } catch (e) {}
+      }
+    }
+    loadState();
+  }, []);
+
+  const saveState = (newState: any) => {
+    const currentState = { wizardStep, businessName, businessCategory, vibe, bio, ...newState };
+    localStorage.setItem('ohc_builder_wizard_state', JSON.stringify(currentState));
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(async () => {
+      const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+      const userId = localStorage.getItem('user_id') || 'test-user';
+      try {
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId
+          },
+          body: JSON.stringify(currentState)
+        });
+      } catch (e) {
+        console.error('Failed to save state', e);
+      }
+    }, 500);
+  };
+
 
   // GEO UI State
   const [geoScore, setGeoScore] = useState<number | null>(null);
@@ -139,8 +207,8 @@ export default function BuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
-             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden"
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
@@ -164,7 +232,7 @@ export default function BuilderPage() {
                   className="w-full border border-gray-300 p-4 mb-6 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
+                  onChange={(e) => { setBusinessName(e.target.value); saveState({ businessName: e.target.value }); }}
                   placeholder="e.g. Acme Corp"
                 />
 
@@ -174,19 +242,19 @@ export default function BuilderPage() {
                   className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
-                  onChange={(e) => setBusinessCategory(e.target.value)}
+                  onChange={(e) => { setBusinessCategory(e.target.value); saveState({ businessCategory: e.target.value }); }}
                   placeholder="e.g. Retail, Consulting, Tech"
                 />
 
                 <button
                   className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
-                    businessName.trim() && businessCategory.trim()
+                    businessName.trim().length > 2 && businessCategory.trim().length > 2
                       ? "text-white shadow-md active:scale-[0.98]"
                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                   }`}
-                  style={{ borderRadius: '8px', background: (businessName.trim() && businessCategory.trim()) ? '#0071E3' : '' }}
-                  onClick={() => setWizardStep(2)}
-                  disabled={!businessName.trim() || !businessCategory.trim()}
+                  style={{ borderRadius: '8px', background: (businessName.trim().length > 2 && businessCategory.trim().length > 2) ? '#0071E3' : '' }}
+                  onClick={() => { setWizardStep(2); saveState({ wizardStep: 2 }); }}
+                  disabled={businessName.trim().length <= 2 || businessCategory.trim().length <= 2}
                 >
                   Next: Choose Vibe
                 </button>
@@ -204,7 +272,7 @@ export default function BuilderPage() {
                   {['Professional', 'Friendly', 'Energetic', 'Minimalist'].map((v) => (
                     <button
                       key={v}
-                      onClick={() => setVibe(v)}
+                      onClick={() => { setVibe(v); saveState({ vibe: v }); }}
                       className={`p-4 border text-left transition-all font-semibold ${
                         vibe === v ? "border-[#0071E3] bg-blue-50 text-[#0071E3]" : "border-gray-200 text-gray-700 hover:border-gray-300"
                       }`}
@@ -219,7 +287,7 @@ export default function BuilderPage() {
                   <button
                     className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
                     style={{ borderRadius: '8px' }}
-                    onClick={() => setWizardStep(1)}
+                    onClick={() => { setWizardStep(1); saveState({ wizardStep: 1 }); }}
                   >
                     Back
                   </button>
@@ -233,9 +301,10 @@ export default function BuilderPage() {
                     onClick={() => {
                        // Pre-fill bio based on earlier steps if empty
                        if (!bio.trim()) {
-                         setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
+                         const newBio = `I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`;
+                         setBio(newBio); saveState({ bio: newBio });
                        }
-                       setWizardStep(3);
+                       setWizardStep(3); saveState({ wizardStep: 3 });
                     }}
                     disabled={!vibe}
                   >
@@ -259,7 +328,7 @@ export default function BuilderPage() {
                     className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
                     style={{ borderRadius: '8px' }}
                     value={bio}
-                    onChange={(e) => setBio(e.target.value)}
+                    onChange={(e) => { setBio(e.target.value); saveState({ bio: e.target.value }); }}
                     placeholder="e.g. I run a mobile dog grooming service in Portland"
                     rows={6}
                   />
@@ -269,7 +338,7 @@ export default function BuilderPage() {
                   <button
                     className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
                     style={{ borderRadius: '8px' }}
-                    onClick={() => setWizardStep(2)}
+                    onClick={() => { setWizardStep(2); saveState({ wizardStep: 2 }); }}
                   >
                     Back
                   </button>
@@ -406,7 +475,7 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden">
+      <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">

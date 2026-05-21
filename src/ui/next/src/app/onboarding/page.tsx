@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
@@ -16,21 +16,87 @@ export default function OnboardingWizard() {
   const [intakeData, setIntakeData] = useState<any>(null);
   const [startResult, setStartResult] = useState<any>(null);
 
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    async function loadState() {
+      const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+      const userId = localStorage.getItem('user_id') || 'test-user';
+      try {
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.step) {
+            setStep(data.step || 1);
+            setBusinessName(data.businessName || "");
+            setBusinessCategory(data.businessCategory || "");
+            setPreferredStyle(data.preferredStyle || "");
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load state from server', e);
+      }
+
+      const localState = localStorage.getItem('ohc_wizard_state');
+      if (localState) {
+        try {
+          const data = JSON.parse(localState);
+          if (data.step) setStep(data.step);
+          if (data.businessName) setBusinessName(data.businessName);
+          if (data.businessCategory) setBusinessCategory(data.businessCategory);
+          if (data.preferredStyle) setPreferredStyle(data.preferredStyle);
+        } catch (e) {}
+      }
+    }
+    loadState();
+  }, []);
+
+  const saveState = (newState: any) => {
+    const currentState = { step, businessName, businessCategory, preferredStyle, ...newState };
+    localStorage.setItem('ohc_wizard_state', JSON.stringify(currentState));
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(async () => {
+      const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+      const userId = localStorage.getItem('user_id') || 'test-user';
+      try {
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId
+          },
+          body: JSON.stringify(currentState)
+        });
+      } catch (e) {
+        console.error('Failed to save state', e);
+      }
+    }, 500);
+  };
+
+
   const handleNext = () => {
-    if (step === 1 && !businessName.trim()) {
+    if (step === 1 && businessName.trim().length <= 2) {
       setError("Please enter your business name.");
       return;
     }
-    if (step === 2 && !businessCategory.trim()) {
+    if (step === 2 && businessCategory.trim().length <= 2) {
       setError("Please describe what you sell.");
       return;
     }
     setError("");
-    setStep(step + 1);
+    const nextStep = step + 1; setStep(nextStep); saveState({ step: nextStep });
   };
 
   const handleIntakeSubmit = async () => {
-    if (!preferredStyle.trim()) {
+    if (preferredStyle.trim().length <= 2) {
       setError("Please describe your preferred style.");
       return;
     }
@@ -53,7 +119,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setIntakeData(data);
-      setStep(4);
+      setStep(4); saveState({ step: 4 });;
     } catch (err: any) {
       setError(err.message || 'An error occurred during intake.');
     } finally {
@@ -94,7 +160,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setStartResult(data);
-      setStep(5);
+      setStep(5); saveState({ step: 5 });
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -105,11 +171,7 @@ export default function OnboardingWizard() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter">
       <div className="w-full max-w-[375px] h-screen sm:h-[812px] bg-white shadow-2xl flex flex-col relative sm:border sm:border-gray-200 overflow-hidden"
-           style={{
-             background: 'rgba(255, 255, 255, 0.65)',
-             backdropFilter: 'blur(30px) saturate(210%)',
-             border: '1px solid rgba(255, 255, 255, 0.4)'
-           }}
+           style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}
       >
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
@@ -134,7 +196,7 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                onChange={(e) => { setBusinessName(e.target.value); saveState({ businessName: e.target.value }); }}
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
@@ -154,14 +216,14 @@ export default function OnboardingWizard() {
               <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
               <textarea
                 value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
+                onChange={(e) => { setBusinessCategory(e.target.value); saveState({ businessCategory: e.target.value }); }}
                 placeholder="e.g. I bake custom wedding cakes and cupcakes."
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 min-h-[120px] bg-white/80 resize-none"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => { setStep(1); saveState({ step: 1 }); }}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
@@ -183,14 +245,14 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 value={preferredStyle}
-                onChange={(e) => setPreferredStyle(e.target.value)}
+                onChange={(e) => { setPreferredStyle(e.target.value); saveState({ preferredStyle: e.target.value }); }}
                 placeholder="e.g. Clean and modern with pastel colors"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => { setStep(2); saveState({ step: 2 }); }}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
@@ -240,7 +302,7 @@ export default function OnboardingWizard() {
 
               <div className="flex gap-3 mt-auto">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => { setStep(3); saveState({ step: 3 }); }}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
