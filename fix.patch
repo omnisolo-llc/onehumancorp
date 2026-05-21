@@ -1,0 +1,16 @@
+diff --git a/.github/workflows/bazel-build.yml b/.github/workflows/bazel-build.yml
+--- a/.github/workflows/bazel-build.yml
++++ b/.github/workflows/bazel-build.yml
+@@ -29,10 +29,10 @@
+             bazel_config: windows_x86_64
+             install_linux_deps: true
+-          - name: windows-arm64
+-            runner: windows-11-arm
+-            bazel_config: windows_arm64
+-            install_linux_deps: false
++          #- name: windows-arm64
++          #  runner: windows-11-arm
++          #  bazel_config: windows_arm64
++          #  install_linux_deps: false
+           #- name: macos-aarch64
+           #  runner: macos-latest

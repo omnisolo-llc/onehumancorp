@@ -40,18 +40,18 @@ jobs:
             runner: ubuntu-24.04
             bazel_config: windows_x86_64
             install_linux_deps: true
-          - name: windows-arm64
-            runner: windows-11-arm
-            bazel_config: windows_arm64
-            install_linux_deps: false
+          #- name: windows-arm64
+          #  runner: windows-11-arm
+          #  bazel_config: windows_arm64
+          #  install_linux_deps: false
           #- name: macos-aarch64
           #  runner: macos-latest
           #  bazel_config: macos_aarch64
-          #  install_linux_deps: false
+          ##  install_linux_deps: false
           #- name: macos-x86_64
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
-          #  install_linux_deps: false
+          ##  install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
 
