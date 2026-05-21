@@ -2,8 +2,11 @@ filegroup(
     name = "srcs",
     srcs = [
         "approvals_test.rs",
+        "business_advisory_agent.rs",
         "customer_success_agent.rs",
+        "finance_agent.rs",
         "flow_test.rs",
+        "legal_agent.rs",
         "marketing_agent.rs",
         "mod.rs",
         "operations_agent.rs",
