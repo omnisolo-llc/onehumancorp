@@ -449,6 +449,96 @@ mod tests {
     }
 
     #[test]
+    fn test_analytics_pii_leakage_ethics_guardrail() {
+        let mut props = std::collections::HashMap::new();
+        props.insert("credit_card_number".to_string(), "4111-1111-1111-1111".to_string());
+        props.insert("user_ssn".to_string(), "123-45-6789".to_string());
+        props.insert("bank_account".to_string(), "987654321".to_string());
+        props.insert("stripe_token".to_string(), "tok_123456789".to_string());
+        props.insert("user_dob".to_string(), "1990-01-01".to_string());
+        props.insert("mac_address".to_string(), "00:1B:44:11:3A:B7".to_string());
+        props.insert("geolocation".to_string(), "37.7749,-122.4194".to_string());
+        props.insert("safe_field".to_string(), "safe_value".to_string());
+
+        let mut sanitized = props.clone();
+        for (k, v) in sanitized.iter_mut() {
+            if ::server_telemetry::is_sensitive_key(k) {
+                *v = "[REDACTED]".to_string();
+            } else if ::server_telemetry::is_email(v) {
+                *v = "[EMAIL_REDACTED]".to_string();
+            }
+        }
+
+        assert_eq!(sanitized.get("credit_card_number").unwrap(), "[REDACTED]", "credit_card_number must be redacted");
+        assert_eq!(sanitized.get("user_ssn").unwrap(), "[REDACTED]", "user_ssn must be redacted");
+        assert_eq!(sanitized.get("bank_account").unwrap(), "[REDACTED]", "bank_account must be redacted");
+        assert_eq!(sanitized.get("stripe_token").unwrap(), "[REDACTED]", "stripe_token must be redacted");
+        assert_eq!(sanitized.get("user_dob").unwrap(), "[REDACTED]", "user_dob must be redacted");
+        assert_eq!(sanitized.get("mac_address").unwrap(), "[REDACTED]", "mac_address must be redacted");
+        assert_eq!(sanitized.get("geolocation").unwrap(), "[REDACTED]", "geolocation must be redacted");
+        assert_eq!(sanitized.get("safe_field").unwrap(), "safe_value", "safe_field should not be redacted");
+    }
+
+    #[test]
+    fn test_hybrid_privacy_audit() {
+        temp_env::with_vars(
+            [
+                ("STANDALONE_MODE", Some("true")),
+                ("OHC_SQLITE_KEY", Some("test-key")),
+            ],
+            || {
+                let mut cfg = ::server_config::AppConfig {
+                    listen_addr: ":8080".to_string(),
+                    grpc_addr: ":9090".to_string(),
+                    database_url: None,
+                    standalone: false, // Initial state
+                    sqlite_encryption_key: None,
+                    redis_url: None,
+                    multitenant: true, // Initial state, should be disabled by enforcer
+                    headless: false,
+                    minimax_api_key: None,
+                    anthropic_api_key: None,
+                    openai_api_key: None,
+                    llm_provider: None,
+                    llm_model: None,
+                    local_llm_endpoint: None,
+                    max_tokens: 2048,
+                    max_iterations: None,
+                    max_context_messages: None,
+                    agent_token: None,
+                    agent_auth_disabled: false,
+                    agent_cert_file: None,
+                    agent_key_file: None,
+                    agent_ca_file: None,
+                    agent_spiffe_id: None,
+                    agent_address: "127.0.0.1:50051".to_string(),
+                    agent_id: None,
+                    builtin_agent_binary: None,
+                    cloud_autodream_endpoint: None,
+                    cloud_telemetry_endpoint: None,
+                    cloud_missions_endpoint: None,
+                    cloud_context_endpoint: None,
+                    telemetry_enabled: false,
+                    bootstrap_org_id: "bootstrap".to_string(),
+                    bootstrap_org_name: "Bootstrap Organization".to_string(),
+                    bootstrap_ceo_name: "Platform Admin".to_string(),
+                    bootstrap_org_domain: None,
+                    jwt_secret: None,
+                    s3_endpoint: None,
+                    s3_bucket_blobs: "ohc-blobs".to_string(),
+                };
+
+                let enforcer = ::server_config::StandaloneModeEnforcer {};
+                use ::server_config::ModeEnforcer;
+                let enforced_cfg = enforcer.enforce(cfg);
+
+                assert_eq!(enforced_cfg.multitenant, false, "Hybrid Privacy Audit: multitenant must be forcibly disabled in Standalone mode.");
+                assert_eq!(enforced_cfg.standalone, true, "Hybrid Privacy Audit: standalone mode must be enforced.");
+            },
+        );
+    }
+
+    #[test]
     fn test_init_telemetry_standalone_opt_in() {
         temp_env::with_vars(
             [

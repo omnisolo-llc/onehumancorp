@@ -298,12 +298,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("email") ||
     k.contains("phone") ||
     k.contains("ssn") ||
-    k.contains("address") ||
-    k.contains("name") ||
-    k.contains("pii") ||
-
-    k.contains("session_id") ||
-    k.contains("payload") ||
     k.contains("credit") ||
     k.contains("card") ||
     k.contains("cvv") ||
@@ -316,7 +310,12 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("billing") ||
     k.contains("ip_address") ||
     k.contains("mac_address") ||
-    k.contains("geolocation")
+    k.contains("geolocation") ||
+    k.contains("address") ||
+    k.contains("name") ||
+    k.contains("pii") ||
+    k.contains("session_id") ||
+    k.contains("payload")
 }
 
 pub fn is_email(s: &str) -> bool {
