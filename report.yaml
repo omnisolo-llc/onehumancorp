@@ -1,5 +1,4 @@
-issue_category: cleanup
-debt_report:
-  description: "Bump version to v0.4.42"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+issue_category: research
+research_report:
+  description: "Scout tool integration research for Zapier"
+  impact: "high"
