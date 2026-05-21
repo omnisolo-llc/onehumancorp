@@ -104,11 +104,17 @@ impl ModeEnforcer for StandaloneModeEnforcer {
             return cfg;
         }
 
-        if let Some(db_url) = &cfg.database_url {
-            if db_url != "sqlite://ohc-standalone.db" {
-                tracing::info!("standalone: DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+        let base_sqlite_url = if let Some(db_url) = &cfg.database_url {
+            if db_url.starts_with("sqlite://") {
+                db_url.split('?').next().unwrap().to_string()
+            } else {
+                tracing::info!("standalone: non-SQLite DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+                "sqlite://ohc-standalone.db".to_string()
             }
-        }
+        } else {
+            "sqlite://ohc-standalone.db".to_string()
+        };
+
         if let Some(redis_url) = &cfg.redis_url {
             if !redis_url.is_empty() {
                 tracing::info!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
@@ -117,14 +123,14 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
-                format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", key)
+                format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, key)
             } else {
                 let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-                format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
+                format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
             }
         } else {
             let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
-            format!("sqlite://ohc-standalone.db?cipher=sqlcipher&key={}", fallback_key)
+            format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
         };
         cfg.database_url = Some(sqlite_url.clone());
 
@@ -136,6 +142,11 @@ impl ModeEnforcer for StandaloneModeEnforcer {
             use std::os::unix::fs::PermissionsExt;
 
             let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
+            if let Some(parent) = std::path::Path::new(db_path).parent() {
+                if !parent.as_os_str().is_empty() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+            }
             match OpenOptions::new()
                 .read(true)
                 .write(true)
