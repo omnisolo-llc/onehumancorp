@@ -2158,8 +2158,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .ohc-growth-card {
                             backdrop-filter: blur(30px) saturate(210%);
-                            background: rgba(255, 255, 255, 0.05);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            background: rgba(255, 255, 255, 0.65);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             font-family: 'Outfit', 'Inter', sans-serif;
                             color: #ffffff;
                             border-radius: 12px;

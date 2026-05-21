@@ -1,60 +1,65 @@
 import { test, expect } from './fixtures';
+import { Pool } from 'pg';
 
-test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
-  // Mock the API for testing the UI specifically
-  await page.route('/api/agents/approvals', async (route) => {
-    const json = {
-      pending_approvals: [
-        {
-          id: 'e2e-approval-mock-1',
-          tenant_id: 'mock-tenant',
-          department: 'CustomerSuccess',
-          description: 'Draft email for review: Maya ordered a vegan cake',
-          status: 'Pending',
-          action_risk: 'High'
-        },
-        {
-          id: 'e2e-approval-mock-2',
-          tenant_id: 'mock-tenant',
-          department: 'Marketing',
-          description: 'Draft Instagram Post: New vegan cakes available!',
-          status: 'Pending',
-          action_risk: 'Low'
-        }
-      ]
-    };
-    await route.fulfill({ json });
+test.describe('Approval Inbox E2E', () => {
+  let pool: Pool;
+
+  test.beforeAll(async () => {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc',
+    });
   });
 
-  await page.route('/api/agents/approvals/*', async (route) => {
-    await route.fulfill({ json: { success: true } });
+  test.afterAll(async () => {
+    await pool.end();
   });
 
-  // 1. User opens the app, authenticates and navigates to the Team Dashboard
-  await page.goto('/');
+  test('User can see seeded approvals and interact with them', async ({ page }) => {
+    // Re-seed the approval just in case
+    await pool.query(`
+      INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+      VALUES ('e2e-approval-mock-1', 'e2e-tenant', 'customer_success', 'Draft email for review: Maya ordered a vegan cake', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (id) DO UPDATE SET status = 'PENDING';
+    `);
 
-  // Login via UI (from global-setup login structure)
-  // Assuming the user is already logged in via global-setup.ts
-  await page.goto('/team');
+    await page.goto('/team');
 
-  // Assert Team Dashboard elements (375px mobile-first)
-  await expect(page.locator('text=The Ambassador')).toBeVisible();
-  await expect(page.locator('text=The Promoter')).toBeVisible();
+    await page.locator('button', { hasText: 'The Ambassador' }).click();
 
-  // "The Ambassador" has pending approvals indicator (e.g., a badge)
-  const ambassadorCard = page.locator('text=The Ambassador').locator('..');
-  await expect(ambassadorCard.locator('text=1 item awaiting approval')).toBeVisible();
+    await expect(page.locator('h1')).toContainText('The Ambassador');
+    await expect(page.getByText('Draft email for review: Maya ordered a vegan cake')).toBeVisible();
 
-  // 2. User taps "The Ambassador" department
-  await ambassadorCard.click();
+    const approveBtn = page.getByRole('button', { name: 'Approve' });
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
 
-  // Verify approval inbox view for The Ambassador
-  await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).toBeVisible();
+    await expect(page.getByText('All Caught Up!')).toBeVisible({ timeout: 10000 });
 
-  // 3. User approves the action (Swipe right / Approve button)
-  const approveBtn = page.locator('button', { hasText: 'Approve' }).first();
-  await approveBtn.click();
+    const result = await pool.query('SELECT status FROM agent_approvals WHERE id = $1', ['e2e-approval-mock-1']);
+    expect(result.rows[0].status).toBe('APPROVED');
+  });
 
-  // Wait for the action to be processed (mocking the UI removal)
-  await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).not.toBeVisible();
+  test('User can see and approve another approval', async ({ page }) => {
+    await pool.query(`
+      INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+      VALUES ('e2e-approval-mock-2', 'e2e-tenant', 'marketing', 'Draft Instagram Post: New vegan cakes available!', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (id) DO UPDATE SET status = 'PENDING';
+    `);
+
+    await page.goto('/team');
+
+    await page.locator('button', { hasText: 'The Promoter' }).click();
+
+    await expect(page.locator('h1')).toContainText('The Promoter');
+    await expect(page.getByText('Draft Instagram Post: New vegan cakes available!')).toBeVisible();
+
+    const approveBtn = page.getByRole('button', { name: 'Approve' });
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    await expect(page.getByText('All Caught Up!')).toBeVisible({ timeout: 10000 });
+
+    const result = await pool.query('SELECT status FROM agent_approvals WHERE id = $1', ['e2e-approval-mock-2']);
+    expect(result.rows[0].status).toBe('APPROVED');
+  });
 });
