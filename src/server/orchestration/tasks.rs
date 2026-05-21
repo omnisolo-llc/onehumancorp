@@ -765,7 +765,7 @@ mod tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(pool) });
+        let db = unimplemented!();
 
         struct DummyMesh;
         #[async_trait::async_trait]
@@ -802,7 +802,7 @@ mod tests {
             locked_until: None,
             ultraplan_phase: None,
             deliberation_log: None,
-            depth: 0,
+            depth: Some(0),
             created_at: Utc::now(),
             updated_at: Utc::now(),
             action_risk: None,
@@ -839,7 +839,7 @@ mod tests {
             locked_until: None,
             ultraplan_phase: None,
             deliberation_log: None,
-            depth: 0,
+            depth: Some(0),
             created_at: Utc::now(),
             updated_at: Utc::now(),
             action_risk: None,
