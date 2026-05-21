@@ -48,9 +48,42 @@ stateDiagram-v2
     FAILED --> [*]
 ```
 
-## 3. Implementation Details
+## 3. Advanced Features (BullMQ/Celery-style)
 
-- **Cloud Mode**: Employs Redis Lists (`RPUSH`/`LPOP`) and Sorted Sets for delayed execution.
+To support complex workflows, the Orchestration Queue includes several advanced features:
+
+- **Parent-Child Job Dependencies**: Jobs can spawn sub-jobs and wait for their completion before resuming.
+- **Exponential Backoff**: Failed jobs are retried with increasing delays to prevent system overload.
+- **Rate Limiting**: Throttles job execution per role or tenant to ensure fair resource allocation.
+- **Dead Letter Queue (DLQ)**: Jobs that exceed `max_attempts` are moved to a DLQ for manual inspection.
+
+### Retry & DLQ Sequence
+
+```mermaid
+sequenceDiagram
+    participant Worker
+    participant Queue
+    participant DLQ
+
+    Worker->>Queue: Request Job
+    Queue-->>Worker: Job Data
+    Worker->>Worker: Attempt Execution
+    alt Execution Fails (Attempt < Max)
+        Worker->>Queue: Report Failure (Retry)
+        Queue->>Queue: Apply Exponential Backoff
+    else Execution Fails (Attempt == Max)
+        Worker->>Queue: Report Final Failure
+        Queue->>DLQ: Move to Dead Letter Queue
+    end
+
+    %% OHC-SIP Visual Excellence Mandate
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Worker,Queue,DLQ premium;
+```
+
+## 4. Implementation Details
+
+- **Cloud Mode**: Employs Redis Lists (`RPUSH`/`LPOP`) and Sorted Sets for delayed execution and exponential backoff scheduling. Parent-child relationships are tracked via Redis hashes.
 - **Standalone Mode**: Utilizes an internal `sub_agent_jobs` SQLite table. Dequeuing relies on explicit transactions with concurrent read/write locks (`FOR UPDATE SKIP LOCKED` logic simulation) to prevent `SQLITE_BUSY` contention during parallel local processing.
 - **Observability**: Both queues integrate natively with OpenTelemetry, emitting queue length and processing time metrics for Grafana visualization.
 
