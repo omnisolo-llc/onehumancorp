@@ -657,6 +657,7 @@ impl Agent {
         let cfg_max_retries = cfg.max_retries;
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
+            let cfg_arc_node = cfg_arc.clone();
             Box::pin(async move {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
@@ -681,10 +682,21 @@ impl Agent {
                 let mut read_only_futures = Vec::new();
                 for tc_val in read_only_calls {
                     let tt_clone = tt.clone();
+                    let cfg_arc_clone = cfg_arc_node.clone();
                     read_only_futures.push(async move {
                         let name = tc_val["name"].as_str().unwrap();
                         let args = tc_val["arguments"].clone();
                         let id = tc_val["id"].as_str().unwrap().to_string();
+
+                        let tc = crate::types::ToolCall {
+                            id: id.clone(),
+                            name: name.to_string(),
+                            arguments: args.clone(),
+                        };
+
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, true, &cfg_arc_clone) {
+                            return (id, Err(e));
+                        }
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
@@ -773,6 +785,38 @@ impl Agent {
                     let args = tc_val["arguments"].clone();
                     let id = tc_val["id"].as_str().unwrap();
                     let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+
+                    let tc = crate::types::ToolCall {
+                        id: id.to_string(),
+                        name: name.to_string(),
+                        arguments: args.clone(),
+                    };
+
+                    let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
+                    if let Err(e) = gating_err {
+                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+                        match final_res {
+                            Ok(_) => unreachable!(),
+                            Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                error_counts.insert(name.to_string(), serde_json::json!(count));
+                                if count > cfg_max_retries as u64 {
+                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                }
+                                tool_results_json[idx] = serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": "",
+                                    "error": msg
+                                });
+                            }
+                            Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error after retries: {}", msg)),
+                            Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
+                            Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
+                            Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
+                        }
+                        continue;
+                    }
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
