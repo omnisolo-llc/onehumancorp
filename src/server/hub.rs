@@ -36,9 +36,7 @@ pub struct Hub {
     scheduler: Scheduler,
     cost_auditor: Arc<CostAuditor>,
     recent_events: RwLock<Vec<HubEvent>>,
-    #[allow(dead_code)]
     token_usage_history: RwLock<HashMap<String, Vec<i64>>>,
-    #[allow(dead_code)]
     get_token_usage: Option<Box<dyn Fn() -> HashMap<String, i64> + Send + Sync>>,
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
