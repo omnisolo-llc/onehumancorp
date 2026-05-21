@@ -3450,6 +3450,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="builder-container">
                             <div class="builder-header">
                                 <h1>Edit Website</h1>
+                                <button class="secondary" onclick="showEmbedSetup()">Embed</button>
                                 <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
                             </div>
 
@@ -3470,6 +3471,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- Dynamic form inputs -->
                             </div>
                             <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
+                        </div>
+
+                        <!-- Embed Setup Bottom Sheet -->
+                        <div id="embed-setup-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Embed Storefront</h2>
+                                <button class="bottom-sheet-close" onclick="closeEmbedSetup()">×</button>
+                            </div>
+                            <div style="padding: 16px;">
+                                <p>Copy the code below to embed your storefront onto another website.</p>
+                                <textarea id="embed-code-textarea" readonly style="width:100%; height:120px; font-family:monospace; margin-top:8px; border-radius:4px; border:1px solid #ccc; padding:8px;"></textarea>
+                                <button style="margin-top: 16px; width: 100%;" onclick="navigator.clipboard.writeText(document.getElementById('embed-code-textarea').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy to Clipboard', 2000);">Copy to Clipboard</button>
+                            </div>
                         </div>
 
                         <!-- Domain Setup Bottom Sheet -->
@@ -3726,6 +3740,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('domain-setup-sheet').classList.add('open');
                             document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
                             document.getElementById('domain-step-1').classList.add('active');
+                        }
+
+                        function showEmbedSetup() {
+                            const origin = window.location.origin;
+                            const embedCode = `<iframe src="${origin}/api/v1/growth/storefront/embed" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>`;
+                            document.getElementById('embed-code-textarea').value = embedCode;
+                            document.getElementById('embed-setup-sheet').classList.add('open');
+                        }
+
+                        function closeEmbedSetup() {
+                            document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
                         function closeDomainSetup() {
