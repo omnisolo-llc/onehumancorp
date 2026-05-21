@@ -12,7 +12,8 @@
     "next": "^14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "swagger-ui-react": "^5.32.6"
+    "swagger-ui-react": "^5.32.6",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
