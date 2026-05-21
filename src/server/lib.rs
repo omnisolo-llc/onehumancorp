@@ -248,17 +248,24 @@ async fn http_metrics_handler(
     }
 
     let tenant_id = payload.tenant_id;
-    let active_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
 
-    let pending_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    let (active_customers_res, pending_orders_res) = tokio::join!(
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        }
+    );
+
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
 
     (
         StatusCode::OK,

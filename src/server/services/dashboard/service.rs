@@ -335,105 +335,107 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
-            .iter()
-            .filter(|a| {
-                a.organization_id == req.organization_id
-                    || a.id.starts_with(&format!("{}-", req.organization_id))
-            })
-            .cloned()
-            .collect();
+        let mut final_meetings = Vec::new();
+        let mut final_agents_payload = Vec::new();
+        let mut final_cost_summary = None;
+        let mut final_statuses = Vec::new();
 
-        let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
-            *status_map.entry(a.status.clone()).or_insert(0) += 1;
-        }
-        let statuses = status_map
-            .into_iter()
-            .map(|(status, count)| StatusCount { status, count })
-            .collect();
+        if !req.mobile_optimized {
+            let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+                .iter()
+                .filter(|a| {
+                    a.organization_id == req.organization_id
+                        || a.id.starts_with(&format!("{}-", req.organization_id))
+                })
+                .cloned()
+                .collect();
 
-        // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
-        let mut original_prompts_len = 0;
-        let mut compressed_prompts_len = 0;
-
-
-        let org_agents: Vec<_> = agents
-            .iter()
-            .filter(|a| {
-                a.organization_id == req.organization_id
-                    || a.id.starts_with(&format!("{}-", req.organization_id))
-            })
-            .collect();
-
-        for agent in org_agents {
-            let prompt = &agent.name;
-            let orig_len = prompt.len();
-            if orig_len > 0 {
-                original_prompts_len += orig_len;
-
-                let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-
-                compressed_prompts_len += compressed.len();
+            let mut status_map = std::collections::HashMap::new();
+            for a in agents.iter() {
+                *status_map.entry(a.status.clone()).or_insert(0) += 1;
             }
-        }
+            final_statuses = status_map
+                .into_iter()
+                .map(|(status, count)| StatusCount { status, count })
+                .collect();
 
-        if let Some(ref o) = org {
-            let prompt = &o.name;
-            let orig_len = prompt.len();
-            if orig_len > 0 {
-                original_prompts_len += orig_len;
-                let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-                compressed_prompts_len += compressed.len();
-            }
-        }
+            // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
+            let mut original_prompts_len = 0;
+            let mut compressed_prompts_len = 0;
 
-        let mut optimized_total_tokens = total_tokens;
-        if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
-            let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
-            optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
-        }
+            let org_agents: Vec<_> = agents
+                .iter()
+                .filter(|a| {
+                    a.organization_id == req.organization_id
+                        || a.id.starts_with(&format!("{}-", req.organization_id))
+                })
+                .collect();
 
-        let mut agent_summaries = Vec::new();
-        for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
-            agent_summaries.push(::server_ohc::billing::AgentCostSummary {
-                agent_id,
-                cost_usd,
-                token_used: tokens_used,
-                roi,
-                efficiency,
-                pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
-                storage_usage_bytes: _storage,
-            });
-        }
+            for agent in org_agents {
+                let prompt = &agent.name;
+                let orig_len = prompt.len();
+                if orig_len > 0 {
+                    original_prompts_len += orig_len;
 
-        let cost_summary = ::server_ohc::billing::CostSummary {
-            organization_id: req.organization_id.clone(),
-            total_cost_usd: total_cost,
-            total_tokens: optimized_total_tokens,
-            projected_monthly_usd: 0.0,
-            agents: agent_summaries,
-        };
+                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
 
-        let mut final_agents = _filtered_agents
-            .into_iter()
-            .map(|a| {
-                let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
-
-                ::server_ohc::agent::Agent {
-                    id: a.id,
-                    name: compressed_name,
-                    role: ::server_ohc::common::Role::Unspecified as i32,
-                    status: ::server_ohc::common::AgentStatus::Idle as i32,
-                    organization_id: a.organization_id,
+                    compressed_prompts_len += compressed.len();
                 }
-            })
-            .collect::<Vec<_>>();
-
-        if req.mobile_optimized {
-            for agent in final_agents.iter_mut() {
-                agent.name = String::new();
             }
+
+            if let Some(ref o) = org {
+                let prompt = &o.name;
+                let orig_len = prompt.len();
+                if orig_len > 0 {
+                    original_prompts_len += orig_len;
+                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                    compressed_prompts_len += compressed.len();
+                }
+            }
+
+            let mut optimized_total_tokens = total_tokens;
+            if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
+                let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
+                optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
+            }
+
+            let mut agent_summaries = Vec::new();
+            for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
+                agent_summaries.push(::server_ohc::billing::AgentCostSummary {
+                    agent_id,
+                    cost_usd,
+                    token_used: tokens_used,
+                    roi,
+                    efficiency,
+                    pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+                    storage_usage_bytes: _storage,
+                });
+            }
+
+            final_cost_summary = Some(::server_ohc::billing::CostSummary {
+                organization_id: req.organization_id.clone(),
+                total_cost_usd: total_cost,
+                total_tokens: optimized_total_tokens,
+                projected_monthly_usd: 0.0,
+                agents: agent_summaries,
+            });
+
+            final_agents_payload = _filtered_agents
+                .into_iter()
+                .map(|a| {
+                    let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
+
+                    ::server_ohc::agent::Agent {
+                        id: a.id,
+                        name: compressed_name,
+                        role: ::server_ohc::common::Role::Unspecified as i32,
+                        status: ::server_ohc::common::AgentStatus::Idle as i32,
+                        organization_id: a.organization_id,
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            final_meetings = out_meetings;
         }
 
         let org = if req.mobile_optimized {
@@ -451,10 +453,10 @@ impl DashboardService for MyDashboardService {
 
         Ok(Response::new(DashboardSnapshot {
             organization: org,
-            agents: final_agents,
-            meetings: out_meetings,
-            cost_summary: Some(cost_summary),
-            statuses,
+            agents: final_agents_payload,
+            meetings: final_meetings,
+            cost_summary: final_cost_summary,
+            statuses: final_statuses,
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
