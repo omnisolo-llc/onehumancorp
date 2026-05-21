@@ -2523,6 +2523,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
+
+                        .premium-glass {
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border-radius: 16px;
+                        }
+
+                        body.dark-theme .premium-glass {
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                        }
                     </style>
                 </head>
                 <body>
@@ -2710,7 +2723,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Progress Section -->
-                        <div class="card glass">
+                        <div class="card premium-glass">
                             <h3 style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                                 <span>Your Growth Progress</span>
                                 <span style="font-size: 14px; font-weight: 500; color: var(--text-secondary); background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 99px;">0 / 5 Referrals</span>
@@ -2722,7 +2735,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- One-Tap Share Tools -->
-                        <div class="card glass">
+                        <div class="card premium-glass">
                             <h3 style="margin-bottom: 20px;">Share with 1-Tap</h3>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
                                 <button style="margin: 0; width: 100%; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Instagram story editor...')">
@@ -2744,7 +2757,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
-                        <div class="card glass" style="margin-top: 24px;">
+                        <div class="card premium-glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
