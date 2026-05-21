@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 
 
-/// OpenAI Codex & Agents SDK Archetype:
+/// OpenAI Codex & Agents SDK Archetype: "Code-first" approach natively expressed in code (not DSLs). Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.
 /// Uses a `Runner` class with async, sync, and streamed modes.
 pub struct Runner {
     pub agent: Arc<Agent>,
@@ -119,6 +119,28 @@ impl AppServer {
             };
             serde_json::to_string(&resp).unwrap()
         }
+    }
+}
+
+/// Client Surfaces (sharing the exact same harness)
+pub struct ClientSurface {
+    pub server: Arc<AppServer>,
+}
+
+impl ClientSurface {
+    pub fn new(server: Arc<AppServer>) -> Self {
+        Self { server }
+    }
+
+    pub async fn run(&self, initial_message: &str) -> String {
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: Some(serde_json::json!("req_1")),
+            method: "run_agent".to_string(),
+            params: serde_json::json!({ "message": initial_message }),
+        };
+        let req_json = serde_json::to_string(&req).unwrap_or_default();
+        self.server.handle_request(&req_json).await
     }
 }
 
