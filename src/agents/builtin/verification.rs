@@ -29,9 +29,14 @@ impl VerificationLoop for ComputationalGuide {
             return Ok(true);
         }
 
-        let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let wd = cfg
+            .workspace_path
+            .clone()
+            .unwrap_or_else(|| ".".to_string());
         let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&cfg.computational_guide_command).current_dir(wd);
+        cmd.arg("-c")
+            .arg(&cfg.computational_guide_command)
+            .current_dir(wd);
 
         match cmd.output() {
             Ok(output) => {
@@ -47,7 +52,10 @@ impl VerificationLoop for ComputationalGuide {
                 }
             }
             Err(e) => {
-                let err_msg = format!("Failed to execute computational guide command '{}': {}", cfg.computational_guide_command, e);
+                let err_msg = format!(
+                    "Failed to execute computational guide command '{}': {}",
+                    cfg.computational_guide_command, e
+                );
                 messages.push(Message::user(err_msg));
                 return Ok(false);
             }
@@ -72,9 +80,14 @@ impl VerificationLoop for VisualVerifier {
             return Ok(true);
         }
 
-        let wd = cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let wd = cfg
+            .workspace_path
+            .clone()
+            .unwrap_or_else(|| ".".to_string());
         let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&cfg.visual_verification_command).current_dir(wd);
+        cmd.arg("-c")
+            .arg(&cfg.visual_verification_command)
+            .current_dir(wd);
 
         match cmd.output() {
             Ok(output) => {
@@ -97,7 +110,10 @@ impl VerificationLoop for VisualVerifier {
                 }
             }
             Err(e) => {
-                let err_msg = format!("Failed to execute visual verification command '{}': {}", cfg.visual_verification_command, e);
+                let err_msg = format!(
+                    "Failed to execute visual verification command '{}': {}",
+                    cfg.visual_verification_command, e
+                );
                 messages.push(Message::user(err_msg));
                 return Ok(false);
             }
@@ -143,20 +159,31 @@ impl VerificationLoop for InferentialSensor {
         }
         #[async_trait::async_trait]
         impl crate::output_parser::LlmClientForParser for ParserClientWrapper {
-            async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                req: crate::types::ChatRequest,
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
+            {
                 self.llm.chat(req).await
             }
         }
 
-        let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> = std::sync::Arc::new(ParserClientWrapper { llm });
-        match crate::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, judge_req, 3).await {
+        let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> =
+            std::sync::Arc::new(ParserClientWrapper { llm });
+        match crate::output_parser::parse_structured_output::<JudgeEvaluation>(
+            &parser_client,
+            judge_req,
+            3,
+        )
+        .await
+        {
             Ok(eval) => {
                 if eval.status.to_uppercase() == "REJECT" {
                     let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Confidence: {:.2}. Please correct your work and use tools if necessary.", eval.reason, eval.confidence);
                     messages.push(Message::user(err_msg));
                     return Ok(false);
                 }
-            },
+            }
             Err(e) => {
                 let err = format!("LLM Judge error: {}", e);
                 return Err(err.into());
@@ -188,7 +215,9 @@ impl VerificationRegistry {
         llm: Arc<dyn crate::llm::LlmClient>,
     ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         for v_loop in &self.loops {
-            let passed = v_loop.verify(cfg, last_assistant_content, messages, llm.clone()).await?;
+            let passed = v_loop
+                .verify(cfg, last_assistant_content, messages, llm.clone())
+                .await?;
             if !passed {
                 return Ok(false); // Short circuit if any verification step fails
             }
