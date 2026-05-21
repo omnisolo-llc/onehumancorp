@@ -87,6 +87,8 @@ pub struct InviteIdRequest {
     pub id: String,
 }
 
+
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateTeamInviteRequest {
     pub team_id: String,
