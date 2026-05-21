@@ -46,7 +46,16 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
                <p className="text-sm text-gray-500">There are no pending actions requiring your review.</p>
             </div>
           ) : (
-            approvals.map(req => (
+            approvals.map(req => {
+              let plainMessage = req.description;
+              let payload = "";
+              const payloadIdx = req.description.indexOf(" | Payload: ");
+              if (payloadIdx !== -1) {
+                  plainMessage = req.description.substring(0, payloadIdx);
+                  payload = req.description.substring(payloadIdx + " | Payload: ".length);
+              }
+
+              return (
               <div key={req.id} className="bg-white rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100">
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
@@ -60,7 +69,7 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
                 </div>
 
                 <p className="text-gray-800 text-sm leading-relaxed mb-6 font-medium">
-                  {req.description}
+                  {plainMessage}
                 </p>
 
                 {req.feature_type === 'legal_compliance' && (
@@ -128,7 +137,7 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
                   </button>
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
       </div>

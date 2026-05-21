@@ -260,15 +260,13 @@ impl OperationsWorker {
                                 crate::db::DbStore::Postgres => {
                                     if let Err(e) = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+                                        VALUES ($1, $2, 'operations', $3, 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(&tenant_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&drafted_msg)
+                                    .bind(format!("{} | Payload: {}", description, serde_json::json!({"drafted_msg": drafted_msg}).to_string()))
                                     .execute(&db.pool)
                                     .await {
                                         tracing::error!("Failed to insert restock task: {}", e);
@@ -277,15 +275,13 @@ impl OperationsWorker {
                                 crate::db::DbStore::Sqlite(pool) => {
                                     if let Err(e) = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+                                        VALUES (?, ?, 'operations', ?, 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(&tenant_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&drafted_msg)
+                                    .bind(format!("{} | Payload: {}", description, serde_json::json!({"drafted_msg": drafted_msg}).to_string()))
                                     .execute(pool)
                                     .await {
                                         tracing::error!("Failed to insert restock task: {}", e);
@@ -687,7 +683,7 @@ impl CustomerSuccessWorker {
         let processed = task.is_some();
         if let Some((id, tenant_id, payload, event_type)) = task {
             // Draft confirmation message
-            let (title, drafted_msg) = if event_type == "OrderProcessed" {
+            let (_title, drafted_msg) = if event_type == "OrderProcessed" {
                 ("Draft Confirmation".to_string(), format!("Hi! Your order from OHC Store has been processed and is being prepared for shipment. Thank you!"))
             } else {
                 ("Draft Reply".to_string(), format!("Hi! Thanks for reaching out. We received your message: '{}'. One of our team members will get back to you shortly.", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")))
@@ -719,14 +715,13 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
+                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+                            VALUES ($1, $2, 'customer_success', $3, 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&drafted_msg)
+                        .bind(format!("The Ambassador drafted a response for your review. | Payload: {}", serde_json::json!({"drafted_msg": drafted_msg}).to_string()))
                         .execute(&db.pool)
                         .await;
                     } else {
@@ -755,14 +750,13 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
+                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+                            VALUES (?, ?, 'customer_success', ?, 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&drafted_msg)
+                        .bind(format!("The Ambassador drafted a response for your review. | Payload: {}", serde_json::json!({"drafted_msg": drafted_msg}).to_string()))
                         .execute(sqlite_pool)
                         .await;
                     } else {

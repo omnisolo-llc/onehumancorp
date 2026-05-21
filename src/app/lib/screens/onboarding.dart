@@ -168,78 +168,145 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildInputState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Welcome to OHC Smart Builder',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1D1D1F),
-                letterSpacing: -0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Tell us about your business, and AI will build it.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 32),
-            TextFormField(
-              key: Key('bio-input'), // for testing or just semantics
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+    return Column(
+      children: [
+        // Chat Header
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Color(0xFFE8F1FF),
+                  shape: BoxShape.circle,
                 ),
-                contentPadding: EdgeInsets.all(20),
+                child: Icon(Icons.auto_awesome, color: Color(0xFF0066FF), size: 20),
               ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
-            ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Setup Assistant',
+                    style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    'AI-powered onboarding',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+                ],
               ),
-              child: Text(
-                'Build My Storefront',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+
+        // Chat Messages Area
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.all(20),
+            children: [
+              // AI Message
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    margin: EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFE8F1FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.auto_awesome, color: Color(0xFF0066FF), size: 16),
+                  ),
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 5,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Hi there! I can help you set up your store in under a minute. Just describe your business in a sentence or two.',
+                        style: TextStyle(height: 1.5, color: Color(0xFF1D1D1F)),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 40), // Spacing for AI message
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // Input Area
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    key: Key('bio-input'),
+                    decoration: InputDecoration(
+                      hintText: 'e.g., I bake custom vegan cakes in Seattle...',
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      filled: true,
+                      fillColor: Color(0xFFF5F5F7),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? '' : null,
+                    onSaved: (value) => bio = value!,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Color(0xFF0066FF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.send, color: Colors.white, size: 20),
+                    onPressed: submit,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

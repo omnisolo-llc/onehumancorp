@@ -11,19 +11,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify we are on the input screen
-    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
-
-    // Tap without entering text to trigger validation
-    await tester.tap(find.text('Build My Storefront'));
-    await tester.pumpAndSettle();
-
-    // Expect the validator message 'Required' for the bio field
-    expect(find.text('Required'), findsOneWidget);
+    expect(find.text('Setup Assistant'), findsOneWidget);
 
     // Fill out the bio form
     await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
     await tester.pumpAndSettle();
 
-    // Test that the form can be submitted. We just assert UI state here up to form submission.
+    // Test that the form can be submitted by tapping the send button.
+    // The send button is an IconButton with Icons.send
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
   });
 }
