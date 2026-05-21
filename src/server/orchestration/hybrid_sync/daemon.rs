@@ -120,19 +120,7 @@ impl HybridSyncDaemon {
                 }
             };
 
-            let mission_res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, 'system')")
-                .bind(&queue_id)
-                .bind(payload.to_string())
-                .execute(&mut *tx)
-                .await;
-
-            if let Err(e) = mission_res {
-                warn!("Failed to insert pg agent_missions: {}, gracefully degrading (cloud unreachable).", e);
-                let _ = tx.rollback().await;
-                continue;
-            }
-
-            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, 'system', NULL, $2, 'QUEUED', $3, $3, $3)")
+            let res = sqlx::query("INSERT INTO agent_missions (id, tenant_id, payload, status, created_at, updated_at) VALUES ($1, 'system', $2, 'PENDING', $3, $3)")
                 .bind(&queue_id)
                 .bind(payload.to_string())
                 .bind(now)

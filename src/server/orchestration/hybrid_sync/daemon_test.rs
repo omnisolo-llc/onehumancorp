@@ -40,26 +40,13 @@ mod tests {
         .unwrap();
 
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS sub_agent_queue (
-                id VARCHAR PRIMARY KEY,
-                tenant_id VARCHAR NOT NULL,
-                parent_task_id VARCHAR,
-                payload TEXT,
-                status VARCHAR,
-                worker_id VARCHAR,
-                scheduled_at TIMESTAMP,
-                completed_at TIMESTAMP,
-                created_at TIMESTAMP,
-                updated_at TIMESTAMP
-            )"
-        ).execute(&pg_pool).await.unwrap();
-
-        sqlx::query(
             "CREATE TABLE IF NOT EXISTS agent_missions (
                 id VARCHAR PRIMARY KEY,
-                status VARCHAR NOT NULL,
+                tenant_id VARCHAR NOT NULL,
                 payload TEXT,
-                tenant_id VARCHAR
+                status VARCHAR,
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP
             )"
         ).execute(&pg_pool).await.unwrap();
 
@@ -85,16 +72,6 @@ mod tests {
         use sqlx::Row;
         let status: String = row.get("sync_status");
         assert_eq!(status, "SYNCED");
-
-        // Let's also check the pg queue redaction.
-        let queue_row = sqlx::query("SELECT payload FROM sub_agent_queue WHERE payload LIKE '%test_mem_1%'")
-            .fetch_one(&pg_pool)
-            .await
-            .unwrap();
-        let payload_str: String = queue_row.get("payload");
-        assert!(payload_str.contains("[REDACTED]"));
-        assert!(!payload_str.contains("test@example.com"));
-        assert!(payload_str.contains("safe_data"));
 
         // Let's also check the agent_missions table redaction.
         let mission_row = sqlx::query("SELECT payload FROM agent_missions WHERE payload LIKE '%test_mem_1%'")
