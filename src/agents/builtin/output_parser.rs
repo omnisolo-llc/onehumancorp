@@ -121,8 +121,8 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         }
 
         if attempt >= max_retries {
-            return Err(ToolError::Fatal(format!(
-                "Output parsing failed after {} retries. Last error: {}",
+            return Err(ToolError::LlmRecoverable(format!(
+                "Output parsing failed after max retries ({}). Last error: {}",
                 max_retries,
                 parse_error_msg.unwrap_or_default()
             )));
