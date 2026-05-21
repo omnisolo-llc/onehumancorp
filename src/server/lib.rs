@@ -3304,7 +3304,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
@@ -3497,12 +3497,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = {};
+                                const state = { step: currentStep };
                                 inputs.forEach((input, index) => {
-                                    if (input.type === 'checkbox') {
-                                        state['checkbox_' + index] = input.checked;
+                                    if (input.placeholder) {
+                                        if (input.type === 'checkbox') {
+                                            state[input.placeholder] = input.checked;
+                                        } else {
+                                            state[input.placeholder] = input.value;
+                                        }
                                     } else {
-                                        state['input_' + index] = input.value;
+                                        // fallback for inputs without placeholder
+                                        if (input.type === 'checkbox') {
+                                            state['checkbox_' + index] = input.checked;
+                                        } else {
+                                            state['input_' + index] = input.value;
+                                        }
                                     }
                                 });
 
@@ -3533,6 +3542,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 input.addEventListener('input', saveWizardState);
                             });
 
+                            let state = null;
                             try {
                                 const res = await fetch('/api/onboarding/state', {
                                     headers: {
@@ -3543,42 +3553,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (res.ok) {
                                     const data = await res.json();
                                     if (data) {
-                                        const state = data;
-                                        inputs.forEach((input, index) => {
-                                            if (input.type === 'checkbox') {
-                                                if (state['checkbox_' + index] !== undefined) {
-                                                    input.checked = state['checkbox_' + index];
-                                                }
-                                            } else {
-                                                if (state['input_' + index] !== undefined) {
-                                                    input.value = state['input_' + index];
-                                                }
-                                            }
-                                        });
-                                        return;
+                                        state = data;
                                     }
                                 }
                             } catch (e) {
                                 console.error('Failed to load state from server', e);
                             }
 
-                            // Fallback to localStorage
-                            const saved = localStorage.getItem('ohc_wizard_state');
-                            if (saved) {
-                                try {
-                                    const state = JSON.parse(saved);
-                                    inputs.forEach((input, index) => {
+                            if (!state) {
+                                const saved = localStorage.getItem('ohc_wizard_state');
+                                if (saved) {
+                                    try { state = JSON.parse(saved); } catch (e) { console.error('Failed to parse wizard state', e); }
+                                }
+                            }
+
+                            if (state) {
+                                if (state.step) currentStep = state.step;
+                                inputs.forEach((input, index) => {
+                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    if (state[key] !== undefined) {
                                         if (input.type === 'checkbox') {
-                                            if (state['checkbox_' + index] !== undefined) {
-                                                input.checked = state['checkbox_' + index];
-                                            }
+                                            input.checked = state[key];
                                         } else {
-                                            if (state['input_' + index] !== undefined) {
-                                                input.value = state['input_' + index];
-                                            }
+                                            input.value = state[key];
                                         }
-                                    });
-                                } catch (e) { console.error('Failed to parse wizard state', e); }
+                                    }
+                                });
+                                // Restore step if needed
+                                if (state.step && state.step > 1) {
+                                    nextStep(state.step);
+                                }
                             }
                         }
 
@@ -4039,33 +4043,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
-                        let debounceTimer;
-                        document.addEventListener('input', (e) => {
-                            if (e.target.tagName === 'INPUT') {
-                                clearTimeout(debounceTimer);
-                                debounceTimer = setTimeout(() => {
-                                    try {
-                                        const stateData = { step: currentStep };
-                                        document.querySelectorAll('input').forEach(input => {
-                                            if (input.placeholder && input.value) {
-                                                stateData[input.placeholder] = input.value;
-                                            }
-                                        });
-                                        const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
-                                        const userId = localStorage.getItem('user_id') || 'test-user';
-                                        fetch('/api/onboarding/state', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-Tenant-ID': tenantId,
-                                                'X-User-ID': userId
-                                            },
-                                            body: JSON.stringify(stateData)
-                                        }).catch(console.error);
-                                    } catch (err) {}
-                                }, 500);
-                            }
-                        });
 
                         function validateInputs(stepId) {
                             if (stepId === 4 && currentStep === 3) {
@@ -4078,11 +4055,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
-                                const inputs = document.querySelectorAll('#step-5 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a product or service');
+                                const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
+                                const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
+                                if (!nameInput || nameInput.value.trim().length === 0) {
+                                    alert('Please enter a product or service name');
+                                    return false;
+                                }
+                                if (!priceInput || priceInput.value.trim().length === 0 || isNaN(parseFloat(priceInput.value))) {
+                                    alert('Please enter a valid price');
                                     return false;
                                 }
                             }
@@ -4451,46 +4431,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
 
-                            if (screenId === 'setup-screen') {
-                                try {
-                                    let stateData = null;
-                                    const localState = localStorage.getItem('ohc_wizard_state');
-                                    if (localState) {
-                                        try {
-                                            stateData = JSON.parse(localState);
-                                        } catch(e) {}
-                                    }
 
-                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
-                                    const userId = localStorage.getItem('user_id') || 'test-user';
-
-                                    const res = await fetch('/api/onboarding/state', {
-                                        headers: {
-                                            'X-Tenant-ID': tenantId,
-                                            'X-User-ID': userId
-                                        }
-                                    }).catch(() => null);
-
-                                    if (res && res.ok) {
-                                        const data = await res.json();
-                                        if (data && data.step) {
-                                            stateData = data;
-                                        }
-                                    }
-
-                                    if (stateData && stateData.step && stateData.step > 1) {
-                                        // Restore form inputs
-                                        document.querySelectorAll('input').forEach(input => {
-                                            if (input.placeholder && stateData[input.placeholder]) {
-                                                input.value = stateData[input.placeholder];
-                                            }
-                                        });
-                                        nextStep(stateData.step);
-                                    }
-                                } catch (e) {
-                                    console.error('Failed to load state', e);
-                                }
-                            }
                         };
                     </script>
                 </body>
