@@ -1,9 +1,5 @@
 # Bazel configuration for MCP Any
 
-# Keep this checkout's output base away from stale root-owned runfiles that can
-# be left behind by Docker-backed Playwright tests in Bazel's default cache.
-startup --output_user_root=~/.cache/bazel/bazel-output-ohc
-
 build --color=yes
 build --config=remote
 build:remote --config=buildbuddy
@@ -46,6 +42,7 @@ build:asan --extra_toolchains=@rust_toolchains//:all
 build:windows_common --extra_toolchains=@rust_toolchains//:all
 build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_amd64
 build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_arm64
+build:windows_common --@rules_rust//rust/settings:toolchain_linker_preference=rust
 build:windows_common --noenable_platform_specific_config
 build:windows_common --keep_going
 
@@ -160,9 +157,5 @@ build:windows --config=windows_x86_64
 build:linux --config=linux_x86_64
 build:linux --linkopt=-fuse-ld=bfd
 build:linux --host_linkopt=-fuse-ld=bfd
-build:windows --action_env=CC_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-gcc
-build:windows --action_env=CXX_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-g++
-build:windows --action_env=AR_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ar
-build:windows --action_env=LD_x86_64_pc_windows_gnu=/usr/bin/x86_64-w64-mingw32-ld
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e

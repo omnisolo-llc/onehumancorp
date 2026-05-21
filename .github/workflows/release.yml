@@ -4,10 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  schedule:
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -31,12 +33,12 @@ jobs:
       matrix:
         include:
           - name: linux-x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             bazel_config: linux_x86_64
             archive_name: ohc-x86_64-unknown-linux-gnu.tar.gz
             install_linux_deps: true
           - name: windows-x86_64
-            runner: ubuntu-24.04
+            runner: ubuntu-latest
             bazel_config: windows_x86_64
             archive_name: ohc-x86_64-pc-windows-gnu.zip
             install_linux_deps: true
@@ -71,9 +73,38 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - .bazelrc
+            - .bazelversion
+            - repositories.bzl
+            - bazel/rules/**/*.bzl
+            - bazel/patches/**
+            - Cargo.lock
+            - Cargo.toml
+            - pnpm-lock.yaml
+            - package-lock.json
+            - package.json
+            - go.mod
+            - go.sum
+          external-cache: |
+            manifest:
+              npm:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - pnpm-lock.yaml
+                - package.json
+              tauri_cargo_vendor:
+                - MODULE.bazel
+                - Cargo.lock
+              crates:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - Cargo.lock
+                - Cargo.toml
           cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
@@ -143,7 +174,7 @@ jobs:
             patterns: "*.dmg"
             install_linux_deps: false
           - name: linux-x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             bundles: deb,rpm
             patterns: "*.deb *.rpm"
             install_linux_deps: true
@@ -169,8 +200,37 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-desktop-${{ matrix.name }}
-          repository-cache: true
-          external-cache: true
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - .bazelrc
+            - .bazelversion
+            - repositories.bzl
+            - bazel/rules/**/*.bzl
+            - bazel/patches/**
+            - Cargo.lock
+            - Cargo.toml
+            - pnpm-lock.yaml
+            - package-lock.json
+            - package.json
+            - go.mod
+            - go.sum
+          external-cache: |
+            manifest:
+              npm:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - pnpm-lock.yaml
+                - package.json
+              tauri_cargo_vendor:
+                - MODULE.bazel
+                - Cargo.lock
+              crates:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - Cargo.lock
+                - Cargo.toml
           cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
@@ -275,7 +335,7 @@ jobs:
       matrix:
         include:
           - name: android
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             targets: "//src/ui/tauri:tauri_android_apk //src/ui/tauri:tauri_android_aab"
             patterns: "*.apk *.aab"
           - name: ios
@@ -327,8 +387,37 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-mobile-${{ matrix.name }}
-          repository-cache: true
-          external-cache: true
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - .bazelrc
+            - .bazelversion
+            - repositories.bzl
+            - bazel/rules/**/*.bzl
+            - bazel/patches/**
+            - Cargo.lock
+            - Cargo.toml
+            - pnpm-lock.yaml
+            - package-lock.json
+            - package.json
+            - go.mod
+            - go.sum
+          external-cache: |
+            manifest:
+              npm:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - pnpm-lock.yaml
+                - package.json
+              tauri_cargo_vendor:
+                - MODULE.bazel
+                - Cargo.lock
+              crates:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - Cargo.lock
+                - Cargo.toml
           cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
@@ -378,7 +467,7 @@ jobs:
 
   build-server-web-image:
     name: Build server web image
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -396,8 +485,37 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-server-web-image
-          repository-cache: true
-          external-cache: true
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - .bazelrc
+            - .bazelversion
+            - repositories.bzl
+            - bazel/rules/**/*.bzl
+            - bazel/patches/**
+            - Cargo.lock
+            - Cargo.toml
+            - pnpm-lock.yaml
+            - package-lock.json
+            - package.json
+            - go.mod
+            - go.sum
+          external-cache: |
+            manifest:
+              npm:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - pnpm-lock.yaml
+                - package.json
+              tauri_cargo_vendor:
+                - MODULE.bazel
+                - Cargo.lock
+              crates:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - Cargo.lock
+                - Cargo.toml
           cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
@@ -437,7 +555,8 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
-    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
     needs:
       - build-release-artifacts
       - build-desktop-installers
@@ -489,7 +608,8 @@ jobs:
 
   push-docker:
     name: Push container images
-    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -512,8 +632,37 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - .bazelrc
+            - .bazelversion
+            - repositories.bzl
+            - bazel/rules/**/*.bzl
+            - bazel/patches/**
+            - Cargo.lock
+            - Cargo.toml
+            - pnpm-lock.yaml
+            - package-lock.json
+            - package.json
+            - go.mod
+            - go.sum
+          external-cache: |
+            manifest:
+              npm:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - pnpm-lock.yaml
+                - package.json
+              tauri_cargo_vendor:
+                - MODULE.bazel
+                - Cargo.lock
+              crates:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - Cargo.lock
+                - Cargo.toml
           cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
