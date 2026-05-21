@@ -13,9 +13,9 @@ export default function Integrations() {
     { id: "stripe", name: "Stripe Advanced", category: "finance", status: "connected", icon: "💳", description: "Accept global payments and manage subscriptions seamlessly." },
     { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." },
     { id: "manychat", name: "Manychat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated scheduling and calendar sync for service businesses." },
+    { id: "calcom", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-friction appointment booking." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚚", description: "Automated shipping rates and label printing for orders." },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "🚚", description: "One-click rate comparison & labels." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automatically generate Zoom meeting links for booked online services." }
   ];

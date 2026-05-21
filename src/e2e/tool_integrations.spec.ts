@@ -19,13 +19,13 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Calendly' })).toBeVisible();
-    await expect(page.getByText('Automated Booking. Let customers schedule appointments 24/7.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
+    await expect(page.getByText('Zero-friction appointment booking.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(1)).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'EasyPost' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(3)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(5)).toBeVisible();
