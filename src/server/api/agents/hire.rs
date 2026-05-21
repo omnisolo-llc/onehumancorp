@@ -87,5 +87,6 @@ async fn hire_handler(
 }
 
 async fn list_agents_handler(State(hub): State<Arc<Hub>>) -> impl IntoResponse {
-    (StatusCode::OK, Json((*hub.get_agents()).clone())).into_response()
+    let agents = tokio::task::spawn_blocking(move || hub.get_agents()).await.unwrap_or_default();
+    (StatusCode::OK, Json((*agents).clone())).into_response()
 }

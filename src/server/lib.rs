@@ -532,8 +532,9 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let llm_cost_f64 = auditor.get_total_cost();
-        let total_revenue_f64 = auditor.get_total_revenue();
+        let (llm_cost_f64, total_revenue_f64) = tokio::task::spawn_blocking(move || {
+            (auditor.get_total_cost(), auditor.get_total_revenue())
+        }).await.unwrap_or((0.0, 0.0));
 
         let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
@@ -1507,7 +1508,8 @@ impl HubService for MyHubService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
-        let meetings = self.hub.get_meetings();
+        let hub = self.hub.clone();
+        let meetings = tokio::task::spawn_blocking(move || hub.get_meetings()).await.unwrap_or_default();
         Ok(Response::new(GetMeetingsResponse { meetings: meetings.to_vec() }))
     }
 

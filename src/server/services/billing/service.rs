@@ -50,11 +50,16 @@ impl BillingService for MyBillingService {
         let req = request.into_inner();
         let org_id = req.organization_id;
 
-        let total_cost = self.auditor.get_total_cost();
-        let total_tokens = self.auditor.get_total_tokens();
+        let auditor_cost = self.auditor.clone();
+        let auditor_tokens = self.auditor.clone();
+        let auditor_snap = self.auditor.clone();
+
+        let (total_cost, total_tokens, agent_costs) = tokio::task::spawn_blocking(move || {
+            (auditor_cost.get_total_cost(), auditor_tokens.get_total_tokens(), auditor_snap.get_agent_costs_snapshot())
+        }).await.unwrap_or((0.0, 0, vec![]));
 
         let mut agents = Vec::new();
-        for (agent_id, cost, token_used, roi, eff, storage_bytes) in self.auditor.get_agent_costs_snapshot() {
+        for (agent_id, cost, token_used, roi, eff, storage_bytes) in agent_costs {
             let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
             agents.push(AgentCostSummary {
                 agent_id,
