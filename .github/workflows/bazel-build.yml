@@ -35,9 +35,9 @@ jobs:
           - name: linux-x86_64
             runner: ubuntu-24.04
             bazel_config: linux_x86_64
-          # - name: windows-x86_64
-          #   runner: ubuntu-24.04
-          #   bazel_config: windows_x86_64
+          - name: windows-x86_64
+            runner: ubuntu-24.04
+            bazel_config: windows_x86_64
           # - name: windows-arm64
           #   runner: windows-11-arm
           #   bazel_config: windows_arm64

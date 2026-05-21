@@ -40,10 +40,10 @@ jobs:
             bazel_config: windows_x86_64
             archive_name: ohc-x86_64-pc-windows-gnu.zip
             install_linux_deps: true
-          # - name: windows-arm64
-            # runner: windows-11-arm
-            # bazel_config: windows_arm64
-            # archive_name: ohc-aarch64-pc-windows-msvc.zip
+          - name: windows-arm64
+            runner: windows-11-arm
+            bazel_config: windows_arm64
+            archive_name: ohc-aarch64-pc-windows-msvc.zip
             install_linux_deps: false
           - name: macos-aarch64
             runner: macos-15
