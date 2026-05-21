@@ -1577,8 +1577,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
 
+    // Start Token Forecast Worker
+    let token_forecast_worker = Arc::new(crate::workers::token_forecast::TokenForecastWorker::new(db.clone()));
+    token_forecast_worker.start();
+
     // Start Agent Memory Pipeline
-    hub.clone().start_token_burn_rate_worker();
     let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
     let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
     let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
