@@ -72,17 +72,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Container(
             height: MediaQuery.of(context).size.height, // Takes up screen height gracefully
             padding: EdgeInsets.symmetric(vertical: 20),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.65),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 32,
+                    offset: Offset(0, 16),
                   ),
-                  child: _buildContent(),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.45),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                    ),
+                    child: _buildContent(),
+                  ),
                 ),
               ),
             ),
@@ -201,6 +213,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             TextFormField(
               key: Key('bio-input'), // for testing or just semantics
               maxLines: 4,
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.sentences,
+              onFieldSubmitted: (_) => submit(),
               decoration: InputDecoration(
                 labelText: 'Business Bio',
                 hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',

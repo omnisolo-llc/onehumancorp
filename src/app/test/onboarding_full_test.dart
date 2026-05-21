@@ -24,6 +24,14 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
     await tester.pumpAndSettle();
 
-    // Test that the form can be submitted. We just assert UI state here up to form submission.
+    // To properly test the keyboard submit, let's trigger it directly
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+
+    // Wait for the mock HTTP request to complete and fail (no server)
+    // The framework mock will return 400 immediately, returning us to the input state.
+    await tester.pumpAndSettle();
+
+    // After failure, we should be back on the input state
+    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
   });
 }
