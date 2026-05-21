@@ -1,5 +1,5 @@
-issue_category: cleanup
+issue_category: research
 debt_report:
-  description: "Bump version to v0.4.42"
-  impact: "low"
-  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
+  description: "Add comprehensive research report and architectural design for Invisible Micro-Accounting & Autonomous Tax Reconciliation Engine."
+  impact: "high"
+  mitigation: "N/A - Architectural research task."
