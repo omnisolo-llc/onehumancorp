@@ -29,7 +29,7 @@ defaults:
 jobs:
   kind-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Free runner disk space
         run: |
@@ -52,6 +52,10 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache || true
           sudo rm -rf /usr/share/php || true
           sudo apt-get clean
+          docker image prune -a -f
+          sudo swapoff -a || true
+          sudo rm -f /swapfile || true
+          sudo rm -rf /usr/local/lib/heroku || true
       - uses: actions/checkout@v6
 
       - name: Install Kubernetes tools
