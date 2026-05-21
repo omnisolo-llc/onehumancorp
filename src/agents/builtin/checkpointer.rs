@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::Command as StdCommand;
+use tokio::process::Command;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Checkpoint {
@@ -64,17 +65,17 @@ impl GitCheckpointer {
     }
 
     pub fn new(repo_path: PathBuf) -> Self {
-        let _ = Command::new("git")
+        let _ = StdCommand::new("git")
             .arg("init")
             .current_dir(&repo_path)
             .output();
 
-        let _ = Command::new("git")
+        let _ = StdCommand::new("git")
             .args(&["config", "user.name", "Agent"])
             .current_dir(&repo_path)
             .output();
 
-        let _ = Command::new("git")
+        let _ = StdCommand::new("git")
             .args(&["config", "user.email", "agent@ohc.local"])
             .current_dir(&repo_path)
             .output();
@@ -96,7 +97,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("show")
             .arg(format!("{}:{}", checkpoint_id, file_name))
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -126,7 +127,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("add")
             .arg("-A")
             .current_dir(&self.repo_path)
-            .output();
+            .output().await;
 
         // 2. Commit the changes
         let commit_msg = format!("Checkpoint: {}", checkpoint.checkpoint_id);
@@ -136,7 +137,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("-m")
             .arg(&commit_msg)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -148,7 +149,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("-f")
             .arg(&checkpoint.checkpoint_id)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !tag_output.status.success() {
@@ -165,7 +166,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("--hard")
             .arg(checkpoint_id)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -176,7 +177,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("clean")
             .arg("-fd")
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !clean_output.status.success() {
@@ -194,7 +195,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("--")
             .arg(&file_name)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
