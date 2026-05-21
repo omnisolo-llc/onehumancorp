@@ -135,6 +135,10 @@ rust_binary(
         size = "large",
         crate = ":server_lib",
         args = ["--test", module],
+        target_compatible_with = select({
+            "@platforms//os:linux": [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        }),
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
         edition = "2024",
         env = {
