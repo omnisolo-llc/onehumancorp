@@ -6,4 +6,4 @@ environment:
   sdk: "^3.7.2"
 
 workspace:
-  - srcs/app
+  - src/app
