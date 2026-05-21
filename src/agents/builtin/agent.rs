@@ -189,12 +189,25 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
 
     let max_bytes = 32 * 1024;
     if combined.len() > max_bytes {
-        let mut end_idx = max_bytes;
-        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
-            end_idx -= 1;
+        let half = max_bytes / 2;
+
+        let mut start_idx = half;
+        while start_idx > 0 && !combined.is_char_boundary(start_idx) {
+            start_idx -= 1;
         }
-        combined.truncate(end_idx);
-        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
+
+        let mut end_idx = combined.len() - half;
+        while end_idx < combined.len() && !combined.is_char_boundary(end_idx) {
+            end_idx += 1;
+        }
+
+        let start_part = &combined[..start_idx];
+        let end_part = &combined[end_idx..];
+
+        combined = format!(
+            "{}\n\n...[System: AGENTS.md content truncated. Preserving start and end to combat 'Lost in the Middle']...\n\n{}",
+            start_part, end_part
+        );
     }
 
     combined
@@ -5589,6 +5602,32 @@ mod stream_tests {
 #[cfg(test)]
 mod hierarchical_prompt_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_load_cascading_agents_md_truncation() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let agent_file = temp_dir.path().join("AGENTS.md");
+
+        // Generate a 40KiB file
+        let mut content = String::new();
+        let part1 = "START_OF_FILE".to_string();
+        let part2 = "A".repeat(40 * 1024);
+        let part3 = "END_OF_FILE".to_string();
+        content.push_str(&part1);
+        content.push_str(&part2);
+        content.push_str(&part3);
+
+        tokio::fs::write(&agent_file, content).await.unwrap();
+
+        let loaded = load_cascading_agents_md(temp_dir.path()).await;
+
+        assert!(loaded.contains("START_OF_FILE"));
+        assert!(loaded.contains("END_OF_FILE"));
+        assert!(loaded.contains("...[System: AGENTS.md content truncated. Preserving start and end to combat 'Lost in the Middle']..."));
+
+        // Ensure the length is roughly 32KiB + marker length
+        assert!(loaded.len() < 34 * 1024);
+    }
 
     #[test]
     fn test_lost_in_the_middle_prevention() {
