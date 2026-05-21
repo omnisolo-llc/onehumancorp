@@ -56,24 +56,23 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
-    // Using a fake mock for UI tests if connection fails
     const connectSwarmMesh = () => {
         try {
-            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
+            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/connect?channel=system`);
 
             ws.onmessage = (event) => {
                 try {
-                    // Try to parse base64 proto message (mocking standard behavior)
-                    // For the sake of the UI, we'll just push simple text events
                     const payload = JSON.parse(event.data);
                     setSwarmActivity(prev => [{
-                        id: Math.random().toString(),
+                        id: payload.msg_id || Math.random().toString(),
                         agent: payload.agent_id || "Swarm Agent",
                         action: payload.action || "Working on task...",
+                        status: payload.status || "ok",
                         time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
                     }, ...prev].slice(0, 5)); // Keep last 5
                 } catch(e) {
                    // Ignore parsing errors
+                   console.error("Failed to parse mesh message", e);
                 }
             };
 

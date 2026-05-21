@@ -154,14 +154,20 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
 
     let mut send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            let mut buf = Vec::new();
-            if msg.encode(&mut buf).is_ok() {
-                let text = STANDARD.encode(&buf);
+            let payload_b64 = STANDARD.encode(&msg.payload);
+            let json_val = serde_json::json!({
+                "agent_id": msg.agent_id,
+                "action": msg.action,
+                "status": msg.status,
+                "payload_b64": payload_b64,
+                "msg_id": msg.msg_id
+            });
+            if let Ok(text) = serde_json::to_string(&json_val) {
                 if sender.send(WsMessage::Text(text.into())).await.is_err() {
                     break;
                 }
             } else {
-                tracing::error!("Failed to encode mesh message to protobuf");
+                tracing::error!("Failed to encode mesh message to JSON");
             }
         }
     });
@@ -171,10 +177,26 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let WsMessage::Text(text) = msg {
-                if let Ok(buf) = STANDARD.decode(text.as_str()) {
-                    if let Ok(mesh_msg) = MeshMessage::decode(&buf[..]) {
-                        let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
-                    }
+                if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(text.as_str()) {
+                    let agent_id = json_val["agent_id"].as_str().unwrap_or("").to_string();
+                    let action = json_val["action"].as_str().unwrap_or("").to_string();
+                    let status = json_val["status"].as_str().unwrap_or("").to_string();
+                    let default_msg_id = uuid::Uuid::new_v4().to_string();
+                    let msg_id = json_val["msg_id"].as_str().unwrap_or(&default_msg_id).to_string();
+                    let payload = if let Some(b64) = json_val["payload_b64"].as_str() {
+                        STANDARD.decode(b64).unwrap_or_default()
+                    } else {
+                        vec![]
+                    };
+
+                    let mesh_msg = MeshMessage {
+                        agent_id,
+                        action,
+                        status,
+                        payload,
+                        msg_id,
+                    };
+                    let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
                 }
             }
         }
@@ -227,17 +249,17 @@ mod tests {
         let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
 
         // Test sending a message from client to server (publish)
-        let test_msg = MeshMessage {
-            agent_id: "test".to_string(),
-            action: "test_chan".to_string(),
-            status: "ok".to_string(),
-            payload: b"ws_test".to_vec(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-        let mut buf = Vec::new();
-        test_msg.encode(&mut buf).unwrap();
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&buf);
-        ws_stream.send(TungsteniteMessage::Text(b64.into())).await.unwrap();
+        let msg_id = uuid::Uuid::new_v4().to_string();
+        let payload_b64 = STANDARD.encode(b"ws_test");
+        let json_val = serde_json::json!({
+            "agent_id": "test",
+            "action": "test_chan",
+            "status": "ok",
+            "payload_b64": payload_b64,
+            "msg_id": msg_id
+        });
+        let text = serde_json::to_string(&json_val).unwrap();
+        ws_stream.send(TungsteniteMessage::Text(text.into())).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
@@ -255,10 +277,11 @@ mod tests {
         for _ in 0..2 {
             if let Some(Ok(msg)) = ws_stream.next().await {
                 if let TungsteniteMessage::Text(text) = msg {
-                    let buf = base64::engine::general_purpose::STANDARD.decode(&text).unwrap();
-                    let received_mesh_msg: MeshMessage = prost::Message::decode(&buf[..]).unwrap();
-                    if received_mesh_msg.payload == b"srv_test" {
-                        assert_eq!(received_mesh_msg.action, "test_chan");
+                    let json_val: serde_json::Value = serde_json::from_str(&text).unwrap();
+                    let payload_b64 = json_val["payload_b64"].as_str().unwrap();
+                    let payload = STANDARD.decode(payload_b64).unwrap();
+                    if payload == b"srv_test" {
+                        assert_eq!(json_val["action"].as_str().unwrap(), "test_chan");
                         found = true;
                         break;
                     }

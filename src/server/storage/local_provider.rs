@@ -172,6 +172,7 @@ impl Provider for LocalProvider {
 
             #[cfg(unix)]
             {
+                #[allow(unused_imports)]
                 use std::os::unix::fs::OpenOptionsExt;
                 options.mode(0o600);
             }
