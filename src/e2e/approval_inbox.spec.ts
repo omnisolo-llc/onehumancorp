@@ -1,35 +1,6 @@
 import { test, expect } from './fixtures';
 
 test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
-  // Mock the API for testing the UI specifically
-  await page.route('/api/agents/approvals', async (route) => {
-    const json = {
-      pending_approvals: [
-        {
-          id: 'e2e-approval-mock-1',
-          tenant_id: 'mock-tenant',
-          department: 'CustomerSuccess',
-          description: 'Draft email for review: Maya ordered a vegan cake',
-          status: 'Pending',
-          action_risk: 'High'
-        },
-        {
-          id: 'e2e-approval-mock-2',
-          tenant_id: 'mock-tenant',
-          department: 'Marketing',
-          description: 'Draft Instagram Post: New vegan cakes available!',
-          status: 'Pending',
-          action_risk: 'Low'
-        }
-      ]
-    };
-    await route.fulfill({ json });
-  });
-
-  await page.route('/api/agents/approvals/*', async (route) => {
-    await route.fulfill({ json: { success: true } });
-  });
-
   // 1. User opens the app, authenticates and navigates to the Team Dashboard
   await page.goto('/');
 

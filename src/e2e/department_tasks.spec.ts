@@ -40,9 +40,6 @@ test('draft-to-approval flow for AI Agent Departments', async ({ page, request }
 });
 
 test('UI: Navigates to team page and displays all AI Agent Departments', async ({ page }) => {
-  await page.route('**/api/agents/approvals', async route => {
-    await route.fulfill({ json: { pending_approvals: [] } });
-  });
 
   await page.goto('/team');
   await expect(page.locator('h1')).toContainText('Your Team');
@@ -75,51 +72,16 @@ test('UI: Department card shows pending approval and opens ApprovalInbox', async
 });
 
 test('UI: Approving a request updates the UI to All Caught Up', async ({ page }) => {
-  let postCalled = false;
-
-  await page.route('**/api/agents/approvals', async (route, request) => {
-    if (request.method() === 'GET') {
-      await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-1', department: 'CustomerSuccess', description: 'Test request', status: 'Pending', action_risk: 'High' }
-      ] } });
-    } else {
-      await route.fallback();
-    }
-  });
-
-  await page.route('**/api/agents/approvals/mock-1', async route => {
-    postCalled = true;
-    await route.fulfill({ json: { success: true } });
-  });
-
-  await page.goto('/team');
+    await page.goto('/team');
   await page.locator('button', { hasText: 'The Ambassador' }).click();
 
   await page.getByRole('button', { name: 'Approve' }).click();
 
   await expect(page.getByText('All Caught Up!')).toBeVisible();
-  expect(postCalled).toBe(true);
-});
+  });
 
 test('UI: Autonomous Global Localization flow', async ({ page }) => {
-  let postCalled = false;
-
-  await page.route('**/api/agents/approvals', async (route, request) => {
-    if (request.method() === 'GET') {
-      await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-mkt-1', department: 'Marketing', description: 'Autonomous Global Localization: Translate storefront to Spanish and localize currency for LATAM visitors?', status: 'Pending', action_risk: 'Medium', feature_type: 'global_localization' }
-      ] } });
-    } else {
-      await route.fallback();
-    }
-  });
-
-  await page.route('**/api/agents/approvals/mock-mkt-1', async route => {
-    postCalled = true;
-    await route.fulfill({ json: { success: true } });
-  });
-
-  await page.goto('/team');
+    await page.goto('/team');
 
   const promoterCard = page.locator('button', { hasText: 'The Promoter' });
   await expect(promoterCard).toContainText('1 item awaiting approval');
@@ -137,28 +99,10 @@ test('UI: Autonomous Global Localization flow', async ({ page }) => {
   await page.getByRole('button', { name: 'Approve' }).click();
 
   await expect(page.getByText('All Caught Up!')).toBeVisible();
-  expect(postCalled).toBe(true);
-});
+  });
 
 test('UI: AI Visibility & GEO flow', async ({ page }) => {
-  let postCalled = false;
-
-  await page.route('**/api/agents/approvals', async (route, request) => {
-    if (request.method() === 'GET') {
-      await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-mkt-2', department: 'Marketing', description: 'AI Visibility & GEO: Apply automated Generative Engine Optimization for LLM crawlers?', status: 'Pending', action_risk: 'Low', feature_type: 'ai_geo' }
-      ] } });
-    } else {
-      await route.fallback();
-    }
-  });
-
-  await page.route('**/api/agents/approvals/mock-mkt-2', async route => {
-    postCalled = true;
-    await route.fulfill({ json: { success: true } });
-  });
-
-  await page.goto('/team');
+    await page.goto('/team');
 
   const promoterCard = page.locator('button', { hasText: 'The Promoter' });
   await expect(promoterCard).toContainText('1 item awaiting approval');
@@ -176,20 +120,9 @@ test('UI: AI Visibility & GEO flow', async ({ page }) => {
   await page.getByRole('button', { name: 'Approve' }).click();
 
   await expect(page.getByText('All Caught Up!')).toBeVisible();
-  expect(postCalled).toBe(true);
-});
+  });
 
 test('UI: Verify risk level UI representations', async ({ page }) => {
-  await page.route('**/api/agents/approvals', async (route, request) => {
-    if (request.method() === 'GET') {
-      await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-risk-high', department: 'Legal', description: 'High Risk Action', status: 'Pending', action_risk: 'High' },
-        { id: 'mock-risk-low', department: 'Legal', description: 'Low Risk Action', status: 'Pending', action_risk: 'Low' }
-      ] } });
-    } else {
-      await route.fallback();
-    }
-  });
 
   await page.goto('/team');
   await page.locator('button', { hasText: 'The Protector' }).click();
@@ -210,24 +143,7 @@ test('UI: Verify risk level UI representations', async ({ page }) => {
 });
 
 test('UI: Proactive Tax & Legal Compliance Guardrails rejection flow', async ({ page }) => {
-  let postCalled = false;
-
-  await page.route('**/api/agents/approvals', async (route, request) => {
-    if (request.method() === 'GET') {
-      await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-legal-2', department: 'Legal', description: 'Generate and apply compliance policies?', status: 'Pending', action_risk: 'High', feature_type: 'legal_compliance' }
-      ] } });
-    } else {
-      await route.fallback();
-    }
-  });
-
-  await page.route('**/api/agents/approvals/mock-legal-2', async route => {
-    postCalled = true;
-    await route.fulfill({ json: { success: true } });
-  });
-
-  await page.goto('/team');
+    await page.goto('/team');
   await page.locator('button', { hasText: 'The Protector' }).click();
 
   await expect(page.getByText('Generate and apply compliance policies?')).toBeVisible();
@@ -239,40 +155,18 @@ test('UI: Proactive Tax & Legal Compliance Guardrails rejection flow', async ({ 
   await page.getByRole('button', { name: 'Reject / Edit' }).click();
 
   await expect(page.getByText('All Caught Up!')).toBeVisible();
-  expect(postCalled).toBe(true);
-});
+  });
 
 test('UI: Rejecting a request updates the UI to All Caught Up', async ({ page }) => {
-  let postCalled = false;
-
-  await page.route('**/api/agents/approvals', async (route, request) => {
-    if (request.method() === 'GET') {
-      await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-2', department: 'Operations', description: 'Another request', status: 'Pending', action_risk: 'Low' }
-      ] } });
-    } else {
-      await route.fallback();
-    }
-  });
-
-  await page.route('**/api/agents/approvals/mock-2', async route => {
-    postCalled = true;
-    await route.fulfill({ json: { success: true } });
-  });
-
-  await page.goto('/team');
+    await page.goto('/team');
   await page.locator('button', { hasText: 'The Manager' }).click();
 
   await page.getByRole('button', { name: 'Reject / Edit' }).click();
 
   await expect(page.getByText('All Caught Up!')).toBeVisible();
-  expect(postCalled).toBe(true);
-});
+  });
 
 test('UI: Department with no approvals shows All Caught Up directly', async ({ page }) => {
-  await page.route('**/api/agents/approvals', async route => {
-    await route.fulfill({ json: { pending_approvals: [] } });
-  });
 
   await page.goto('/team');
 
@@ -284,24 +178,7 @@ test('UI: Department with no approvals shows All Caught Up directly', async ({ p
 });
 
 test('UI: Proactive Tax & Legal Compliance Guardrails flow', async ({ page }) => {
-  let postCalled = false;
-
-  await page.route('**/api/agents/approvals', async (route, request) => {
-    if (request.method() === 'GET') {
-      await route.fulfill({ json: { pending_approvals: [
-        { id: 'mock-legal-1', department: 'Legal', description: 'ACTION REQUIRED: Revenue approaching EU VAT threshold. Generate and apply compliance policies?', status: 'Pending', action_risk: 'High', feature_type: 'legal_compliance' }
-      ] } });
-    } else {
-      await route.fallback();
-    }
-  });
-
-  await page.route('**/api/agents/approvals/mock-legal-1', async route => {
-    postCalled = true;
-    await route.fulfill({ json: { success: true } });
-  });
-
-  await page.goto('/team');
+    await page.goto('/team');
 
   const protectorCard = page.locator('button', { hasText: 'The Protector' });
   await expect(protectorCard).toContainText('1 item awaiting approval');
@@ -317,5 +194,4 @@ test('UI: Proactive Tax & Legal Compliance Guardrails flow', async ({ page }) =>
   await page.getByRole('button', { name: 'Approve' }).click();
 
   await expect(page.getByText('All Caught Up!')).toBeVisible();
-  expect(postCalled).toBe(true);
-});
+  });

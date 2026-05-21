@@ -153,4 +153,21 @@ ALTER TABLE IF EXISTS agent_inbox FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+VALUES
+('mock-1', 'e2e-tenant', 'customer_success', 'Test request', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-mkt-1', 'e2e-tenant', 'marketing', 'Autonomous Global Localization: Translate storefront to Spanish and localize currency for LATAM visitors?', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-mkt-2', 'e2e-tenant', 'marketing', 'AI Visibility & GEO: Apply automated Generative Engine Optimization for LLM crawlers?', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-risk-high', 'e2e-tenant', 'legal', 'High Risk Action', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-risk-low', 'e2e-tenant', 'legal', 'Low Risk Action', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-legal-2', 'e2e-tenant', 'legal', 'Generate and apply compliance policies?', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-2', 'e2e-tenant', 'operations', 'Another request', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-legal-1', 'e2e-tenant', 'legal', 'ACTION REQUIRED: Revenue approaching EU VAT threshold. Generate and apply compliance policies?', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-mock-1', 'e2e-tenant', 'customer_success', 'Draft email for review: Maya ordered a vegan cake', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-mock-2', 'e2e-tenant', 'marketing', 'Draft Instagram Post: New vegan cakes available!', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
 COMMIT;
