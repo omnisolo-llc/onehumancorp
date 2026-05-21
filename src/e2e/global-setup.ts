@@ -52,16 +52,18 @@ function seedDatabase() {
     return;
   }
 
-  execFileSync(
-    'docker',
-    ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'exec', '-T', 'postgres', 'psql', '-U', 'ohc', '-d', 'ohc', '-v', 'ON_ERROR_STOP=1', '-f', '-'],
-    {
-      cwd: ROOT,
-      input: fs.readFileSync(SEED_SQL),
-      stdio: ['pipe', 'inherit', 'inherit'],
-      env: process.env,
-    },
-  );
+  if (!process.env.SKIP_E2E_DB_SEED) {
+    execFileSync(
+      'docker',
+      ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'exec', '-T', 'postgres', 'psql', '-U', 'ohc', '-d', 'ohc', '-v', 'ON_ERROR_STOP=1', '-f', '-'],
+      {
+        cwd: ROOT,
+        input: fs.readFileSync(SEED_SQL),
+        stdio: ['pipe', 'inherit', 'inherit'],
+        env: process.env,
+      },
+    );
+  }
 }
 
 async function loginThroughUi(baseURL: string, user: (typeof USERS)[number]) {

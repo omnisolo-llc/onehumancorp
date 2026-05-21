@@ -69,10 +69,12 @@ export default function MyPlanPage() {
       return mb.toFixed(1) + " MB";
   };
 
+  const [showCostDetails, setShowCostDetails] = useState(false);
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>My Plan</h1>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>My Current Plan</h1>
         <div className="flex gap-2">
             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to Dashboard
@@ -89,7 +91,7 @@ export default function MyPlanPage() {
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <h2 className="text-sm font-medium text-gray-500 mb-1">Current Plan</h2>
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Plan: {planData?.current_plan}</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded mt-2">Active</span>
                 </div>
@@ -154,6 +156,10 @@ export default function MyPlanPage() {
 
         {/* Management Actions */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button onClick={() => setShowCostDetails(true)} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+                <h3 className="font-medium text-gray-900">View Cost Details</h3>
+                <p className="text-sm text-gray-500 mt-1">View detailed cost and AI usage for this billing cycle.</p>
+            </button>
             <button className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">Change Plan</h3>
                 <p className="text-sm text-gray-500 mt-1">Upgrade or downgrade your current subscription.</p>
@@ -169,6 +175,42 @@ export default function MyPlanPage() {
         </section>
 
       </main>
+
+      {showCostDetails && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+              <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl overflow-hidden">
+                  <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                      <h2 className="text-xl font-bold font-outfit text-gray-900">Cost & AI Usage</h2>
+                      <button onClick={() => setShowCostDetails(false)} className="text-gray-500 hover:text-gray-700">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
+                  </div>
+                  <div className="p-6">
+                      <p className="text-gray-700 mb-4">Detailed breakdown of your costs and AI usage for the current billing cycle.</p>
+                      {/* Placeholder for actual cost details */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex justify-between mb-2">
+                              <span className="text-gray-600">Total AI Actions</span>
+                              <span className="font-medium">{planData?.ai_actions_used}</span>
+                          </div>
+                          <div className="flex justify-between mb-2">
+                              <span className="text-gray-600">Storage Cost</span>
+                              <span className="font-medium">$0.00</span>
+                          </div>
+                          <div className="flex justify-between font-bold border-t border-gray-200 pt-2 mt-2">
+                              <span>Estimated Total</span>
+                              <span>${planData?.next_bill_estimated.toFixed(2)}</span>
+                          </div>
+                      </div>
+                  </div>
+                  <div className="p-6 border-t border-gray-200 bg-gray-50 text-right">
+                      <button onClick={() => setShowCostDetails(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors">
+                          Close
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
