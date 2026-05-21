@@ -2679,9 +2679,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2 style="font-size: 32px; font-weight: 800; margin-bottom: 12px; color: white; position: relative; z-index: 1;">Give 1 Month, Get 1 Month Free</h2>
                             <p style="color: rgba(255,255,255,0.9); font-size: 16px; max-width: 400px; margin: 0 auto 24px; line-height: 1.5; position: relative; z-index: 1;">Invite other small business owners to OHC. When they launch, you both get a free month of OHC Pro. There's no limit!</p>
 
-                            <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
-                                <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
-                                <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
+                            <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
+                                <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: bold; color: rgba(255,255,255,0.8); text-align: left; text-transform: uppercase; letter-spacing: 1px;">Your Referral Link</p>
+                                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                    <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
+                                    <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Copied');">Copy</button>
+                                </div>
                             </div>
                         </div>
 
@@ -2700,6 +2703,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <!-- One-Tap Share Tools -->
                         <div class="card glass">
                             <h3 style="margin-bottom: 20px;">Share with 1-Tap</h3>
+                            <div style="margin-bottom: 16px; position: relative;">
+                                <button style="margin: 0; width: 100%; background: var(--primary); color: white; border: none; font-weight: 600; padding: 12px; border-radius: 8px;" onclick="document.getElementById('invite-copied-msg').style.display = 'block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display = 'none', 3000);">Copy Invite Message</button>
+                                <div id="invite-copied-msg" style="display: none; position: absolute; top: -40px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 8px 16px; border-radius: 4px; font-size: 14px; white-space: nowrap;">Invite message copied!</div>
+                            </div>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
                                 <button style="margin: 0; width: 100%; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Instagram story editor...')">
                                     <span style="font-size: 24px;">📷</span>
@@ -2726,7 +2733,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
                                     <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
                                 </div>
-                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="secondary" style="margin: 0;" onclick="alert('Exporting data...')">Export Data</button>
+                                    <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
+                                </div>
                             </div>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
