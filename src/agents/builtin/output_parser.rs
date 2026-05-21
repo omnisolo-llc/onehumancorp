@@ -1,5 +1,6 @@
 use crate::types::{ChatRequest, Message, ToolError, ChatResponse};
 use serde::de::DeserializeOwned;
+use schemars::JsonSchema;
 use std::sync::Arc;
 use async_trait::async_trait;
 
@@ -14,7 +15,7 @@ pub trait LlmClientForParser: Send + Sync {
 /// Implements the Output Parsing mechanic from the Master Catalog:
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
 /// the failed completion, and the parsing error back to the model)."
-pub async fn parse_structured_output<T: DeserializeOwned>(
+pub async fn parse_structured_output<T: DeserializeOwned + JsonSchema>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
     max_retries: usize,
@@ -22,19 +23,13 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
     let mut current_req = req.clone();
 
     // Inject the schema as a tool definition to encourage the model to use tool_calls API
+    let schema = schemars::schema_for!(T);
+    let schema_json = serde_json::to_value(&schema).unwrap_or_else(|_| serde_json::json!({}));
+
     let schema_tool = crate::types::ToolDefinition {
         name: "structured_output".to_string(),
-        description: "Call this tool to output the parsed structured data.".to_string(),
-        parameters: serde_json::json!({
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "description": "The structured data matching the requested schema."
-                }
-            },
-            "required": ["data"]
-        }),
+        description: "Call this tool to output the parsed structured data matching the schema.".to_string(),
+        parameters: schema_json,
     };
 
     if !current_req.tools.iter().any(|t| t.name == "structured_output") {
@@ -55,19 +50,13 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty() {
             if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
-                if let Some(data) = call.arguments.get("data") {
-                    match serde_json::from_value::<T>(data.clone()) {
-                        Ok(parsed) => return Ok(parsed),
-                        Err(e) => {
-                            parse_error_msg = Some(format!(
-                                "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
-                            ));
-                        }
+                match serde_json::from_value::<T>(call.arguments.clone()) {
+                    Ok(parsed) => return Ok(parsed),
+                    Err(e) => {
+                        parse_error_msg = Some(format!(
+                            "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+                        ));
                     }
-                } else {
-                    parse_error_msg = Some(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
-                    );
                 }
             }
         }
@@ -140,7 +129,7 @@ mod tests {
     use serde::Deserialize;
     use tokio::sync::Mutex;
 
-    #[derive(Deserialize, Debug, PartialEq)]
+    #[derive(Deserialize, Debug, PartialEq, JsonSchema)]
     struct TestOutput {
         result: String,
     }
@@ -268,7 +257,7 @@ mod tests {
     async fn test_parse_structured_output_tool_calls_success() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_tool_call"}})),
+                create_tool_call_resp("structured_output", serde_json::json!({"result": "success_tool_call"})),
             ]),
         });
 
@@ -281,8 +270,8 @@ mod tests {
     async fn test_parse_structured_output_tool_calls_retry_success() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field": "test"}})),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_tool_call_retry"}})),
+                create_tool_call_resp("structured_output", serde_json::json!({"wrong_field": "test"})),
+                create_tool_call_resp("structured_output", serde_json::json!({"result": "success_tool_call_retry"})),
             ]),
         });
 
@@ -296,8 +285,8 @@ mod tests {
     async fn test_parse_structured_output_tool_calls_failure() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field": "test"}})),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_field_again": "test"}})),
+                create_tool_call_resp("structured_output", serde_json::json!({"wrong_field": "test"})),
+                create_tool_call_resp("structured_output", serde_json::json!({"wrong_field_again": "test"})),
             ]),
         });
 
