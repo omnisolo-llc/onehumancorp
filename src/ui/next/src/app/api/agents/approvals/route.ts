@@ -2,47 +2,22 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const approvals = [
-    {
-      id: "1",
-      department: "CustomerSuccess",
-      action_risk: "High",
-      description: "Draft email for review: Maya ordered a vegan cake",
-      status: "Pending"
-    },
-    {
-      id: "2",
-      department: "Marketing",
-      action_risk: "Low",
-      description: "Draft Instagram Post: New vegan cakes available!",
-      status: "Pending"
-    },
-    {
-      id: "3",
-      department: "Legal",
-      action_risk: "High",
-      description: "ACTION REQUIRED: Revenue approaching EU VAT threshold. Generate and apply compliance policies?",
-      status: "Pending",
-      feature_type: "legal_compliance"
-    },
-    {
-      id: "4",
-      department: "Marketing",
-      action_risk: "Medium",
-      description: "Autonomous Global Localization: Translate storefront to Spanish and localize currency for LATAM visitors?",
-      status: "Pending",
-      feature_type: "global_localization"
-    },
-    {
-      id: "5",
-      department: "Marketing",
-      action_risk: "Low",
-      description: "AI Visibility & GEO: Apply automated Generative Engine Optimization for LLM crawlers?",
-      status: "Pending",
-      feature_type: "ai_geo"
-    }
-  ];
+import { headers } from "next/headers";
 
-  return NextResponse.json({ pending_approvals: approvals });
+export async function GET(request: Request) {
+  // Use absolute URL to bypass Next.js and hit the Rust API proxy if running in a hybrid setup,
+  // or proxy directly.
+  try {
+    const backendUrl = process.env.BACKEND_API_URL || 'http://127.0.0.1:8080';
+    const res = await fetch(`${backendUrl}/api/agents/approvals`, {
+        headers: headers(),
+    });
+    if (!res.ok) {
+        return NextResponse.json({ pending_approvals: [] });
+    }
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ pending_approvals: [] });
+  }
 }

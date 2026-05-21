@@ -92,6 +92,7 @@ pub struct ApprovalRequest {
     pub description: String,
     pub status: ApprovalStatus,
     pub action_risk: ActionRisk,
+    pub feature_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
