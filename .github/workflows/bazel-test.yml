@@ -50,7 +50,7 @@ jobs:
             libdbus-1-dev libatk1.0-dev libgtk-3-dev \
             libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
             librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git mingw-w64 rpm
+            ca-certificates curl git mingw-w64 binutils-mingw-w64-x86-64 rpm
 
       - name: Set up Go
         uses: actions/setup-go@v5
