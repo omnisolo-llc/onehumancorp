@@ -41,7 +41,7 @@ jobs:
             bazel_config: windows_x86_64
             install_linux_deps: true
           - name: windows-arm64
-            runner: windows-11-arm
+            runner: windows-latest
             bazel_config: windows_arm64
             install_linux_deps: false
           #- name: macos-aarch64
